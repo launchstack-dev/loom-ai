@@ -52,6 +52,13 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/roadmap --milestone add/complete/list` | Manage milestones |
 | `/roadmap --snapshot` | Save current plan state for versioning |
 | `/roadmap --review-integrate` | Apply review findings to plan |
+| `/library` or `/library list` | Show installed items grouped by type |
+| `/library use <name>` | Install item from catalog, resolve dependencies |
+| `/library sync` | Re-pull all installed items, compare hashes |
+| `/library search <query>` | Search catalog by name/description |
+| `/library add <source>` | Add new item (local path or GitHub URL) |
+| `/library remove <name>` | Uninstall, warn about dependents |
+| `/library update` | Check all sources for changes |
 | `/help` | Show this reference |
 
 ### Agent Groups

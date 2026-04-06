@@ -1,12 +1,21 @@
 #!/bin/bash
-# Meta-Orchestration System Installer
-# Symlinks agents, commands, and protocols into ~/.claude/
+# Meta-Orchestration System Installer (bootstrap)
+#
+# DEPRECATED: Use /library for ongoing management after initial install.
+# This script is kept for first-time bootstrap only. It creates symlinks
+# from the repo into ~/.claude/. After running this, use /library sync
+# to manage updates and /library use <name> to install new items.
+#
+# See: /library or commands/library.md for the catalog-based approach.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${HOME}/.claude"
 
+echo "⚠  This installer is for initial bootstrap only."
+echo "   After install, use /library for ongoing management."
+echo ""
 echo "Installing meta-orchestration system..."
 echo "Source: ${SCRIPT_DIR}"
 echo "Target: ${CLAUDE_DIR}"

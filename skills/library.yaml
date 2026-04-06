@@ -1,3 +1,6 @@
+catalog_version: 1
+repo: https://github.com/launchstack-dev/meta-orchestration
+
 default_dirs:
   skills:
     - default: .claude/skills/
@@ -106,6 +109,9 @@ library:
     - name: roadmap
       description: Create, track, refine, and visualize project plans and milestones
       requires: [agent:plan-builder-agent, agent:questioner-agent]
+
+    - name: library
+      description: Pull-on-demand catalog management - install, sync, search, update agents and commands
 
     - name: help
       description: Shows meta-orchestration system reference

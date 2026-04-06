@@ -17,13 +17,22 @@ Six slash commands that compose 20+ specialized agents:
 
 ## Install
 
+**Bootstrap** (first time):
 ```bash
-git clone https://github.com/yourusername/meta-orchestration.git
+git clone https://github.com/launchstack-dev/meta-orchestration.git
 cd meta-orchestration
 ./install.sh
 ```
 
-This symlinks agents, commands, and protocols into `~/.claude/`. Run `/help` in Claude Code to verify.
+**Ongoing management** (after bootstrap):
+```
+/library list           — see what's installed
+/library use <name>     — install an agent or command
+/library sync           — re-pull all items, detect changes
+/library update         — check for new catalog entries
+```
+
+The bootstrap script symlinks everything into `~/.claude/`. After that, `/library` manages the catalog with dependency resolution, content hashing, and GitHub source support. Run `/help` in Claude Code to verify.
 
 ## Architecture
 

@@ -348,3 +348,35 @@ export interface ScopeCoverageCriterion {
 export interface ScopeCoverage {
   criteria: ScopeCoverageCriterion[];
 }
+
+// ---------------------------------------------------------------------------
+// Library catalog — ~/.claude/skills/library/install-state.toon
+// ---------------------------------------------------------------------------
+
+export interface LibraryInstallItem {
+  name: string;
+  type: 'agent' | 'skill' | 'prompt';
+  source: string;
+  targetPath: string;
+  installedAt: string;
+  contentHash: string;
+}
+
+export interface LibraryInstallState {
+  schemaVersion: number;
+  lastSynced: string;
+  items: LibraryInstallItem[];
+}
+
+export interface LibraryCatalogEntry {
+  name: string;
+  description: string;
+  source: string;
+  requires?: string[];
+}
+
+export interface LibraryCatalog {
+  skills: LibraryCatalogEntry[];
+  agents: LibraryCatalogEntry[];
+  prompts: LibraryCatalogEntry[];
+}
