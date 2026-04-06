@@ -107,7 +107,7 @@ npm install
 npx vitest run
 ```
 
-81 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
+97 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
 
 ## File Structure
 
