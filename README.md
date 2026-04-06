@@ -43,19 +43,22 @@ state.schema.md               ← Execution state for resume
 execution-conventions.md      ← File ownership, context tiers, TOON format
 orchestration-config.schema.md ← Per-project agent registration
 orchestration-patterns.md     ← Debate, chain, vote, triage patterns
-validation-rules.md           ← Output validation, blocker gates
+validation-rules.md           ← Output validation, blocker gates, plan validation
+plan.schema.md                ← PLAN.md format specification
 ```
 
 ## Typical Workflow
 
 ```
-1. /roadmap --init            Create a structured PLAN.md
-2. /review-plan               5 agents analyze it in parallel
-3. /roadmap --review-integrate Apply review findings to the plan
-4. /execute-plan --dry-run    Preview the wave structure
-5. /execute-plan              Run with approval gates
-6. /test-plan --run           Generate and run tests
-7. /review-code               Full code review
+1. /roadmap --init            Create a structured PLAN.md (codebase-aware)
+2. /roadmap --validate        Validate plan structure, deps, ownership, sizing
+3. /review-plan               5 agents analyze it in parallel
+4. /roadmap --review-integrate Apply review findings to the plan
+5. /roadmap --deps            Verify dependency graph + critical path
+6. /execute-plan --dry-run    Preview the wave structure
+7. /execute-plan              Run with approval gates (validation gate built-in)
+8. /test-plan --run           Generate and run tests
+9. /review-code               Full code review
 ```
 
 ## Per-Project Extensibility
@@ -103,15 +106,16 @@ npm install
 npx vitest run
 ```
 
-35 tests validating the inter-agent protocol: schema validation, context compression, handoff chains, file ownership detection, and feedback logging.
+57 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
 
 ## File Structure
 
 ```
-agents/                     20 agent definitions
-  protocols/                 6 protocol specs
+agents/                     20+ agent definitions
+  protocols/                 7 protocol specs (incl. plan.schema.md)
 commands/                    6 slash commands
 skills/library.yaml         Library registry
-test/protocol/              35 protocol tests
+test/protocol/              57 protocol tests
+test-fixtures/              Test plan fixtures (valid + broken)
 install.sh                  Symlink installer
 ```

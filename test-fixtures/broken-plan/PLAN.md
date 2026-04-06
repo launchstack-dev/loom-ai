@@ -52,6 +52,7 @@ Note: The `authorId` fields reference the `UserProfile` type which defines the u
 ### Phase 2 — Wave 2: Feed Aggregation
 
 **Depends on:** Phase 3
+**Dependencies:** Phase 3
 
 **Agent:** implementer-agent
 
@@ -64,11 +65,15 @@ Note: The `authorId` fields reference the `UserProfile` type which defines the u
 2. `src/services/ranking.ts` — Post ranking algorithm
 3. `src/utils/helpers.ts` — Shared utility functions
 
+#### Acceptance Criteria
+- [ ] Feed service returns sorted posts
+
 ---
 
 ### Phase 3 — Wave 3: Notifications and Realtime
 
 **Depends on:** Phase 2
+**Dependencies:** Phase 2
 
 **Agent:** implementer-agent
 
@@ -94,6 +99,11 @@ Note: The `authorId` fields reference the `UserProfile` type which defines the u
 14. `src/websocket/middleware/logging.ts` — WebSocket logging
 15. `src/websocket/events/index.ts` — Event type definitions
 16. `src/websocket/events/validators.ts` — Event payload validators
+
+#### Acceptance Criteria
+- [ ] All feeds load in under 200ms
+- [ ] Notifications are delivered within 5 seconds
+- [ ] WebSocket connections handle 1000 concurrent users
 
 ---
 

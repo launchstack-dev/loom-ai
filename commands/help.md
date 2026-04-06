@@ -39,6 +39,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/roadmap` | Show roadmap status (phases, milestones, progress) |
 | `/roadmap --init` | Create a new PLAN.md interactively |
 | `/roadmap --init --from "desc"` | Create a plan from a one-line description |
+| `/roadmap --validate` | Run plan validation pipeline (stages 1-4) |
+| `/roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
 | `/roadmap --refine` | Refine plan using review history |
 | `/roadmap --status` | Detailed execution + milestone progress |
 | `/roadmap --deps` | Show phase dependency graph + critical path |

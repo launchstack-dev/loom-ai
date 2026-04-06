@@ -186,6 +186,79 @@ export interface DerivedMetrics {
 }
 
 // ---------------------------------------------------------------------------
+// Plan validation types
+// ---------------------------------------------------------------------------
+
+export interface PlanFrontmatter {
+  planVersion: number;
+  name: string;
+  status: 'draft' | 'reviewed' | 'approved' | 'in-progress' | 'completed';
+  created: string;
+  lastReviewed: string | null;
+  totalPhases: number;
+  totalWaves: number;
+}
+
+export interface PlanDeliverable {
+  file: string;
+  action: string;
+  owner: string;
+}
+
+export interface PhaseNode {
+  id: number;
+  name: string;
+  wave: number;
+  agent: string;
+  objective: string;
+  dependencies: number[];
+  fileOwnership: string[];
+  deliverables: PlanDeliverable[];
+  acceptanceCriteria: string[];
+}
+
+export interface PlanStructure {
+  frontmatter: PlanFrontmatter | null;
+  title: string | null;
+  hasOverview: boolean;
+  hasTechStack: boolean;
+  hasSchema: boolean;
+  hasExecutionPhases: boolean;
+  hasVerificationCommands: boolean;
+  phases: PhaseNode[];
+}
+
+export interface DependencyGraph {
+  nodes: PhaseNode[];
+  adjacency: Record<number, number[]>; // phase → depends-on phases
+  criticalPath: number[];
+  criticalPathLength: number;
+  hasCycles: boolean;
+  cycleNodes: number[];
+}
+
+export interface ValidationFinding {
+  stage: 'structure' | 'dependencies' | 'ownership' | 'sizing' | 'criteria';
+  severity: 'error' | 'warning';
+  message: string;
+  phase?: number;
+  file?: string;
+}
+
+export interface PlanValidationResult {
+  valid: boolean;
+  errors: ValidationFinding[];
+  warnings: ValidationFinding[];
+  graph: DependencyGraph;
+  sizing: {
+    phaseId: number;
+    deliverableCount: number;
+    criteriaCount: number;
+    flag?: 'oversized' | 'undersized' | 'no-criteria';
+  }[];
+}
+
+// ---------------------------------------------------------------------------
 // Ownership conflict detection
 // ---------------------------------------------------------------------------
 

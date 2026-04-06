@@ -18,6 +18,14 @@ If no arguments are provided, look for a PLAN.md in the current working director
 
 1. **Find the plan.** Locate the planning document — check for PLAN.md, plan.md, or whatever the user specified. Read it to confirm it exists and has content.
 
+1a. **Structural pre-check.** Before spawning agents, run plan validation stages 1-4 from `validation-rules.md` Section 6:
+   - Stage 1 (Structure): frontmatter, required sections, Phase 0
+   - Stage 2 (Dependencies): cycle detection, self-deps, undefined references
+   - Stage 3 (Ownership): same-wave overlaps, deliverable boundary checks
+   - Stage 4 (Sizing): oversized phases, missing criteria
+
+   If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 5 agents still run — they catch different things (feature gaps, UX issues, parallelization opportunities) that structural validation doesn't cover. But surfacing structural errors first gives the user the most actionable feedback.
+
 1b. **Check for project-specific agents.** Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section. These will be spawned alongside the 5 built-in agents.
 
 2. **Launch all agents in parallel using the Agent tool.** Each agent must receive the full text of the plan in its prompt (agents cannot read files from your context). Send ALL Agent tool calls in a SINGLE message so they run concurrently. This includes the 5 built-in agents plus any from `orchestration.toml`:

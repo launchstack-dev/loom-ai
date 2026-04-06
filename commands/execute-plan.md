@@ -69,19 +69,32 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
 ### Step 1: Initialize
 
 1. Read the plan file. Confirm it exists and has content.
-2. Analyze the plan to extract or infer:
+
+2. **Validation gate.** Before creating `.plan-execution/`, run plan validation stages 1-4 from `validation-rules.md` Section 6:
+   - **Stage 1 (Structure):** Verify frontmatter, required sections, Phase 0 existence and contracts-agent assignment
+   - **Stage 2 (Dependencies):** Build dependency graph, run cycle detection (Kahn's algorithm), check for self-deps and undefined references
+   - **Stage 3 (Ownership):** Check for same-wave file ownership overlaps, verify deliverables fall within ownership boundaries
+   - **Stage 4 (Sizing):** Flag phases with >12 deliverables (blocking), 0 acceptance criteria (blocking), >8 deliverables (warning)
+
+   **If blocking errors found:** Display the full validation report and abort. Suggest the user run `/roadmap --refine` or `/roadmap --validate --deep` to fix issues before retrying.
+
+   **If warnings only:** Display the validation report and ask the user whether to proceed or fix first. Warnings do not block execution but may indicate plan quality issues.
+
+   **If clean:** Proceed to step 3.
+
+3. Analyze the plan to extract or infer:
    - Schema/type definitions (for contracts-agent)
    - Implementation tasks grouped into waves
    - File ownership per task
    - Verification commands (typecheck, test, lint)
    - Acceptance criteria per task
-3. Create `.plan-execution/` directory structure:
+4. Create `.plan-execution/` directory structure:
    - `.plan-execution/.gitignore` containing `*`
    - `.plan-execution/state.json` (initialized per schema)
    - `.plan-execution/rolling-context.md` (empty)
    - `.plan-execution/contracts/` directory
    - `.plan-execution/requests/` directory
-4. Create a git tag `plan-exec-start` for rollback safety
+5. Create a git tag `plan-exec-start` for rollback safety
 
 ### Step 2: Wave 0 — Contracts
 

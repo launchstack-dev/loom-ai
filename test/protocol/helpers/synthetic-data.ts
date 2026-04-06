@@ -17,6 +17,7 @@ import type {
   ContractEntry,
   CrossBoundaryRequest,
   CrossBoundaryRequestItem,
+  PhaseNode,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -249,4 +250,147 @@ export function createValidRequest(
       },
     ],
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan structures (for plan-validation tests)
+// ---------------------------------------------------------------------------
+
+export function createValidPlanStructure(): PhaseNode[] {
+  // Mirrors taskboard structure: Phase 0 (contracts), Phase 1 parallel tracks, Phase 2 wiring
+  return [
+    {
+      id: 0,
+      name: 'Shared Contracts',
+      wave: 0,
+      agent: 'contracts-agent',
+      objective: 'Create shared type definitions, database schema, and API contract types.',
+      dependencies: [],
+      fileOwnership: ['src/contracts/'],
+      deliverables: [
+        { file: 'src/contracts/types.ts', action: 'Create', owner: 'contracts-agent' },
+        { file: 'src/contracts/schema.sql', action: 'Create', owner: 'contracts-agent' },
+        { file: 'src/contracts/api-types.ts', action: 'Create', owner: 'contracts-agent' },
+      ],
+      acceptanceCriteria: [
+        'All types compile with `npx tsc --noEmit`',
+        'Types match the schema tables defined in this plan',
+        'Input types use optional fields for update operations',
+      ],
+    },
+    {
+      id: 1,
+      name: 'Data Layer',
+      wave: 1,
+      agent: 'implementer-agent',
+      objective: 'Implement SQLite database setup and repository functions.',
+      dependencies: [0],
+      fileOwnership: ['src/db/', 'src/repositories/'],
+      deliverables: [
+        { file: 'src/db/connection.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/db/migrate.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/repositories/user.repository.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/repositories/board.repository.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/repositories/task.repository.ts', action: 'Create', owner: 'implementer-agent' },
+      ],
+      acceptanceCriteria: [
+        'All repository functions use parameterized queries',
+        'UUID generation uses crypto.randomUUID()',
+        'All tests pass via `npx vitest run`',
+      ],
+    },
+    {
+      id: 2,
+      name: 'API Routes',
+      wave: 1,
+      agent: 'implementer-agent',
+      objective: 'Implement Express route handlers for all entities.',
+      dependencies: [0],
+      fileOwnership: ['src/routes/', 'src/middleware/'],
+      deliverables: [
+        { file: 'src/middleware/error-handler.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/middleware/validate.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/routes/user.routes.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/routes/board.routes.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/routes/task.routes.ts', action: 'Create', owner: 'implementer-agent' },
+      ],
+      acceptanceCriteria: [
+        'Routes access repositories through req.app.locals.repositories',
+        'All routes use try/catch and pass errors to next()',
+        'All tests pass via `npx vitest run`',
+      ],
+    },
+    {
+      id: 3,
+      name: 'Integration and Wiring',
+      wave: 2,
+      agent: 'wiring-agent',
+      objective: 'Wire together routes and repositories, create app entry point.',
+      dependencies: [1, 2],
+      fileOwnership: ['src/app.ts', 'src/index.ts'],
+      deliverables: [
+        { file: 'src/app.ts', action: 'Create', owner: 'wiring-agent' },
+        { file: 'src/index.ts', action: 'Create', owner: 'wiring-agent' },
+      ],
+      acceptanceCriteria: [
+        'createApp() with no arguments uses in-memory SQLite',
+        'All route prefixes match the API route table',
+        'Application starts without errors: `npx tsx src/index.ts`',
+      ],
+    },
+  ];
+}
+
+export function createBrokenPlanStructure(): PhaseNode[] {
+  // Mirrors broken-plan: no Phase 0, circular deps, oversized phase, shared ownership
+  return [
+    {
+      id: 1,
+      name: 'Base Infrastructure',
+      wave: 1,
+      agent: 'implementer-agent',
+      objective: 'Set up base models and routes.',
+      dependencies: [],
+      fileOwnership: ['src/models/', 'src/routes/'],
+      deliverables: [
+        { file: 'src/models/post.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/models/comment.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/routes/posts.ts', action: 'Create', owner: 'implementer-agent' },
+      ],
+      acceptanceCriteria: [], // Missing acceptance criteria
+    },
+    {
+      id: 2,
+      name: 'Feed Aggregation',
+      wave: 2,
+      agent: 'implementer-agent',
+      objective: 'Build feed aggregation service.',
+      dependencies: [3], // Circular: depends on Phase 3
+      fileOwnership: ['src/services/', 'src/utils/helpers.ts'], // Shared ownership on helpers.ts
+      deliverables: [
+        { file: 'src/services/feed.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/services/ranking.ts', action: 'Create', owner: 'implementer-agent' },
+        { file: 'src/utils/helpers.ts', action: 'Create', owner: 'implementer-agent' },
+      ],
+      acceptanceCriteria: ['Feed service returns sorted posts'],
+    },
+    {
+      id: 3,
+      name: 'Notifications and Realtime',
+      wave: 3,
+      agent: 'implementer-agent',
+      objective: 'Build notifications and websocket features.',
+      dependencies: [2], // Circular: depends on Phase 2
+      fileOwnership: ['src/notifications/', 'src/utils/helpers.ts', 'src/websocket/'],
+      deliverables: Array.from({ length: 16 }, (_, i) => ({
+        file: `src/websocket/file${i}.ts`,
+        action: 'Create',
+        owner: 'implementer-agent',
+      })), // Oversized: 16 deliverables
+      acceptanceCriteria: [
+        'All feeds load in under 200ms', // Unmeasurable perf criterion
+        'Notifications are delivered within 5 seconds',
+      ],
+    },
+  ];
 }

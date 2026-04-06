@@ -95,3 +95,116 @@ When processing `.plan-execution/requests/{taskId}.json`:
 2. **Requested files are valid**: Each `file` in `requests[]` must be a real path (or a path that will exist after wiring)
 3. **No self-requests**: An agent cannot request changes to files it already owns
 4. **Dedup**: If multiple agents request changes to the same file, flag for human review
+
+## 6. Plan Validation Rules
+
+Plan validation enforces the structural and semantic integrity of PLAN.md files. The authoritative format specification is `plan.schema.md` — these rules describe how orchestrators enforce that spec at runtime.
+
+### When Validation Runs
+
+Plan validation is triggered in four contexts:
+- **`/roadmap --init`** — after the plan-builder-agent generates a new plan
+- **`/roadmap --refine`** — after the plan-builder-agent refines an existing plan
+- **`/roadmap --validate`** — standalone validation (no generation, just check)
+- **`/execute-plan`** — as a gate in Step 1 before any agents are spawned
+
+If any **blocking** error is found, the pipeline halts and reports all errors to the user. **Warning**-level issues are reported but do not halt execution. **Info**-level issues are logged but not surfaced unless verbose mode is on.
+
+### Stage 1: Structure Parse — BLOCKING
+
+Validates that the plan conforms to the required document structure.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Frontmatter exists | blocking | YAML frontmatter with `---` delimiters must be present |
+| Required frontmatter fields | blocking | `planVersion`, `name`, `status`, `created`, `totalPhases`, `totalWaves` must all be present and non-null |
+| Title matches name | blocking | `# Plan: {name}` must match `frontmatter.name` |
+| Required sections present | blocking | Overview, Tech Stack, Schema / Type Definitions, Execution Phases, Verification Commands must all exist |
+| Section order | blocking | Required sections must appear in the order specified by plan.schema.md |
+| Phase 0 exists | blocking | At least one `### Phase 0` subsection must exist within Execution Phases |
+| Phase 0 is contracts | blocking | Phase 0 must have `Agent: contracts-agent`, `Wave: 0`, and `Dependencies: None` |
+| Phase field completeness | blocking | Every phase must have Agent, Objective, Dependencies, File Ownership, Deliverables table, and Acceptance Criteria |
+
+### Stage 2: Dependency Graph — BLOCKING
+
+Builds and validates the dependency DAG across all phases.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Cycle detection | blocking | Run Kahn's algorithm on the adjacency list. Any cycle = blocking error. Report the full cycle path. |
+| Self-dependencies | blocking | A phase cannot list itself in its Dependencies field |
+| Undefined references | blocking | Every phase number referenced in a Dependencies field must correspond to an existing phase |
+| Forward references | blocking | A phase cannot depend on a phase with a higher phase number |
+| Wave consistency | warning | A phase in Wave W should only depend on phases in Wave < W. Cross-wave dependencies that violate this are suspicious. |
+| Critical path | info | Compute the longest path through the DAG and report it. This is the minimum number of sequential waves required. |
+
+### Stage 3: File Ownership — BLOCKING / WARNING
+
+Validates that file ownership declarations are consistent and non-overlapping within waves.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Same-wave overlap | blocking | Two phases in the same wave MUST NOT claim the same file or overlapping directory globs |
+| Deliverable outside ownership | warning | Every file in a phase's Deliverables table should fall within that phase's declared File Ownership |
+| Cross-wave overlap | warning | A file owned by a phase in Wave N and also by a phase in Wave M (M > N) is allowed but flagged for awareness |
+| Empty ownership | warning | A phase with no File Ownership declaration is suspicious — flag it |
+
+### Stage 4: Sizing — BLOCKING / WARNING
+
+Validates that phases are appropriately sized for agent context windows.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| >12 deliverables | blocking | A phase with more than 12 deliverables must be split |
+| 0 acceptance criteria | blocking | Every phase must have at least one acceptance criterion |
+| >8 deliverables | warning | A phase with 9-12 deliverables should be reviewed for splitting opportunities |
+| <2 deliverables | warning | A phase with fewer than 2 deliverables should be reviewed for merging opportunities |
+| 1 acceptance criterion | warning | A phase with only 1 criterion may lack sufficient verification coverage |
+| Non-automatable criteria | warning | Criteria containing subjective language ("should work well", "good", "handles edge cases") are flagged |
+
+### Stage 5: Agent Feasibility — WARNING
+
+Estimates whether an agent can realistically complete a phase within its context window. This stage is optional and can be skipped for fast validation.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| >15 files-in | warning | A phase that must read more than 15 files from prior phases risks context overflow. Count all files in dependency phases' deliverables. |
+| >20 files-in | blocking | Hard limit — the phase must be split |
+| Deep check (optional) | info | If `agentic-workflow-agent` is available, delegate a deeper feasibility analysis that considers file sizes and complexity |
+
+### Stage 6: Schema Completeness — WARNING
+
+Validates that all type references in the plan resolve to definitions. This stage is optional and can be skipped for fast validation.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Undefined type references | warning | Entity names referenced in phase deliverables, acceptance criteria, or objectives that do not appear in the Schema / Type Definitions section |
+| Orphaned definitions | info | Types defined in Schema / Type Definitions that are never referenced by any phase (may indicate dead schema) |
+| Deep check (optional) | info | If `feature-coverage-agent` is available, delegate a deeper completeness analysis that cross-references the plan against the original project description |
+
+### Validation Output Format
+
+Validation results are reported as a structured list:
+
+```
+PLAN VALIDATION: {plan name}
+================================
+Stage 1 (Structure):    PASS
+Stage 2 (Dependencies): PASS
+Stage 3 (Ownership):    1 warning
+Stage 4 (Sizing):       FAIL — 2 blocking errors
+Stage 5 (Feasibility):  1 warning
+Stage 6 (Schema):       PASS
+================================
+RESULT: BLOCKED
+
+Blocking errors:
+  [Stage 4] Phase 5 has 14 deliverables (max 12)
+  [Stage 4] Phase 3 has 0 acceptance criteria
+
+Warnings:
+  [Stage 3] src/utils/helpers.ts owned by Phase 2 (Wave 1) and Phase 5 (Wave 2)
+  [Stage 5] Phase 4 reads 17 files from prior phases — consider splitting
+```
+
+When validation fails with blocking errors, the plan is returned to the plan-builder-agent in Validation Correction Mode for targeted fixes.
