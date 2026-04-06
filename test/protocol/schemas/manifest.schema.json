@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://meta-orchestration.local/schemas/manifest.schema.json",
   "title": "ContractManifest",
-  "description": "Manifest listing all contract files produced by the contracts-agent. Written to .plan-execution/contracts/manifest.json.",
+  "description": "Manifest listing all contract files produced by the contracts-agent. Written to .plan-execution/contracts/manifest.toon.",
   "type": "object",
   "required": ["contracts"],
   "properties": {

@@ -6,7 +6,7 @@ All orchestrators (`/execute-plan`, `/roadmap`) and all execution agents (`imple
 
 ## Progress File
 
-Each agent writes periodic updates to `.plan-execution/progress/{taskId}.json`.
+Each agent writes periodic updates to `.plan-execution/progress/{taskId}.toon`.
 
 ```json
 {
@@ -139,5 +139,5 @@ AgentProgress is **INFORMATIONAL** during execution. AgentResult is **AUTHORITAT
 The `.plan-execution/progress/` directory is:
 
 1. **Created** by the orchestrator at wave initialization.
-2. **Cleared** at the start of each wave (remove all `{taskId}.json` files).
+2. **Cleared** at the start of each wave (remove all `{taskId}.toon` files).
 3. **Not preserved** in wave summaries (ephemeral monitoring data).

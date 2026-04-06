@@ -38,7 +38,7 @@ You will receive:
    - One file per logical domain (e.g., `types.ts` for shared types, `schema.sql` for database, `api-types.ts` for API contracts)
    - Export all types — implementers will import from these files
 
-4. **Create the manifest.** Write `.plan-execution/contracts/manifest.json`:
+4. **Create the manifest.** Write `.plan-execution/contracts/manifest.toon`:
    ```json
    {
      "contracts": [
@@ -53,13 +53,13 @@ You will receive:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After analyzing plan specifications → `phase: "reading-contracts"`, `percentComplete: 10`
 2. After designing type structure → `phase: "implementing"`, `percentComplete: 30`
 3. After each contract file written → increment `percentComplete` proportionally, `phase: "writing-files"`
-4. After manifest.json written → `phase: "finalizing"`, `percentComplete: 100`
+4. After manifest.toon written → `phase: "finalizing"`, `percentComplete: 100`
 
 Write updates at least every 30 seconds. Each write must increment `checkpointCount` and set `heartbeatAt` to the current time.
 
@@ -75,7 +75,7 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
   "wave": 0,
   "taskId": "<provided>",
   "status": "success",
-  "filesCreated": [".plan-execution/contracts/types.ts", ".plan-execution/contracts/manifest.json"],
+  "filesCreated": [".plan-execution/contracts/types.ts", ".plan-execution/contracts/manifest.toon"],
   "filesModified": [],
   "filesDeleted": [],
   "exportsAdded": [

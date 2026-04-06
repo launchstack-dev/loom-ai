@@ -69,7 +69,7 @@ export function createValidAgentResult(
 }
 
 // ---------------------------------------------------------------------------
-// ExecutionState (state.json)
+// ExecutionState (state.toon)
 // ---------------------------------------------------------------------------
 
 function createWave(
@@ -114,7 +114,7 @@ function createWave(
     tasks,
     summaryFile:
       status === 'succeeded'
-        ? `.plan-execution/wave-${waveIndex}-summary.json`
+        ? `.plan-execution/wave-${waveIndex}-summary.toon`
         : null,
     verificationResult: {
       status: status === 'succeeded' ? 'pass' : null,

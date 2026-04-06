@@ -26,7 +26,7 @@ All of these must be present and non-null:
 
 ### On validation failure
 - Log which fields failed validation and the agent name
-- Mark the agent's task as `failed` in state.json
+- Mark the agent's task as `failed` in state.toon
 - Include validation errors in the wave summary
 - Do NOT silently accept malformed results — surface them to the user
 
@@ -75,7 +75,7 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 7. Continue pipeline
 ```
 
-## 4. State.json Integrity
+## 4. State.toon Integrity
 
 ### On write
 - Always use atomic writes (write to `.tmp`, rename)
@@ -89,7 +89,7 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 
 ## 5. Cross-Boundary Request Validation
 
-When processing `.plan-execution/requests/{taskId}.json`:
+When processing `.plan-execution/requests/{taskId}.toon`:
 
 1. **Source agent exists**: The `agent` field must match an agent that ran in the current wave
 2. **Requested files are valid**: Each `file` in `requests[]` must be a real path (or a path that will exist after wiring)
@@ -208,3 +208,22 @@ Warnings:
 ```
 
 When validation fails with blocking errors, the plan is returned to the plan-builder-agent in Validation Correction Mode for targeted fixes.
+
+## 7. Scope Coverage Validation
+
+### Pre-Execution Coverage Check
+Run after plan validation (Step 1) and before Wave 0.
+
+1. **Collect criteria**: For each phase, extract all `acceptanceCriteria` entries.
+2. **Map to tasks**: For each criterion, find task(s) whose `fileOwnership` or `objective` plausibly covers it. A criterion is covered if at least one task's objective or owned files overlap with the criterion's domain.
+3. **Write matrix**: Write `.plan-execution/scope-coverage.toon` with all criteria and their covering tasks.
+4. **Flag orphans**: Any criterion with `coveringTasks: []` gets `status: orphaned` and triggers a SCOPE REDUCTION warning.
+5. **User gate**: If orphaned criteria exist, display them and ask user to proceed / abort / assign manually.
+
+### Post-Wave Drift Check
+Run after each wave's verification pass.
+
+1. **Update statuses**: Mark criteria as `covered` when their covering task(s) succeed.
+2. **Detect drift**: If a task fails and won't be retried, its criteria become `orphaned` again.
+3. **Flag new orphans**: Display any newly orphaned criteria as SCOPE DRIFT warnings.
+4. **Status `dropped`**: If user explicitly acknowledges and dismisses an orphaned criterion, mark it `dropped`.

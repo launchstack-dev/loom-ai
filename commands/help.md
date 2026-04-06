@@ -20,7 +20,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/execute-plan [path]` | Execute a plan wave-by-wave with human approval gates |
 | `/execute-plan --init` | Scaffold a new PLAN.md template interactively |
 | `/execute-plan --dry-run` | Preview wave structure without executing |
-| `/execute-plan --resume` | Resume from `.plan-execution/state.json` |
+| `/execute-plan --resume` | Resume from `.plan-execution/state.toon` |
 | `/execute-plan --wave N` | Re-run a single wave |
 | `/execute-plan --contracts-only` | Run only Wave 0 (contracts) |
 | `/test-plan [path]` | Generate tests from plan acceptance criteria |
@@ -37,8 +37,11 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/review-code --full` | All reviewers including comments + types |
 | `/review-code --plan PLAN.md` | Include plan compliance check |
 | `/roadmap` | Show roadmap status (phases, milestones, progress) |
-| `/roadmap --init` | Create a new PLAN.md interactively |
+| `/roadmap --init` | Create a new PLAN.md interactively (includes discussion phase) |
 | `/roadmap --init --from "desc"` | Create a plan from a one-line description |
+| `/roadmap --discuss` | Run discussion phase to surface architectural decisions |
+| `/roadmap --no-discuss` | Skip the discussion phase |
+| `/roadmap --auto` | Accept all recommended defaults from discussion phase |
 | `/roadmap --validate` | Run plan validation pipeline (stages 1-4) |
 | `/roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
 | `/roadmap --refine` | Refine plan using review history |
@@ -60,6 +63,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 - `parallelization-agent` — Designs execution waves, merge strategy, conflict prevention
 - `agentic-workflow-agent` — Decomposes phases into context-bounded agent tasks
 - `plan-builder-agent` — Creates structured, execution-ready PLAN.md files from descriptions
+- `questioner-agent` — Surfaces architectural decisions before plan generation, writes CONTEXT.md
 
 **Execution** (spawned by `/execute-plan`):
 - `contracts-agent` — Wave 0: creates shared types, interfaces, schemas on disk
@@ -85,7 +89,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 ### Typical Workflow
 
 ```
-1. /roadmap --init            — create a structured PLAN.md interactively
+1. /roadmap --init            — discussion phase + structured PLAN.md creation
 2. /review-plan               — 5 agents analyze it in parallel
 3. /roadmap --review-integrate — apply review findings to the plan
 4. /roadmap --deps            — verify dependency graph + critical path
@@ -100,26 +104,28 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 ### Execution Pipeline
 
 ```
+Pre:    scope coverage check (maps criteria → tasks, flags orphans)
 Wave 0: contracts-agent → verify → human gate
-Wave N: implementer-agents (parallel) → wiring-agent → verify → human gate
+Wave N: implementer-agents (parallel) → wiring-agent → verify → scope drift check → human gate
         ↑ repeat for each wave
 ```
 
-Each agent returns a structured `AgentResult` JSON. State is tracked in `.plan-execution/state.json`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.json` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage.
+Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
 
 ### File Structure (during execution)
 
 ```
 .plan-execution/              — Ephemeral (gitignored)
-  state.json              — Execution state (resumable)
+  state.toon              — Execution state (resumable)
   rolling-context.md      — Compressed cross-wave context
   contracts/              — Shared types and interfaces
-    manifest.json         — Contract registry
+    manifest.toon         — Contract registry
   progress/               — Agent heartbeat files (monitoring)
-    {taskId}.json
+    {taskId}.toon
   requests/               — Cross-boundary change requests
-    {taskId}.json
-  wave-N-summary.json     — Per-wave results
+    {taskId}.toon
+  scope-coverage.toon     — Acceptance criteria coverage matrix
+  wave-N-summary.toon     — Per-wave results
 
 .plan-history/                — Persistent (git-tracked)
   reviews/                — /review-plan findings

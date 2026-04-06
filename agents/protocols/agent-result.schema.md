@@ -69,4 +69,4 @@ Standard return envelope for all execution agents. Every agent MUST return valid
 
 ## Relationship to Progress Reporting
 
-During execution, agents write periodic progress updates to `.plan-execution/progress/{taskId}.json` (see `agent-monitoring.schema.md`). AgentProgress is **informational** — the orchestrator uses it for dashboards and stale detection. AgentResult is **authoritative** — it is the final source of truth for files created, issues found, and task status. If progress data disagrees with the AgentResult, the AgentResult wins.
+During execution, agents write periodic progress updates to `.plan-execution/progress/{taskId}.toon` (see `agent-monitoring.schema.md`). AgentProgress is **informational** — the orchestrator uses it for dashboards and stale detection. AgentResult is **authoritative** — it is the final source of truth for files created, issues found, and task status. If progress data disagrees with the AgentResult, the AgentResult wins.

@@ -14,6 +14,9 @@ library:
     - name: execution-protocols
       description: Inter-agent protocol schemas for the meta-orchestration execution pipeline (AgentResult, state.json, execution conventions)
 
+    - name: toon-format-protocol
+      description: TOON (Token-Oriented Object Notation) format specification for all on-disk artifacts and agent communication
+
   agents:
     # Planning agents
     - name: feature-coverage-agent
@@ -69,6 +72,10 @@ library:
       description: Architecture drift detection - dependency direction, pattern consistency, contracts
 
     # Planning agents (extended)
+    - name: questioner-agent
+      description: Discussion phase agent - surfaces architectural decision points with structured options before plan generation
+      requires: [skill:execution-protocols]
+
     - name: plan-builder-agent
       description: Creates structured, execution-ready PLAN.md files from project descriptions
 
@@ -98,7 +105,7 @@ library:
 
     - name: roadmap
       description: Create, track, refine, and visualize project plans and milestones
-      requires: [agent:plan-builder-agent]
+      requires: [agent:plan-builder-agent, agent:questioner-agent]
 
     - name: help
       description: Shows meta-orchestration system reference

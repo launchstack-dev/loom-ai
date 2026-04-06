@@ -14,7 +14,7 @@ You execute after implementer agents complete a wave but before verification. Yo
 
 You will receive:
 1. **All implementer AgentResults** from the wave (JSON array)
-2. **Contract manifest** — the manifest.json from `.plan-execution/contracts/`
+2. **Contract manifest** — the manifest.toon from `.plan-execution/contracts/`
 3. **Wave index** — which wave just completed
 4. **Project conventions** — how the project organizes imports, routes, etc.
 
@@ -35,7 +35,7 @@ You will read:
    - All cross-boundary requests
    - All integration notes
 
-2. **Process cross-boundary requests.** Read `.plan-execution/requests/*.json`. For each request:
+2. **Process cross-boundary requests.** Read `.plan-execution/requests/*.toon`. For each request:
    - Evaluate if the change is safe and consistent with contracts
    - Apply the suggested change if appropriate
    - Flag conflicts or ambiguous requests as issues
@@ -62,7 +62,7 @@ You will read:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After parsing all AgentResults → `phase: "reading-contracts"`, `percentComplete: 15`

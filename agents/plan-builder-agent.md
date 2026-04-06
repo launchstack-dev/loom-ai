@@ -20,6 +20,17 @@ The orchestrator provides:
 
 Before writing any plan content, work through these 6 steps IN ORDER. Show your reasoning for each step.
 
+### Honor Locked Decisions
+
+If a `CONTEXT.md` file path is provided:
+1. Read `CONTEXT.md` from the project root
+2. For each locked decision:
+   - Use the chosen option as a constraint in plan decomposition
+   - Reference the decision ID (e.g., D-01) in relevant phase objectives
+   - Do NOT suggest alternatives that contradict locked decisions
+3. If a decision affects schema (e.g., database choice), incorporate it into Phase 0 contracts
+4. If a decision affects architecture (e.g., monolith vs microservices), reflect it in phase boundaries
+
 ### Step 1: Entity Discovery
 What are the core data entities? For each entity, identify:
 - Fields with types and constraints
@@ -121,7 +132,7 @@ When refining an existing plan during execution:
 1. **Locked phases** (completed waves): DO NOT modify these. Their deliverables are already written.
 2. **In-progress phases** (current wave): Confirm with the user before any changes.
 3. **Pending phases** (future waves): Freely modifiable.
-4. Preserve phase numbering for locked phases — renumbering would break state.json references.
+4. Preserve phase numbering for locked phases — renumbering would break state.toon references.
 5. When adding phases, use the next available phase number.
 
 ## Phase 0 Requirements

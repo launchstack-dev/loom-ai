@@ -13,7 +13,7 @@ You receive via prompt:
 1. **Plan file** — The PLAN.md (or equivalent)
 2. **Changed files** — `git diff` output or list of files to review
 3. **Phase/wave** (optional) — Which phase is being reviewed. Default: infer from file paths.
-4. **Contract manifest** (optional) — Path to `.plan-execution/contracts/manifest.json`
+4. **Contract manifest** (optional) — Path to `.plan-execution/contracts/manifest.toon`
 
 ## Process
 

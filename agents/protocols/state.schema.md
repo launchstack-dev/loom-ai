@@ -1,6 +1,6 @@
 # Execution State Schema
 
-Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to `.plan-execution/state.json`.
+Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to `.plan-execution/state.toon`.
 
 ## Schema
 
@@ -33,7 +33,7 @@ Tracks execution progress for resume, auditing, and orchestrator decision-making
           "completedAt": "string | null"
         }
       ],
-      "summaryFile": "string | null — path to wave-N-summary.json",
+      "summaryFile": "string | null — path to wave-N-summary.toon",
       "verificationResult": {
         "status": "pass | fail | null",
         "checks": [
@@ -60,7 +60,7 @@ Tracks execution progress for resume, auditing, and orchestrator decision-making
 
 ## Rules
 
-1. **Atomic writes.** Always write to `state.json.tmp` then rename to `state.json`. Never write directly.
+1. **Atomic writes.** Always write to `state.toon.tmp` then rename to `state.toon`. Never write directly.
 2. **Update `updatedAt`** on every state change.
 3. **Lock file.** Before starting execution, write PID to `.plan-execution/.lock`. Check on startup — if lock exists and PID is alive, abort with error.
 4. **Drift detection on resume.** Before `--resume`, compare current file hashes against `fileHashes` from the last completed wave. Warn if any differ.

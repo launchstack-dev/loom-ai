@@ -11,7 +11,7 @@ Parse arguments:
 - `path/to/plan`: execute that specific plan file
 - `--init`: scaffold a PLAN.md template interactively, then stop
 - `--dry-run`: show the wave structure without executing
-- `--resume`: resume from `.plan-execution/state.json`
+- `--resume`: resume from `.plan-execution/state.toon`
 - `--wave N`: re-run only wave N using existing contracts and prior outputs
 - `--contracts-only`: run only Wave 0 (contracts agent), then stop
 - `--rollback-wave N`: revert to the git state before wave N
@@ -34,7 +34,7 @@ Check for `.claude/orchestration.toml` in the project root. If it exists, read t
 - `post-implementer` — after implementer-agents, before wiring (e.g., seed data, API docs)
 - `post-wiring` — after wiring-agent, before verification (e.g., integration setup)
 
-Spawn project-specific agents at their declared phase using `subagent_type: "general-purpose"` with the agent's `.md` file contents embedded in the prompt. Agents with `outputRole: producer` return standard `AgentResult` and create files tracked in state.json.
+Spawn project-specific agents at their declared phase using `subagent_type: "general-purpose"`. In the prompt, tell the agent to read its instructions from the `.md` file path declared in `orchestration.toml` — do NOT embed the file contents. Agents with `outputRole: producer` return standard `AgentResult` and create files tracked in state.toon.
 
 If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limit when spawning.
 
@@ -57,12 +57,12 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
 3. Display the proposed structure and stop
 
 **If `--rollback-wave N`:**
-1. Read `.plan-execution/state.json`
+1. Read `.plan-execution/state.toon`
 2. Find the git tag/stash for wave N: `plan-exec-wave-N-pre`
 3. Confirm with user, then restore
 
 **If `--resume`:**
-1. Read `.plan-execution/state.json`
+1. Read `.plan-execution/state.toon`
 2. Check for drift: compare current file hashes against `fileHashes` from last completed wave
 3. If drift detected, warn user and ask whether to proceed
 4. Jump to the appropriate step in the main loop below
@@ -91,40 +91,63 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
    - Acceptance criteria per task
 4. Create `.plan-execution/` directory structure:
    - `.plan-execution/.gitignore` containing `*`
-   - `.plan-execution/state.json` (initialized per schema)
+   - `.plan-execution/state.toon` (initialized per schema)
    - `.plan-execution/rolling-context.md` (empty)
    - `.plan-execution/contracts/` directory
    - `.plan-execution/requests/` directory
    - `.plan-execution/progress/` directory (for agent monitoring)
 5. Create a git tag `plan-exec-start` for rollback safety
 
+### Step 1.5: Scope Coverage Check
+
+1. For each phase in the plan, collect all `acceptanceCriteria` entries
+2. For each criterion, identify task(s) that cover it by matching:
+   - File ownership overlap (task owns files in the criterion's domain)
+   - Objective keyword matching (task objective addresses the criterion)
+3. Write `.plan-execution/scope-coverage.toon`:
+   ```toon
+   criteria[N]{phaseId,criterion,coveringTasks,status}:
+     0,All types compile with npx tsc --noEmit,w0-contracts,pending
+     1,All repository functions use parameterized queries,w1-data-layer,pending
+     2,Routes access repositories through req.app.locals,w1-api-routes,pending
+   ```
+4. If any criterion has 0 covering tasks (orphaned):
+   ```
+   ⚠ SCOPE REDUCTION: N acceptance criteria have no covering tasks:
+
+   Phase 2, Criterion: "Dashboard renders user list"
+     → No task owns UI files or has matching objective
+
+   Options: proceed anyway / abort / assign manually
+   ```
+5. Wait for user decision before proceeding
+
 ### Step 2: Wave 0 — Contracts
 
-1. Update state.json: wave 0 = in_progress
+1. Update state.toon: wave 0 = in_progress
 2. Create a git tag `plan-exec-wave-0-pre`
-3. Read `~/.claude/agents/contracts-agent.md` for the agent's full instructions
-4. Spawn a single Agent (general-purpose) with:
-   - The contracts-agent instructions embedded in the prompt
+3. Spawn a single Agent (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/contracts-agent.md` first."
    - The schema/type specifications extracted from the plan
    - The output directory: `.plan-execution/contracts/`
-   - Instruction to return an AgentResult JSON as the last block of output
+   - Instruction to return an AgentResult as the last block of output
 
 5. Parse the AgentResult from the agent's return value
-6. Write `wave-0-summary.json` and `wave-0-summary.md`
+6. Write `wave-0-summary.toon` and `wave-0-summary.md`
 7. Update `rolling-context.md` with Wave 0 as HOT entry
-8. Update state.json: wave 0 tasks complete
+8. Update state.toon: wave 0 tasks complete
 
 **If `--contracts-only`:** Display results and stop here.
 
 ### Step 3: Verify Wave 0
 
-1. Read `~/.claude/agents/verification-agent.md`
-2. Spawn verification-agent with:
+1. Spawn verification-agent (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/verification-agent.md` first."
    - Verification commands from the plan (or auto-detect: try `npm run typecheck`, `npm test`, etc.)
    - File ownership: `{"contracts-agent": [list of files from AgentResult]}`
    - Wave index: 0
 3. Parse verification AgentResult
-4. Update state.json with verification result
+4. Update state.toon with verification result
 
 ### Step 4: Human Approval Gate
 
@@ -151,29 +174,29 @@ Wait for user approval before continuing.
 
 For each implementation wave (1, 2, ...):
 
-1. Update state.json: wave N = in_progress
+1. Update state.toon: wave N = in_progress
 2. Create git tag `plan-exec-wave-N-pre`
-3. Read `~/.claude/agents/implementer-agent.md`
-4. Read `rolling-context.md`
-5. For each task in this wave, prepare the implementer prompt:
+3. Read `rolling-context.md`
+4. For each task in this wave, prepare the implementer prompt:
+   - Instruction: "Read your instructions from `~/.claude/agents/implementer-agent.md` first."
    - Task objective and acceptance criteria
    - File ownership list for this specific task
-   - **Specific** contract file paths relevant to this task (from manifest.json)
+   - **Specific** contract file paths relevant to this task (from manifest.toon)
    - Rolling context content
    - Technology stack and conventions
-6. **Clear progress directory:** Remove all `*.json` files from `.plan-execution/progress/` (fresh wave).
+5. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
 
-7. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
-   - Each agent is `general-purpose` with implementer-agent instructions embedded
+6. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
+   - Each agent is `general-purpose` — it reads its own instructions from disk
    - Each agent gets its own scoped prompt (different file ownership, different task)
-   - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/progress/{taskId}.json`
+   - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/progress/{taskId}.toon`
    - Use `run_in_background: true` for all agents
 
 8. **Monitor agents via polling loop** (per `agent-monitoring.schema.md`):
 
    While any agent has not completed:
    1. Wait 15 seconds (`pollIntervalSeconds`)
-   2. Read `.plan-execution/progress/{taskId}.json` for each running agent
+   2. Read `.plan-execution/progress/{taskId}.toon` for each running agent
    3. Classify each agent:
       - **reporting** — progress file exists, `heartbeatAt` within 90s
       - **silent** — no progress file (agent may not support protocol or just started)
@@ -213,14 +236,14 @@ If blocking conflicts found, report to user and ask how to proceed.
 
 ### Step 7: Wiring Pass
 
-1. Read `~/.claude/agents/wiring-agent.md`
-2. Spawn wiring-agent with:
-   - All implementer AgentResults as JSON in the prompt
-   - Contract manifest
+1. Spawn wiring-agent (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/wiring-agent.md` first."
+   - All implementer AgentResults in the prompt
+   - Contract manifest path
    - Wave index
    - Project conventions
 3. Parse wiring AgentResult
-4. Write `wave-N-summary.json` and `wave-N-summary.md`
+4. Write `wave-N-summary.toon` and `wave-N-summary.md`
 
 ### Step 8: Verify Wave N
 
@@ -236,9 +259,15 @@ Same as Step 3 but for wave N:
    - Oldest WARM becomes COLD (compress to one-line)
    - Target: keep under 10k tokens total
 
-2. Update state.json: wave N complete, store file hashes
+2. Update state.toon: wave N complete, store file hashes
 
-3. **Human approval gate** — same format as Step 4:
+3. **Scope drift check:**
+   - Read `.plan-execution/scope-coverage.toon`
+   - For each task that succeeded in this wave, mark its criteria as `covered`
+   - For each task that failed and won't be retried (`retryCount >= 2`), mark its criteria as `orphaned`
+   - If new orphans detected, display SCOPE DRIFT warning before the human gate
+
+4. **Human approval gate** — same format as Step 4:
    - Show files changed, verification results
    - Show next wave preview
    - Ask: proceed / re-run wave / abort
@@ -264,7 +293,7 @@ Use --resume if you need to re-run any wave.
 ## Error Handling
 
 ### Agent failure (timeout or error)
-- Mark the task as failed in state.json (increment retryCount)
+- Mark the task as failed in state.toon (increment retryCount)
 - If retryCount < 2: retry with error context added to prompt
 - If retryCount >= 2: report failure, ask user: skip task / abort wave / abort run
 - Other tasks in the wave that succeeded are preserved
@@ -275,7 +304,7 @@ Use --resume if you need to re-run any wave.
 
 ### Unexpected state
 - If `.plan-execution/.lock` exists with a live PID, abort with warning
-- If state.json is missing or corrupt, offer to reinitialize
+- If state.toon is missing or corrupt, offer to reinitialize
 
 ## Runtime Feedback
 

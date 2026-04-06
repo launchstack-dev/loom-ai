@@ -98,4 +98,4 @@ Return a standard `AgentResult` JSON with:
 
 ## File Ownership
 
-You may ONLY create/modify files listed in your file ownership. These will typically be `**/*.test.ts` or `**/__tests__/**` patterns. If you need a test helper that lives outside your ownership, write a cross-boundary request to `.plan-execution/requests/{taskId}.json`.
+You may ONLY create/modify files listed in your file ownership. These will typically be `**/*.test.ts` or `**/__tests__/**` patterns. If you need a test helper that lives outside your ownership, write a cross-boundary request to `.plan-execution/requests/{taskId}.toon`.

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { encode, decode } from '@toon-format/toon';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,16 @@ import {
   createValidManifest,
   createValidRequest,
 } from './helpers/synthetic-data.js';
+
+/**
+ * TOON roundtrip helper: encode JS object to TOON, decode back, verify fidelity.
+ * Returns the decoded object for further AJV validation.
+ */
+function toonRoundtrip<T>(data: T): T {
+  const encoded = encode(data);
+  const decoded = decode(encoded);
+  return decoded as T;
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -132,10 +143,10 @@ describe('Schema Validation', () => {
   });
 
   // -----------------------------------------------------------------------
-  // ExecutionState (state.json)
+  // ExecutionState (state.toon)
   // -----------------------------------------------------------------------
 
-  describe('State.json', () => {
+  describe('State (TOON roundtrip)', () => {
     it('validates a state with 2 waves', () => {
       const state = createValidState(2);
       const valid = validateState(state);
@@ -239,6 +250,64 @@ describe('Schema Validation', () => {
         console.error('CrossBoundary errors:', validateCrossBoundary.errors);
       }
       expect(valid).toBe(true);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // TOON Roundtrip Fidelity — encode→decode→validate for all schemas
+  // -----------------------------------------------------------------------
+
+  describe('TOON Roundtrip', () => {
+    it('AgentResult survives TOON roundtrip and validates', () => {
+      const original = createValidAgentResult();
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateAgentResult(roundtripped)).toBe(true);
+    });
+
+    it('ExecutionState survives TOON roundtrip and validates', () => {
+      const original = createValidState(2);
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateState(roundtripped)).toBe(true);
+    });
+
+    it('WaveSummary survives TOON roundtrip and validates', () => {
+      const results = [createValidAgentResult()];
+      const original = createValidWaveSummary(0, results);
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateWaveSummary(roundtripped)).toBe(true);
+    });
+
+    it('Manifest survives TOON roundtrip and validates', () => {
+      const original = createValidManifest();
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateManifest(roundtripped)).toBe(true);
+    });
+
+    it('CrossBoundaryRequest survives TOON roundtrip and validates', () => {
+      const original = createValidRequest();
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateCrossBoundary(roundtripped)).toBe(true);
+    });
+
+    it('AgentResult with empty arrays survives roundtrip', () => {
+      const original = createValidAgentResult({
+        filesCreated: [],
+        filesModified: [],
+        filesDeleted: [],
+        exportsAdded: [],
+        dependenciesAdded: [],
+        issues: [],
+        contractAmendments: [],
+        crossBoundaryRequests: [],
+      });
+      const roundtripped = toonRoundtrip(original);
+      expect(roundtripped).toEqual(original);
+      expect(validateAgentResult(roundtripped)).toBe(true);
     });
   });
 });

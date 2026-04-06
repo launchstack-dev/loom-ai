@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://meta-orchestration.local/schemas/state.schema.json",
   "title": "ExecutionState",
-  "description": "Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to .plan-execution/state.json.",
+  "description": "Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to .plan-execution/state.toon.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -113,7 +113,7 @@
         },
         "summaryFile": {
           "type": ["string", "null"],
-          "description": "Path to wave-N-summary.json"
+          "description": "Path to wave-N-summary.toon"
         },
         "verificationResult": {
           "$ref": "#/$defs/VerificationResult"

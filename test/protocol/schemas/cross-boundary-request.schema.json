@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://meta-orchestration.local/schemas/cross-boundary-request.schema.json",
   "title": "CrossBoundaryRequest",
-  "description": "A request from one agent to modify files outside its ownership boundary. Written to .plan-execution/requests/{taskId}.json.",
+  "description": "A request from one agent to modify files outside its ownership boundary. Written to .plan-execution/requests/{taskId}.toon.",
   "type": "object",
   "required": ["taskId", "agent", "requests"],
   "properties": {

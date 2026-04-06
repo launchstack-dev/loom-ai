@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://meta-orchestration.local/schemas/wave-summary.schema.json",
   "title": "WaveSummary",
-  "description": "Machine-readable summary of a completed wave, written to .plan-execution/wave-N-summary.json.",
+  "description": "Machine-readable summary of a completed wave, written to .plan-execution/wave-N-summary.toon.",
   "type": "object",
   "required": [
     "wave",

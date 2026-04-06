@@ -8,18 +8,19 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 .plan-execution/
 ├── .lock                       # PID lock file — prevents concurrent runs
 ├── .gitignore                  # Auto-generated: ignores everything in this dir
-├── state.json                  # Execution state (see state.schema.md)
+├── state.toon                  # Execution state (see state.schema.md)
 ├── rolling-context.md          # Tiered summary of all prior waves
 ├── contracts/                  # Wave 0 output — shared types/schemas
-│   ├── manifest.json           # Lists all contract files + their purpose
+│   ├── manifest.toon           # Lists all contract files + their purpose
 │   └── [contract files]        # e.g., types.ts, schema.sql, api-contract.ts
 ├── progress/                   # Agent heartbeat files (ephemeral, cleared per wave)
-│   └── {taskId}.json           # Per-agent progress — see agent-monitoring.schema.md
+│   └── {taskId}.toon           # Per-agent progress — see agent-monitoring.schema.md
 ├── requests/                   # Cross-boundary requests from implementers
-│   └── {taskId}.json           # One file per request
-├── wave-0-summary.json         # Machine-readable wave summary
+│   └── {taskId}.toon           # One file per request
+├── scope-coverage.toon         # Acceptance criteria coverage matrix
+├── wave-0-summary.toon         # Machine-readable wave summary
 ├── wave-0-summary.md           # Human-readable wave summary
-├── wave-1-summary.json
+├── wave-1-summary.toon
 ├── wave-1-summary.md
 └── ...
 ```
@@ -28,7 +29,7 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 
 ### Contract files
 - Use descriptive names: `types.ts`, `schema.sql`, `api-types.ts`, `db-models.ts`
-- Always include a `manifest.json`:
+- Always include a `manifest.toon`:
   ```json
   {
     "contracts": [
@@ -39,7 +40,7 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
   ```
 
 ### Wave summaries
-- `wave-N-summary.json` — machine-readable, follows this structure:
+- `wave-N-summary.toon` — machine-readable, follows this structure:
   ```json
   {
     "wave": 0,
@@ -52,7 +53,7 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 - `wave-N-summary.md` — human-readable narrative for inspection
 
 ### Cross-boundary requests
-- `requests/{taskId}.json`:
+- `requests/{taskId}.toon`:
   ```json
   {
     "taskId": "string",
@@ -65,21 +66,22 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 
 ## Data Formats — TOON vs JSON
 
-The system uses two data formats for different purposes:
+TOON (Token-Oriented Object Notation) is the **default format for all runtime artifacts**. See `agents/protocols/toon-format.md` for the full spec.
 
-### JSON — Storage and Validation
-- **state.json**, **manifest.json**, **wave-N-summary.json** — on-disk persistence
-- Schema validation via AJV against `*.schema.json` files
-- Machine-to-machine data exchange
-
-### TOON (Token-Oriented Object Notation) — Agent Communication
+### TOON — Runtime Artifacts (Default)
+- **state.toon**, **manifest.toon**, **wave-N-summary.toon** — on-disk persistence
+- **progress/{taskId}.toon**, **requests/{taskId}.toon** — ephemeral runtime files
 - Agent prompts and inter-agent data in rolling-context.md
 - Review findings passed between agents
 - Any structured data embedded in LLM context
 
 TOON achieves **30-60% token reduction** vs JSON while maintaining lossless roundtrip fidelity.
 
-**Conversion rule:** Orchestrators convert JSON to TOON before injecting into agent prompts, and parse TOON back to JSON when collecting agent output.
+### JSON — Schema Definitions Only
+- `*.schema.json` files for AJV validation
+- `package.json`, `tsconfig.json` — toolchain configs (not owned by this system)
+
+**Conversion rule:** Orchestrators validate against `*.schema.json` by decoding TOON to in-memory objects, then running AJV. On-disk artifacts remain TOON.
 
 ### TOON Format Quick Reference
 
@@ -111,6 +113,22 @@ contractAmendments[0]:
 
 **npm package:** `@toon-format/toon` — `encode(json)` and `decode(toon)` for lossless conversion.
 
+## Agent Instruction Loading (Lean Orchestrator Pattern)
+
+Orchestrators MUST NOT embed full agent `.md` file contents in spawned agent prompts. Instead:
+
+1. **Pass the file path.** Include an instruction like: `"Read your instructions from ~/.claude/agents/{name}.md first."`
+2. **The agent reads its own instructions from disk** as its first action.
+3. **Orchestrator context stays lean** — only task-specific data (file ownership, acceptance criteria, contract paths, rolling context) goes in the prompt.
+
+**Why:** Embedding agent .md content inflates every spawned prompt by 2-5K tokens of identical text. When an orchestrator spawns 4+ parallel agents per wave across multiple waves, this compounds. Agents already read files from disk (contracts, rolling-context) — their own instructions are no different.
+
+**Built-in agents** (via `subagent_type: "agent-name"`) handle this automatically — their instructions are resolved by the agent registry. This convention applies to:
+- Execution agents spawned as `general-purpose` (contracts-agent, implementer-agent, wiring-agent, verification-agent)
+- Project-specific agents from `orchestration.toml`
+- Bespoke reviewers (security-reviewer, architecture-reviewer, plan-compliance-reviewer)
+- Plan-builder-agent (also reads `plan.schema.md` from disk)
+
 ## Atomic Writes
 
 All agents and the orchestrator MUST use atomic writes for shared state:
@@ -123,7 +141,7 @@ This prevents partial reads of corrupted state.
 
 1. **One owner per file.** No two implementer-agents may modify the same file in the same wave.
 2. **Ownership is explicit.** Each implementer receives an exact list of files it may create/modify in its prompt.
-3. **Cross-boundary needs → request file.** If an implementer needs a file outside its boundary, it writes to `.plan-execution/requests/{taskId}.json`. The wiring-agent processes these.
+3. **Cross-boundary needs → request file.** If an implementer needs a file outside its boundary, it writes to `.plan-execution/requests/{taskId}.toon`. The wiring-agent processes these.
 4. **Wiring-agent owns shared files.** Package.json, barrel/index files, route registrations, and migration files are explicitly owned by the wiring-agent.
 5. **Contracts are read-only after Wave 0.** No agent may modify contract files after the contracts-agent completes. If amendments are needed, the orchestrator decides whether to re-run Wave 0.
 
@@ -143,7 +161,7 @@ This prevents partial reads of corrupted state.
 ### What agents NEVER read
 - Raw wave-N-summary files (the rolling-context.md replaces these)
 - Other agents' full output (only the orchestrator sees this)
-- state.json (only the orchestrator reads/writes this)
+- state.toon (only the orchestrator reads/writes this)
 
 ## Tiered Context Compression (rolling-context.md)
 

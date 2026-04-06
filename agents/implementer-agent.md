@@ -34,7 +34,7 @@ You will receive:
 
 4. **Handle cross-boundary needs.** If you discover you need to modify a file outside your ownership:
    - Do NOT modify it
-   - Write a request to `.plan-execution/requests/{taskId}.json`:
+   - Write a request to `.plan-execution/requests/{taskId}.toon`:
      ```json
      {
        "taskId": "your-task-id",
@@ -52,7 +52,7 @@ You will receive:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After reading contracts and existing code → `phase: "reading-contracts"`, `percentComplete: 10`

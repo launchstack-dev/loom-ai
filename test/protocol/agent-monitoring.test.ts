@@ -17,6 +17,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { encode, decode } from '@toon-format/toon';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -638,6 +639,27 @@ describe('Agent Monitoring — Schema Validation', () => {
   it('rejects currentActivity exceeding maxLength 120', () => {
     const progress = createValidAgentProgress({ currentActivity: 'x'.repeat(121) });
     expect(validate(progress)).toBe(false);
+  });
+
+  it('AgentProgress survives TOON roundtrip and validates', () => {
+    const original = createValidAgentProgress();
+    const encoded = encode(original);
+    const decoded = decode(encoded);
+    expect(decoded).toEqual(original);
+    expect(validate(decoded)).toBe(true);
+  });
+
+  it('AgentProgress timeline entries survive TOON roundtrip', () => {
+    const timeline = createProgressTimeline(
+      'w1-test', 'implementer-agent', 1,
+      ['src/a.ts', 'src/b.ts'],
+      { startTime: new Date('2025-06-15T10:00:00Z'), intervalMs: 30_000 },
+    );
+    for (const entry of timeline) {
+      const decoded = decode(encode(entry));
+      expect(decoded).toEqual(entry);
+      expect(validate(decoded)).toBe(true);
+    }
   });
 });
 

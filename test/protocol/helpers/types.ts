@@ -50,7 +50,7 @@ export interface AgentResult {
 }
 
 // ---------------------------------------------------------------------------
-// ExecutionState — state.json from state.schema.json
+// ExecutionState — state.toon from state.schema.json
 // ---------------------------------------------------------------------------
 
 export type RunStatus = 'initializing' | 'running' | 'paused' | 'completed' | 'failed';
@@ -106,7 +106,7 @@ export interface ExecutionState {
 }
 
 // ---------------------------------------------------------------------------
-// WaveSummary — wave-N-summary.json
+// WaveSummary — wave-N-summary.toon
 // ---------------------------------------------------------------------------
 
 export interface WaveSummaryIssue {
@@ -126,7 +126,7 @@ export interface WaveSummary {
 }
 
 // ---------------------------------------------------------------------------
-// ContractManifest — contracts/manifest.json
+// ContractManifest — contracts/manifest.toon
 // ---------------------------------------------------------------------------
 
 export interface ContractEntry {
@@ -140,7 +140,7 @@ export interface ContractManifest {
 }
 
 // ---------------------------------------------------------------------------
-// CrossBoundaryRequest — requests/{taskId}.json
+// CrossBoundaryRequest — requests/{taskId}.toon
 // ---------------------------------------------------------------------------
 
 export interface CrossBoundaryRequestItem {
@@ -259,7 +259,7 @@ export interface PlanValidationResult {
 }
 
 // ---------------------------------------------------------------------------
-// Agent monitoring — .plan-execution/progress/{taskId}.json
+// Agent monitoring — .plan-execution/progress/{taskId}.toon
 // ---------------------------------------------------------------------------
 
 export type AgentPhase =
@@ -330,4 +330,21 @@ export interface Conflict {
   file: string;
   agents: string[];
   type: 'modified' | 'created' | 'directory';
+}
+
+// ---------------------------------------------------------------------------
+// Scope coverage — .plan-execution/scope-coverage.toon
+// ---------------------------------------------------------------------------
+
+export type ScopeCriterionStatus = 'pending' | 'covered' | 'orphaned' | 'dropped';
+
+export interface ScopeCoverageCriterion {
+  phaseId: number;
+  criterion: string;
+  coveringTasks: string[];
+  status: ScopeCriterionStatus;
+}
+
+export interface ScopeCoverage {
+  criteria: ScopeCoverageCriterion[];
 }

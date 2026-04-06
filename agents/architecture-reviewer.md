@@ -13,7 +13,7 @@ You receive via prompt:
 1. **Changed files** — `git diff` output or list of files to review
 2. **Project structure** — top-level directory listing (`ls -la src/`)
 3. **Plan file** (optional) — PLAN.md for intended architecture
-4. **Contract manifest** (optional) — `.plan-execution/contracts/manifest.json`
+4. **Contract manifest** (optional) — `.plan-execution/contracts/manifest.toon`
 5. **CLAUDE.md** (optional) — project conventions
 
 ## Process
@@ -55,7 +55,7 @@ If contracts exist (`.plan-execution/contracts/`):
 ### Step 5: Check Boundary Violations
 
 In the context of the execution pipeline:
-- Read file ownership from the plan or state.json
+- Read file ownership from the plan or state.toon
 - Flag if changes touch files outside the declared ownership
 - Check for circular dependencies between modules
 

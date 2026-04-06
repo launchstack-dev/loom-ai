@@ -36,7 +36,7 @@ If no arguments are provided, look for a PLAN.md in the current working director
    - **parallelization-agent** — Design multi-agent execution waves and merge strategy
    - **agentic-workflow-agent** — Decompose phases into discrete context-bounded tasks for AI agents
 
-   For each built-in agent, use `subagent_type` matching the agent name. For project-specific agents from `orchestration.toml`, use `subagent_type: "general-purpose"` and embed the agent's `.md` file contents as instructions in the prompt. Include the full plan content in each prompt along with the instruction: "Review this plan from your specialized perspective and produce your structured report."
+   For each built-in agent, use `subagent_type` matching the agent name. For project-specific agents from `orchestration.toml`, use `subagent_type: "general-purpose"` and instruct the agent to read its own `.md` file from the path declared in `orchestration.toml` — do NOT embed the file contents. Include the full plan content in each prompt along with the instruction: "Review this plan from your specialized perspective and produce your structured report."
 
    Project-specific agents with `outputRole: blocker` must pass (no blocking findings) before proceeding to synthesis. Agents with `outputRole: reviewer` are included in the synthesis like built-in agents.
 

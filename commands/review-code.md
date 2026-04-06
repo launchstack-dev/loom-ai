@@ -19,7 +19,7 @@ Parse arguments:
 
 ## Project-Specific Reviewers
 
-Check for `.claude/orchestration.toml` in the project root. If it exists, read the `review:` section to discover app-specific review agents. Each declares which `modes` it participates in (quick, default, full). Spawn them alongside the built-in + bespoke reviewers using `subagent_type: "general-purpose"` with the agent's `.md` file embedded as instructions. Their findings are merged into the unified report with a custom tag based on their name (e.g., `[HIPAA]` for `hipaa-security-reviewer`).
+Check for `.claude/orchestration.toml` in the project root. If it exists, read the `review:` section to discover app-specific review agents. Each declares which `modes` it participates in (quick, default, full). Spawn them alongside the built-in + bespoke reviewers using `subagent_type: "general-purpose"` — instruct each agent to read its own `.md` file from the path declared in `orchestration.toml`. Their findings are merged into the unified report with a custom tag based on their name (e.g., `[HIPAA]` for `hipaa-security-reviewer`).
 
 ## Instructions
 
@@ -48,7 +48,7 @@ Also gather context:
 - `git diff --stat` for file summary
 - Read `CLAUDE.md` if it exists (project conventions)
 - Read `package.json` for tech stack
-- Read `.plan-execution/contracts/manifest.json` if it exists
+- Read `.plan-execution/contracts/manifest.toon` if it exists
 - `ls src/` for project structure
 
 ### Step 1: Fan Out — Built-in Reviewers (parallel)
@@ -102,23 +102,23 @@ Input: The git diff, filtered to type definitions.
 Launch these custom agents simultaneously using Agent tool with `subagent_type: "general-purpose"`.
 
 #### 2a. Security Reviewer
-Prompt: Embed the full contents of `~/.claude/agents/security-reviewer.md` as instructions, then provide:
+Prompt: "Read your instructions from `~/.claude/agents/security-reviewer.md` first." Then provide:
 - The git diff
 - Tech stack from package.json
 - Scope: `full` (or `critical-only` for `--quick`)
 
 #### 2b. Architecture Reviewer
-Prompt: Embed the full contents of `~/.claude/agents/architecture-reviewer.md` as instructions, then provide:
+Prompt: "Read your instructions from `~/.claude/agents/architecture-reviewer.md` first." Then provide:
 - The git diff
 - Project structure (`ls src/`)
 - CLAUDE.md if available
-- Contract manifest if available
+- Contract manifest path if available
 
 #### 2c. Plan Compliance Reviewer — only if `--plan` provided or PLAN.md exists
-Prompt: Embed the full contents of `~/.claude/agents/plan-compliance-reviewer.md` as instructions, then provide:
-- The plan file contents
+Prompt: "Read your instructions from `~/.claude/agents/plan-compliance-reviewer.md` first." Then provide:
+- The plan file path
 - The git diff
-- Contract manifest if available
+- Contract manifest path if available
 
 ### Parallel Execution Strategy
 

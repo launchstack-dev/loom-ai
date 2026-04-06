@@ -18,6 +18,9 @@ Parse arguments:
 - No args or `--status`: show roadmap status (plan progress + milestones + risk indicators)
 - `--init`: create a new PLAN.md interactively using the plan-builder-agent
 - `--init --from "description"`: create a plan from a one-line description
+- `--discuss`: run the discussion phase to surface architectural decisions before plan generation (default with `--init`)
+- `--no-discuss`: skip the discussion phase entirely
+- `--auto`: accept all recommended defaults from the discussion phase without interactive prompting
 - `--validate [path]`: run validation pipeline on a plan (stages 1-4)
 - `--validate --deep [path]`: run all 6 validation stages including agent checks
 - `--refine [path]`: refine an existing plan using review history + plan-builder-agent
@@ -36,7 +39,7 @@ Parse arguments:
 Before any subcommand, gather available state:
 
 1. **Find the plan file**: check for `PLAN.md`, `plan.md`, or user-specified path. If not found and command is not `--init`, tell user and suggest `--init`.
-2. **Check execution state**: read `.plan-execution/state.json` if it exists → extract wave statuses, task completions.
+2. **Check execution state**: read `.plan-execution/state.toon` if it exists → extract wave statuses, task completions.
 3. **Check plan history**: read `.plan-history/roadmap.toon`, `.plan-history/changelog.md` if they exist.
 4. **Check project config**: read `.claude/orchestration.toml` if it exists for custom agents.
 
@@ -74,20 +77,84 @@ hasExistingTypes: true
 existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
 ```
 
+### Step 1.5: Discussion Phase
+
+**Skip if `--no-discuss` was passed.**
+
+1. Spawn `questioner-agent` (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/questioner-agent.md` first."
+   - The codebase context summary from Step 1
+   - The user's project description (from `--from` or interview answers)
+
+2. Parse the agent's decision points from its TOON output.
+
+3. **If `--auto`:** Accept all recommended defaults. Display them for awareness:
+   ```
+   ## Locked Decisions (auto-selected defaults)
+
+   D-01: Authentication Strategy → JWT with refresh tokens
+     Rationale: API-first architecture needs stateless auth
+   D-02: Database Engine → SQLite via better-sqlite3
+     Rationale: Zero-config for MVP scope
+
+   Proceeding with these defaults. Use --discuss to choose interactively.
+   ```
+
+4. **Otherwise (interactive):** Present each decision to the user:
+   ```
+   ## D-01: Authentication Strategy [HIGH impact]
+
+   Options:
+   1. JWT with refresh tokens (recommended)
+      + Stateless scaling; API-first
+      - Token management complexity
+   2. Session-based auth
+      + Simpler implementation; built-in CSRF
+      - Stateful; harder to scale
+   3. OAuth2 only
+      + Delegated auth; industry standard
+      - Overkill for MVP; external dependency
+
+   Choose (1-3, or describe custom approach):
+   ```
+
+   Record the user's choice for each decision.
+
+5. **Write CONTEXT.md** in the project root:
+   ```markdown
+   # Project Decisions
+
+   Locked decisions made during the discussion phase. Plan generation and execution
+   must honor these choices. To change a decision, re-run `/roadmap --discuss`.
+
+   ## D-01: Authentication Strategy
+   **Decision:** JWT with refresh tokens
+   **Rationale:** API-first architecture, stateless scaling
+   **Alternatives considered:** session-based (simpler but stateful), OAuth2 (overkill for MVP)
+   **Impact:** high
+
+   ## D-02: Database Engine
+   **Decision:** SQLite via better-sqlite3
+   **Rationale:** Zero-config, sufficient for <10K users
+   **Alternatives considered:** PostgreSQL (concurrent writes but requires server)
+   **Impact:** high
+   ```
+
+6. Pass the CONTEXT.md path to Step 2 (Plan Generation).
+
 ### Step 2: Plan Generation
 
-1. Read `~/.claude/agents/plan-builder-agent.md` for the agent's full instructions
-2. Read `~/.claude/agents/protocols/plan.schema.md` for the format spec
-3. If `--from` provided, use the description directly. Otherwise, ask the user:
+1. If `--from` provided, use the description directly. Otherwise, ask the user:
    - What are you building? (end-user experience: UI, API, CLI?)
    - What data does this manage? (entities → schema)
    - What's the tech stack? (or auto-detect from Step 1)
    - Any constraints? (existing code, timeline, team size)
-4. Spawn `plan-builder-agent` (general-purpose) with:
-   - The plan-builder-agent.md instructions embedded in the prompt
-   - The plan.schema.md spec embedded in the prompt
+2. Spawn `plan-builder-agent` (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first, then read the format spec from `~/.claude/agents/protocols/plan.schema.md`."
    - The codebase context summary from Step 1
    - The user's answers/description
+   - If CONTEXT.md was written in Step 1.5: "Read locked decisions from CONTEXT.md in the project root. Every decision constrains your plan choices."
+   - The CONTEXT.md file path (if it exists)
    - Instruction: "Follow the Decomposition Reasoning Framework. Output must conform to plan.schema.md."
 
 ### Step 3: Validation Loop (max 2 retries)
@@ -153,7 +220,7 @@ Pure data synthesis — no agents spawned. Read all sources and render a unified
 
 ```
 1. PLAN.md → parse phases, dependencies, deliverables, acceptance criteria
-2. .plan-execution/state.json → wave statuses, task completions, verification results
+2. .plan-execution/state.toon → wave statuses, task completions, verification results
 3. .plan-history/roadmap.toon → milestones
 4. .plan-history/changelog.md → recent entries
 ```
@@ -162,14 +229,14 @@ Pure data synthesis — no agents spawned. Read all sources and render a unified
 
 Map phases to waves using the `Wave W` in each phase header:
 
-- For each phase, check if its wave exists in state.json:
+- For each phase, check if its wave exists in state.toon:
   - Wave `succeeded` → phase completed. Count `filesCreated` from wave summary vs planned deliverables.
   - Wave `in_progress` → phase in progress. Count completed tasks vs total.
   - Wave `pending` or missing → phase pending.
-- Check criteria: cross-reference verification results in state.json against plan's acceptance criteria.
-- **Detect drift**: if PLAN.md file modification time > state.json `startedAt`, plan was changed during execution → warn.
-- **Detect stale**: if state.json `updatedAt` > 24 hours ago → warn.
-- **Detect orphans**: if state.json has waves that don't correspond to any phase in the current plan → warn.
+- Check criteria: cross-reference verification results in state.toon against plan's acceptance criteria.
+- **Detect drift**: if PLAN.md file modification time > state.toon `startedAt`, plan was changed during execution → warn.
+- **Detect stale**: if state.toon `updatedAt` > 24 hours ago → warn.
+- **Detect orphans**: if state.toon has waves that don't correspond to any phase in the current plan → warn.
 
 ### Step 3: Compute Analytics
 
@@ -296,7 +363,7 @@ Execution-aware refinement with structured analysis and change tracking.
 
 ### Step 1: Execution State Check
 
-If `.plan-execution/state.json` exists and execution has started:
+If `.plan-execution/state.toon` exists and execution has started:
 
 1. Identify completed waves → their phases are **LOCKED** (cannot be changed)
 2. Identify in-progress waves → their phases require **user confirmation** to modify
@@ -364,7 +431,7 @@ Phase 1 (in_progress — requires confirmation), Phase 2 (pending — freely edi
 ### Step 4: Generate Refined Plan
 
 Spawn `plan-builder-agent` (general-purpose) with:
-- The plan-builder-agent.md instructions
+- Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first, then read `~/.claude/agents/protocols/plan.schema.md`."
 - The refinement brief from Step 3
 - Instruction: "Fix all validation errors. Apply agent findings where appropriate. Do NOT modify locked phases. Annotate every change with reasoning."
 
@@ -511,7 +578,8 @@ Length: 3 waves (minimum sequential execution)
 
 1. Read the plan
 2. Run validation (`--validate`) — if there are structural issues, report them first
-3. Spawn `plan-builder-agent` with `--split` mode:
+3. Spawn `plan-builder-agent` (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
    - Include the current plan
    - Instruction: "Identify natural boundaries (by domain, by layer, by milestone). Create sub-plans that reference shared contracts. Each sub-plan must be independently executable via /execute-plan."
 4. Present the proposed split with rationale
@@ -562,7 +630,7 @@ Manage milestones in `.plan-history/roadmap.toon`.
 1. Find the milestone in roadmap.toon
 2. Mark as completed with current timestamp
 3. Append to changelog
-4. If milestone corresponds to a phase, verify the phase's wave is `succeeded` in state.json
+4. If milestone corresponds to a phase, verify the phase's wave is `succeeded` in state.toon
 
 ### `--milestone list`
 1. Read roadmap.toon
@@ -578,7 +646,7 @@ Manage milestones in `.plan-history/roadmap.toon`.
 ## Command: `--snapshot`
 
 1. Copy `PLAN.md` to `.plan-history/snapshots/YYYY-MM-DD-plan.md`
-2. If `.plan-execution/state.json` exists, save execution summary alongside
+2. If `.plan-execution/state.toon` exists, save execution summary alongside
 3. Append to changelog: "Snapshot saved: YYYY-MM-DD"
 
 ---
@@ -588,7 +656,8 @@ Manage milestones in `.plan-history/roadmap.toon`.
 1. Read the most recent file in `.plan-history/reviews/`
 2. Parse findings by severity (blocking → warning → info)
 3. Filter to actionable findings (skip pure observations)
-4. Spawn `plan-builder-agent` with:
+4. Spawn `plan-builder-agent` (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
    - Current plan
    - Filtered review findings
    - Instruction: "Apply these approved review recommendations. Annotate each change with the finding that motivated it."
@@ -626,7 +695,7 @@ phases[3]{id,name,wave,status,deliverableCount,criteriaCount}:
 
 When spawning agents via `run_in_background: true` (plan-builder-agent, planning agents in `--init` Step 4, `--refine` Step 2), apply lightweight monitoring per `agent-monitoring.schema.md`:
 
-1. Include the agent's `taskId` in its prompt so it can write to `.plan-execution/progress/{taskId}.json`
+1. Include the agent's `taskId` in its prompt so it can write to `.plan-execution/progress/{taskId}.toon`
 2. Create `.plan-execution/progress/` directory if it doesn't exist
 3. After spawning, poll every 15 seconds:
    - Read progress files for running agents
@@ -654,9 +723,9 @@ This is additive — if agents don't support progress reporting, the orchestrato
 ## Integration Points
 
 - `/review-plan` → writes findings to `.plan-history/reviews/`
-- `/execute-plan` → reads plan (validates stages 1-4 as gate), updates state.json
+- `/execute-plan` → reads plan (validates stages 1-4 as gate), updates state.toon
 - `/test-plan` → acceptance criteria from plan phases feed test spec generation
 - `--refine` → consumes review findings + agent analysis → updated plan
 - `--review-integrate` → automates review → plan update cycle
 - `--validate` → used by `--init`, `--refine`, and `/execute-plan` as a pre-flight check
-- `--status` → reads plan + state.json + roadmap.toon + changelog for unified view
+- `--status` → reads plan + state.toon + roadmap.toon + changelog for unified view

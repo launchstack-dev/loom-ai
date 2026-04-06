@@ -13,7 +13,7 @@ Parse arguments:
 - `--unit-only`: generate and run unit tests only (skip E2E)
 - `--e2e-only`: generate and run E2E tests only (skip unit)
 - `--chrome`: use interactive Chrome mode for E2E tests (requires `claude --chrome`)
-- `--spec path/to/spec.json`: skip criteria extraction, use existing test spec
+- `--spec path/to/spec.toon`: skip criteria extraction, use existing test spec
 - `--phase N`: only test phase N (default: all phases)
 - `--run`: generate AND run tests (default: generate only)
 - `--parallel`: run unit and E2E test generation in parallel
@@ -23,13 +23,13 @@ Parse arguments:
 ### Step 0: Gather Context
 
 1. Read the plan file
-1b. Check for `.claude/orchestration.toml` in the project root. If it exists, read the `testing:` section to discover app-specific testing agents. These declare a `phase` (post-criteria, post-unit, post-e2e) and are spawned at the appropriate step alongside the built-in agents. Use `subagent_type: "general-purpose"` with the agent's `.md` file contents embedded as instructions.
+1b. Check for `.claude/orchestration.toml` in the project root. If it exists, read the `testing:` section to discover app-specific testing agents. These declare a `phase` (post-criteria, post-unit, post-e2e) and are spawned at the appropriate step alongside the built-in agents. Use `subagent_type: "general-purpose"` — instruct each agent to read its own `.md` file from the path declared in `orchestration.toml`.
 2. Check for existing test infrastructure:
    - Is vitest/jest installed? Check `package.json`
    - Is Playwright installed? Check for `playwright.config.ts` or `@playwright/test` in deps
    - Are there existing test files? Glob for `**/*.test.ts`, `**/*.spec.ts`, `e2e/**`
-3. Check for `.plan-execution/` directory — if it exists, read `contracts/manifest.json` for type information
-4. Check for existing test spec — if `--spec` was provided or `.plan-execution/test-spec.json` exists
+3. Check for `.plan-execution/` directory — if it exists, read `contracts/manifest.toon` for type information
+4. Check for existing test spec — if `--spec` was provided or `.plan-execution/test-spec.toon` exists
 
 ### Step 1: Extract Acceptance Criteria
 
@@ -39,7 +39,7 @@ Spawn the `acceptance-criteria-agent` (use Agent tool with `subagent_type: "gene
 
 **Prompt template:**
 ```
-[Paste the full contents of ~/.claude/agents/acceptance-criteria-agent.md here as instructions]
+Read your instructions from `~/.claude/agents/acceptance-criteria-agent.md` first.
 
 ## Your Task
 
@@ -55,7 +55,7 @@ Analyze the following plan and generate structured test specs.
 {--phase N if specified, otherwise "all phases"}
 ```
 
-Save the output to `.plan-execution/test-spec.json`.
+Save the output to `.plan-execution/test-spec.toon`.
 
 Display a summary to the user:
 - Total test specs by category (contract/behavior/e2e)
@@ -78,17 +78,17 @@ Spawn the `unit-test-agent` (use Agent tool with `subagent_type: "general-purpos
 
 **Prompt template:**
 ```
-[Paste the full contents of ~/.claude/agents/unit-test-agent.md here as instructions]
+Read your instructions from `~/.claude/agents/unit-test-agent.md` first.
 
 ## Your Task
 
 Generate unit tests based on the following test spec.
 
 ### Test Spec:
-{contents of test-spec.json, filtered to contractTests and behaviorTests}
+{contents of test-spec.toon, filtered to contractTests and behaviorTests}
 
 ### Contract Files:
-{list contract file paths from .plan-execution/contracts/manifest.json, or "no contracts available"}
+{list contract file paths from .plan-execution/contracts/manifest.toon, or "no contracts available"}
 
 ### Source Files to Test:
 {list of source files from the plan's deliverables}
@@ -118,14 +118,14 @@ Spawn the `e2e-test-agent` (use Agent tool with `subagent_type: "general-purpose
 
 **Prompt template:**
 ```
-[Paste the full contents of ~/.claude/agents/e2e-test-agent.md here as instructions]
+Read your instructions from `~/.claude/agents/e2e-test-agent.md` first.
 
 ## Your Task
 
 Generate E2E tests based on the following test spec.
 
 ### Test Spec:
-{contents of test-spec.json, filtered to e2eTests}
+{contents of test-spec.toon, filtered to e2eTests}
 
 ### Source Files (routes/pages):
 {list route and page files from plan deliverables}
@@ -211,7 +211,7 @@ Save the report to `.plan-execution/test-report.md`.
 
 ## State Integration
 
-If `.plan-execution/state.json` exists:
+If `.plan-execution/state.toon` exists:
 - Read current wave to know which phases are implemented
 - Only generate tests for implemented phases (unless `--phase` overrides)
 - Update state with test results if running as part of execution pipeline

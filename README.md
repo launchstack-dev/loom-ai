@@ -41,6 +41,7 @@ Protocols (shared contracts)
 agent-result.schema.md        ← Standard return envelope
 state.schema.md               ← Execution state for resume
 execution-conventions.md      ← File ownership, context tiers, TOON format
+toon-format.md                ← TOON format specification
 orchestration-config.schema.md ← Per-project agent registration
 orchestration-patterns.md     ← Debate, chain, vote, triage patterns
 validation-rules.md           ← Output validation, blocker gates, plan validation
@@ -91,8 +92,8 @@ Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`
 
 ## Data Formats
 
-- **JSON** for on-disk storage and schema validation
-- **TOON** (Token-Oriented Object Notation) for agent-to-agent communication — 30-60% token savings
+- **TOON** (Token-Oriented Object Notation) for all on-disk artifacts and agent communication — 30-60% token savings
+- **JSON** for schema validation only (AJV test schemas)
 
 ## Persistence
 
@@ -107,13 +108,13 @@ npm install
 npx vitest run
 ```
 
-97 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
+117 tests validating the inter-agent protocol: schema validation (with TOON roundtrip fidelity), plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), scope coverage (orphan detection, drift tracking), context compression, agent monitoring (graded E2E rubric), handoff chains, file ownership detection, and feedback logging.
 
 ## File Structure
 
 ```
 agents/                     20+ agent definitions
-  protocols/                 7 protocol specs (incl. plan.schema.md)
+  protocols/                 8 protocol specs (incl. plan.schema.md, toon-format.md)
 commands/                    6 slash commands
 skills/library.yaml         Library registry
 test/protocol/              57 protocol tests
