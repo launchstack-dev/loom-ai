@@ -18,6 +18,8 @@ import type {
   CrossBoundaryRequest,
   CrossBoundaryRequestItem,
   PhaseNode,
+  AgentProgress,
+  AgentPhase,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -393,4 +395,179 @@ export function createBrokenPlanStructure(): PhaseNode[] {
       ],
     },
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Agent progress (for monitoring tests)
+// ---------------------------------------------------------------------------
+
+export function createValidAgentProgress(
+  overrides?: Partial<AgentProgress>,
+): AgentProgress {
+  const now = new Date().toISOString();
+  return {
+    taskId: 'task-1a',
+    agent: 'implementer-agent',
+    wave: 1,
+    phase: 'implementing',
+    percentComplete: 45,
+    currentActivity: 'Writing user repository functions',
+    filesWritten: ['src/repositories/user.repository.ts'],
+    issuesSoFar: 0,
+    heartbeatAt: now,
+    startedAt: now,
+    checkpointCount: 5,
+    ...overrides,
+  };
+}
+
+/**
+ * Simulate a sequence of progress updates from an agent over time.
+ * Returns an array of AgentProgress snapshots at different phases.
+ */
+export function createProgressTimeline(
+  taskId: string,
+  agent: string,
+  wave: number,
+  files: string[],
+  opts?: {
+    startTime?: Date;
+    intervalMs?: number;
+    stallAtCheckpoint?: number;
+    skipPhases?: AgentPhase[];
+  },
+): AgentProgress[] {
+  const startTime = opts?.startTime ?? new Date();
+  const interval = opts?.intervalMs ?? 30_000;
+  const stallAt = opts?.stallAtCheckpoint ?? Infinity;
+  const skip = new Set(opts?.skipPhases ?? []);
+  const timeline: AgentProgress[] = [];
+  let checkpoint = 0;
+  let elapsed = 0;
+
+  function ts(): string {
+    return new Date(startTime.getTime() + elapsed).toISOString();
+  }
+
+  function push(phase: AgentPhase, pct: number, activity: string, written: string[]) {
+    if (skip.has(phase)) return;
+    if (checkpoint >= stallAt) return;
+    checkpoint++;
+    timeline.push({
+      taskId,
+      agent,
+      wave,
+      phase,
+      percentComplete: pct,
+      currentActivity: activity,
+      filesWritten: written,
+      issuesSoFar: 0,
+      heartbeatAt: ts(),
+      startedAt: startTime.toISOString(),
+      checkpointCount: checkpoint,
+    });
+    elapsed += interval;
+  }
+
+  push('initializing', 0, 'Starting up', []);
+  push('reading-contracts', 10, 'Reading contract files', []);
+
+  const fileCount = files.length;
+  for (let i = 0; i < fileCount; i++) {
+    const pct = 15 + Math.round((70 * (i + 1)) / fileCount);
+    const written = files.slice(0, i + 1);
+    push('implementing', pct, `Writing ${files[i].split('/').pop()}`, written);
+  }
+
+  push('writing-files', 90, 'Finishing file writes', files);
+  push('finalizing', 100, 'Preparing AgentResult', files);
+
+  return timeline;
+}
+
+/**
+ * Build scenario: a realistic Wave 1 with 4 parallel implementer agents.
+ * Returns the progress timelines for each, with varied behaviors:
+ *   - w1-data-layer: perfect behavior (regular heartbeats, smooth progress)
+ *   - w1-api-routes: good but slower
+ *   - w1-auth: stalls at checkpoint 4 (simulates hang)
+ *   - w1-websocket: silent (never writes progress)
+ */
+export function createWave1Scenario(): {
+  tasks: { taskId: string; agent: string; files: string[] }[];
+  timelines: Record<string, AgentProgress[]>;
+  agentResults: Record<string, AgentResult>;
+} {
+  const baseTime = new Date('2025-06-15T10:00:00Z');
+
+  const tasks = [
+    {
+      taskId: 'w1-data-layer',
+      agent: 'implementer-agent',
+      files: [
+        'src/db/connection.ts',
+        'src/db/migrate.ts',
+        'src/repositories/user.repository.ts',
+        'src/repositories/board.repository.ts',
+        'src/repositories/task.repository.ts',
+      ],
+    },
+    {
+      taskId: 'w1-api-routes',
+      agent: 'implementer-agent',
+      files: [
+        'src/middleware/error-handler.ts',
+        'src/middleware/validate.ts',
+        'src/routes/user.routes.ts',
+        'src/routes/board.routes.ts',
+        'src/routes/task.routes.ts',
+      ],
+    },
+    {
+      taskId: 'w1-auth',
+      agent: 'implementer-agent',
+      files: ['src/auth/middleware.ts', 'src/auth/jwt.ts', 'src/auth/types.ts'],
+    },
+    {
+      taskId: 'w1-websocket',
+      agent: 'implementer-agent',
+      files: ['src/websocket/server.ts', 'src/websocket/handlers.ts'],
+    },
+  ];
+
+  const timelines: Record<string, AgentProgress[]> = {};
+
+  timelines['w1-data-layer'] = createProgressTimeline(
+    'w1-data-layer', 'implementer-agent', 1, tasks[0].files,
+    { startTime: baseTime, intervalMs: 25_000 },
+  );
+
+  timelines['w1-api-routes'] = createProgressTimeline(
+    'w1-api-routes', 'implementer-agent', 1, tasks[1].files,
+    { startTime: baseTime, intervalMs: 40_000 },
+  );
+
+  timelines['w1-auth'] = createProgressTimeline(
+    'w1-auth', 'implementer-agent', 1, tasks[2].files,
+    { startTime: baseTime, intervalMs: 30_000, stallAtCheckpoint: 4 },
+  );
+
+  timelines['w1-websocket'] = [];
+
+  const agentResults: Record<string, AgentResult> = {};
+  for (const task of tasks) {
+    agentResults[task.taskId] = createValidAgentResult({
+      agent: task.agent,
+      wave: 1,
+      taskId: task.taskId,
+      status: task.taskId === 'w1-auth' ? 'failure' : 'success',
+      filesCreated: task.files,
+      durationMs: task.taskId === 'w1-data-layer' ? 180_000
+        : task.taskId === 'w1-api-routes' ? 320_000
+        : task.taskId === 'w1-auth' ? 0
+        : 150_000,
+    });
+  }
+
+  return { tasks, timelines, agentResults };
 }

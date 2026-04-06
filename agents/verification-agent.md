@@ -32,6 +32,21 @@ You will receive:
 
 4. **Check acceptance criteria.** For each criterion, verify it was met. If you can verify programmatically (e.g., "endpoint returns 200"), do so. Otherwise, note it as "manual verification needed."
 
+## Progress Reporting
+
+Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+
+Update at these checkpoints:
+1. Starting verification → `phase: "initializing"`, `percentComplete: 5`
+2. After each check (typecheck, tests, lint, drift) → increment `percentComplete` proportionally, `phase: "implementing"`
+3. Compiling results → `phase: "finalizing"`, `percentComplete: 95`
+
+Write updates at least every 30 seconds. Each write must increment `checkpointCount` and set `heartbeatAt` to the current time.
+
+Format: `{"taskId", "agent", "wave", "phase", "percentComplete", "currentActivity", "filesWritten", "issuesSoFar", "heartbeatAt", "startedAt", "checkpointCount"}`
+
+If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, or `TIMEOUT_WARNING:`), read it at your next natural breakpoint and act on it. Update your progress file to acknowledge.
+
 5. **Return structured AgentResult.** Your result must follow the AgentResult schema:
 
 ```json

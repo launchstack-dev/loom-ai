@@ -259,6 +259,70 @@ export interface PlanValidationResult {
 }
 
 // ---------------------------------------------------------------------------
+// Agent monitoring — .plan-execution/progress/{taskId}.json
+// ---------------------------------------------------------------------------
+
+export type AgentPhase =
+  | 'initializing'
+  | 'reading-contracts'
+  | 'implementing'
+  | 'writing-files'
+  | 'finalizing';
+
+export interface AgentProgress {
+  taskId: string;
+  agent: string;
+  wave: number;
+  phase: AgentPhase;
+  percentComplete: number;
+  currentActivity: string;
+  filesWritten: string[];
+  issuesSoFar: number;
+  heartbeatAt: string;
+  startedAt: string;
+  checkpointCount: number;
+}
+
+export type AgentMonitoringStatus =
+  | 'reporting'
+  | 'silent'
+  | 'stale'
+  | 'completed'
+  | 'timed-out';
+
+export interface AgentProgressSummary {
+  taskId: string;
+  agent: string;
+  status: AgentMonitoringStatus;
+  lastHeartbeat: string | null;
+  secondsSinceHeartbeat: number;
+  phase: AgentPhase | null;
+  percentComplete: number;
+  currentActivity: string | null;
+  filesWrittenCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Monitoring evaluation — graded rubric for E2E tests
+// ---------------------------------------------------------------------------
+
+export interface RubricDimension {
+  name: string;
+  maxScore: number;
+  score: number;
+  details: string;
+}
+
+export interface MonitoringEvaluation {
+  scenario: string;
+  dimensions: RubricDimension[];
+  totalScore: number;
+  maxScore: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  summary: string;
+}
+
+// ---------------------------------------------------------------------------
 // Ownership conflict detection
 // ---------------------------------------------------------------------------
 

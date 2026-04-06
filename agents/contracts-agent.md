@@ -51,6 +51,22 @@ You will receive:
    }
    ```
 
+## Progress Reporting
+
+Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+
+Update at these checkpoints:
+1. After analyzing plan specifications → `phase: "reading-contracts"`, `percentComplete: 10`
+2. After designing type structure → `phase: "implementing"`, `percentComplete: 30`
+3. After each contract file written → increment `percentComplete` proportionally, `phase: "writing-files"`
+4. After manifest.json written → `phase: "finalizing"`, `percentComplete: 100`
+
+Write updates at least every 30 seconds. Each write must increment `checkpointCount` and set `heartbeatAt` to the current time.
+
+Format: `{"taskId", "agent", "wave", "phase", "percentComplete", "currentActivity", "filesWritten", "issuesSoFar", "heartbeatAt", "startedAt", "checkpointCount"}`
+
+If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, or `TIMEOUT_WARNING:`), read it at your next natural breakpoint and act on it. Update your progress file to acknowledge.
+
 5. **Return structured AgentResult:**
 
 ```json

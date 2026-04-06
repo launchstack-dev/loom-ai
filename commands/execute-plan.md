@@ -23,6 +23,7 @@ Before doing anything, read these protocol files to understand the inter-agent c
 - `~/.claude/agents/protocols/state.schema.md` — execution state structure
 - `~/.claude/agents/protocols/execution-conventions.md` — shared rules, directory structure, context compression
 - `~/.claude/agents/protocols/validation-rules.md` — AgentResult validation, blocker gates, config validation
+- `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting, polling, stale detection, escalation
 
 ## Project-Specific Agents
 
@@ -94,6 +95,7 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
    - `.plan-execution/rolling-context.md` (empty)
    - `.plan-execution/contracts/` directory
    - `.plan-execution/requests/` directory
+   - `.plan-execution/progress/` directory (for agent monitoring)
 5. Create a git tag `plan-exec-start` for rollback safety
 
 ### Step 2: Wave 0 — Contracts
@@ -159,14 +161,47 @@ For each implementation wave (1, 2, ...):
    - **Specific** contract file paths relevant to this task (from manifest.json)
    - Rolling context content
    - Technology stack and conventions
-6. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
+6. **Clear progress directory:** Remove all `*.json` files from `.plan-execution/progress/` (fresh wave).
+
+7. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
    - Each agent is `general-purpose` with implementer-agent instructions embedded
    - Each agent gets its own scoped prompt (different file ownership, different task)
-   - Use `run_in_background: true` for all but one, or send all in one message
+   - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/progress/{taskId}.json`
+   - Use `run_in_background: true` for all agents
 
-7. Collect all AgentResults as they complete
+8. **Monitor agents via polling loop** (per `agent-monitoring.schema.md`):
 
-### Step 6: Reconciliation Check
+   While any agent has not completed:
+   1. Wait 15 seconds (`pollIntervalSeconds`)
+   2. Read `.plan-execution/progress/{taskId}.json` for each running agent
+   3. Classify each agent:
+      - **reporting** — progress file exists, `heartbeatAt` within 90s
+      - **silent** — no progress file (agent may not support protocol or just started)
+      - **stale** — progress file exists but `heartbeatAt` older than 90s
+      - **completed** — agent returned its AgentResult
+      - **timed-out** — wall clock exceeded agent's timeout
+   4. **Render dashboard:**
+     ```
+     === Wave N Progress (K agents) ===  [elapsed: Xm Ys]
+
+       task-id  agent-type  ██████████░░░░░░  65%  implementing   "Current activity"  ♥ 8s ago
+       ...
+
+       Completed: X/K  |  Stale: Y  |  Timed out: Z
+     ```
+   5. **Escalate as needed:**
+      - Silent > 120s after spawn → warn in dashboard
+      - Stale > 90s → warn in dashboard
+      - Stale > 180s → send `MONITORING: heartbeat nudge` via SendMessage to that agent
+      - Stale > 270s → present options to user: wait longer / send custom message / mark failed
+      - Wall clock > agent timeout → present timeout options to user
+   6. On agent completion notification → mark done, proceed to collect AgentResult
+
+   If an agent ignores progress reporting entirely, the loop classifies it as `silent` and continues waiting — monitoring is additive, never gating.
+
+9. Collect all AgentResults
+
+### Step 6: Reconciliation Check (after Step 5 completes)
 
 Before wiring, check for problems:
 1. **File ownership violations**: Did any agent modify files outside its declared boundary?

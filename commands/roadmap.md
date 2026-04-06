@@ -8,6 +8,7 @@ Before doing anything, read these protocol files:
 - `~/.claude/agents/protocols/plan.schema.md` — the canonical PLAN.md format spec
 - `~/.claude/agents/protocols/validation-rules.md` — validation stages and enforcement rules
 - `~/.claude/agents/protocols/execution-conventions.md` — .plan-history/ and .plan-execution/ structure
+- `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting and stale detection
 
 ## Requirements
 
@@ -620,6 +621,24 @@ phases[3]{id,name,wave,status,deliverableCount,criteriaCount}:
 ```
 
 ---
+
+## Agent Monitoring (simplified)
+
+When spawning agents via `run_in_background: true` (plan-builder-agent, planning agents in `--init` Step 4, `--refine` Step 2), apply lightweight monitoring per `agent-monitoring.schema.md`:
+
+1. Include the agent's `taskId` in its prompt so it can write to `.plan-execution/progress/{taskId}.json`
+2. Create `.plan-execution/progress/` directory if it doesn't exist
+3. After spawning, poll every 15 seconds:
+   - Read progress files for running agents
+   - Classify: `reporting` (heartbeat < 90s), `silent` (no file), `stale` (heartbeat > 90s)
+   - Print a one-line status per agent: `{taskId}  {phase}  {percentComplete}%  "activity"  ♥ Ns ago`
+4. Escalation:
+   - Silent > 120s → warn
+   - Stale > 180s → SendMessage nudge
+   - Stale > 270s → ask user
+   - Wall clock > 300s (5 min default for planning agents) → present timeout options
+
+This is additive — if agents don't support progress reporting, the orchestrator waits normally.
 
 ## Error Handling
 

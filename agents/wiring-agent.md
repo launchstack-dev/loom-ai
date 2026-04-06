@@ -60,6 +60,22 @@ You will read:
 
 7. **Clean up requests directory.** After processing, remove the request files.
 
+## Progress Reporting
+
+Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+
+Update at these checkpoints:
+1. After parsing all AgentResults → `phase: "reading-contracts"`, `percentComplete: 15`
+2. After processing cross-boundary requests → `phase: "implementing"`, `percentComplete: 40`
+3. After updating barrel/index files → increment `percentComplete` proportionally, `phase: "writing-files"`
+4. After package.json/route updates → `phase: "finalizing"`, `percentComplete: 90`
+
+Write updates at least every 30 seconds. Each write must increment `checkpointCount` and set `heartbeatAt` to the current time.
+
+Format: `{"taskId", "agent", "wave", "phase", "percentComplete", "currentActivity", "filesWritten", "issuesSoFar", "heartbeatAt", "startedAt", "checkpointCount"}`
+
+If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, or `TIMEOUT_WARNING:`), read it at your next natural breakpoint and act on it. Update your progress file to acknowledge.
+
 8. **Return structured AgentResult:**
 
 ```json

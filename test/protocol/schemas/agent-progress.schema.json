@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentProgress",
+  "description": "Heartbeat and progress reporting from a running agent. Written to .plan-execution/progress/{taskId}.json",
+  "type": "object",
+  "required": [
+    "taskId",
+    "agent",
+    "wave",
+    "phase",
+    "percentComplete",
+    "currentActivity",
+    "filesWritten",
+    "issuesSoFar",
+    "heartbeatAt",
+    "startedAt",
+    "checkpointCount"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "Unique task identifier matching the WaveTask.taskId in state.json"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent type (e.g., implementer-agent, contracts-agent)"
+    },
+    "wave": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current wave number"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["initializing", "reading-contracts", "implementing", "writing-files", "finalizing"],
+      "description": "Current execution phase within the agent's lifecycle"
+    },
+    "percentComplete": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Best-effort progress estimate. Must be monotonically non-decreasing."
+    },
+    "currentActivity": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Human-readable description of current activity"
+    },
+    "filesWritten": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files created or modified so far"
+    },
+    "issuesSoFar": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of issues encountered during execution"
+    },
+    "heartbeatAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of this update. The orchestrator compares this against wall clock to detect hangs."
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the agent began execution"
+    },
+    "checkpointCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing counter. Proves progress even if timestamps are unreliable."
+    }
+  },
+  "additionalProperties": false
+}

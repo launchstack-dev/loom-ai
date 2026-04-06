@@ -50,6 +50,23 @@ You will receive:
      ```
    - Continue with your implementation, stubbing or working around the missing dependency
 
+## Progress Reporting
+
+Write progress updates to `.plan-execution/progress/{taskId}.json` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+
+Update at these checkpoints:
+1. After reading contracts and existing code → `phase: "reading-contracts"`, `percentComplete: 10`
+2. After planning implementation approach → `phase: "implementing"`, `percentComplete: 20`
+3. After creating/modifying each file → increment `percentComplete` proportionally, add file to `filesWritten`
+4. After all files written → `phase: "writing-files"`, `percentComplete: 90`
+5. Before returning AgentResult → `phase: "finalizing"`, `percentComplete: 100`
+
+Write updates at least every 30 seconds. Each write must increment `checkpointCount` and set `heartbeatAt` to the current time.
+
+Format: `{"taskId", "agent", "wave", "phase", "percentComplete", "currentActivity", "filesWritten", "issuesSoFar", "heartbeatAt", "startedAt", "checkpointCount"}`
+
+If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, or `TIMEOUT_WARNING:`), read it at your next natural breakpoint and act on it. Update your progress file to acknowledge.
+
 5. **Return structured AgentResult:**
 
 ```json

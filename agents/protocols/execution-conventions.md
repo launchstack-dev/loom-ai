@@ -13,6 +13,8 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 ├── contracts/                  # Wave 0 output — shared types/schemas
 │   ├── manifest.json           # Lists all contract files + their purpose
 │   └── [contract files]        # e.g., types.ts, schema.sql, api-contract.ts
+├── progress/                   # Agent heartbeat files (ephemeral, cleared per wave)
+│   └── {taskId}.json           # Per-agent progress — see agent-monitoring.schema.md
 ├── requests/                   # Cross-boundary requests from implementers
 │   └── {taskId}.json           # One file per request
 ├── wave-0-summary.json         # Machine-readable wave summary

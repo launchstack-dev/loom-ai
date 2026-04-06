@@ -45,6 +45,7 @@ orchestration-config.schema.md ← Per-project agent registration
 orchestration-patterns.md     ← Debate, chain, vote, triage patterns
 validation-rules.md           ← Output validation, blocker gates, plan validation
 plan.schema.md                ← PLAN.md format specification
+agent-monitoring.schema.md    ← Progress reporting, stale detection, dashboards
 ```
 
 ## Typical Workflow
@@ -106,7 +107,7 @@ npm install
 npx vitest run
 ```
 
-57 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
+81 tests validating the inter-agent protocol: schema validation, plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), context compression, handoff chains, file ownership detection, and feedback logging.
 
 ## File Structure
 

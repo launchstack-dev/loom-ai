@@ -105,7 +105,7 @@ Wave N: implementer-agents (parallel) → wiring-agent → verify → human gate
         ↑ repeat for each wave
 ```
 
-Each agent returns a structured `AgentResult` JSON. State is tracked in `.plan-execution/state.json`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens.
+Each agent returns a structured `AgentResult` JSON. State is tracked in `.plan-execution/state.json`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.json` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage.
 
 ### File Structure (during execution)
 
@@ -115,6 +115,8 @@ Each agent returns a structured `AgentResult` JSON. State is tracked in `.plan-e
   rolling-context.md      — Compressed cross-wave context
   contracts/              — Shared types and interfaces
     manifest.json         — Contract registry
+  progress/               — Agent heartbeat files (monitoring)
+    {taskId}.json
   requests/               — Cross-boundary change requests
     {taskId}.json
   wave-N-summary.json     — Per-wave results
