@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/wave-summary.schema.json",
+  "title": "WaveSummary",
+  "description": "Machine-readable summary of a completed wave, written to .plan-execution/wave-N-summary.json.",
+  "type": "object",
+  "required": [
+    "wave",
+    "agentResults",
+    "filesChanged",
+    "exportsAdded",
+    "unresolvedIssues"
+  ],
+  "properties": {
+    "wave": {
+      "type": "number",
+      "description": "Wave index",
+      "minimum": 0
+    },
+    "agentResults": {
+      "type": "array",
+      "items": { "$ref": "agent-result.schema.json" },
+      "description": "Array of AgentResult objects from all agents in this wave"
+    },
+    "filesChanged": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Deduplicated list of all files created, modified, or deleted in this wave"
+    },
+    "exportsAdded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "name", "kind"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Path to file containing the export"
+          },
+          "name": {
+            "type": "string",
+            "description": "Exported symbol name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["function", "class", "const", "type", "interface", "enum"],
+            "description": "Kind of exported symbol"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Deduplicated list of all new exports from this wave"
+    },
+    "unresolvedIssues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "description", "file", "agent", "taskId"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["blocking", "warning", "info"],
+            "description": "Issue severity level"
+          },
+          "description": {
+            "type": "string",
+            "description": "What went wrong or needs attention"
+          },
+          "file": {
+            "type": ["string", "null"],
+            "description": "File path if applicable"
+          },
+          "agent": {
+            "type": "string",
+            "description": "Agent that reported this issue"
+          },
+          "taskId": {
+            "type": "string",
+            "description": "Task that produced this issue"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Any blocking or warning issues from agents that remain unresolved"
+    }
+  },
+  "additionalProperties": false
+}

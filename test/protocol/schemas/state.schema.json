@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/state.schema.json",
+  "title": "ExecutionState",
+  "description": "Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to .plan-execution/state.json.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "runId",
+    "planFile",
+    "status",
+    "currentWave",
+    "startedAt",
+    "updatedAt",
+    "waves",
+    "rollingContextFile",
+    "lockPid"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1,
+      "description": "Schema version, always 1"
+    },
+    "runId": {
+      "type": "string",
+      "description": "UUID generated at execution start",
+      "format": "uuid"
+    },
+    "planFile": {
+      "type": "string",
+      "description": "Path to the plan being executed"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["initializing", "running", "paused", "completed", "failed"],
+      "description": "Overall execution status"
+    },
+    "currentWave": {
+      "type": "number",
+      "description": "Index of the wave currently executing or next to execute",
+      "minimum": 0
+    },
+    "startedAt": {
+      "type": "string",
+      "description": "ISO 8601 timestamp of execution start",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "ISO 8601 timestamp, updated on every state change",
+      "format": "date-time"
+    },
+    "waves": {
+      "type": "object",
+      "description": "Wave objects keyed by string numbers ('0', '1', '2', etc.)",
+      "patternProperties": {
+        "^[0-9]+$": {
+          "$ref": "#/$defs/Wave"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rollingContextFile": {
+      "type": "string",
+      "description": "Path to rolling-context.md"
+    },
+    "lockPid": {
+      "type": ["number", "null"],
+      "description": "PID of the process holding the execution lock"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Wave": {
+      "type": "object",
+      "required": [
+        "status",
+        "startedAt",
+        "completedAt",
+        "agents",
+        "tasks",
+        "summaryFile",
+        "verificationResult",
+        "gateApproval",
+        "fileHashes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "succeeded", "failed", "skipped"],
+          "description": "Wave execution status"
+        },
+        "startedAt": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp or null if not started",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp or null if not completed",
+          "format": "date-time"
+        },
+        "agents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agent names involved in this wave"
+        },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Task" },
+          "description": "Tasks within this wave"
+        },
+        "summaryFile": {
+          "type": ["string", "null"],
+          "description": "Path to wave-N-summary.json"
+        },
+        "verificationResult": {
+          "$ref": "#/$defs/VerificationResult"
+        },
+        "gateApproval": {
+          "type": ["string", "null"],
+          "enum": ["approved", "rejected", "pending", null],
+          "description": "Gate approval status"
+        },
+        "fileHashes": {
+          "type": "object",
+          "description": "Content hashes of key files at wave completion, for drift detection on resume",
+          "properties": {
+            "contracts": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Map of contract file path to sha256 hash"
+            },
+            "modified": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "description": "Map of modified file path to sha256 hash"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Task": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "agent",
+        "description",
+        "status",
+        "fileOwnership",
+        "retryCount",
+        "result",
+        "startedAt",
+        "completedAt"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "description": "Unique task identifier within this run"
+        },
+        "agent": {
+          "type": "string",
+          "description": "Which agent type handles this task"
+        },
+        "description": {
+          "type": "string",
+          "description": "Short task description"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "succeeded", "failed"],
+          "description": "Task execution status"
+        },
+        "fileOwnership": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths this task may modify"
+        },
+        "retryCount": {
+          "type": "number",
+          "description": "Incremented on each retry, max 2",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "result": {
+          "oneOf": [
+            { "$ref": "agent-result.schema.json" },
+            { "type": "null" }
+          ],
+          "description": "AgentResult, populated on completion"
+        },
+        "startedAt": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp or null",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp or null",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "VerificationResult": {
+      "type": "object",
+      "required": ["status", "checks"],
+      "properties": {
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["pass", "fail", null],
+          "description": "Overall verification status"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status", "details"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Check name, e.g., 'typecheck', 'tests', 'lint', 'ownership-drift'"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["pass", "fail"],
+                "description": "Individual check status"
+              },
+              "details": {
+                "type": ["string", "null"],
+                "description": "Error output if failed"
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Individual verification checks"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

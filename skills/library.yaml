@@ -1,0 +1,104 @@
+default_dirs:
+  skills:
+    - default: .claude/skills/
+    - global: ~/.claude/skills/
+  agents:
+    - default: .claude/agents/
+    - global: ~/.claude/agents/
+  prompts:
+    - default: .claude/commands/
+    - global: ~/.claude/commands/
+
+library:
+  skills:
+    - name: execution-protocols
+      description: Inter-agent protocol schemas for the meta-orchestration execution pipeline (AgentResult, state.json, execution conventions)
+
+  agents:
+    # Planning agents
+    - name: feature-coverage-agent
+      description: Audits plan schema, API surface, and features against competitors
+
+    - name: strategy-ux-agent
+      description: Evaluates positioning, UX, theming, and developer ergonomics
+
+    - name: phasing-agent
+      description: Reviews phase boundaries, dependencies, and sequencing risks
+
+    - name: parallelization-agent
+      description: Designs multi-agent execution waves and merge strategy
+
+    - name: agentic-workflow-agent
+      description: Decomposes phases into context-bounded tasks for AI agents
+
+    # Execution agents
+    - name: contracts-agent
+      description: Wave 0 specialist - creates shared types, interfaces, schemas
+      requires: [skill:execution-protocols]
+
+    - name: implementer-agent
+      description: Parallel worker within file ownership boundaries
+      requires: [skill:execution-protocols]
+
+    - name: wiring-agent
+      description: Post-wave integration - barrel files, routes, imports, deps
+      requires: [skill:execution-protocols]
+
+    - name: verification-agent
+      description: Quality gate - typecheck, tests, lint, ownership drift
+      requires: [skill:execution-protocols]
+
+    # Testing agents
+    - name: acceptance-criteria-agent
+      description: Extracts testable acceptance criteria from plan phases, outputs structured test specs
+
+    - name: unit-test-agent
+      description: Generates unit tests from contracts, acceptance criteria, and source code
+
+    - name: e2e-test-agent
+      description: Generates Playwright E2E tests, supports --chrome and bowser integration
+
+    # Code review agents
+    - name: plan-compliance-reviewer
+      description: Reviews code against PLAN.md deliverables, schemas, and acceptance criteria
+
+    - name: security-reviewer
+      description: OWASP-focused security audit - injection, auth, XSS, secrets, dependencies
+
+    - name: architecture-reviewer
+      description: Architecture drift detection - dependency direction, pattern consistency, contracts
+
+    # Planning agents (extended)
+    - name: plan-builder-agent
+      description: Creates structured, execution-ready PLAN.md files from project descriptions
+
+    # Utility agents
+    - name: meta-agent
+      description: Generates new Claude Code agents, skills, and commands
+
+    - name: tdd-coach
+      description: Drives test-driven development with red-green-refactor
+
+  prompts:
+    - name: review-plan
+      description: Launches 5 planning agents in parallel to review a PLAN.md
+      requires: [agent:feature-coverage-agent, agent:strategy-ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent]
+
+    - name: execute-plan
+      description: Wave-by-wave execution orchestrator with human approval gates
+      requires: [agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, skill:execution-protocols]
+
+    - name: test-plan
+      description: Testing pipeline - acceptance criteria, unit tests, E2E tests with Playwright
+      requires: [agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent]
+
+    - name: review-code
+      description: Comprehensive code review - built-in + bespoke reviewers in parallel
+      requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer]
+
+    - name: roadmap
+      description: Create, track, refine, and visualize project plans and milestones
+      requires: [agent:plan-builder-agent]
+
+    - name: help
+      description: Shows meta-orchestration system reference

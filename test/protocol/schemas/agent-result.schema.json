@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/agent-result.schema.json",
+  "title": "AgentResult",
+  "description": "Standard return envelope for all execution agents. Every agent MUST return valid JSON matching this schema as the last content block in its response.",
+  "type": "object",
+  "required": [
+    "agent",
+    "wave",
+    "taskId",
+    "status",
+    "filesCreated",
+    "filesModified",
+    "filesDeleted",
+    "exportsAdded",
+    "dependenciesAdded",
+    "integrationNotes",
+    "issues",
+    "contractAmendments",
+    "crossBoundaryRequests",
+    "durationMs"
+  ],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "description": "Agent name (e.g., 'contracts-agent', 'implementer-agent')"
+    },
+    "wave": {
+      "type": "number",
+      "description": "Wave index this agent executed in",
+      "minimum": 0
+    },
+    "taskId": {
+      "type": "string",
+      "description": "Unique task identifier assigned by orchestrator"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failure", "partial"],
+      "description": "Execution result status"
+    },
+    "filesCreated": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Absolute paths of newly created files"
+    },
+    "filesModified": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Absolute paths of modified files"
+    },
+    "filesDeleted": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Absolute paths of deleted files"
+    },
+    "exportsAdded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "name", "kind"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Path to file containing the export"
+          },
+          "name": {
+            "type": "string",
+            "description": "Exported symbol name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["function", "class", "const", "type", "interface", "enum"],
+            "description": "Kind of exported symbol"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "New exports added by this agent"
+    },
+    "dependenciesAdded": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dependencies added in package@version format"
+    },
+    "integrationNotes": {
+      "type": "string",
+      "description": "Key decisions, assumptions, or gotchas for downstream agents. Max 500 tokens.",
+      "maxLength": 2000
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "description", "file", "line"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["blocking", "warning", "info"],
+            "description": "Issue severity level"
+          },
+          "description": {
+            "type": "string",
+            "description": "What went wrong or needs attention"
+          },
+          "file": {
+            "type": ["string", "null"],
+            "description": "File path if applicable"
+          },
+          "line": {
+            "type": ["number", "null"],
+            "description": "Line number if applicable"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Issues encountered during execution"
+    },
+    "contractAmendments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "issue"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Contract file path that needs updating"
+          },
+          "issue": {
+            "type": "string",
+            "description": "What's wrong or missing in the contract"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Proposed amendments to contract files"
+    },
+    "crossBoundaryRequests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "reason", "suggestedChange"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "File path outside ownership boundary that needs changes"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this file needs modification"
+          },
+          "suggestedChange": {
+            "type": "string",
+            "description": "What change is needed"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Requests to modify files outside this agent's ownership boundary"
+    },
+    "durationMs": {
+      "type": "number",
+      "description": "Wall-clock time for this agent's execution in milliseconds",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

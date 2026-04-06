@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/manifest.schema.json",
+  "title": "ContractManifest",
+  "description": "Manifest listing all contract files produced by the contracts-agent. Written to .plan-execution/contracts/manifest.json.",
+  "type": "object",
+  "required": ["contracts"],
+  "properties": {
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "purpose", "exports"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Relative path to the contract file within the contracts directory"
+          },
+          "purpose": {
+            "type": "string",
+            "description": "Human-readable description of what this contract defines"
+          },
+          "exports": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of exported symbol names from this contract file"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "List of all contract files with their purpose and exports",
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

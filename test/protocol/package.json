@@ -1,0 +1,17 @@
+{
+  "name": "meta-orchestration-protocol-tests",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@toon-format/toon": "^2.1.0"
+  }
+}

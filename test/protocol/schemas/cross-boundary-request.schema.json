@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/cross-boundary-request.schema.json",
+  "title": "CrossBoundaryRequest",
+  "description": "A request from one agent to modify files outside its ownership boundary. Written to .plan-execution/requests/{taskId}.json.",
+  "type": "object",
+  "required": ["taskId", "agent", "requests"],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "Task identifier of the requesting agent"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent making the request"
+    },
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "reason", "suggestedChange"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "File path outside ownership boundary that needs changes"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why this file needs modification"
+          },
+          "suggestedChange": {
+            "type": "string",
+            "description": "What change is needed"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "List of requested cross-boundary file modifications"
+    }
+  },
+  "additionalProperties": false
+}
