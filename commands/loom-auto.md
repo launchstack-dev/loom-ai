@@ -2,6 +2,8 @@
 
 You are a meta-orchestrator that drives the full software lifecycle autonomously: plan creation, execution, testing, code review, and fix cycles. You loop through these stages until the product works or a circuit breaker trips, then report results to the human.
 
+**AUTONOMOUS EXECUTION: After each stage completes, immediately proceed to the next stage. Do not wait for user input between stages. Do not display intermediate results and stop. The quality-gate Stop hook will prevent premature completion — trust the loop. Only stop when `currentStage` reaches `complete`, `escalated`, or a `--stop-after` boundary.**
+
 ## Requirements
 
 $ARGUMENTS
@@ -62,55 +64,33 @@ Before doing anything, read these protocol files:
 
 4. Create or verify `.plan-execution/` directory structure.
 
-5. **Install enforcement hooks.** Create `.claude/settings.json` in the project directory (if it doesn't already exist) with Loom's deterministic hooks. The hooks live in the meta-orchestration repo at `~/Projects/meta-orchestration/hooks/` and enforce file ownership, contract locks, agent budget, quality gates, and typecheck-on-write. Write this file using the Bash tool:
+5. **Install enforcement hooks.** If `.claude/settings.json` doesn't exist in the project, create it with Loom's deterministic hooks (file-ownership, contract-lock, budget-tracker, quality-gate, status-updater, typecheck-on-write). The hooks live in `~/Projects/meta-orchestration/hooks/` and are registered via:
 
    ```bash
-   mkdir -p .claude
-   cat > .claude/settings.json << 'HOOKS_EOF'
+   mkdir -p .claude && cat > .claude/settings.json << 'EOF'
    {
      "hooks": {
        "PreToolUse": [
-         {
-           "matcher": "Write|Edit",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/file-ownership.ts", "timeout": 5000}]
-         },
-         {
-           "matcher": "Write|Edit",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/contract-lock.ts", "timeout": 5000}]
-         },
-         {
-           "matcher": "Agent",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]
-         }
+         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/file-ownership.ts", "timeout": 5000}]},
+         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/contract-lock.ts", "timeout": 5000}]},
+         {"matcher": "Agent", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]}
        ],
        "PostToolUse": [
-         {
-           "matcher": "Write|Edit",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/typecheck-on-write.ts", "timeout": 30000}]
-         }
+         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/typecheck-on-write.ts", "timeout": 30000}]}
        ],
        "SubagentStop": [
-         {
-           "matcher": "",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]
-         },
-         {
-           "matcher": "",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/status-updater.ts", "timeout": 5000}]
-         }
+         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]},
+         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/status-updater.ts", "timeout": 5000}]}
        ],
        "Stop": [
-         {
-           "matcher": "",
-           "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/quality-gate.ts", "timeout": 5000}]
-         }
+         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/quality-gate.ts", "timeout": 5000}]}
        ]
      }
    }
-   HOOKS_EOF
+   EOF
    ```
 
-   If `.claude/settings.json` already exists, merge the hooks key rather than overwriting. The hooks fail open — if the project has no `.plan-execution/` they exit 0 immediately.
+   If `.claude/settings.json` already exists, merge the `hooks` key. The hooks fail open — no `.plan-execution/` means exit 0 immediately.
 
 6. Initialize `pipeline-state.toon`:
    ```toon
