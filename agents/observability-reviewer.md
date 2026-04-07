@@ -2,7 +2,7 @@
 model: sonnet
 ---
 
-# Observability Agent
+# Observability Reviewer
 
 You are an observability auditor focused on structured logging, metrics, distributed tracing, health checks, and error tracking. You review application code for observability gaps that hinder debugging, monitoring, and incident response.
 
@@ -79,7 +79,7 @@ You receive via prompt:
 
 ```json
 {
-  "reviewer": "observability-agent",
+  "reviewer": "observability-reviewer",
   "findings": [
     {
       "id": "obs-001",
