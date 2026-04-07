@@ -72,6 +72,9 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-library add <source>` | Add new item (local path or GitHub URL) |
 | `/loom-library remove <name>` | Uninstall, warn about dependents |
 | `/loom-library update` | Check all sources for changes |
+| `/loom-create-agent` | Interactive wizard: create a bespoke agent + wire into pipeline |
+| `/loom-create-agent --pipeline review --role "HIPAA checker"` | Quick mode with pipeline and role |
+| `/loom-create-agent --from .claude/agents/existing.md` | Clone and customize an existing agent |
 | `/loom` | Show this reference |
 
 ### Agent Groups
@@ -108,6 +111,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 **Utility:**
 - `meta-agent` — Generates new agents, skills, and commands from descriptions
 - `tdd-coach` — Drives test-driven development (red-green-refactor cycle)
+- `/loom-create-agent` — Interactive wizard to create project-specific bespoke agents + pipeline registration
 
 ### Typical Workflow
 
@@ -212,7 +216,7 @@ modes = ["default", "full"]     # which /review-code modes include it
 outputRole = "reviewer"
 ```
 
-Or use `meta-agent --register` to create an agent and wire it into a pipeline in one step.
+Or use `/loom-create-agent` to interactively create an agent and wire it into a pipeline in one step.
 
 ### Distribution
 
