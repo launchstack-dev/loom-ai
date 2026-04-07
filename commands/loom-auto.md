@@ -9,11 +9,12 @@ $ARGUMENTS
 Parse arguments:
 - `--from "description"`: create a plan from scratch using the description
 - `--plan <path>`: start from an existing plan file (default: `PLAN.md`)
+- `--roadmap <path>`: path to roadmap file (default: `ROADMAP.md`)
 - `--resume`: resume from `pipeline-state.toon`
 - `--max-iterations N`: outer loop cap (default: 3)
 - `--max-agents N`: agent budget cap (default: 50)
 - `--dry-run`: show pipeline stages without executing
-- `--stop-after <stage>`: stop after a named stage: `plan`, `execute`, `test`, `review`, `fix`
+- `--stop-after <stage>`: stop after a named stage: `roadmap`, `plan`, `execute`, `test`, `review`, `fix`
 
 ## Protocols
 
@@ -33,6 +34,7 @@ Before doing anything, read these protocol files:
 
 1. Parse `$ARGUMENTS` into local variables:
    - `description` from `--from`
+   - `roadmapFile` from `--roadmap` (default: `ROADMAP.md`)
    - `planFile` from `--plan` (default: `PLAN.md`)
    - `resumeMode` from `--resume`
    - `maxIterations` from `--max-iterations` (default: 3)
@@ -46,14 +48,19 @@ Before doing anything, read these protocol files:
    ```
    ## Pipeline Stages (dry run)
 
-   1. Plan Creation   — loom-roadmap --init --auto
-   2. Plan Review      — loom-review-plan
-   3. Review Integrate — loom-roadmap --review-integrate
-   4. Execution        — loom-execute-plan --auto
-   5. Test             — loom-test-plan --run --parallel --auto
-   6. Code Review      — loom-review-code --branch
-   7. Quality Gate     — automated decision matrix
-   8. Fix Cycle        — loom-fix-code --auto (up to 2 cycles)
+   1. Roadmap Creation  — loom-roadmap --init --auto
+   2. Roadmap Review    — loom-review-roadmap
+   3. Roadmap Integrate — loom-roadmap --review-integrate --roadmap
+   4. Roadmap Approve   — loom-roadmap --approve-roadmap (auto)
+   5. Plan Creation     — loom-roadmap --init --plan --auto
+   6. Plan Review       — loom-review-plan
+   7. Plan Integrate    — loom-roadmap --review-integrate
+   8. Plan Validate     — validation stages 1-4 (+ Stage 7 for v2)
+   9. Execution         — loom-execute-plan --auto
+   10. Test             — loom-test-plan --run --parallel --auto
+   11. Code Review      — loom-review-code --branch
+   12. Quality Gate     — automated decision matrix
+   13. Fix Cycle        — loom-fix-code --auto (up to 2 cycles)
 
    Outer loop: up to {maxIterations} iterations
    Agent budget: {maxAgents}
@@ -118,50 +125,107 @@ Before doing anything, read these protocol files:
    runId: {generate uuid}
    mode: auto
    description: "{description or 'Existing plan: ' + planFile}"
+   roadmapFile: {roadmapFile}
    planFile: {planFile}
    outerIteration: 1
    maxIterations: {maxIterations}
    agentsSpawned: 0
    maxAgents: {maxAgents}
    fixCycleCount: 0
-   currentStage: plan-create
+   currentStage: roadmap-create
 
    stageHistory[0]{stage,status,iteration,startedAt,completedAt,agentsUsed,gateResult}:
 
    failureLog[0]{iteration,stage,error,resolution}:
    ```
 
-6. Update status line and proceed to Step 1.
+7. Update status line and proceed to Step 1.
 
 ---
 
-### Step 1: Plan Creation (Phase A)
+### Step 1: Roadmap Creation (Phase R)
+
+**If `outerIteration == 1` AND no existing roadmap file (or `--from` provided):**
+
+1a. **Create roadmap.** Spawn a general-purpose agent:
+   ```
+   "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
+    Create a roadmap using --init --from '{description}' --auto.
+    Write the result to {roadmapFile}."
+   ```
+   Record agents spawned. Update `pipeline-state.toon`: `currentStage: roadmap-create`.
+
+1b. **Review roadmap.** Spawn a general-purpose agent:
+   ```
+   "Read your instructions from ~/.claude/commands/loom-review-roadmap.md first.
+    Review the roadmap at {roadmapFile}. Save findings to .plan-history/reviews/."
+   ```
+   Record agents spawned. Update `currentStage: roadmap-review`.
+
+1c. **Integrate review findings.** Spawn a general-purpose agent:
+   ```
+   "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
+    Run --review-integrate --roadmap to apply review findings to {roadmapFile}."
+   ```
+   Record agents spawned. Update `currentStage: roadmap-integrate`.
+
+1d. **Validate roadmap.** Run roadmap validation stages 1-4 (from `validation-rules.md` Section 7):
+   - Stage 1: Structure
+   - Stage 2: Feature completeness
+   - Stage 3: Milestone ordering
+   - Stage 4: Data model coverage
+
+   If validation fails after integration: **ESCALATE** — review recommendations broke the roadmap.
+
+   If validation passes: auto-approve roadmap (set status to `approved` in frontmatter). Update `currentStage: roadmap-approve`.
+
+**If `outerIteration > 1` AND roadmap revision needed (REVISE-ROADMAP from quality gate):**
+
+1a-alt. **Revise roadmap.** Spawn a general-purpose agent:
+   ```
+   "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
+    Run --refine --roadmap on {roadmapFile}.
+    Failure context from prior iteration:
+    - Failed stage: {failedStage}
+    - Error: {errorSummary}
+    - Root cause: {rootCauseAnalysis}
+    Only modify features/milestones related to the failure."
+   ```
+   Then run steps 1b-1d as above.
+
+**If `--stop-after roadmap`:** display roadmap summary and stop.
+
+Check circuit breakers before proceeding.
+
+---
+
+### Step 2: Plan Creation (Phase A)
 
 **If `outerIteration == 1` AND no existing plan file (or `--from` provided):**
 
-1a. **Create plan.** Spawn a general-purpose agent:
+2a. **Create plan.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Create a plan using --init --from '{description}' --auto.
+    Create a plan using --init --plan --from '{description}' --auto.
     Write the result to {planFile}."
    ```
    Record agents spawned. Update `pipeline-state.toon`: `currentStage: plan-create`.
 
-1b. **Review plan.** Spawn a general-purpose agent:
+2b. **Review plan.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-review-plan.md first.
     Review the plan at {planFile}. Save findings to .plan-history/reviews/."
    ```
    Record agents spawned. Update `currentStage: plan-review`.
 
-1c. **Integrate review findings.** Spawn a general-purpose agent:
+2c. **Integrate review findings.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
     Run --review-integrate to apply review findings to {planFile}."
    ```
    Record agents spawned. Update `currentStage: plan-integrate`.
 
-1d. **Validate.** Run plan validation stages 1-4 (from `validation-rules.md`):
+2d. **Validate.** Run plan validation stages 1-4 (from `validation-rules.md`):
    - Stage 1: Structure
    - Stage 2: Dependencies (cycle detection)
    - Stage 3: Ownership (no same-wave overlaps)
@@ -173,7 +237,7 @@ Before doing anything, read these protocol files:
 
 **If `outerIteration > 1` (plan revision after failure):**
 
-1a-alt. **Revise plan.** Spawn a general-purpose agent:
+2a-alt. **Revise plan.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
     Run --refine on {planFile}.
@@ -183,7 +247,7 @@ Before doing anything, read these protocol files:
     - What was tried: {priorAttemptSummary}
     Lock completed phases. Only edit pending/failed phases."
    ```
-   Then run steps 1b-1d as above.
+   Then run steps 2b-2d as above.
 
 **If `--stop-after plan`:** display plan summary and stop.
 
@@ -191,7 +255,7 @@ Check circuit breakers before proceeding.
 
 ---
 
-### Step 2: Execution (Phase B)
+### Step 3: Execution (Phase B)
 
 Update `pipeline-state.toon`: `currentStage: execute`.
 
@@ -205,11 +269,11 @@ Spawn a general-purpose agent:
 Record agents spawned (add to `agentsSpawned`).
 
 On completion, read `.plan-execution/state.toon`:
-- If status == `completed`: proceed to Step 3.
+- If status == `completed`: proceed to Step 4.
 - If status == `failed` or `paused`:
   - Record failure context in `pipeline-state.toon` failureLog.
   - Increment `outerIteration`.
-  - Check circuit breakers. If clear, go to Step 1 (Phase A with `--refine`).
+  - Check circuit breakers. If clear, go to Step 2 (Phase A with `--refine`).
 
 Log stage result in `stageHistory`.
 
@@ -219,7 +283,7 @@ Check circuit breakers before proceeding.
 
 ---
 
-### Step 3: Test (Phase C)
+### Step 4: Test (Phase C)
 
 Update `pipeline-state.toon`: `currentStage: test`.
 
@@ -236,7 +300,7 @@ Record agents spawned. Log stage in `stageHistory`.
 
 ---
 
-### Step 4: Code Review
+### Step 5: Code Review
 
 Update `pipeline-state.toon`: `currentStage: review-code`.
 
@@ -254,15 +318,15 @@ Proceed to the Pipeline Quality Gate.
 
 ---
 
-### Step 5: Pipeline Quality Gate
+### Step 6: Pipeline Quality Gate
 
-Parse the outputs from Steps 3 and 4:
+Parse the outputs from Steps 4 and 5:
 
 ```
 criticalCount  = count of findings where severity == "critical" in review-report.md
 warningCount   = count of findings where severity == "warning" in review-report.md
-testsPassed    = passed test count from Step 3
-testsFailed    = failed test count from Step 3
+testsPassed    = passed test count from Step 4
+testsFailed    = failed test count from Step 4
 testPassRate   = testsPassed / (testsPassed + testsFailed)
 typecheckPass  = run project typecheck, read exit code (true if 0)
 ```
@@ -275,25 +339,31 @@ Apply the decision matrix:
 | `criticalCount <= 3` AND `testPassRate >= 80%` AND `fixCycleCount < 2` | **FIX-AND-RECHECK** |
 | `criticalCount > 3` OR `testPassRate < 80%` OR systemic typecheck failures | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
 | `fixCycleCount >= 2` (already tried fixing twice) | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
+| `outerIteration > 1` AND same structural failure pattern across iterations | **REVISE-ROADMAP** (if iterations remain) else **ESCALATE** |
 
-**On PROCEED:** go to Step 7 (Completion).
+**On PROCEED:** go to Step 8 (Completion).
 
-**On FIX-AND-RECHECK:** go to Step 6 (Fix Cycle).
+**On FIX-AND-RECHECK:** go to Step 7 (Fix Cycle).
 
 **On REVISE-PLAN:**
 1. Build failure context: remaining critical findings, failing tests, typecheck errors, what fix cycles attempted.
 2. Increment `outerIteration`.
-3. Check circuit breakers. If clear, go to Step 1 (Phase A with `--refine`).
+3. Check circuit breakers. If clear, go to Step 2 (Phase A with `--refine`).
 
-**On ESCALATE:** go to Step 7 (Escalation report).
+**On REVISE-ROADMAP:**
+1. Build failure context including root cause analysis indicating the problem is at the roadmap/scope level.
+2. Increment `outerIteration`.
+3. Check circuit breakers. If clear, go to Step 1 (Phase R with `--refine`).
+
+**On ESCALATE:** go to Step 8 (Escalation report).
 
 ---
 
-### Step 6: Fix Cycle
+### Step 7: Fix Cycle
 
 Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code`.
 
-6a. **Apply fixes.** Spawn a general-purpose agent:
+7a. **Apply fixes.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-fix-code.md first.
     Run with --auto --severity critical,warning flags.
@@ -301,7 +371,7 @@ Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code
    ```
    Record agents spawned.
 
-6b. **Convergence detection.** Compare before/after:
+7b. **Convergence detection.** Compare before/after:
    - Did `criticalCount` decrease? (progress)
    - Did `testPassRate` increase? (progress)
    - Are the SAME findings still present (same tag:file:line)? (stuck)
@@ -310,16 +380,16 @@ Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code
    - Skip directly to REVISE-PLAN. The failure is structural.
    - Do not burn another fix cycle.
 
-6c. **Re-run quick review.** Spawn a general-purpose agent:
+7c. **Re-run quick review.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-review-code.md first.
     Run a quick review (code style + security only).
     Write updated findings to .plan-execution/review-report.md."
    ```
 
-6d. **Re-run verification.** Run typecheck + existing tests.
+7d. **Re-run verification.** Run typecheck + existing tests.
 
-6e. **Return to Step 5** (Pipeline Quality Gate) with updated results.
+7e. **Return to Step 6** (Pipeline Quality Gate) with updated results.
 
 Log stage in `stageHistory`.
 
@@ -327,7 +397,7 @@ Log stage in `stageHistory`.
 
 ---
 
-### Step 7: Completion
+### Step 8: Completion
 
 **On success (PROCEED from quality gate):**
 
@@ -389,7 +459,7 @@ Display the escalation report to the user.
 
 ## Circuit Breakers
 
-Check these conditions before every stage transition. If any triggers, go to Step 7 (Escalation).
+Check these conditions before every stage transition. If any triggers, go to Step 8 (Escalation).
 
 | Breaker | Condition | Reason |
 |---------|-----------|--------|
@@ -421,14 +491,18 @@ When `--resume` is passed:
 
    | `currentStage` value | Re-entry point |
    |----------------------|----------------|
-   | `plan-create` | Step 1, sub-step 1a |
-   | `plan-review` | Step 1, sub-step 1b |
-   | `plan-integrate` | Step 1, sub-step 1c |
-   | `plan-validate` | Step 1, sub-step 1d |
-   | `execute` | Step 2 (pass `--resume` to loom-execute-plan) |
-   | `test` | Step 3 |
-   | `review-code` | Step 4 |
-   | `fix-code` | Step 6 |
+   | `roadmap-create` | Step 1, sub-step 1a |
+   | `roadmap-review` | Step 1, sub-step 1b |
+   | `roadmap-integrate` | Step 1, sub-step 1c |
+   | `roadmap-approve` | Step 1, sub-step 1d |
+   | `plan-create` | Step 2, sub-step 1a |
+   | `plan-review` | Step 2, sub-step 1b |
+   | `plan-integrate` | Step 2, sub-step 1c |
+   | `plan-validate` | Step 2, sub-step 1d |
+   | `execute` | Step 3 (pass `--resume` to loom-execute-plan) |
+   | `test` | Step 4 |
+   | `review-code` | Step 5 |
+   | `fix-code` | Step 7 |
 
 6. Restore all state variables from `pipeline-state.toon`: `outerIteration`, `agentsSpawned`, `fixCycleCount`, `maxIterations`, `maxAgents`.
 7. Continue the loop from the re-entry point.
@@ -453,6 +527,7 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
 command: loom-auto
 stage: {currentStage}
 stageName: {human-readable stage name}
+roadmapFile: {roadmapFile}
 outerIteration: {outerIteration}
 fixCycleCount: {fixCycleCount}
 agentsSpawned: {agentsSpawned}

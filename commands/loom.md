@@ -48,23 +48,31 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
 | `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
 | `/loom-auto --dry-run` | Show pipeline plan without executing |
-| `/loom-auto --stop-after <stage>` | Stop after named stage |
-| `/loom-roadmap` | Show roadmap status (phases, milestones, progress) |
-| `/loom-roadmap --init` | Create a new PLAN.md interactively (includes discussion phase) |
-| `/loom-roadmap --init --from "desc"` | Create a plan from a one-line description |
+| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, test, review, fix) |
+| `/loom-review-roadmap [path]` | Launch 3 agents to review a ROADMAP.md |
+| `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
+| `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
+| `/loom-roadmap --init --plan` | Create a PLAN.md (v2 spec) from an approved ROADMAP.md |
+| `/loom-roadmap --init --full` | Full pipeline: roadmap → review → plan → review (interactive) |
+| `/loom-roadmap --init --from "desc"` | Create a roadmap from a one-line description |
 | `/loom-roadmap --discuss` | Run discussion phase to surface architectural decisions |
 | `/loom-roadmap --no-discuss` | Skip the discussion phase |
-| `/loom-roadmap --auto` | Accept all recommended defaults from discussion phase |
+| `/loom-roadmap --auto` | Accept all recommended defaults without prompting |
+| `/loom-roadmap --approve-roadmap` | Mark ROADMAP.md as approved (unlocks plan generation) |
+| `/loom-roadmap --review-roadmap` | Trigger roadmap review (delegates to /loom-review-roadmap) |
 | `/loom-roadmap --validate` | Run plan validation pipeline (stages 1-4) |
+| `/loom-roadmap --validate --roadmap` | Run roadmap validation pipeline (stages 1-4) |
 | `/loom-roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
 | `/loom-roadmap --refine` | Refine plan using review history |
+| `/loom-roadmap --refine --roadmap` | Refine roadmap using review history |
+| `/loom-roadmap --review-integrate` | Apply plan review findings to PLAN.md |
+| `/loom-roadmap --review-integrate --roadmap` | Apply roadmap review findings to ROADMAP.md |
 | `/loom-roadmap --status` | Detailed execution + milestone progress |
 | `/loom-roadmap --deps` | Show phase dependency graph + critical path |
 | `/loom-roadmap --diff` | Compare current plan vs last snapshot |
 | `/loom-roadmap --history` | Show plan revision history |
 | `/loom-roadmap --milestone add/complete/list` | Manage milestones |
 | `/loom-roadmap --snapshot` | Save current plan state for versioning |
-| `/loom-roadmap --review-integrate` | Apply review findings to plan |
 | `/loom-library` or `/loom-library list` | Show installed items grouped by type |
 | `/loom-library use <name>` | Install item from catalog, resolve dependencies |
 | `/loom-library sync` | Re-pull all installed items, compare hashes |
@@ -76,14 +84,18 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 
 ### Agent Groups
 
-**Planning** (spawned by `/loom-review-plan` and `/loom-roadmap`):
+**Roadmap** (spawned by `/loom-review-roadmap` and `/loom-roadmap --init`):
+- `roadmap-builder-agent` — Creates ROADMAP.md files from descriptions and discussion output
+- `scope-feasibility-agent` — Reviews roadmap scope, feature conflicts, milestone sizing
+- `questioner-agent` — Surfaces architectural decisions before roadmap generation
+
+**Planning** (spawned by `/loom-review-plan` and `/loom-roadmap --init --plan`):
 - `feature-coverage-agent` — Audits schema, API surface, features against competitors
 - `strategy-ux-agent` — Evaluates positioning, UX, theming, developer ergonomics
 - `phasing-agent` — Reviews phase boundaries, dependencies, sequencing risks
 - `parallelization-agent` — Designs execution waves, merge strategy, conflict prevention
 - `agentic-workflow-agent` — Decomposes phases into context-bounded agent tasks
-- `plan-builder-agent` — Creates structured, execution-ready PLAN.md files from descriptions
-- `questioner-agent` — Surfaces architectural decisions before plan generation, writes CONTEXT.md
+- `plan-builder-agent` — Creates v1/v2 PLAN.md files (v2 = spec-driven with API specs, state machines)
 
 **Execution** (spawned by `/loom-execute-plan`):
 - `contracts-agent` — Wave 0: creates shared types, interfaces, schemas on disk
@@ -112,18 +124,27 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 ### Typical Workflow
 
 ```
-1. /roadmap --init            — discussion phase + structured PLAN.md creation
-2. /review-plan               — 5 agents analyze it in parallel
-3. /roadmap --review-integrate — apply review findings to the plan
-4. /roadmap --deps            — verify dependency graph + critical path
-5. /execute-plan --dry-run    — preview the wave structure
-6. /execute-plan              — run the full pipeline with approval gates
-7. /test-plan                 — generate acceptance criteria + unit + E2E tests
-8. /test-plan --run           — generate and run all tests
-9. /review-code               — full code review
-10. /fix-code                  — auto-apply review findings
-11. /roadmap --status          — track progress across phases + milestones
-12. /execute-plan --resume     — pick up where you left off if interrupted
+Tier 1 — Roadmap (strategy):
+1.  /roadmap --init              — discussion phase + ROADMAP.md creation
+2.  /review-roadmap              — 3 agents review roadmap
+3.  /roadmap --review-integrate --roadmap — apply roadmap review findings
+4.  /roadmap --approve-roadmap   — lock roadmap, enable plan generation
+
+Tier 2 — Plan (spec):
+5.  /roadmap --init --plan       — generate v2 PLAN.md from approved roadmap
+6.  /review-plan                 — 5 agents analyze plan in parallel
+7.  /roadmap --review-integrate  — apply plan review findings
+8.  /roadmap --deps              — verify dependency graph + critical path
+
+Tier 3 — Build:
+9.  /execute-plan --dry-run      — preview the wave structure
+10. /execute-plan                — run the full pipeline with approval gates
+
+Tier 4 — Qualify:
+11. /test-plan --run             — generate and run all tests
+12. /review-code                 — full code review
+13. /fix-code                    — auto-apply review findings
+14. /roadmap --status            — track progress across everything
 ```
 
 Or for fully autonomous execution:
@@ -144,10 +165,11 @@ Wave N: implementer-agents (parallel) → wiring-agent → verify → scope drif
 
 ```
 Outer Loop (max 3 iterations):
-  Plan: roadmap --init → review-plan → review-integrate → validate
-  Build: execute-plan --auto (wave loop with automated gates)
+  Roadmap: roadmap --init → review-roadmap → integrate → approve
+  Plan:    roadmap --init --plan → review-plan → integrate → validate
+  Build:   execute-plan --auto (wave loop with automated gates)
   Qualify: test-plan → review-code → fix-code (max 2 fix cycles)
-  Gate: DONE / FIX / REVISE-PLAN / ESCALATE
+  Gate:    DONE / FIX / REVISE-PLAN / REVISE-ROADMAP / ESCALATE
 ```
 
 Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
@@ -168,7 +190,8 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
   wave-N-summary.toon     — Per-wave results
 
 .plan-history/                — Persistent (git-tracked)
-  reviews/                — /review-plan findings
+  reviews/                — Review findings (roadmap + plan)
+    YYYY-MM-DD-roadmap-review.toon
     YYYY-MM-DD-review.toon
   decisions/              — Architecture Decision Records
     NNN-description.md
