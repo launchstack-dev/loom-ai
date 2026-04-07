@@ -95,6 +95,21 @@ library:
       description: Architecture drift detection - dependency direction, pattern consistency, contracts
       source: agents/architecture-reviewer.md
 
+    - name: api-explorer
+      description: Brownfield API surface analyst - discovers internal endpoints, external integrations, undocumented routes
+      source: agents/api-explorer.md
+
+    # API agents (execution)
+    - name: api-route-creator
+      description: Specialized implementer that generates internal API endpoints (routes, validation, middleware)
+      source: agents/api-route-creator.md
+      requires: [skill:execution-protocols]
+
+    - name: api-connector
+      description: Specialized implementer that generates typed third-party API clients (auth, retry, timeout, response mapping)
+      source: agents/api-connector.md
+      requires: [skill:execution-protocols]
+
     # Planning agents (extended)
     - name: questioner-agent
       description: Discussion phase agent - surfaces architectural decision points with structured options before plan generation

@@ -234,3 +234,4 @@ Each finding is tagged with the reviewer that found it:
 - `[SEC]` — security-reviewer
 - `[ARCH]` — architecture-reviewer
 - `[PLAN]` — plan-compliance-reviewer
+- `[API-MAP]` — api-explorer

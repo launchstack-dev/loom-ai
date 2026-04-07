@@ -98,6 +98,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 **Execution** (spawned by `/loom-execute-plan`):
 - `contracts-agent` — Wave 0: creates shared types, interfaces, schemas on disk
 - `implementer-agent` — Parallel worker within strict file ownership boundaries
+- `api-route-creator` — Specialized implementer: internal API endpoints, validation, middleware
+- `api-connector` — Specialized implementer: typed third-party API clients, auth, retry logic
 - `wiring-agent` — Post-wave integration: barrel files, routes, imports, deps
 - `verification-agent` — Quality gate: typecheck, tests, lint, ownership drift
 
@@ -111,6 +113,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 - `security-reviewer` — OWASP Top 10 audit: injection, auth, XSS, secrets, dependencies
 - `architecture-reviewer` — Dependency direction, pattern consistency, contract conformance
 - `plan-compliance-reviewer` — Deliverables, schema drift, acceptance criteria coverage
+- `api-explorer` — Brownfield API surface discovery: internal endpoints, external integrations, undocumented routes
 
 **Code Fix** (spawned by `/loom-fix-code`):
 - `fixer-agent` — Parallel worker that applies review findings within file ownership boundaries
