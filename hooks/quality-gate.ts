@@ -11,12 +11,17 @@ import { findPlanExecutionDir, readPipelineState } from "./lib/context.js";
 
 const TERMINAL_STAGES = new Set(["complete", "escalated"]);
 const KNOWN_STAGES = new Set([
+  "roadmap-create", "roadmap-review", "roadmap-integrate", "roadmap-approve",
   "plan-create", "plan-review", "plan-integrate", "plan-validate",
   "execute", "test", "review-code", "fix-code",
   "complete", "escalated",
 ]);
 
 const STAGE_NAMES: Record<string, string> = {
+  "roadmap-create": "Roadmap Creation",
+  "roadmap-review": "Roadmap Review",
+  "roadmap-integrate": "Roadmap Integration",
+  "roadmap-approve": "Roadmap Approval",
   "plan-create": "Plan Creation",
   "plan-review": "Plan Review",
   "plan-integrate": "Review Integration",

@@ -1,3 +1,6 @@
 node_modules/
 .plan-execution/
 test/results/*.jsonl
+
+# Git worktrees managed by wt.sh
+.worktrees/

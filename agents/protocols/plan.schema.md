@@ -4,6 +4,8 @@ Canonical specification for PLAN.md files consumed by the meta-orchestration pip
 
 All orchestrators (`/loom-roadmap`, `/loom-execute-plan`, `/loom-review-plan`, `/loom-test-plan`) and the `plan-builder-agent` MUST conform to this spec.
 
+**Version note:** This spec supports both `planVersion: 1` (original) and `planVersion: 2` (spec-driven). v1 plans continue to work unchanged. v2 plans add API Specification, State Machines, Error Handling, and expanded Schema sections. See `spec.schema.md` for detailed format of v2-only sections.
+
 ---
 
 ## Frontmatter
@@ -12,11 +14,12 @@ Every PLAN.md MUST begin with YAML frontmatter:
 
 ```yaml
 ---
-planVersion: 1
+planVersion: 1 | 2
 name: "Project Name"
 status: draft | reviewed | approved | in-progress | completed
 created: YYYY-MM-DD
 lastReviewed: YYYY-MM-DD | null
+roadmapRef: ROADMAP.md | null
 totalPhases: N
 totalWaves: N
 ---
@@ -24,11 +27,12 @@ totalWaves: N
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| planVersion | integer | yes | Schema version (currently 1). Enables future evolution. |
+| planVersion | integer | yes | Schema version. `1` = original format. `2` = spec-driven format with API specs, state machines, error handling. |
 | name | string | yes | Project name. Must match `# Plan: {name}` title. |
 | status | enum | yes | Plan lifecycle state. |
 | created | date string | yes | When the plan was first created. |
 | lastReviewed | date string | no | When `/loom-review-plan` last ran. null if never reviewed. |
+| roadmapRef | string | no | Path to the ROADMAP.md this plan was generated from. null if created without a roadmap. v2 plans SHOULD set this. |
 | totalPhases | integer | yes | Number of phases (excluding verification). |
 | totalWaves | integer | yes | Number of execution waves (wave 0 = contracts). |
 
@@ -88,7 +92,51 @@ May also include:
 - TypeScript type specs
 - Error formats
 
-### 5. Execution Phases
+**v2 additions:** For `planVersion: 2`, entity tables MUST also include:
+- **Validation Rules** column (regex patterns, min/max, custom validators) — or a separate `## Validation Rules` section
+- **Indexing** subsection per entity (primary keys, unique constraints, indexes, compound indexes)
+- **Cascade Behavior** subsection (ON DELETE / ON UPDATE for every foreign key)
+- Optional **SQL Schema** subsection with CREATE TABLE statements
+
+See `spec.schema.md` → "Expanded Schema / Type Definitions" for exact formats.
+
+### 5. API Specification (v2 only)
+
+```markdown
+## API Specification
+```
+
+**Required for `planVersion: 2` plans that define HTTP endpoints.** Omit for v1 plans or non-API projects.
+
+Each endpoint gets its own `### METHOD /path` subsection with: description, auth requirements, path/query parameters, request body with field types and constraints, success response with JSON shape, error responses with status codes and conditions, and behavior notes for implementation-specific details.
+
+See `spec.schema.md` → "API Specification" for the exact endpoint format, rules, and validation checks.
+
+### 6. State Machines (v2 only)
+
+```markdown
+## State Machines
+```
+
+**Required for `planVersion: 2` plans where any entity has a status/lifecycle/state field.** Omit if no entities have state fields.
+
+Each stateful entity gets: an ASCII state transition diagram, a States table (state, description, entry condition), a Valid Transitions table (from, to, trigger, side effects), and an Invalid Transitions table (from, to, error code, message).
+
+See `spec.schema.md` → "State Machines" for the exact format, rules, and validation checks.
+
+### 7. Error Handling Specification (v2 only)
+
+```markdown
+## Error Handling Specification
+```
+
+**Required for `planVersion: 2` plans that define APIs.** Omit for v1 plans or non-API projects.
+
+Defines the consistent error response JSON format, error categories table (code, HTTP status, when used, retryable), field-level validation error format, and retry behavior.
+
+See `spec.schema.md` → "Error Handling Specification" for the exact format, rules, and validation checks.
+
+### 8. Execution Phases
 
 ```markdown
 ## Execution Phases
@@ -96,7 +144,7 @@ May also include:
 
 Contains one or more `### Phase N` subsections. See Phase Structure below.
 
-### 6. Verification Commands
+### 9. Verification Commands
 
 ```markdown
 ## Verification Commands
@@ -123,6 +171,8 @@ These sections are recommended but not required:
 - `## Milestones` — Key checkpoints with dependencies. Auto-derived from phases if absent.
 - `## Risks & Mitigations` — Known risks and planned mitigations.
 - `## Acceptance Criteria (Final)` — Overall project-level criteria beyond per-phase criteria.
+- `## Configuration Specification` — (v2) Environment variables, defaults, validation. See `spec.schema.md`.
+- `## Validation Rules` — (v2) Per-field validation rules when not inline in Schema tables. See `spec.schema.md`.
 
 ---
 
@@ -240,11 +290,12 @@ Phase 0 is special — it is always the contracts phase:
 
 ## Validation Stages
 
-Orchestrators validate plans through these stages:
+Orchestrators validate plans through these stages. Stages are version-aware — v2-only checks are skipped for `planVersion: 1` plans.
 
 ### Stage 1: Structure Parse
-- Frontmatter exists with required fields
+- Frontmatter exists with required fields (including `roadmapRef` awareness for v2)
 - All required sections present in order
+- **v2:** API Specification, State Machines, and Error Handling sections must be present (if applicable — API Spec required for API projects, State Machines required if any entity has a status field)
 - At least one Phase subsection exists
 - Phase 0 exists and is contracts-focused
 
@@ -272,6 +323,13 @@ Orchestrators validate plans through these stages:
 ### Stage 6: Schema Completeness (optional, deep)
 - Check all entity references resolve to definitions in Schema section
 - Flag undefined type references
+
+### Stage 7: Spec Completeness (v2 only, optional)
+- **API coverage:** Every endpoint referenced in acceptance criteria has a full spec in API Specification
+- **State machine coverage:** Every entity with a status/state field has a state machine defined
+- **Error consistency:** Every error code used in API Specification error tables is defined in Error Handling Specification
+- **Index coverage:** Every foreign key in Schema has a corresponding index in the Indexing subsection
+- **Cascade coverage:** Every foreign key has ON DELETE / ON UPDATE behavior defined
 
 ---
 

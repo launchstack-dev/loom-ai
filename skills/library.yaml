@@ -26,6 +26,14 @@ library:
       description: Reusable pattern runtime protocol for debate, chain, vote, triage orchestration patterns
       source: agents/protocols/pattern-executor.md
 
+    - name: roadmap-schema
+      description: Schema for ROADMAP.md structure - vision, features, milestones, constraints, conceptual data model
+      source: agents/protocols/roadmap.schema.md
+
+    - name: spec-schema
+      description: Schema for v2 spec-level plan sections - API specs, state machines, error handling, validation rules
+      source: agents/protocols/spec.schema.md
+
   agents:
     # Planning agents
     - name: feature-coverage-agent
@@ -95,15 +103,27 @@ library:
       description: Architecture drift detection - dependency direction, pattern consistency, contracts
       source: agents/architecture-reviewer.md
 
+    # Roadmap agents
+    - name: roadmap-builder-agent
+      description: Creates ROADMAP.md files from descriptions and discussion output, supports refinement mode
+      source: agents/roadmap-builder-agent.md
+      requires: [skill:roadmap-schema]
+
+    - name: scope-feasibility-agent
+      description: Reviews roadmap scope, feature conflicts, milestone sizing, constraint compliance
+      source: agents/scope-feasibility-agent.md
+      requires: [skill:roadmap-schema]
+
     # Planning agents (extended)
     - name: questioner-agent
-      description: Discussion phase agent - surfaces architectural decision points with structured options before plan generation
+      description: Discussion phase agent - surfaces architectural decision points with structured options before roadmap generation
       source: agents/questioner-agent.md
       requires: [skill:execution-protocols]
 
     - name: plan-builder-agent
-      description: Creates structured, execution-ready PLAN.md files from project descriptions
+      description: Creates v1/v2 PLAN.md files - v2 is spec-driven with API specs, state machines, error handling
       source: agents/plan-builder-agent.md
+      requires: [skill:spec-schema]
 
     # Utility agents
     - name: meta-agent
@@ -140,10 +160,15 @@ library:
       source: commands/loom-review-code.md
       requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer]
 
+    - name: loom-review-roadmap
+      description: Launch 3 agents to review ROADMAP.md from strategy, scope, and feasibility angles
+      source: commands/loom-review-roadmap.md
+      requires: [agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-ux-agent]
+
     - name: loom-roadmap
-      description: Create, track, refine, and visualize project plans and milestones
+      description: Two-tier planning orchestrator - ROADMAP.md (strategy) and PLAN.md (spec) lifecycle
       source: commands/loom-roadmap.md
-      requires: [agent:plan-builder-agent, agent:questioner-agent]
+      requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent]
 
     - name: loom-library
       description: Pull-on-demand catalog management - install, sync, search, update agents and commands
@@ -155,9 +180,9 @@ library:
       requires: [agent:fixer-agent]
 
     - name: loom-auto
-      description: Fully autonomous pipeline - plan, build, test, review, fix loops until done
+      description: Fully autonomous pipeline - roadmap, plan, build, test, review, fix loops until done
       source: commands/loom-auto.md
-      requires: [prompt:loom-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
+      requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
 
     - name: loom
       description: Shows Loom system reference — commands, agents, workflows

@@ -209,7 +209,96 @@ Warnings:
 
 When validation fails with blocking errors, the plan is returned to the plan-builder-agent in Validation Correction Mode for targeted fixes.
 
-## 7. Scope Coverage Validation
+## 7. Roadmap Validation Rules
+
+Roadmap validation enforces the structural and semantic integrity of ROADMAP.md files. The authoritative format specification is `roadmap.schema.md` — these rules describe how orchestrators enforce that spec at runtime.
+
+### When Validation Runs
+
+Roadmap validation is triggered in three contexts:
+- **`/loom-roadmap --init`** — after the roadmap-builder-agent generates a new roadmap
+- **`/loom-roadmap --validate --roadmap`** — standalone roadmap validation
+- **`/loom-review-roadmap`** — as a pre-check before spawning review agents
+
+If any **blocking** error is found, the pipeline halts. **Warning**-level issues are reported but do not halt.
+
+### Stage 1: Structure Parse — BLOCKING
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Frontmatter exists | blocking | YAML frontmatter with `---` delimiters must be present |
+| Required frontmatter fields | blocking | `roadmapVersion`, `name`, `status`, `created`, `totalFeatures`, `totalMilestones` must all be present and non-null |
+| Title matches name | blocking | `# Roadmap: {name}` must match `frontmatter.name` |
+| Required sections present | blocking | Vision, Success Metrics, Constraints & Decisions, Tech Stack, Features, Data Model (Conceptual), Milestones, Risks & Mitigations, Out of Scope must all exist |
+| Section order | blocking | Required sections must appear in the order specified by roadmap.schema.md |
+| Feature count matches | warning | `totalFeatures` in frontmatter should match actual feature count |
+| Milestone count matches | warning | `totalMilestones` in frontmatter should match actual milestone count |
+
+### Stage 2: Feature Completeness — BLOCKING / WARNING
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Feature has milestone | blocking | Every feature (F-XX) must reference an existing milestone (M-XX) |
+| Feature has entities | warning | Every feature should reference at least one entity from the Data Model |
+| Feature has key behaviors | warning | Every feature should have at least 2 key behaviors listed |
+| Feature description length | warning | Feature descriptions shorter than 2 sentences may lack context |
+| Priority distribution | info | Flag if all features are P0 (no prioritization) or all P2 (no urgency) |
+
+### Stage 3: Milestone Ordering — BLOCKING
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Cycle detection | blocking | Run Kahn's algorithm on milestone dependencies. Any cycle = blocking error. Report the full cycle path. |
+| Self-dependencies | blocking | A milestone cannot list itself in its Dependencies field |
+| Undefined references | blocking | Every milestone ID referenced in Dependencies must correspond to an existing milestone |
+| Forward references | blocking | A milestone cannot depend on a milestone with a higher number |
+| All features assigned | warning | Every feature should appear in at least one milestone's Features list |
+| Orphan milestones | warning | A milestone with no features assigned may indicate incomplete roadmap |
+
+### Stage 4: Data Model Coverage — WARNING
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Entity referenced by feature | warning | Every entity in the Data Model should be referenced by at least one feature |
+| Feature entity exists | warning | Every entity referenced in a feature's "Entities involved" should exist in the Data Model |
+| Relationship endpoints exist | warning | Both sides of every relationship must reference entities defined in the Entities table |
+| Orphan entities | info | Entities defined but never referenced by any feature |
+
+### Roadmap Validation Output Format
+
+```
+ROADMAP VALIDATION: {roadmap name}
+================================
+Stage 1 (Structure):    PASS
+Stage 2 (Features):     1 warning
+Stage 3 (Milestones):   PASS
+Stage 4 (Data Model):   PASS
+================================
+RESULT: PASS (0 errors, 1 warning)
+
+Warnings:
+  [Stage 2] Feature F-04 has only 1 key behavior — consider adding more
+```
+
+## 8. Plan v2 Spec Validation Rules
+
+For `planVersion: 2` plans, these additional checks run after the standard Stage 1-6 plan validation.
+
+### Stage 7: Spec Completeness — BLOCKING / WARNING
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| API endpoint referenced but not specified | blocking | An endpoint mentioned in any acceptance criterion must have a full spec in API Specification |
+| Entity with status field but no state machine | blocking | Every entity in Schema with a status/state/lifecycle field must have a State Machine defined |
+| Error code used but not defined | blocking | Every error code in API Specification error tables must appear in Error Handling Specification |
+| Missing error responses on endpoint | warning | Every API endpoint should document at least 400 and 500 error cases |
+| No request body on POST/PUT/PATCH | warning | Write endpoints typically need a request body spec |
+| Foreign key without index | warning | Every foreign key in Schema should have a corresponding index in the Indexing subsection |
+| Foreign key without cascade behavior | warning | Every foreign key should have ON DELETE / ON UPDATE behavior defined |
+| Unreachable state | warning | A state with no inbound transition (other than initial) in a state machine |
+| Dead-end state without terminal marking | warning | A non-terminal state with no outbound transitions |
+
+## 9. Scope Coverage Validation
 
 ### Pre-Execution Coverage Check
 Run after plan validation (Step 1) and before Wave 0.
