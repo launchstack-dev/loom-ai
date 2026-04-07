@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/pipeline-state.schema.json",
+  "title": "PipelineState",
+  "description": "Tracks the meta-orchestrator's autonomous pipeline state across outer loop iterations, fix cycles, and stage transitions. Written to .plan-execution/pipeline-state.toon.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "runId",
+    "mode",
+    "description",
+    "planFile",
+    "outerIteration",
+    "maxIterations",
+    "agentsSpawned",
+    "maxAgents",
+    "fixCycleCount",
+    "currentStage",
+    "stageHistory",
+    "failureLog"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version, always 1"
+    },
+    "runId": {
+      "type": "string",
+      "description": "UUID generated at pipeline start",
+      "format": "uuid"
+    },
+    "mode": {
+      "type": "string",
+      "const": "auto",
+      "description": "Pipeline execution mode, always 'auto'"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the pipeline is building"
+    },
+    "planFile": {
+      "type": "string",
+      "description": "Path to the plan being executed (e.g. PLAN.md)"
+    },
+    "outerIteration": {
+      "type": "integer",
+      "description": "Current outer loop iteration (plan-level). Starts at 1, increments on plan revision.",
+      "minimum": 1
+    },
+    "maxIterations": {
+      "type": "integer",
+      "description": "Maximum outer loop iterations before escalation (default 3)",
+      "minimum": 1
+    },
+    "agentsSpawned": {
+      "type": "integer",
+      "description": "Total agents spawned across all iterations and stages",
+      "minimum": 0
+    },
+    "maxAgents": {
+      "type": "integer",
+      "description": "Agent budget cap — escalate if exceeded (default 50)",
+      "minimum": 1
+    },
+    "fixCycleCount": {
+      "type": "integer",
+      "description": "Number of fix cycles completed in the current iteration's qualify phase",
+      "minimum": 0
+    },
+    "currentStage": {
+      "$ref": "#/$defs/PipelineStage",
+      "description": "The stage currently executing or last completed"
+    },
+    "stageHistory": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/StageHistoryEntry" },
+      "description": "Ordered log of all stage executions across iterations"
+    },
+    "failureLog": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FailureLogEntry" },
+      "description": "Log of failures that triggered resolution actions"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "PipelineStage": {
+      "type": "string",
+      "enum": [
+        "plan-create",
+        "plan-review",
+        "plan-integrate",
+        "plan-validate",
+        "execute",
+        "test",
+        "review-code",
+        "fix-code",
+        "complete",
+        "escalated"
+      ]
+    },
+    "StageHistoryEntry": {
+      "type": "object",
+      "required": [
+        "stage",
+        "status",
+        "iteration",
+        "startedAt",
+        "completedAt",
+        "agentsUsed",
+        "gateResult"
+      ],
+      "properties": {
+        "stage": {
+          "$ref": "#/$defs/PipelineStage",
+          "description": "Which pipeline stage this entry represents"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["succeeded", "failed", "in_progress", "skipped"],
+          "description": "Execution status of this stage"
+        },
+        "iteration": {
+          "type": "integer",
+          "description": "Which outer loop iteration this stage ran in",
+          "minimum": 1
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when this stage started",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": ["string", "null"],
+          "description": "ISO 8601 timestamp when this stage completed, or null if still in progress",
+          "format": "date-time"
+        },
+        "agentsUsed": {
+          "type": "integer",
+          "description": "Number of agents spawned during this stage",
+          "minimum": 0
+        },
+        "gateResult": {
+          "type": ["string", "null"],
+          "enum": ["proceed", "fix-and-recheck", "revise-plan", "escalate", null],
+          "description": "Gate decision after this stage completed, or null if still in progress"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FailureLogEntry": {
+      "type": "object",
+      "required": [
+        "iteration",
+        "stage",
+        "error",
+        "resolution"
+      ],
+      "properties": {
+        "iteration": {
+          "type": "integer",
+          "description": "Which outer loop iteration this failure occurred in",
+          "minimum": 1
+        },
+        "stage": {
+          "$ref": "#/$defs/PipelineStage",
+          "description": "Which stage failed"
+        },
+        "error": {
+          "type": "string",
+          "description": "Description of the failure (e.g. '5-critical-findings', 'typecheck-failed')"
+        },
+        "resolution": {
+          "type": "string",
+          "enum": ["wave-retry", "fix-and-recheck", "revise-plan", "escalate"],
+          "description": "How this failure was resolved"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -17,6 +17,7 @@ Parse arguments:
 - `--phase N`: only test phase N (default: all phases)
 - `--run`: generate AND run tests (default: generate only)
 - `--parallel`: run unit and E2E test generation in parallel
+- `--auto`: skip interactive approval prompts, proceed automatically through all stages
 
 ## Instructions
 
@@ -68,7 +69,7 @@ Display a summary to the user:
 
 **If `--criteria-only`, stop here.**
 
-Ask the user: "Test specs generated. Proceed with test generation?" Wait for approval.
+If `--auto`: proceed without asking. Otherwise, ask the user: "Test specs generated. Proceed with test generation?" Wait for approval.
 
 ### Step 2: Generate Unit Tests
 

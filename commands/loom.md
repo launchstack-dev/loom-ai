@@ -42,6 +42,13 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-fix-code --dry-run` | Show fix plan without applying changes |
 | `/loom-fix-code --auto` | Skip approval gate after fixes |
 | `/loom-fix-code --finding N` | Fix a single finding by number |
+| `/loom-auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
+| `/loom-auto --plan PLAN.md` | Autonomous pipeline from existing plan |
+| `/loom-auto --resume` | Resume autonomous pipeline from saved state |
+| `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
+| `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
+| `/loom-auto --dry-run` | Show pipeline plan without executing |
+| `/loom-auto --stop-after <stage>` | Stop after named stage |
 | `/loom-roadmap` | Show roadmap status (phases, milestones, progress) |
 | `/loom-roadmap --init` | Create a new PLAN.md interactively (includes discussion phase) |
 | `/loom-roadmap --init --from "desc"` | Create a plan from a one-line description |
@@ -119,6 +126,11 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 12. /execute-plan --resume     — pick up where you left off if interrupted
 ```
 
+Or for fully autonomous execution:
+```
+/loom-auto --from "description"    — plan, build, test, review, fix until done
+```
+
 ### Execution Pipeline
 
 ```
@@ -126,6 +138,16 @@ Pre:    scope coverage check (maps criteria → tasks, flags orphans)
 Wave 0: contracts-agent → verify → human gate
 Wave N: implementer-agents (parallel) → wiring-agent → verify → scope drift check → human gate
         ↑ repeat for each wave
+```
+
+### Autonomous Pipeline (/loom-auto)
+
+```
+Outer Loop (max 3 iterations):
+  Plan: roadmap --init → review-plan → review-integrate → validate
+  Build: execute-plan --auto (wave loop with automated gates)
+  Qualify: test-plan → review-code → fix-code (max 2 fix cycles)
+  Gate: DONE / FIX / REVISE-PLAN / ESCALATE
 ```
 
 Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).

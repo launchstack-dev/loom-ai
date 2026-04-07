@@ -380,3 +380,95 @@ export interface LibraryCatalog {
   agents: LibraryCatalogEntry[];
   prompts: LibraryCatalogEntry[];
 }
+
+// ---------------------------------------------------------------------------
+// Pipeline state — .plan-execution/pipeline-state.toon
+// ---------------------------------------------------------------------------
+
+export type PipelineStage =
+  | 'plan-create'
+  | 'plan-review'
+  | 'plan-integrate'
+  | 'plan-validate'
+  | 'execute'
+  | 'test'
+  | 'review-code'
+  | 'fix-code'
+  | 'complete'
+  | 'escalated';
+
+export type GateResult = 'proceed' | 'fix-and-recheck' | 'revise-plan' | 'escalate';
+
+export interface StageHistoryEntry {
+  stage: PipelineStage;
+  status: 'succeeded' | 'failed' | 'in_progress' | 'skipped';
+  iteration: number;
+  startedAt: string;
+  completedAt: string | null;
+  agentsUsed: number;
+  gateResult: GateResult | null;
+}
+
+export interface FailureLogEntry {
+  iteration: number;
+  stage: PipelineStage;
+  error: string;
+  resolution: 'wave-retry' | 'fix-and-recheck' | 'revise-plan' | 'escalate';
+}
+
+export interface PipelineState {
+  schemaVersion: number;
+  runId: string;
+  mode: 'auto';
+  description: string;
+  planFile: string;
+  outerIteration: number;
+  maxIterations: number;
+  agentsSpawned: number;
+  maxAgents: number;
+  fixCycleCount: number;
+  currentStage: PipelineStage;
+  stageHistory: StageHistoryEntry[];
+  failureLog: FailureLogEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Pattern executor — PatternResult from pattern-executor.md
+// ---------------------------------------------------------------------------
+
+export type PatternType = 'debate' | 'chain' | 'vote' | 'triage';
+
+export interface PatternResult {
+  pattern: string;
+  type: PatternType;
+  result: string;
+  agentsUsed: number;
+  transcript?: string;
+  rounds?: number;
+  solutions?: number;
+  routing?: { complexity: string; domains: string[] };
+}
+
+// ---------------------------------------------------------------------------
+// Quality gate inputs — used by pipeline quality gate tests
+// ---------------------------------------------------------------------------
+
+export interface QualityGateInput {
+  criticalCount: number;
+  warningCount: number;
+  testsPassed: number;
+  testsFailed: number;
+  typecheckPasses: boolean;
+  fixCycleCount: number;
+  outerIteration: number;
+  maxIterations: number;
+}
+
+export interface WaveGateInput {
+  verificationStatus: 'pass' | 'fail';
+  failuresInOwnedFiles: boolean;
+  blockingIssueCount: number;
+  ownershipViolationCount: number;
+  newOrphanedCriteria: number;
+  waveRetryCount: number;
+}

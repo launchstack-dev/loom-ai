@@ -22,6 +22,10 @@ library:
       description: TOON (Token-Oriented Object Notation) format specification for all on-disk artifacts and agent communication
       source: agents/protocols/toon-format.md
 
+    - name: pattern-executor-protocol
+      description: Reusable pattern runtime protocol for debate, chain, vote, triage orchestration patterns
+      source: agents/protocols/pattern-executor.md
+
   agents:
     # Planning agents
     - name: feature-coverage-agent
@@ -149,6 +153,11 @@ library:
       description: Apply review findings to code - parse, group, spawn fixer-agents, verify
       source: commands/loom-fix-code.md
       requires: [agent:fixer-agent]
+
+    - name: loom-auto
+      description: Fully autonomous pipeline - plan, build, test, review, fix loops until done
+      source: commands/loom-auto.md
+      requires: [prompt:loom-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
 
     - name: loom
       description: Shows Loom system reference — commands, agents, workflows

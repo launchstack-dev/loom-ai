@@ -20,6 +20,15 @@ import type {
   PhaseNode,
   AgentProgress,
   AgentPhase,
+  PipelineState,
+  PipelineStage,
+  StageHistoryEntry,
+  FailureLogEntry,
+  GateResult,
+  PatternResult,
+  PatternType,
+  QualityGateInput,
+  WaveGateInput,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -570,4 +579,106 @@ export function createWave1Scenario(): {
   }
 
   return { tasks, timelines, agentResults };
+}
+
+// ---------------------------------------------------------------------------
+// PipelineState
+// ---------------------------------------------------------------------------
+
+export function createValidPipelineState(
+  overrides?: Partial<PipelineState>,
+): PipelineState {
+  return {
+    schemaVersion: 1,
+    runId: 'run-auto-abc123',
+    mode: 'auto',
+    description: 'Build a task management API with auth and teams',
+    planFile: 'PLAN.md',
+    outerIteration: 1,
+    maxIterations: 3,
+    agentsSpawned: 0,
+    maxAgents: 50,
+    fixCycleCount: 0,
+    currentStage: 'plan-create',
+    stageHistory: [],
+    failureLog: [],
+    ...overrides,
+  };
+}
+
+export function createStageHistoryEntry(
+  stage: PipelineStage,
+  overrides?: Partial<StageHistoryEntry>,
+): StageHistoryEntry {
+  return {
+    stage,
+    status: 'succeeded',
+    iteration: 1,
+    startedAt: '2026-04-06T10:00:00Z',
+    completedAt: '2026-04-06T10:02:00Z',
+    agentsUsed: 3,
+    gateResult: 'proceed',
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PatternResult
+// ---------------------------------------------------------------------------
+
+export function createValidPatternResult(
+  type: PatternType,
+  overrides?: Partial<PatternResult>,
+): PatternResult {
+  const base: PatternResult = {
+    pattern: `test-${type}`,
+    type,
+    result: `Result from ${type} pattern`,
+    agentsUsed: type === 'debate' ? 7 : type === 'vote' ? 4 : type === 'triage' ? 2 : 3,
+  };
+
+  if (type === 'debate') {
+    base.transcript = 'Advocate: position A. Critic: weakness X. Advocate: rebuttal. Moderator: recommendation.';
+    base.rounds = 3;
+  } else if (type === 'vote') {
+    base.solutions = 3;
+  } else if (type === 'triage') {
+    base.routing = { complexity: 'complex', domains: ['backend'] };
+  }
+
+  return { ...base, ...overrides };
+}
+
+// ---------------------------------------------------------------------------
+// Quality Gate Inputs
+// ---------------------------------------------------------------------------
+
+export function createQualityGateInput(
+  overrides?: Partial<QualityGateInput>,
+): QualityGateInput {
+  return {
+    criticalCount: 0,
+    warningCount: 2,
+    testsPassed: 50,
+    testsFailed: 0,
+    typecheckPasses: true,
+    fixCycleCount: 0,
+    outerIteration: 1,
+    maxIterations: 3,
+    ...overrides,
+  };
+}
+
+export function createWaveGateInput(
+  overrides?: Partial<WaveGateInput>,
+): WaveGateInput {
+  return {
+    verificationStatus: 'pass',
+    failuresInOwnedFiles: false,
+    blockingIssueCount: 0,
+    ownershipViolationCount: 0,
+    newOrphanedCriteria: 0,
+    waveRetryCount: 0,
+    ...overrides,
+  };
 }

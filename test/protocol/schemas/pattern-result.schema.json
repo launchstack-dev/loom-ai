@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meta-orchestration.local/schemas/pattern-result.schema.json",
+  "title": "PatternResult",
+  "description": "Return envelope for orchestration pattern invocations. Each pattern type (debate, chain, vote, triage) returns this structure with type-specific optional fields.",
+  "type": "object",
+  "required": [
+    "pattern",
+    "type",
+    "result",
+    "agentsUsed"
+  ],
+  "properties": {
+    "pattern": {
+      "type": "string",
+      "description": "Pattern name from orchestration.toml config"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["debate", "chain", "vote", "triage"],
+      "description": "Orchestration pattern type"
+    },
+    "result": {
+      "type": "string",
+      "description": "Final output or recommendation from the pattern execution"
+    },
+    "agentsUsed": {
+      "type": "integer",
+      "description": "Total agents spawned during pattern execution, for budget tracking",
+      "minimum": 1
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Compressed argument history (debate only)"
+    },
+    "rounds": {
+      "type": "integer",
+      "description": "Actual debate rounds used (debate only)",
+      "minimum": 1
+    },
+    "solutions": {
+      "type": "integer",
+      "description": "Number of solutions compared (vote only)",
+      "minimum": 0
+    },
+    "routing": {
+      "type": "object",
+      "description": "Classification result from triage router (triage only)",
+      "required": ["complexity", "domains"],
+      "properties": {
+        "complexity": {
+          "type": "string",
+          "description": "Complexity classification (e.g., 'simple', 'complex', 'multi-domain')"
+        },
+        "domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Domain areas identified by the router"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "type": { "const": "debate" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["pattern", "type", "result", "agentsUsed", "transcript", "rounds"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "type": { "const": "triage" } },
+        "required": ["type"]
+      },
+      "then": {
+        "required": ["pattern", "type", "result", "agentsUsed", "routing"]
+      }
+    }
+  ]
+}

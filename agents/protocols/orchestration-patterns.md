@@ -6,6 +6,29 @@ All patterns are declared in `orchestration.toml` under `[patterns.<name>]` and 
 
 ---
 
+## Runtime Execution
+
+For step-by-step execution mechanics, see `pattern-executor.md` in this directory. That protocol defines:
+
+- **Trigger matching** — how orchestrators match task labels to pattern triggers from `orchestration.toml`
+- **Per-pattern execution** — detailed agent spawn sequences for each pattern type
+- **PatternResult format** — the standard return envelope all patterns produce:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pattern` | string | yes | Pattern name from orchestration.toml config |
+| `type` | enum | yes | `debate`, `chain`, `vote`, or `triage` |
+| `result` | string | yes | Final output or recommendation |
+| `agentsUsed` | integer | yes | Total agents spawned (for budget tracking) |
+| `transcript` | string | debate | Compressed argument history |
+| `rounds` | integer | debate | Actual debate rounds completed |
+| `solutions` | integer | vote | Number of solutions evaluated |
+| `routing` | object | triage | `{ complexity, domains }` classification |
+
+**Budget accounting:** Each pattern reports `agentsUsed`. The calling orchestrator accumulates this toward its agent budget (e.g., `/loom-auto --max-agents 50`). Warn at 80% budget consumed; hard-block pattern invocation at 100%.
+
+---
+
 ## Pattern 1: Debate
 
 **Description:** Two or more agents argue adversarially about a decision over multiple rounds. One agent advocates for a position, another critiques it. After N rounds, a moderator synthesizes the strongest arguments into a final recommendation.

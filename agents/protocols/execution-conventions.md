@@ -9,6 +9,7 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 ├── .lock                       # PID lock file — prevents concurrent runs
 ├── .gitignore                  # Auto-generated: ignores everything in this dir
 ├── state.toon                  # Execution state (see state.schema.md)
+├── pipeline-state.toon         # /loom-auto pipeline state (see pipeline-state.schema.md)
 ├── rolling-context.md          # Tiered summary of all prior waves
 ├── contracts/                  # Wave 0 output — shared types/schemas
 │   ├── manifest.toon           # Lists all contract files + their purpose

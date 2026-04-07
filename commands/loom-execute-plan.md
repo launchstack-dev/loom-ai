@@ -15,6 +15,7 @@ Parse arguments:
 - `--wave N`: re-run only wave N using existing contracts and prior outputs
 - `--contracts-only`: run only Wave 0 (contracts agent), then stop
 - `--rollback-wave N`: revert to the git state before wave N
+- `--auto`: skip human approval gates, use automated quality gates instead
 
 ## Protocols
 
@@ -131,7 +132,7 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
 
    Options: proceed anyway / abort / assign manually
    ```
-5. Wait for user decision before proceeding
+5. If `--auto`: log orphaned criteria as a warning in state.toon, then proceed. Do not wait for user input. Otherwise, wait for user decision before proceeding.
 
 ### Step 2: Wave 0 — Contracts
 
@@ -162,6 +163,8 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
 
 ### Step 4: Human Approval Gate
 
+If `--auto` is specified, run the Automated Quality Gate (see section below) instead of displaying the approval prompt.
+
 Display to the user:
 ```
 ## Wave 0 Complete: Contracts
@@ -188,16 +191,17 @@ For each implementation wave (1, 2, ...):
 1. Update state.toon: wave N = in_progress
 2. Create git tag `plan-exec-wave-N-pre`
 3. Read `rolling-context.md`
-4. For each task in this wave, prepare the implementer prompt:
+4. **Pattern check:** If `.claude/orchestration.toml` exists and has `[patterns.*]` entries, check each task's description against pattern triggers. If a task matches a pattern trigger (per `~/.claude/agents/protocols/pattern-executor.md`), execute the pattern instead of spawning a single implementer. The pattern's output replaces the implementer's AgentResult.
+5. For each task in this wave, prepare the implementer prompt:
    - Instruction: "Read your instructions from `~/.claude/agents/implementer-agent.md` first."
    - Task objective and acceptance criteria
    - File ownership list for this specific task
    - **Specific** contract file paths relevant to this task (from manifest.toon)
    - Rolling context content
    - Technology stack and conventions
-5. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
+6. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
 
-6. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
+7. **Launch all implementer agents in parallel** using the Agent tool — send ALL agent calls in a SINGLE message:
    - Each agent is `general-purpose` — it reads its own instructions from disk
    - Each agent gets its own scoped prompt (different file ownership, different task)
    - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/progress/{taskId}.toon`
@@ -243,7 +247,9 @@ Before wiring, check for problems:
 3. **Cross-boundary requests**: Are there files in `.plan-execution/requests/`?
 4. **Contract amendments**: Did any agent flag contract issues?
 
-If blocking conflicts found, report to user and ask how to proceed.
+If `--auto` and blocking conflicts found: attempt auto-resolution by assigning conflicting files to the wiring-agent. If still conflicting after wiring: escalate (set wave status to failed).
+
+If not `--auto` and blocking conflicts found, report to user and ask how to proceed.
 
 ### Step 7: Wiring Pass
 
@@ -281,7 +287,7 @@ Same as Step 3 but for wave N:
      - Mark a criterion as `orphaned` ONLY if its `coveringTasks` becomes empty AND its status is not already `covered` or `dropped`
    - If new orphans detected, display SCOPE DRIFT warning before the human gate
 
-4. **Human approval gate** — same format as Step 4:
+4. **Human approval gate** — If `--auto`: run the Automated Quality Gate instead of asking the user. Otherwise, same format as Step 4:
    - Show files changed, verification results
    - Show next wave preview
    - Ask: proceed / re-run wave / abort
@@ -319,6 +325,38 @@ Use --resume if you need to re-run any wave.
 ### Unexpected state
 - If `.plan-execution/.lock` exists with a live PID, abort with warning
 - If state.toon is missing or corrupt, offer to reinitialize
+
+## Automated Quality Gate (--auto mode)
+
+When `--auto` is active, replace all human approval gates (Steps 4 and 9) with this automated decision logic:
+
+**PROCEED** if:
+- `verification.status == "pass"` (all checks green)
+- Zero blocking issues in any AgentResult
+- Zero file ownership violations
+
+**RETRY** (re-run failed agents, max 2 retries per wave) if:
+- Verification failed
+- AND all failures are in files owned by this wave's agents
+- AND `wave.retryCount < 2`
+
+On retry:
+1. Increment `retryCount` in state.toon
+2. Re-spawn ONLY the failed agents with error context added to prompt:
+   "Your previous attempt failed verification. Errors: [exact typecheck/test output for files you own]. Fix these issues."
+3. Re-run wiring-agent with mix of preserved + new results
+4. Re-run verification-agent
+5. Re-evaluate this gate
+
+**ESCALATE** (set status=paused) if:
+- Verification failures are in files NOT owned by this wave
+- OR `wave.retryCount >= 2`
+- OR reconciliation found blocking conflicts that auto-resolve failed
+
+On escalate:
+1. Set wave status to "failed" in state.toon
+2. Set run status to "paused"
+3. The calling orchestrator (`/loom-auto`) reads state.toon and decides: revise plan or give up
 
 ## Runtime Feedback
 

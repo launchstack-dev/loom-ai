@@ -79,6 +79,12 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
    - Deep-dive into any specific agent's full report
    - Re-run a specific agent with additional context
 
+### Step 6: Save Findings
+
+1. Create `.plan-history/reviews/` if it doesn't exist
+2. Save the synthesized report to `.plan-history/reviews/YYYY-MM-DD-review.toon` using TOON format
+3. This enables `/loom-roadmap --review-integrate` to read findings from disk in autonomous pipelines
+
 ## Output Format
 
 Use the structured summary format from step 3, followed by cross-cutting themes and next steps. Keep each agent's summary concise (3-5 lines) — the full reports are available on request.

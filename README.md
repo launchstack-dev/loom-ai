@@ -4,7 +4,7 @@ A multi-agent pipeline for planning, executing, testing, and reviewing software 
 
 ## What It Does
 
-Seven slash commands that compose 20+ specialized agents:
+Eight slash commands that compose 20+ specialized agents:
 
 | Command | What it does |
 |---------|-------------|
@@ -14,6 +14,7 @@ Seven slash commands that compose 20+ specialized agents:
 | `/loom-review-code` | 9 reviewers (6 built-in + 3 bespoke) with severity-ranked output |
 | `/loom-fix-code` | Auto-apply review findings with parallel fixer-agents and verification |
 | `/loom-roadmap` | Plan creation, milestone tracking, dependency graphs, versioning |
+| `/loom-auto` | Fully autonomous pipeline with feedback loops |
 | `/loom` | Full reference |
 
 ## Install
@@ -46,6 +47,7 @@ Commands (user-facing)              Agents (spawned by commands)
 /loom-review-code ─────────────→ 6 built-in + 3 bespoke reviewers
 /loom-fix-code ────────────────→ parallel fixer-agents
 /loom-roadmap ─────────────────→ plan-builder-agent
+/loom-auto ───────────────────→ chains all commands with automated gates
 
 Protocols (shared contracts)
 ────────────────────────────
@@ -127,7 +129,7 @@ npx vitest run
 ```
 agents/                     20+ agent definitions
   protocols/                 8 protocol specs (incl. plan.schema.md, toon-format.md)
-commands/                    7 slash commands
+commands/                    8 slash commands
 skills/library.yaml         Library registry
 test/protocol/              57 protocol tests
 test-fixtures/              Test plan fixtures (valid + broken)
