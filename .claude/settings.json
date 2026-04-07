@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bunx tsx hooks/file-ownership.ts",
+        "timeout": 5000
+      },
+      {
+        "matcher": "Write|Edit",
+        "command": "bunx tsx hooks/contract-lock.ts",
+        "timeout": 5000
+      },
+      {
+        "matcher": "Agent",
+        "command": "bunx tsx hooks/budget-tracker.ts",
+        "timeout": 5000
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bunx tsx hooks/typecheck-on-write.ts",
+        "timeout": 30000
+      }
+    ],
+    "SubagentStop": [
+      {
+        "command": "bunx tsx hooks/budget-tracker.ts",
+        "timeout": 5000
+      },
+      {
+        "command": "bunx tsx hooks/status-updater.ts",
+        "timeout": 5000
+      }
+    ],
+    "Stop": [
+      {
+        "command": "bunx tsx hooks/quality-gate.ts",
+        "timeout": 5000
+      }
+    ]
+  }
+}

@@ -194,6 +194,16 @@ This prevents partial reads of corrupted state.
 4. **Wiring-agent owns shared files.** Package.json, barrel/index files, route registrations, and migration files are explicitly owned by the wiring-agent.
 5. **Contracts are read-only after Wave 0.** No agent may modify contract files after the contracts-agent completes. If amendments are needed, the orchestrator decides whether to re-run Wave 0.
 
+### Hook Enforcement
+
+Rules 1-2 and 5 above are **deterministically enforced** by Claude Code hooks in `hooks/`:
+
+- `file-ownership.ts` (PreToolUse) — blocks writes to files not in the current task's ownership list
+- `contract-lock.ts` (PreToolUse) — blocks writes to `contracts/` after Wave 0 completes
+- `budget-tracker.ts` (PreToolUse + SubagentStop) — tracks agent count, blocks spawns at budget limit
+
+These hooks fail open: if `.plan-execution/state.toon` is missing or unreadable, writes are allowed. See `hooks/lib/run-hook.ts` for the shared defensive harness. Registered in `.claude/settings.json`.
+
 ## Context Injection Rules
 
 ### What goes in the prompt (small, essential)

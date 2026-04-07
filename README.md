@@ -109,6 +109,21 @@ Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`
 - **TOON** (Token-Oriented Object Notation) for all on-disk artifacts and agent communication — 30-60% token savings
 - **JSON** for schema validation only (AJV test schemas)
 
+## Hooks (Deterministic Enforcement)
+
+Six Claude Code hooks in `hooks/` enforce critical invariants at the tool-call level:
+
+| Hook | Event | What it does |
+|------|-------|-------------|
+| `file-ownership` | PreToolUse | Blocks writes outside agent's file ownership boundary |
+| `contract-lock` | PreToolUse | Locks `contracts/` after Wave 0 |
+| `budget-tracker` | PreToolUse + SubagentStop | Tracks agent count, blocks spawns at budget limit |
+| `status-updater` | SubagentStop | Updates status.toon timestamps |
+| `quality-gate` | Stop | Prevents premature pipeline stops |
+| `typecheck-on-write` | PostToolUse | Runs tsc after TS writes, feeds errors back |
+
+All hooks use a shared harness (`hooks/lib/run-hook.ts`) that adopts Hookify's defensive patterns: always exit 0 on errors, fail open on missing state, atomic stdin consumption. Registered in `.claude/settings.json`.
+
 ## Persistence
 
 - `.plan-execution/` — ephemeral execution state (gitignored)
@@ -117,9 +132,11 @@ Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`
 ## Tests
 
 ```bash
-cd test/protocol
-npm install
-npx vitest run
+# Protocol tests
+cd test/protocol && bun install && bunx vitest run
+
+# Hook tests
+cd hooks && bun install && bunx vitest run
 ```
 
 117 tests validating the inter-agent protocol: schema validation (with TOON roundtrip fidelity), plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), scope coverage (orphan detection, drift tracking), context compression, agent monitoring (graded E2E rubric), handoff chains, file ownership detection, and feedback logging.
@@ -128,10 +145,14 @@ npx vitest run
 
 ```
 agents/                     20+ agent definitions
-  protocols/                 8 protocol specs (incl. plan.schema.md, toon-format.md)
-commands/                    8 slash commands
-skills/library.yaml         Library registry
-test/protocol/              57 protocol tests
-test-fixtures/              Test plan fixtures (valid + broken)
-install.sh                  Symlink installer
+  protocols/                 11 protocol specs (incl. plan.schema.md, toon-format.md)
+commands/                    9 slash commands
+hooks/                       6 deterministic enforcement hooks
+  lib/                       Shared harness + TOON reader + context resolver
+  __tests__/                 Hook tests
+.claude/settings.json        Hook registrations
+skills/library.yaml          Library registry
+test/protocol/               Protocol tests
+test-fixtures/               Test plan fixtures (valid + broken)
+install.sh                   Symlink installer
 ```
