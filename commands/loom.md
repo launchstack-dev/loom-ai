@@ -49,6 +49,13 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
 | `/loom-auto --dry-run` | Show pipeline plan without executing |
 | `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, test, review, fix) |
+| `/loom-converge --target <path>` | Convergence loop: compare implementation against deterministic target |
+| `/loom-converge --config <path>` | Run convergence with existing harness config |
+| `/loom-converge --max-iterations N` | Cap convergence iterations (default: 10) |
+| `/loom-converge --tolerance <threshold>` | Global tolerance override (0.0-1.0) |
+| `/loom-converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
+| `/loom-converge --resume` | Resume convergence from saved state |
+| `/loom-converge --status` | Show current convergence state |
 | `/loom-review-roadmap [path]` | Launch 3 agents to review a ROADMAP.md |
 | `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
 | `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
@@ -80,6 +87,9 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-library add <source>` | Add new item (local path or GitHub URL) |
 | `/loom-library remove <name>` | Uninstall, warn about dependents |
 | `/loom-library update` | Check all sources for changes |
+| `/loom-create-agent` | Interactive wizard: create a bespoke agent + wire into pipeline |
+| `/loom-create-agent --pipeline review --role "HIPAA checker"` | Quick mode with pipeline and role |
+| `/loom-create-agent --from .claude/agents/existing.md` | Clone and customize an existing agent |
 | `/loom` | Show this reference |
 
 ### Agent Groups
@@ -100,6 +110,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 **Execution** (spawned by `/loom-execute-plan`):
 - `contracts-agent` — Wave 0: creates shared types, interfaces, schemas on disk
 - `implementer-agent` — Parallel worker within strict file ownership boundaries
+- `api-route-creator` — Specialized implementer: internal API endpoints, validation, middleware
+- `api-connector` — Specialized implementer: typed third-party API clients, auth, retry logic
 - `wiring-agent` — Post-wave integration: barrel files, routes, imports, deps
 - `verification-agent` — Quality gate: typecheck, tests, lint, ownership drift
 
@@ -113,13 +125,38 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 - `security-reviewer` — OWASP Top 10 audit: injection, auth, XSS, secrets, dependencies
 - `architecture-reviewer` — Dependency direction, pattern consistency, contract conformance
 - `plan-compliance-reviewer` — Deliverables, schema drift, acceptance criteria coverage
+- `api-explorer` — Brownfield API surface discovery: internal endpoints, external integrations, undocumented routes
 
 **Code Fix** (spawned by `/loom-fix-code`):
 - `fixer-agent` — Parallel worker that applies review findings within file ownership boundaries
 
+**Documentation** (spawned by docs-generator and docs-auditor workflows):
+- `docs-generator` — Greenfield + brownfield documentation: README, API docs, ADRs, onboarding, CLAUDE.md, codebase maps
+- `docs-auditor` — Documentation audit (staleness, gaps, contradictions) + Loom readiness assessment
+
+**Architecture Decision** (spawned via debate pattern):
+- `tech-stack-debater` — Multi-persona debate: advocate, skeptic, pragmatist for technology selection
+- `migration-architect` — Incremental migration planning with risk assessment + rollback strategies
+
+**Extended Review** (registered via orchestration.toml, spawned by `/loom-review-code`):
+- `performance-reviewer` — N+1 queries, algorithmic complexity, rendering, bundle size, I/O, pagination
+- `accessibility-reviewer` — WCAG 2.1 AA: semantic HTML, ARIA, keyboard, contrast, focus, forms
+- `dependency-auditor` — CVEs, license compliance, abandoned packages, version drift
+- `api-design-reviewer` — REST conventions, HTTP methods, error formats, versioning, pagination
+- `database-schema-reviewer` — Normalization, indexes, migration safety, constraints, naming
+- `infra-reviewer` — Dockerfile, CI pipelines, IaC, secrets, resource limits, networking
+- `observability-reviewer` — Structured logging, metrics, tracing, health checks, alerting
+
+**Convergence Loop** (spawned by `/loom-converge`):
+- `target-parser` — Normalizes deterministic sources into comparable target manifests
+- `harness-builder` — Scaffolds comparison infrastructure (diff scripts, config, runner)
+- `delta-analyzer` — Triages deltas: noise vs actionable, prioritizes fixes
+- `convergence-driver` — Iteration orchestrator with circuit breakers (stall, regression, budget)
+
 **Utility:**
 - `meta-agent` — Generates new agents, skills, and commands from descriptions
 - `tdd-coach` — Drives test-driven development (red-green-refactor cycle)
+- `/loom-create-agent` — Interactive wizard to create project-specific bespoke agents + pipeline registration
 
 ### Typical Workflow
 
@@ -172,6 +209,21 @@ Outer Loop (max 3 iterations):
   Gate:    DONE / FIX / REVISE-PLAN / REVISE-ROADMAP / ESCALATE
 ```
 
+### Convergence Pipeline (/loom-converge)
+
+```
+target-parser(source) → target manifest
+harness-builder(manifest) → comparison harness + converge.config
+Human approval gate: review targets + tolerances
+[Convergence Loop]:
+  harness → Delta Report
+  delta-analyzer → prioritized fix list
+  fixer-agents (parallel) → code changes
+  harness → new Delta Report
+  Circuit break if: stalled | regression | budget exhausted | max iterations
+Final: convergence report (pass/fail per target)
+```
+
 Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` — the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
 
 ### File Structure (during execution)
@@ -188,6 +240,11 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
     {taskId}.toon
   scope-coverage.toon     — Acceptance criteria coverage matrix
   wave-N-summary.toon     — Per-wave results
+  convergence/            — Convergence loop state
+    targets/              — Normalized target artifacts
+    convergence-state.toon — Iteration state (resumable)
+    convergence-report.md — Final convergence report
+    converge.config       — Target-to-method mapping + tolerances
 
 .plan-history/                — Persistent (git-tracked)
   reviews/                — Review findings (roadmap + plan)
@@ -235,7 +292,7 @@ modes = ["default", "full"]     # which /review-code modes include it
 outputRole = "reviewer"
 ```
 
-Or use `meta-agent --register` to create an agent and wire it into a pipeline in one step.
+Or use `/loom-create-agent` to interactively create an agent and wire it into a pipeline in one step.
 
 ### Distribution
 

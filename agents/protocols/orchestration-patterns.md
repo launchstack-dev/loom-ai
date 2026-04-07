@@ -17,7 +17,7 @@ For step-by-step execution mechanics, see `pattern-executor.md` in this director
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `pattern` | string | yes | Pattern name from orchestration.toml config |
-| `type` | enum | yes | `debate`, `chain`, `vote`, or `triage` |
+| `type` | enum | yes | `debate`, `chain`, `vote`, `triage`, or `converge` |
 | `result` | string | yes | Final output or recommendation |
 | `agentsUsed` | integer | yes | Total agents spawned (for budget tracking) |
 | `transcript` | string | debate | Compressed argument history |
@@ -330,13 +330,112 @@ Orchestrator execution:
 
 ---
 
+## Pattern 5: Converge
+
+**Description:** An iterative pipeline that compares current output against a deterministic target and loops until the delta reaches zero (or circuit breaks). Unlike chain (linear) or debate (adversarial), converge is a feedback loop that measures progress toward a known-good target.
+
+### When to use
+
+- Design-to-code: pixel-perfect implementation against mockups/Figma
+- API migration: old API → new API response parity
+- Data pipeline rewrites: same input → same output guarantee
+- Compiler/parser ports: reference implementation matching
+- Database migration: query result parity between old and new schema
+- Any project with a deterministic "done" signal
+
+### How it works
+
+1. **Orchestrator spawns** target-parser to normalize the deterministic source into comparable artifacts.
+2. **Spawns** harness-builder to create comparison infrastructure (diff scripts, tolerance config, runner).
+3. **Human approval gate:** review target manifest and harness config.
+4. **Enter iteration loop** (max `maxIterations`):
+   a. Run the comparison harness → produces a Delta Report.
+   b. Spawn delta-analyzer with the report → produces prioritized fix list.
+   c. Spawn fixer agents in parallel for actionable deltas.
+   d. Re-run harness → check convergence.
+   e. Circuit break if: convergence rate < 1% for 2+ iterations, delta growing, max iterations reached.
+5. **Produce convergence report:** iterations completed, final scores, pass/fail per target.
+
+**Cost control:** Setup is 2 agents (target-parser + harness-builder). Each iteration costs 1 (delta-analyzer) + N (fixer agents) + 1 (harness re-run). Total bounded by `maxIterations`.
+
+**Data flow:**
+```
+target-parser(source) → target manifest
+harness-builder(manifest) → comparison harness + converge.config
+[Loop]:
+  harness(current state) → Delta Report
+  delta-analyzer(report) → fix list
+  fixer-agents(fixes) → code changes (parallel)
+  harness(updated state) → new Delta Report
+  if converged or circuit-break → exit loop
+convergence-report → final result
+```
+
+### orchestration.toml config
+
+```toml
+[patterns.design-convergence]
+type = "converge"
+targetParser = "target-parser"
+harnessBuilder = "harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "convergence-task"
+
+[patterns.design-convergence.tolerance]
+pixel-diff = 0.98
+json-deep-equal = 1.0
+semantic-html = 0.95
+row-diff = 1.0
+text-diff = 0.99
+```
+
+| Field          | Type          | Required | Description                                              |
+|----------------|---------------|----------|----------------------------------------------------------|
+| type           | `"converge"`  | yes      | Pattern type identifier                                  |
+| targetParser   | string        | yes      | Agent that normalizes the deterministic source           |
+| harnessBuilder | string        | yes      | Agent that scaffolds comparison infrastructure           |
+| deltaAnalyzer  | string        | yes      | Agent that triages gaps and prioritizes fixes            |
+| driver         | string        | yes      | Agent that orchestrates the iteration loop               |
+| maxIterations  | integer       | no       | Max convergence iterations (default: 10, max: 50)        |
+| tolerance      | object        | no       | Per-method score thresholds (default: 1.0 for all)       |
+| trigger        | string        | yes      | Event or command that activates this pattern             |
+
+### Example: API migration convergence
+
+```toml
+[patterns.api-migration]
+type = "converge"
+targetParser = "target-parser"
+harnessBuilder = "harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 15
+trigger = "api-migration"
+
+[patterns.api-migration.tolerance]
+json-deep-equal = 1.0
+```
+
+Orchestrator execution:
+1. Spawn `target-parser` with: "Parse the legacy API responses into comparable artifacts: {source}"
+2. Spawn `harness-builder` with: "Build comparison harness for these target artifacts: {target-manifest}"
+3. Human reviews harness config and approves.
+4. **Iteration 1:** Run harness → Delta Report shows 47 failing endpoints. Spawn `delta-analyzer` → prioritized fix list. Spawn fixer agents for top deltas in parallel. Re-run harness → 31 failing.
+5. **Iteration 2:** Spawn `delta-analyzer` with new report → updated fix list. Spawn fixers. Re-run harness → 12 failing. Convergence rate: 61%.
+6. **Iterations 3-6:** Continue until 0 failing endpoints.
+7. Return convergence report: 6 iterations, 47/47 targets passing, converged = true.
+
+---
+
 ## Config Schema Reference
 
 All patterns live under the `[patterns]` table in `orchestration.toml`. The general structure:
 
 ```toml
 [patterns.<pattern-name>]
-type = "debate" | "chain" | "vote" | "triage"
+type = "debate" | "chain" | "vote" | "triage" | "converge"
 trigger = "<event-or-command-name>"
 # ... type-specific fields
 ```
@@ -376,6 +475,18 @@ trigger = "task-intake"
 simple = "sonnet-worker"
 complex = "opus-worker"
 multi = ["domain-a", "domain-b"]
+
+[patterns.api-convergence]
+type = "converge"
+targetParser = "target-parser"
+harnessBuilder = "harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "convergence-task"
+
+[patterns.api-convergence.tolerance]
+json-deep-equal = 1.0
 ```
 
 ### Pattern selection guidance
@@ -386,5 +497,6 @@ multi = ["domain-a", "domain-b"]
 | Chain     | Progressive artifact refinement | Medium   | High     | Medium     |
 | Vote      | Critical implementations        | High     | Medium*  | Highest    |
 | Triage    | Mixed-complexity workloads      | Low-Med  | Low      | Varies     |
+| Converge  | Deterministic target matching   | High     | High     | Highest    |
 
 *Vote has medium latency because agents run in parallel, despite higher total cost.

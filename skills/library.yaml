@@ -114,6 +114,21 @@ library:
       source: agents/scope-feasibility-agent.md
       requires: [skill:roadmap-schema]
 
+    - name: api-explorer
+      description: Brownfield API surface analyst - discovers internal endpoints, external integrations, undocumented routes
+      source: agents/api-explorer.md
+
+    # API agents (execution)
+    - name: api-route-creator
+      description: Specialized implementer that generates internal API endpoints (routes, validation, middleware)
+      source: agents/api-route-creator.md
+      requires: [skill:execution-protocols]
+
+    - name: api-connector
+      description: Specialized implementer that generates typed third-party API clients (auth, retry, timeout, response mapping)
+      source: agents/api-connector.md
+      requires: [skill:execution-protocols]
+
     # Planning agents (extended)
     - name: questioner-agent
       description: Discussion phase agent - surfaces architectural decision points with structured options before roadmap generation
@@ -183,6 +198,11 @@ library:
       description: Fully autonomous pipeline - roadmap, plan, build, test, review, fix loops until done
       source: commands/loom-auto.md
       requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
+
+    - name: loom-create-agent
+      description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines
+      source: commands/loom-create-agent.md
+      requires: [agent:meta-agent]
 
     - name: loom
       description: Shows Loom system reference — commands, agents, workflows

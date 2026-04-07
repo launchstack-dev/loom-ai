@@ -70,6 +70,34 @@ Lightweight classification then specialist routing.
 
 **Budget:** 1 (router) + 1 (simple/complex) or 1 + N (multi-domain).
 
+### Converge
+
+Iterative convergence loop toward a deterministic target.
+
+1. Spawn target-parser with the source reference. Collect target manifest.
+2. Spawn harness-builder with target manifest. Collect harness config + comparison scripts.
+3. Present harness config to orchestrator for approval gate.
+4. Enter convergence loop (iteration 1..`maxIterations`):
+   a. Run comparison harness → Delta Report.
+   b. If all targets pass (score >= threshold): break loop, report success.
+   c. Spawn delta-analyzer with Delta Report → prioritized fix list.
+   d. Filter to actionable, non-noise deltas.
+   e. Spawn fixer agents in parallel for each actionable delta.
+   f. After fixers complete, re-run harness.
+   g. Compute convergence rate: `(prior failing - current failing) / prior failing`.
+   h. Circuit break if: `convergenceRate < 0.01` for 2 consecutive iterations OR `current failing > prior failing` (regression).
+5. Produce convergence report with final status.
+
+**Error handling:**
+- **target-parser fails:** Abort pattern, return error (no fallback — can't converge without a target).
+- **harness-builder fails:** Abort pattern, return error.
+- **delta-analyzer fails mid-loop:** Use previous iteration's fix list if available, otherwise halt loop and return partial result.
+- **Fixer agent fails:** Mark that delta as unresolved, continue with remaining fixers.
+- **All fixers fail in an iteration:** Halt loop, return partial result.
+- **Harness execution fails:** Retry once, then halt loop.
+
+**Budget:** 2 (setup: target-parser + harness-builder) + iterations x (1 delta-analyzer + N fixers). Capped by `maxIterations`. Report `agentsUsed` cumulatively.
+
 ---
 
 ## PatternResult
@@ -79,13 +107,16 @@ Every pattern invocation returns a `PatternResult` to the orchestrator.
 | Field        | Type     | Required | Description                                  |
 |--------------|----------|----------|----------------------------------------------|
 | `pattern`    | string   | yes      | Pattern name from `orchestration.toml`       |
-| `type`       | enum     | yes      | `debate`, `chain`, `vote`, or `triage`       |
+| `type`       | enum     | yes      | `debate`, `chain`, `vote`, `triage`, or `converge` |
 | `result`     | string   | yes      | Final output text                            |
 | `agentsUsed` | integer  | yes      | Total agent invocations consumed             |
 | `transcript` | string   | debate   | Compressed argument history                  |
 | `rounds`     | integer  | debate   | Actual rounds executed                       |
 | `solutions`  | integer  | vote     | Number of solutions compared by evaluator    |
 | `routing`    | object   | triage   | `{ complexity: string, domains: string[] }`  |
+| `iterations` | integer  | converge | Number of convergence iterations completed   |
+| `finalDelta` | object   | converge | `{ passing: N, failing: N, total: N }`       |
+| `converged`  | boolean  | converge | True if all targets passed within tolerance  |
 
 ---
 
@@ -111,3 +142,11 @@ Every pattern invocation returns a `PatternResult` to the orchestrator.
 | Vote    | Evaluator fails     | Return first successful solution with annotation  |
 | Triage  | Router fails        | Fall back to complex specialist (opus)            |
 | Triage  | Specialist fails    | Escalate to orchestrator                          |
+| Converge | target-parser fails | Abort; return error result                       |
+| Converge | harness-builder fails | Abort; return error result                     |
+| Converge | delta-analyzer fails | Use prior fix list or halt with partial          |
+| Converge | Fixer fails         | Mark delta unresolved, continue                  |
+| Converge | All fixers fail     | Halt loop; return partial result                 |
+| Converge | Harness fails       | Retry once; then halt                            |
+| Converge | Stall detected      | Halt loop; return partial with stall flag        |
+| Converge | Regression detected | Halt loop; return partial with regression flag   |

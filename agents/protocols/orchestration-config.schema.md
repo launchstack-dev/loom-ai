@@ -63,6 +63,65 @@ input = ["diff", "plan"]
 outputRole = "reviewer"
 modes = ["default", "full"]  # quick | default | full
 
+# ── Extended review agents (from loom agent expansion) ──────
+# Register any combination below to include in /loom-review-code
+
+[[review.agents]]
+name = "performance-reviewer"
+source = "~/.claude/agents/performance-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["default", "full"]
+
+[[review.agents]]
+name = "accessibility-reviewer"
+source = "~/.claude/agents/accessibility-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["full"]
+
+[[review.agents]]
+name = "dependency-auditor"
+source = "~/.claude/agents/dependency-auditor.md"
+model = "sonnet"
+input = ["diff", "package-json"]
+outputRole = "reviewer"
+modes = ["default", "full"]
+
+[[review.agents]]
+name = "api-design-reviewer"
+source = "~/.claude/agents/api-design-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["full"]
+
+[[review.agents]]
+name = "database-schema-reviewer"
+source = "~/.claude/agents/database-schema-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["full"]
+
+[[review.agents]]
+name = "infra-reviewer"
+source = "~/.claude/agents/infra-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["full"]
+
+[[review.agents]]
+name = "observability-reviewer"
+source = "~/.claude/agents/observability-reviewer.md"
+model = "sonnet"
+input = ["diff"]
+outputRole = "reviewer"
+modes = ["full"]
+
 # ─────────────────────────────────────────────────────────────
 # Orchestration patterns — advanced multi-agent coordination
 # ─────────────────────────────────────────────────────────────
@@ -92,6 +151,22 @@ router = "triage-agent"
 routerModel = "haiku"
 specialists = { simple = "sonnet-worker", complex = "opus-worker" }
 fanout = ["domain-a-agent", "domain-b-agent"]  # for multi-domain tasks
+
+[patterns.design-convergence]
+type = "converge"
+targetParser = "target-parser"
+harnessBuilder = "harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "convergence-task"
+
+[patterns.design-convergence.tolerance]
+pixel-diff = 0.98
+json-deep-equal = 1.0
+semantic-html = 0.95
+row-diff = 1.0
+text-diff = 0.99
 ```
 
 ## How Orchestrators Use This
@@ -159,6 +234,16 @@ Phase 2:
   complex → spawn specialist
   multi → fan out to multiple specialists
 Result: specialist output(s)
+```
+
+### `converge`
+```
+Phase 1: spawn target-parser → normalize source into target manifest
+Phase 2: spawn harness-builder → create comparison infrastructure
+Gate:    human approval of targets + tolerances
+Loop:    harness → delta-analyzer → fixer-agents (parallel) → re-run harness
+         Circuit break: stall | regression | budget | max iterations
+Result:  convergence report (iterations, pass/fail per target, agents used)
 ```
 
 ## Migration from YAML
