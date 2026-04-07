@@ -56,7 +56,7 @@ For each acceptance criterion:
 
 ## Output Format
 
-Return findings as structured JSON:
+Return findings in TOON:
 
 ```toon
 reviewer: plan-compliance-reviewer

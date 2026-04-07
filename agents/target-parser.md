@@ -55,7 +55,7 @@ targetManifest:
     target-005,README output,text-diff,.plan-execution/convergence/targets/readme.txt,
 
 filesCreated[5]: .plan-execution/convergence/targets/api-users-get.json, .plan-execution/convergence/targets/api-users-post.json, .plan-execution/convergence/targets/login.png, .plan-execution/convergence/targets/config.json, .plan-execution/convergence/targets/readme.txt
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Comparison Method Reference

@@ -61,7 +61,7 @@ exportsAdded[2]{file,name,kind}:
 
 dependenciesAdded[0]:
 integrationNotes: Created 2 route modules with Zod validation. Each exports a router instance. Wiring-agent needs to register them in src/app.ts. Auth middleware reused from existing src/middleware/auth.ts.
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 contractAmendments[N]{file,issue}:
 
 crossBoundaryRequests[1]{file,reason,suggestedChange}:

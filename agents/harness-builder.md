@@ -89,7 +89,7 @@ filesCreated[4]: .plan-execution/convergence/harness/compare-json.js, .plan-exec
 filesModified[0]:
 dependenciesAdded[1]: pixelmatch@5.3.0
 integrationNotes: "Harness uses vitest for comparison runners since project already uses vitest. Run with: ./run-harness.sh"
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Rules

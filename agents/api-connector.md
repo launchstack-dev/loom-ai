@@ -60,7 +60,7 @@ exportsAdded[4]{file,name,kind}:
 
 dependenciesAdded[0]:
 integrationNotes: Created typed clients for Stripe (payments) and Twilio (SMS). Both use axios with retry interceptor. Stripe uses API key auth from STRIPE_SECRET_KEY env var. Twilio uses basic auth from TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN. Both have 30s timeout, 3 retries with exponential backoff. Wiring-agent needs to add env vars to .env.example.
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 contractAmendments[N]{file,issue}:
 
 crossBoundaryRequests[2]{file,reason,suggestedChange}:

@@ -76,7 +76,7 @@ exportsAdded[N]{file,name,kind}:
 
 dependenciesAdded[N]: package@version if any
 integrationNotes: What the wiring-agent and next-wave implementers need to know. Max 500 tokens.
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 
 contractAmendments[N]{file,issue}:
   contract path,What's wrong or missing

@@ -95,7 +95,7 @@ analysis:
     trending: improving
     stuckTargets[0]:
 
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Stuck Delta Detection

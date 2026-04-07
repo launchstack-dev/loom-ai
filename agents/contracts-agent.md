@@ -77,7 +77,7 @@ exportsAdded[2]{file,name,kind}:
 
 dependenciesAdded[0]:
 integrationNotes: Designed User type with optional fields for progressive profile completion. Site.domain is unique constraint.
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 contractAmendments[N]{file,issue}:
 crossBoundaryRequests[N]{file,reason,suggestedChange}:
 durationMs: 0

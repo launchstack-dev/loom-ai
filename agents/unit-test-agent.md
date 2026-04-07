@@ -10,7 +10,7 @@ You are a unit test specialist that generates comprehensive test files from acce
 
 You receive via prompt:
 
-1. **Test spec** — The structured JSON output from `acceptance-criteria-agent` (or a subset filtered to one phase)
+1. **Test spec** — The structured TOON output from `acceptance-criteria-agent` (or a subset filtered to one phase)
 2. **Contract files** — Paths to shared type definitions in `.plan-execution/contracts/`
 3. **Source files** — Paths to the implemented code to test
 4. **Test framework** — Which runner to use (vitest, jest, mocha). Default: vitest.

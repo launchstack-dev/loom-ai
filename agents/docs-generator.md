@@ -100,7 +100,7 @@ skipped[N]{type,reason}:
 improvements[N]{category,severity,description,files,recommendation}:
   architecture,medium,"Route handlers contain business logic — extract to service layer","src/routes/users.ts src/routes/posts.ts","Introduce src/services/ layer to separate concerns before scaling"
 
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Rules

@@ -119,7 +119,7 @@ report:
 
 filesCreated[1]: .plan-execution/convergence-state.toon
 filesModified[0]:
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Error Handling

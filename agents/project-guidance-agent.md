@@ -223,7 +223,7 @@ analysis:
   conventionsPruned: 4
   prunedReason: "4 conventions omitted — obvious from code or framework defaults"
 
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 ```
 
 ## Rules

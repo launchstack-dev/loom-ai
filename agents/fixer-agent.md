@@ -108,7 +108,7 @@ crossBoundaryRequests[N]{file,findingId,reason,suggestedChange}:
   path,4,why,what
 
 integrationNotes: What the orchestrator needs to know. Max 500 tokens.
-issues[N]{severity,description}:
+issues[N]{severity,description,file,line}:
 durationMs: 0
 ```
 

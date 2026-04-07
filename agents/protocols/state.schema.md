@@ -17,25 +17,28 @@ updatedAt: 2026-04-07T10:15:00Z
   status: succeeded
   startedAt: 2026-04-07T10:00:00Z
   completedAt: 2026-04-07T10:05:00Z
-  agents: contracts-agent
-  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,startedAt,completedAt}:
-    task-001,contracts-agent,Create shared types,succeeded,src/types.ts,0,2026-04-07T10:00:00Z,2026-04-07T10:03:00Z
-    task-002,contracts-agent,Create API schemas,succeeded,src/schema.ts,0,2026-04-07T10:00:00Z,2026-04-07T10:04:00Z
+  agents[1]: contracts-agent
+  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,result,startedAt,completedAt}:
+    task-001,contracts-agent,Create shared types,succeeded,src/types.ts,0,success,2026-04-07T10:00:00Z,2026-04-07T10:03:00Z
+    task-002,contracts-agent,Create API schemas,succeeded,src/schema.ts,0,success,2026-04-07T10:00:00Z,2026-04-07T10:04:00Z
   summaryFile: .plan-execution/wave-0-summary.toon
   verificationResult: pass
   verificationChecks[2]{name,status,details}:
     typecheck,pass,
     lint,pass,
+  fileHashes:
+    src/types.ts: sha256-a1b2c3d4
+    src/schema.ts: sha256-e5f6a7b8
   gateApproval: approved
 
 1:
   status: in_progress
   startedAt: 2026-04-07T10:05:00Z
   completedAt:
-  agents: implementer-agent
-  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,startedAt,completedAt}:
-    task-003,implementer-agent,Implement auth routes,in_progress,src/routes/auth.ts,0,2026-04-07T10:05:00Z,
-    task-004,implementer-agent,Implement user routes,pending,src/routes/users.ts,0,,
+  agents[2]: implementer-agent, wiring-agent
+  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,result,startedAt,completedAt}:
+    task-003,implementer-agent,Implement auth routes,in_progress,src/routes/auth.ts,0,,2026-04-07T10:05:00Z,
+    task-004,implementer-agent,Implement user routes,pending,src/routes/users.ts,0,,,
   summaryFile:
   verificationResult:
   gateApproval: pending
