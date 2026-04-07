@@ -1,0 +1,13 @@
+planFile: PLAN.md
+planVersion: 1
+lastUpdated: 2026-04-07
+status: draft
+
+milestones[3]{name,targetPhase,status,effort,dependencies,completedAt}:
+  Contracts Ready,0,pending,S,,
+  Implementation Complete,1,pending,M,Contracts Ready,
+  Plan Complete,-,pending,M,Implementation Complete,
+
+phases[2]{id,name,wave,status,deliverableCount,criteriaCount}:
+  0,Contracts,0,pending,1,4
+  1,Implementation,1,pending,7,7

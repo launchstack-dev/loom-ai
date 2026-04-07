@@ -1,0 +1,34 @@
+schemaVersion: 1
+runId: e2e-calc-001
+planFile: PLAN.md
+status: completed
+currentWave: 1
+startedAt: 2026-04-07T00:00:00Z
+updatedAt: 2026-04-07T00:03:00Z
+rollingContextFile: .plan-execution/rolling-context.md
+lockPid: null
+
+wave0.status: succeeded
+wave0.startedAt: 2026-04-07T00:00:00Z
+wave0.completedAt: 2026-04-07T00:01:00Z
+wave0.agents: contracts-agent
+wave0.tasks[1]{taskId,agent,description,status,retryCount}:
+  w0-contracts,contracts-agent,Define shared types,succeeded,0
+wave0.verificationResult.status: pass
+wave0.verificationResult.checks[1]{name,status,details}:
+  typecheck,pass,npx tsc --noEmit exited 0
+wave0.gateApproval: approved
+wave0.summaryFile: .plan-execution/wave-0-summary.toon
+
+wave1.status: succeeded
+wave1.startedAt: 2026-04-07T00:01:00Z
+wave1.completedAt: 2026-04-07T00:03:00Z
+wave1.agents: implementer-agent
+wave1.tasks[1]{taskId,agent,description,status,retryCount}:
+  w1-impl,implementer-agent,Implement CLI calculator with tests,succeeded,0
+wave1.verificationResult.status: pass
+wave1.verificationResult.checks[2]{name,status,details}:
+  typecheck,pass,npx tsc --noEmit exited 0
+  tests,pass,npx vitest run - 15/15 passed
+wave1.gateApproval: approved
+wave1.summaryFile: .plan-execution/wave-1-summary.toon

@@ -1,0 +1,9 @@
+command: loom-auto
+stage: complete
+stageName: Complete
+outerIteration: 1
+fixCycleCount: 0
+agentsSpawned: 4
+agentBudget: 30
+gateResult: proceed
+updatedAt: 2026-04-07T11:59:00Z

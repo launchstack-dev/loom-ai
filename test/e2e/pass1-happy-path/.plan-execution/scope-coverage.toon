@@ -1,0 +1,10 @@
+criteria[9]{phaseId,criterion,coveringTasks,status}:
+  0,npx tsc --noEmit exits with code 0 (wave 0),w0-contracts,covered
+  1,src/types.ts exports Operator CalculatorInput CalculatorResult,w0-contracts,covered
+  2,Operator type includes word and symbol forms,w0-contracts,covered
+  3,npx tsc --noEmit exits with code 0 (wave 1),w1-impl,covered
+  4,npx tsx src/index.ts 2 add 3 prints 5,w1-impl,covered
+  5,npx tsx src/index.ts 10 divide 0 prints error exits 1,w1-impl,covered
+  6,npx tsx src/index.ts --help prints usage exits 0,w1-impl,covered
+  7,npx tsx src/index.ts foo add 3 prints validation error exits 1,w1-impl,covered
+  8,npx vitest run passes all tests,w1-impl,covered

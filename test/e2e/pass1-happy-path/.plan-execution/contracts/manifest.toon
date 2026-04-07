@@ -1,0 +1,2 @@
+contracts[1]{file,purpose,exports}:
+  src/types.ts,Shared TypeScript type definitions,"Operator,CalculatorInput,CalculatorResult"

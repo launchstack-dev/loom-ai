@@ -1,0 +1,9 @@
+wave: 0
+status: succeeded
+filesCreated[1]: src/types.ts
+filesModified[0]:
+exportsAdded[3]{name,file,kind}:
+  Operator,src/types.ts,type
+  CalculatorInput,src/types.ts,interface
+  CalculatorResult,src/types.ts,interface
+unresolvedIssues[0]:

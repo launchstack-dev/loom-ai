@@ -1,0 +1,20 @@
+schemaVersion: 1
+runId: 86e233a3-3ca0-45b1-b300-a003a4f9838d
+mode: auto
+description: "Build a CLI calculator that supports add, subtract, multiply, and divide operations. It should accept two numbers and an operator from command line arguments, validate input, handle division by zero, and print the result. Include a --help flag."
+planFile: PLAN.md
+outerIteration: 1
+maxIterations: 2
+agentsSpawned: 4
+maxAgents: 30
+fixCycleCount: 0
+currentStage: complete
+
+stageHistory[5]{stage,status,iteration,startedAt,completedAt,agentsUsed,gateResult}:
+  plan-create,succeeded,1,2026-04-07T11:45:00Z,2026-04-07T11:47:00Z,1,proceed
+  plan-validate,succeeded,1,2026-04-07T11:47:00Z,2026-04-07T11:48:00Z,0,proceed
+  execute,succeeded,1,2026-04-07T11:48:00Z,2026-04-07T11:57:00Z,2,proceed
+  test,succeeded,1,2026-04-07T11:57:00Z,2026-04-07T11:58:00Z,0,proceed
+  review-code,succeeded,1,2026-04-07T11:58:00Z,2026-04-07T11:59:00Z,1,proceed
+
+failureLog[0]{iteration,stage,error,resolution}:

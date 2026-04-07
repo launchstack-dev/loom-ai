@@ -1,0 +1,8 @@
+wave: 1
+status: succeeded
+filesCreated[2]: src/index.ts,src/__tests__/calculator.test.ts
+filesModified[2]: package.json,tsconfig.json
+exportsAdded[2]{name,file,kind}:
+  parseArgs,src/index.ts,function
+  calculate,src/index.ts,function
+unresolvedIssues[0]:
