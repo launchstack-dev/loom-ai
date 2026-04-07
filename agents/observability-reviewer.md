@@ -77,37 +77,25 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "observability-reviewer",
-  "findings": [
-    {
-      "id": "obs-001",
-      "severity": "critical",
-      "category": "logging",
-      "description": "User passwords logged in plaintext during authentication flow",
-      "file": "src/auth/login.ts",
-      "line": 34,
-      "code": "logger.info('Login attempt', { email, password })",
-      "fix": "Remove password from log entry: logger.info('Login attempt', { email, hasPassword: !!password })"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "logging": 0,
-      "metrics": 0,
-      "tracing": 0,
-      "health-checks": 0,
-      "alerting": 0,
-      "error-tracking": 0
-    }
-  }
-}
+```toon
+reviewer: observability-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  obs-001,critical,logging,User passwords logged in plaintext during authentication flow,src/auth/login.ts,34,"logger.info('Login attempt', { email, password })","Remove password from log entry: logger.info('Login attempt', { email, hasPassword: !!password })"
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    logging: 0
+    metrics: 0
+    tracing: 0
+    health-checks: 0
+    alerting: 0
+    error-tracking: 0
 ```
 
 ## Severity Levels

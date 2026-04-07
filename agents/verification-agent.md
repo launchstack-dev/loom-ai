@@ -49,30 +49,24 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 
 5. **Return structured AgentResult.** Your result must follow the AgentResult schema:
 
-```json
-{
-  "agent": "verification-agent",
-  "wave": <wave index>,
-  "taskId": "<provided by orchestrator>",
-  "status": "success | failure | partial",
-  "filesCreated": [],
-  "filesModified": [],
-  "filesDeleted": [],
-  "exportsAdded": [],
-  "dependenciesAdded": [],
-  "integrationNotes": "<summary of verification results>",
-  "issues": [
-    {
-      "severity": "blocking | warning | info",
-      "description": "<what failed and why>",
-      "file": "<path if applicable>",
-      "line": null
-    }
-  ],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [],
-  "durationMs": 0
-}
+```toon
+agent: verification-agent
+wave: <wave index>
+taskId: <provided by orchestrator>
+status: success | failure | partial
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]:
+dependenciesAdded[0]:
+integrationNotes: <summary of verification results>
+
+issues[N]{severity,description,file,line}:
+  blocking | warning | info,<what failed and why>,<path if applicable>,
+
+contractAmendments[N]{file,issue}:
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+durationMs: 0
 ```
 
 ## Verification Checks

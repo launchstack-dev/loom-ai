@@ -77,37 +77,25 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "database-schema-reviewer",
-  "findings": [
-    {
-      "id": "db-001",
-      "severity": "critical",
-      "category": "migration-safety",
-      "description": "Adding NOT NULL column 'email_verified' without default to populated 'users' table will fail on existing rows",
-      "file": "migrations/20240115_add_email_verified.sql",
-      "line": 3,
-      "code": "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL;",
-      "fix": "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT false;"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "normalization": 0,
-      "indexing": 0,
-      "migration-safety": 0,
-      "constraints": 0,
-      "naming": 0,
-      "types": 0
-    }
-  }
-}
+```toon
+reviewer: database-schema-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  db-001,critical,migration-safety,Adding NOT NULL column 'email_verified' without default to populated 'users' table will fail on existing rows,migrations/20240115_add_email_verified.sql,3,ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL;,ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT false;
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    normalization: 0
+    indexing: 0
+    migration-safety: 0
+    constraints: 0
+    naming: 0
+    types: 0
 ```
 
 ## Severity Levels

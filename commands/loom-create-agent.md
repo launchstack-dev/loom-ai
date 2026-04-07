@@ -178,23 +178,29 @@ You receive:
 
 Return standard AgentResult:
 
-\```json
-{
-  "agent": "{name}",
-  "wave": 0,
-  "taskId": "",
-  "status": "success",
-  "filesCreated": [],
-  "filesModified": [],
-  "filesDeleted": [],
-  "exportsAdded": [],
-  "dependenciesAdded": [],
-  "integrationNotes": "",
-  "issues": [],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [],
-  "durationMs": 0
-}
+\```toon
+agent: {name}
+wave: 0
+taskId: task-xxx
+status: success
+
+filesCreated[N]:
+filesModified[N]:
+filesDeleted[N]:
+
+exportsAdded[N]{file,name,kind}:
+
+dependenciesAdded[N]:
+
+integrationNotes: ""
+
+issues[N]{severity,description,file,line}:
+
+contractAmendments[N]{file,issue}:
+
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+
+durationMs: 0
 \```
 
 ## Rules

@@ -83,39 +83,27 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "api-design-reviewer",
-  "findings": [
-    {
-      "id": "api-001",
-      "severity": "high",
-      "category": "methods",
-      "description": "GET endpoint modifies database state by updating a last-accessed timestamp",
-      "file": "src/routes/users.ts",
-      "line": 27,
-      "code": "router.get('/users/:id', async (req, res) => { await db.updateLastAccessed(req.params.id); ... })",
-      "fix": "Move the last-accessed update to a separate POST/PATCH endpoint, or use middleware that fires asynchronously without blocking the GET response"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "naming": 0,
-      "methods": 0,
-      "errors": 0,
-      "versioning": 0,
-      "pagination": 0,
-      "idempotency": 0,
-      "rate-limiting": 0,
-      "schema-consistency": 0
-    }
-  }
-}
+```toon
+reviewer: api-design-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  api-001,high,methods,GET endpoint modifies database state by updating a last-accessed timestamp,src/routes/users.ts,27,"router.get('/users/:id', async (req, res) => { await db.updateLastAccessed(req.params.id); ... })","Move the last-accessed update to a separate POST/PATCH endpoint, or use middleware that fires asynchronously without blocking the GET response"
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    naming: 0
+    methods: 0
+    errors: 0
+    versioning: 0
+    pagination: 0
+    idempotency: 0
+    rate-limiting: 0
+    schema-consistency: 0
 ```
 
 ## Severity Levels

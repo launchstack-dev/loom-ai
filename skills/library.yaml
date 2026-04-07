@@ -149,6 +149,19 @@ library:
       description: Drives test-driven development with red-green-refactor
       source: agents/tdd-coach.md
 
+    # Documentation agents
+    - name: project-guidance-agent
+      description: Creates CLAUDE.md and AI coding assistant guidance files from codebase analysis
+      source: agents/project-guidance-agent.md
+
+    - name: docs-auditor
+      description: Audits documentation for staleness, gaps, contradictions, and Loom readiness
+      source: agents/docs-auditor.md
+
+    - name: docs-generator
+      description: Generates README, API docs, ADRs, onboarding guides, and module documentation
+      source: agents/docs-generator.md
+
     # Code fix agents
     - name: fixer-agent
       description: Applies code review findings as targeted fixes within file ownership boundaries

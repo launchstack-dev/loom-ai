@@ -84,40 +84,27 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "accessibility-reviewer",
-  "findings": [
-    {
-      "id": "a11y-001",
-      "severity": "high",
-      "category": "forms",
-      "description": "Input field has no associated label — screen readers cannot identify this field",
-      "file": "src/components/LoginForm.tsx",
-      "line": 24,
-      "code": "<input type=\"email\" placeholder=\"Enter email\" />",
-      "fix": "Add a label: <label htmlFor=\"email\">Email</label><input id=\"email\" type=\"email\" placeholder=\"Enter email\" />",
-      "wcag": "WCAG 2.1 SC 1.3.1"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "semantic-html": 0,
-      "aria": 0,
-      "keyboard": 0,
-      "color-contrast": 0,
-      "focus-management": 0,
-      "forms": 0,
-      "images": 0,
-      "motion": 0
-    }
-  }
-}
+```toon
+reviewer: accessibility-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix,wcag}:
+  a11y-001,high,forms,Input field has no associated label — screen readers cannot identify this field,src/components/LoginForm.tsx,24,"<input type=\"email\" placeholder=\"Enter email\" />","Add a label: <label htmlFor=\"email\">Email</label><input id=\"email\" type=\"email\" placeholder=\"Enter email\" />",WCAG 2.1 SC 1.3.1
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    semantic-html: 0
+    aria: 0
+    keyboard: 0
+    color-contrast: 0
+    focus-management: 0
+    forms: 0
+    images: 0
+    motion: 0
 ```
 
 ## Severity Levels

@@ -43,43 +43,31 @@ You receive:
 
 Return standard AgentResult:
 
-```json
-{
-  "agent": "api-connector",
-  "wave": 0,
-  "taskId": "",
-  "status": "success",
-  "filesCreated": [
-    "src/clients/stripe.ts",
-    "src/clients/twilio.ts",
-    "src/clients/types.ts"
-  ],
-  "filesModified": [],
-  "filesDeleted": [],
-  "exportsAdded": [
-    {"file": "src/clients/stripe.ts", "name": "StripeClient", "kind": "class"},
-    {"file": "src/clients/stripe.ts", "name": "createStripeClient", "kind": "function"},
-    {"file": "src/clients/twilio.ts", "name": "TwilioClient", "kind": "class"},
-    {"file": "src/clients/types.ts", "name": "ApiClientError", "kind": "class"}
-  ],
-  "dependenciesAdded": [],
-  "integrationNotes": "Created typed clients for Stripe (payments) and Twilio (SMS). Both use axios with retry interceptor. Stripe uses API key auth from STRIPE_SECRET_KEY env var. Twilio uses basic auth from TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN. Both have 30s timeout, 3 retries with exponential backoff. Wiring-agent needs to add env vars to .env.example.",
-  "issues": [],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [
-    {
-      "file": ".env.example",
-      "reason": "Add environment variables for new external service clients",
-      "suggestedChange": "STRIPE_SECRET_KEY=sk_test_...\nSTRIPE_BASE_URL=https://api.stripe.com/v2\nTWILIO_ACCOUNT_SID=AC...\nTWILIO_AUTH_TOKEN=...\nTWILIO_BASE_URL=https://api.twilio.com/2010-04-01"
-    },
-    {
-      "file": "src/clients/index.ts",
-      "reason": "Create barrel file for client exports",
-      "suggestedChange": "export { StripeClient, createStripeClient } from './stripe';\nexport { TwilioClient, createTwilioClient } from './twilio';\nexport { ApiClientError } from './types';"
-    }
-  ],
-  "durationMs": 0
-}
+```toon
+agent: api-connector
+wave: 0
+taskId:
+status: success
+filesCreated[3]: src/clients/stripe.ts, src/clients/twilio.ts, src/clients/types.ts
+filesModified[0]:
+filesDeleted[0]:
+
+exportsAdded[4]{file,name,kind}:
+  src/clients/stripe.ts,StripeClient,class
+  src/clients/stripe.ts,createStripeClient,function
+  src/clients/twilio.ts,TwilioClient,class
+  src/clients/types.ts,ApiClientError,class
+
+dependenciesAdded[0]:
+integrationNotes: Created typed clients for Stripe (payments) and Twilio (SMS). Both use axios with retry interceptor. Stripe uses API key auth from STRIPE_SECRET_KEY env var. Twilio uses basic auth from TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN. Both have 30s timeout, 3 retries with exponential backoff. Wiring-agent needs to add env vars to .env.example.
+issues[N]{severity,description,file,line}:
+contractAmendments[N]{file,issue}:
+
+crossBoundaryRequests[2]{file,reason,suggestedChange}:
+  .env.example,Add environment variables for new external service clients,"STRIPE_SECRET_KEY=sk_test_... STRIPE_BASE_URL=https://api.stripe.com/v2 TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_BASE_URL=https://api.twilio.com/2010-04-01"
+  src/clients/index.ts,Create barrel file for client exports,"export { StripeClient, createStripeClient } from './stripe'; export { TwilioClient, createTwilioClient } from './twilio'; export { ApiClientError } from './types';"
+
+durationMs: 0
 ```
 
 ## Rules

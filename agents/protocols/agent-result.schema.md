@@ -1,63 +1,41 @@
 # AgentResult Schema
 
-Standard return envelope for all execution agents. Every agent MUST return valid JSON matching this schema as the last content block in its response.
+Standard return envelope for all execution agents. Every agent MUST return valid TOON matching this schema as the last content block in its response.
 
 ## Schema
 
-```json
-{
-  "agent": "string — agent name (e.g., 'contracts-agent', 'implementer-agent')",
-  "wave": "number — wave index this agent executed in",
-  "taskId": "string — unique task identifier assigned by orchestrator",
-  "status": "success | failure | partial",
+```toon
+agent: contracts-agent
+wave: 0
+taskId: task-001
+status: success
 
-  "filesCreated": ["string — absolute paths of newly created files"],
-  "filesModified": ["string — absolute paths of modified files"],
-  "filesDeleted": ["string — absolute paths of deleted files"],
+filesCreated[N]: src/types.ts, src/schema.ts
+filesModified[N]: package.json
+filesDeleted[N]:
 
-  "exportsAdded": [
-    {
-      "file": "string — path to file containing the export",
-      "name": "string — exported symbol name",
-      "kind": "function | class | const | type | interface | enum"
-    }
-  ],
+exportsAdded[N]{file,name,kind}:
+  src/types.ts,UserType,type
+  src/schema.ts,createUser,function
 
-  "dependenciesAdded": ["string — package@version format"],
+dependenciesAdded[N]: zod@3.22.0, drizzle-orm@0.30.0
 
-  "integrationNotes": "string — max 500 tokens. Key decisions, assumptions, or gotchas for downstream agents. Keep concise.",
+integrationNotes: "Used Zod for runtime validation. Downstream agents should import UserType from src/types.ts."
 
-  "issues": [
-    {
-      "severity": "blocking | warning | info",
-      "description": "string — what went wrong or needs attention",
-      "file": "string | null — file path if applicable",
-      "line": "number | null — line number if applicable"
-    }
-  ],
+issues[N]{severity,description,file,line}:
+  warning,"Missing index on users.email — add before production",src/schema.ts,42
 
-  "contractAmendments": [
-    {
-      "file": "string — contract file path that needs updating",
-      "issue": "string — what's wrong or missing in the contract"
-    }
-  ],
+contractAmendments[N]{file,issue}:
 
-  "crossBoundaryRequests": [
-    {
-      "file": "string — file path outside ownership boundary that needs changes",
-      "reason": "string — why this file needs modification",
-      "suggestedChange": "string — what change is needed"
-    }
-  ],
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+  package.json,"Need to add drizzle-kit as devDependency","Add drizzle-kit@0.22.0 to devDependencies"
 
-  "durationMs": "number — wall-clock time for this agent's execution"
-}
+durationMs: 12500
 ```
 
 ## Rules
 
-1. **Always return valid JSON.** The orchestrator parses this programmatically.
+1. **Always return valid TOON.** The orchestrator parses this programmatically.
 2. **Status meanings:**
    - `success` — all acceptance criteria met, no blocking issues
    - `partial` — some work completed but blocking issues remain

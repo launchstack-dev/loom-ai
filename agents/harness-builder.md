@@ -39,29 +39,19 @@ Each comparison script must:
 
 Maps each target artifact to its comparison configuration:
 
-```json
-{
-  "targets": [
-    {
-      "id": "target-001",
-      "name": "GET /api/users response",
-      "comparisonMethod": "json-deep-equal",
-      "tolerance": 1.0,
-      "baselinePath": ".plan-execution/convergence/targets/api-users-get.json",
-      "actualPath": ".plan-execution/convergence/actual/api-users-get.json",
-      "options": {
-        "ignoreFields": ["timestamp", "requestId"],
-        "numericTolerance": 0.001,
-        "keyOrdering": false
-      }
-    }
-  ],
-  "comparisonScripts": {
-    "json-deep-equal": ".plan-execution/convergence/harness/compare-json.js",
-    "pixel-diff": ".plan-execution/convergence/harness/compare-pixel.js"
-  },
-  "runner": ".plan-execution/convergence/harness/run-harness.sh"
-}
+```toon
+targets[1]{id,name,comparisonMethod,tolerance,baselinePath,actualPath}:
+  target-001,GET /api/users response,json-deep-equal,1.0,.plan-execution/convergence/targets/api-users-get.json,.plan-execution/convergence/actual/api-users-get.json
+
+options.target-001.ignoreFields: timestamp,requestId
+options.target-001.numericTolerance: 0.001
+options.target-001.keyOrdering: false
+
+comparisonScripts:
+  json-deep-equal: .plan-execution/convergence/harness/compare-json.js
+  pixel-diff: .plan-execution/convergence/harness/compare-pixel.js
+
+runner: .plan-execution/convergence/harness/run-harness.sh
 ```
 
 The config must be human-readable and editable — users may want to adjust tolerances, add field ignores, or change viewport sizes between iterations.
@@ -74,28 +64,16 @@ An entry point script (`.plan-execution/convergence/harness/run-harness.sh` or e
 2. For each target: captures current implementation output into the `actualPath` location
 3. Runs the appropriate comparison script for each target
 4. Computes a score per target
-5. Produces a structured Delta Report (JSON):
+5. Produces a structured Delta Report (TOON):
 
-```json
-{
-  "timestamp": "2025-01-15T10:30:00Z",
-  "totalTargets": 12,
-  "passing": 8,
-  "failing": 4,
-  "targets": [
-    {
-      "id": "target-001",
-      "name": "GET /api/users response",
-      "score": 0.85,
-      "threshold": 1.0,
-      "passed": false,
-      "diff": {
-        "type": "json-deep-equal",
-        "details": "Missing field 'pagination.totalPages' in response"
-      }
-    }
-  ]
-}
+```toon
+timestamp: 2025-01-15T10:30:00Z
+totalTargets: 12
+passing: 8
+failing: 4
+
+targets[12]{id,name,score,threshold,passed,diffType,diffDetails}:
+  target-001,GET /api/users response,0.85,1.0,false,json-deep-equal,"Missing field 'pagination.totalPages' in response"
 ```
 
 6. Returns exit code 0 if all targets pass, exit code 1 if any fail
@@ -103,21 +81,15 @@ An entry point script (`.plan-execution/convergence/harness/run-harness.sh` or e
 
 ## Output Format
 
-```json
-{
-  "agent": "harness-builder",
-  "status": "success",
-  "filesCreated": [
-    ".plan-execution/convergence/harness/compare-json.js",
-    ".plan-execution/convergence/harness/compare-pixel.js",
-    ".plan-execution/convergence/harness/run-harness.sh",
-    ".plan-execution/convergence/converge.config"
-  ],
-  "filesModified": [],
-  "dependenciesAdded": ["pixelmatch@5.3.0"],
-  "integrationNotes": "Harness uses vitest for comparison runners since project already uses vitest. Run with: ./run-harness.sh",
-  "issues": []
-}
+```toon
+agent: harness-builder
+status: success
+
+filesCreated[4]: .plan-execution/convergence/harness/compare-json.js, .plan-execution/convergence/harness/compare-pixel.js, .plan-execution/convergence/harness/run-harness.sh, .plan-execution/convergence/converge.config
+filesModified[0]:
+dependenciesAdded[1]: pixelmatch@5.3.0
+integrationNotes: "Harness uses vitest for comparison runners since project already uses vitest. Run with: ./run-harness.sh"
+issues[N]{severity,description,file,line}:
 ```
 
 ## Rules
@@ -126,7 +98,7 @@ An entry point script (`.plan-execution/convergence/harness/run-harness.sh` or e
 2. **Comparison scripts must be deterministic.** Same input always produces the same score. No random seeds, no timestamp sensitivity, no environment-dependent behavior.
 3. **The runner must produce the Delta Report even if some comparisons fail.** Set failing comparisons to score 0.0 and include the error in the diff details. Partial results are valuable for the delta-analyzer.
 4. **Include setup instructions for any comparison dependencies** (pixelmatch, sharp, cheerio). List them in `dependenciesAdded` so the wiring-agent can install them.
-5. **converge.config must be human-readable and editable.** Use JSON with comments (JSONC) or plain JSON with descriptive field names. The user may want to adjust tolerances between iterations.
+5. **converge.config must be human-readable and editable.** Use TOON format with descriptive field names. The user may want to adjust tolerances between iterations.
 6. **Create the `actual/` directory structure** mirroring the `targets/` directory. This is where the harness runner will write captured outputs.
 7. **All paths in converge.config must be relative to the project root** for portability.
 8. **The harness runner must be idempotent.** Running it twice with no code changes must produce the same Delta Report.

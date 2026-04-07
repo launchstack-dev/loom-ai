@@ -56,38 +56,32 @@ For each acceptance criterion:
 
 ## Output Format
 
-Return findings as structured JSON:
+Return findings in TOON:
 
-```json
-{
-  "reviewer": "plan-compliance-reviewer",
-  "findings": [
-    {
-      "id": "pc-001",
-      "severity": "blocking",
-      "category": "missing-deliverable",
-      "planReference": "Phase 1, Deliverable 3: src/routes/posts.ts",
-      "description": "File src/routes/posts.ts does not exist",
-      "suggestion": "Create src/routes/posts.ts with POST/GET/PUT/DELETE handlers for posts"
-    },
-    {
-      "id": "pc-002",
-      "severity": "warning",
-      "category": "schema-drift",
-      "planReference": "Schema: Post.content — max 5000 chars",
-      "description": "Post content field has no length validation",
-      "file": "src/models/post.ts",
-      "line": 15,
-      "suggestion": "Add maxLength: 5000 constraint to content field"
-    }
-  ],
-  "summary": {
-    "deliverables": { "total": 8, "present": 6, "missing": 2 },
-    "schemaFields": { "total": 15, "compliant": 12, "drifted": 3 },
-    "acceptanceCriteria": { "total": 5, "covered": 3, "uncovered": 2 },
-    "contractUsage": { "total": 4, "used": 3, "bypassed": 1 }
-  }
-}
+```toon
+reviewer: plan-compliance-reviewer
+
+findings[N]{id,severity,category,planReference,description,file,line,suggestion}:
+  pc-001,blocking,missing-deliverable,"Phase 1, Deliverable 3: src/routes/posts.ts",File src/routes/posts.ts does not exist,,,Create src/routes/posts.ts with POST/GET/PUT/DELETE handlers for posts
+  pc-002,warning,schema-drift,Schema: Post.content — max 5000 chars,Post content field has no length validation,src/models/post.ts,15,Add maxLength: 5000 constraint to content field
+
+summary:
+  deliverables:
+    total: 8
+    present: 6
+    missing: 2
+  schemaFields:
+    total: 15
+    compliant: 12
+    drifted: 3
+  acceptanceCriteria:
+    total: 5
+    covered: 3
+    uncovered: 2
+  contractUsage:
+    total: 4
+    used: 3
+    bypassed: 1
 ```
 
 ## Severity Levels

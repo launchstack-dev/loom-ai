@@ -78,27 +78,27 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 
 8. **Return structured AgentResult:**
 
-```json
-{
-  "agent": "wiring-agent",
-  "wave": "<wave index>",
-  "taskId": "<provided>",
-  "status": "success | failure | partial",
-  "filesCreated": ["any new barrel files created"],
-  "filesModified": ["barrel files, package.json, route files updated"],
-  "filesDeleted": ["processed request files"],
-  "exportsAdded": [
-    {"file": "path", "name": "symbolName", "kind": "re-export"}
-  ],
-  "dependenciesAdded": ["packages actually installed"],
-  "integrationNotes": "Summary of wiring changes. Any requests that couldn't be fulfilled. Contract mismatches found.",
-  "issues": [
-    {"severity": "warning", "description": "Implementer A exported UserService but contract expects UserHandler", "file": "path", "line": null}
-  ],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [],
-  "durationMs": 0
-}
+```toon
+agent: wiring-agent
+wave: <wave index>
+taskId: <provided>
+status: success | failure | partial
+filesCreated[N]: any new barrel files created
+filesModified[N]: barrel files, package.json, route files updated
+filesDeleted[N]: processed request files
+
+exportsAdded[N]{file,name,kind}:
+  path,symbolName,re-export
+
+dependenciesAdded[N]: packages actually installed
+integrationNotes: Summary of wiring changes. Any requests that couldn't be fulfilled. Contract mismatches found.
+
+issues[N]{severity,description,file,line}:
+  warning,Implementer A exported UserService but contract expects UserHandler,path,
+
+contractAmendments[N]{file,issue}:
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+durationMs: 0
 ```
 
 ## Files You Own

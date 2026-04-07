@@ -108,36 +108,26 @@ Every migration step must be evaluated on these dimensions:
 
 ## Output Format
 
-```json
-{
-  "migrationPattern": "strangler-fig | parallel-run | big-bang | branch-by-abstraction",
-  "totalSteps": 5,
-  "estimatedEffort": "S | M | L | XL per step",
-  "criticalPath": ["step-1", "step-3", "step-5"],
-  "steps": [
-    {
-      "id": "step-1",
-      "name": "Extract data access layer",
-      "description": "Introduce repository pattern to decouple data access from business logic",
-      "dependencies": [],
-      "effort": "M",
-      "risk": {
-        "blastRadius": "low | medium | high",
-        "rollbackDifficulty": "trivial | moderate | hard | impossible",
-        "dataConsistency": "description of consistency implications"
-      },
-      "rollback": "Revert repository interfaces, restore direct DB calls",
-      "successCriteria": ["All queries route through repositories", "Zero query performance regression"],
-      "dataChanges": "None — code-only refactor",
-      "parallelRunOpportunity": false
-    }
-  ],
-  "riskMatrix": {
-    "highRiskSteps": ["step-3"],
-    "rollbackPlan": "Full rollback to pre-migration state via git revert + DB restore",
-    "pointOfNoReturn": "step-4 (schema migration is destructive)"
-  }
-}
+```toon
+migrationPattern: strangler-fig | parallel-run | big-bang | branch-by-abstraction
+totalSteps: 5
+estimatedEffort: S | M | L | XL per step
+criticalPath[3]: step-1, step-3, step-5
+
+steps[N]{id,name,description,dependencies,effort,rollback,dataChanges,parallelRunOpportunity}:
+  step-1,Extract data access layer,Introduce repository pattern to decouple data access from business logic,,M,"Revert repository interfaces, restore direct DB calls",None — code-only refactor,false
+
+  # Each step also includes nested blocks:
+  # risk:
+  #   blastRadius: low | medium | high
+  #   rollbackDifficulty: trivial | moderate | hard | impossible
+  #   dataConsistency: description of consistency implications
+  # successCriteria[N]: All queries route through repositories, Zero query performance regression
+
+riskMatrix:
+  highRiskSteps[1]: step-3
+  rollbackPlan: Full rollback to pre-migration state via git revert + DB restore
+  pointOfNoReturn: step-4 (schema migration is destructive)
 ```
 
 ## Rules

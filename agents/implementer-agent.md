@@ -62,29 +62,29 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 
 5. **Return structured AgentResult:**
 
-```json
-{
-  "agent": "implementer-agent",
-  "wave": "<wave index>",
-  "taskId": "<provided>",
-  "status": "success | failure | partial",
-  "filesCreated": ["list of new files"],
-  "filesModified": ["list of modified files"],
-  "filesDeleted": [],
-  "exportsAdded": [
-    {"file": "path", "name": "symbolName", "kind": "function|class|const|type"}
-  ],
-  "dependenciesAdded": ["package@version if any"],
-  "integrationNotes": "What the wiring-agent and next-wave implementers need to know. Max 500 tokens.",
-  "issues": [],
-  "contractAmendments": [
-    {"file": "contract path", "issue": "What's wrong or missing"}
-  ],
-  "crossBoundaryRequests": [
-    {"file": "path", "reason": "why", "suggestedChange": "what"}
-  ],
-  "durationMs": 0
-}
+```toon
+agent: implementer-agent
+wave: <wave index>
+taskId: <provided>
+status: success | failure | partial
+filesCreated[N]: list of new files
+filesModified[N]: list of modified files
+filesDeleted[0]:
+
+exportsAdded[N]{file,name,kind}:
+  path,symbolName,function|class|const|type
+
+dependenciesAdded[N]: package@version if any
+integrationNotes: What the wiring-agent and next-wave implementers need to know. Max 500 tokens.
+issues[N]{severity,description,file,line}:
+
+contractAmendments[N]{file,issue}:
+  contract path,What's wrong or missing
+
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+  path,why,what
+
+durationMs: 0
 ```
 
 ## File Ownership Rules (NON-NEGOTIABLE)

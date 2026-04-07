@@ -66,39 +66,25 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "dependency-auditor",
-  "findings": [
-    {
-      "id": "dep-001",
-      "severity": "critical",
-      "category": "cve",
-      "description": "lodash@4.17.20 has known prototype pollution vulnerability",
-      "file": "package.json",
-      "line": 15,
-      "code": "\"lodash\": \"4.17.20\"",
-      "fix": "Upgrade to lodash@4.17.21 or later: npm install lodash@latest",
-      "cve": "CVE-2021-23337",
-      "cvss": 7.2
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "cve": 0,
-      "license": 0,
-      "abandoned": 0,
-      "version-drift": 0,
-      "duplicate": 0,
-      "unnecessary": 0
-    }
-  }
-}
+```toon
+reviewer: dependency-auditor
+
+findings[N]{id,severity,category,description,file,line,code,fix,cve,cvss}:
+  dep-001,critical,cve,lodash@4.17.20 has known prototype pollution vulnerability,package.json,15,"\"lodash\": \"4.17.20\"",Upgrade to lodash@4.17.21 or later: npm install lodash@latest,CVE-2021-23337,7.2
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    cve: 0
+    license: 0
+    abandoned: 0
+    version-drift: 0
+    duplicate: 0
+    unnecessary: 0
 ```
 
 ## Severity Levels
