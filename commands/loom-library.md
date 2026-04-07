@@ -1,6 +1,6 @@
 # Library Manager
 
-You manage a pull-on-demand catalog of agents, commands, and skills for the meta-orchestration system. The catalog lives at `~/.claude/skills/library/library.yaml` and install state is tracked in `~/.claude/skills/library/install-state.toon`.
+You manage a pull-on-demand catalog of agents, commands, and skills for Loom. The catalog lives at `~/.claude/skills/library/library.yaml` and install state is tracked in `~/.claude/skills/library/install-state.toon`.
 
 ## Instructions
 
@@ -32,12 +32,24 @@ items[N]{name,type,source,targetPath,installedAt,contentHash}:
 
 If install-state.toon does not exist, create it with `schemaVersion: 1`, current timestamp for `lastSynced`, and `items[0]{name,type,source,targetPath,installedAt,contentHash}:` (empty).
 
-Compute `contentHash` by running `shasum -a 256 <source-file>` via the Bash tool. This detects when sources have changed.
+Compute `contentHash` by running `shasum -a 256 <target-file>` via the Bash tool AFTER writing content to the target. This ensures the hash matches what was actually installed, not what was at the source at an earlier point in time. If `shasum` is not available, try `sha256sum` as a fallback. If both fail, report the error and store `contentHash: unknown`.
 
 ## Source Types
 
 - **Local path**: Absolute path to a `.md` file. Read it directly with the Read tool.
-- **GitHub URL**: A URL like `https://github.com/user/repo/blob/main/path/file.md`. Convert to raw: `https://raw.githubusercontent.com/user/repo/main/path/file.md` and fetch with `curl -sL`. Alternatively use `gh api` to fetch content.
+- **GitHub URL**: A URL like `https://github.com/user/repo/blob/main/path/file.md`. Convert to raw URL per the rules below, validate, then fetch.
+
+### Source Validation
+
+**GitHub URL validation:**
+1. Parse the URL to extract org, repo, branch, and file path components
+2. Convert to raw URL: `https://raw.githubusercontent.com/{org}/{repo}/{branch}/{path}`
+3. Validate the raw URL matches: `^https://raw\.githubusercontent\.com/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+/.+$`
+4. If validation fails, report the invalid URL and stop
+5. Fetch with: `curl --max-filesize 10485760 --max-time 30 --max-redirs 5 -sL "{url}"` (always double-quote the URL variable)
+
+**Name validation:**
+Before constructing any target path, validate that the item name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Reject names containing `/`, `..`, or null bytes. After resolving the full target path, verify it starts with `~/.claude/`.
 
 ## Target Paths by Type
 
@@ -95,7 +107,7 @@ Use a checkmark for installed items and an x-mark for uninstalled ones.
    a. Read source content (local Read or GitHub curl)
    b. Determine target path from the type (see Target Paths by Type above)
    c. Write content to target path using the Write tool
-   d. Compute content hash via `shasum -a 256`
+   d. Compute content hash: run `shasum -a 256 <target-path>` (hash the installed file, not the source). If `shasum` fails, try `sha256sum <target-path>`.
    e. Add entry to install-state.toon (update the items array and count)
 5. Update `lastSynced` timestamp in install-state.toon
 6. Display summary:
@@ -145,6 +157,7 @@ Update now? (yes / no / select individually)
    - Contains agent-style instructions (role/task language, file ownership) -> agent
    - Otherwise -> skill
 4. Derive a suggested name from the filename (strip extension and path)
+4b. Validate the name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. If not, sanitize by replacing invalid characters with `-` and confirm with user.
 5. Ask user to confirm name and type
 6. Append the new entry to the appropriate section in library.yaml
 7. Ask if user wants to install immediately via `use`
@@ -193,3 +206,5 @@ Install new items? (yes / all / select / no)
 - **Missing source file**: Report which item has a missing source. For `sync`/`update`, mark it and continue checking others.
 - **Network errors** (GitHub fetch): Report the error, skip the item, continue with others.
 - **Write failures**: Report the target path and error. Do not update install-state for that item.
+- **Corrupt install-state.toon**: If the file exists but cannot be parsed as valid TOON, back it up as `install-state.toon.corrupt`, create a fresh empty state, and warn the user: "Install state was corrupt and has been reset. Run `/loom-library sync` to rebuild."
+- **Hash command unavailable**: If both `shasum -a 256` and `sha256sum` fail, report the error and store `contentHash: unknown`. The `sync` command will detect these entries and re-hash them on the next run.

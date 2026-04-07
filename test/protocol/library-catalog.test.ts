@@ -223,6 +223,22 @@ describe('Library Catalog — Dependency Resolution', () => {
     expect(result.order).toEqual(['nonexistent']);
     expect(result.circular).toHaveLength(0);
   });
+
+  it('documents ambiguity: missing items are indistinguishable from resolved items', () => {
+    const catalog = createValidCatalog();
+    const resultMissing = resolveDependencies('nonexistent', catalog, new Set());
+    const resultReal = resolveDependencies('plan-builder-agent', catalog, new Set());
+
+    // Both return { order: [name], circular: [] } — the caller cannot tell
+    // whether 'nonexistent' was found in the catalog or not.
+    // This is a known limitation: the library.md command must separately
+    // verify that each item in the resolved order exists in the catalog
+    // before attempting installation.
+    expect(resultMissing.order).toEqual(['nonexistent']);
+    expect(resultMissing.circular).toEqual([]);
+    expect(resultReal.order).toEqual(['plan-builder-agent']);
+    expect(resultReal.circular).toEqual([]);
+  });
 });
 
 describe('Library Catalog — Change Detection', () => {
@@ -291,5 +307,30 @@ describe('Library Catalog — Reverse Dependencies', () => {
 
     const dependents = findDependents('execution-protocols', catalog, installed);
     expect(dependents).toEqual(['contracts-agent']);
+  });
+});
+
+describe('Library Catalog — TOON Roundtrip', () => {
+  it('full LibraryCatalog survives TOON roundtrip with optional requires', () => {
+    const original: LibraryCatalog = createValidCatalog();
+    const encoded = encode(original);
+    const decoded = decode(encoded) as LibraryCatalog;
+    expect(decoded).toEqual(original);
+    // Specifically verify optional requires field survives
+    const agentWithDeps = decoded.agents.find(a => a.requires && a.requires.length > 0);
+    expect(agentWithDeps).toBeDefined();
+    expect(agentWithDeps!.requires).toContain('skill:execution-protocols');
+  });
+
+  it('questioner-agent decision structure survives TOON roundtrip', () => {
+    const original = {
+      decisions: [
+        { id: 'D-01', title: 'Auth Strategy', impact: 'high', recommended: 'JWT with refresh tokens', rationale: 'API-first architecture' },
+        { id: 'D-02', title: 'Database Engine', impact: 'high', recommended: 'SQLite', rationale: 'Zero-config for MVP' },
+      ],
+    };
+    const encoded = encode(original);
+    const decoded = decode(encoded);
+    expect(decoded).toEqual(original);
   });
 });

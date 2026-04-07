@@ -1,5 +1,5 @@
 #!/bin/bash
-# Meta-Orchestration System Installer (bootstrap)
+# Loom Installer (bootstrap)
 #
 # DEPRECATED: Use /library for ongoing management after initial install.
 # This script is kept for first-time bootstrap only. It creates symlinks
@@ -16,7 +16,7 @@ CLAUDE_DIR="${HOME}/.claude"
 echo "⚠  This installer is for initial bootstrap only."
 echo "   After install, use /library for ongoing management."
 echo ""
-echo "Installing meta-orchestration system..."
+echo "Installing Loom..."
 echo "Source: ${SCRIPT_DIR}"
 echo "Target: ${CLAUDE_DIR}"
 echo ""
@@ -78,4 +78,4 @@ echo "  /execute-plan   — wave-by-wave execution with approval gates"
 echo "  /test-plan      — acceptance criteria + unit + E2E test generation"
 echo "  /review-code    — built-in + bespoke code review"
 echo "  /roadmap        — plan creation, tracking, and milestone management"
-echo "  /help           — full reference"
+echo "  /loom           — full reference"

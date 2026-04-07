@@ -1,19 +1,20 @@
-# Meta-Orchestration System
+# Loom
 
 A multi-agent pipeline for planning, executing, testing, and reviewing software projects with Claude Code.
 
 ## What It Does
 
-Six slash commands that compose 20+ specialized agents:
+Seven slash commands that compose 20+ specialized agents:
 
 | Command | What it does |
 |---------|-------------|
-| `/review-plan` | 5 agents analyze a PLAN.md in parallel |
-| `/execute-plan` | Wave-by-wave execution with contracts, parallel implementers, wiring, and verification |
-| `/test-plan` | Acceptance criteria extraction + unit + E2E test generation |
-| `/review-code` | 9 reviewers (6 built-in + 3 bespoke) with severity-ranked output |
-| `/roadmap` | Plan creation, milestone tracking, dependency graphs, versioning |
-| `/help` | Full reference |
+| `/loom-review-plan` | 5 agents analyze a PLAN.md in parallel |
+| `/loom-execute-plan` | Wave-by-wave execution with contracts, parallel implementers, wiring, and verification |
+| `/loom-test-plan` | Acceptance criteria extraction + unit + E2E test generation |
+| `/loom-review-code` | 9 reviewers (6 built-in + 3 bespoke) with severity-ranked output |
+| `/loom-fix-code` | Auto-apply review findings with parallel fixer-agents and verification |
+| `/loom-roadmap` | Plan creation, milestone tracking, dependency graphs, versioning |
+| `/loom` | Full reference |
 
 ## Install
 
@@ -26,24 +27,25 @@ cd meta-orchestration
 
 **Ongoing management** (after bootstrap):
 ```
-/library list           — see what's installed
-/library use <name>     — install an agent or command
-/library sync           — re-pull all items, detect changes
-/library update         — check for new catalog entries
+/loom-library list           — see what's installed
+/loom-library use <name>     — install an agent or command
+/loom-library sync           — re-pull all items, detect changes
+/loom-library update         — check for new catalog entries
 ```
 
-The bootstrap script symlinks everything into `~/.claude/`. After that, `/library` manages the catalog with dependency resolution, content hashing, and GitHub source support. Run `/help` in Claude Code to verify.
+The bootstrap script symlinks everything into `~/.claude/`. After that, `/loom-library` manages the catalog with dependency resolution, content hashing, and GitHub source support. Run `/loom` in Claude Code to verify.
 
 ## Architecture
 
 ```
-Commands (user-facing)          Agents (spawned by commands)
-──────────────────────          ───────────────────────────
-/review-plan ─────────────────→ 5 planning agents (parallel)
-/execute-plan ─��──────────────→ contracts → implementers → wiring → verification
-/test-plan ───────────────────→ criteria → unit-test → e2e-test
-/review-code ───────���─────────→ 6 built-in + 3 bespoke reviewers
-/roadmap ─────────────���───────→ plan-builder-agent
+Commands (user-facing)              Agents (spawned by commands)
+──────────────────────              ───────────────────────────
+/loom-review-plan ─────────────→ 5 planning agents (parallel)
+/loom-execute-plan ────────────→ contracts → implementers → wiring → verification
+/loom-test-plan ───────────────→ criteria → unit-test → e2e-test
+/loom-review-code ─────────────→ 6 built-in + 3 bespoke reviewers
+/loom-fix-code ────────────────→ parallel fixer-agents
+/loom-roadmap ─────────────────→ plan-builder-agent
 
 Protocols (shared contracts)
 ────────────────────────────
@@ -61,15 +63,16 @@ agent-monitoring.schema.md    ← Progress reporting, stale detection, dashboard
 ## Typical Workflow
 
 ```
-1. /roadmap --init            Create a structured PLAN.md (codebase-aware)
-2. /roadmap --validate        Validate plan structure, deps, ownership, sizing
-3. /review-plan               5 agents analyze it in parallel
-4. /roadmap --review-integrate Apply review findings to the plan
-5. /roadmap --deps            Verify dependency graph + critical path
-6. /execute-plan --dry-run    Preview the wave structure
-7. /execute-plan              Run with approval gates (validation gate built-in)
-8. /test-plan --run           Generate and run tests
-9. /review-code               Full code review
+1. /loom-roadmap --init            Create a structured PLAN.md (codebase-aware)
+2. /loom-roadmap --validate        Validate plan structure, deps, ownership, sizing
+3. /loom-review-plan               5 agents analyze it in parallel
+4. /loom-roadmap --review-integrate Apply review findings to the plan
+5. /loom-roadmap --deps            Verify dependency graph + critical path
+6. /loom-execute-plan --dry-run    Preview the wave structure
+7. /loom-execute-plan              Run with approval gates (validation gate built-in)
+8. /loom-test-plan --run           Generate and run tests
+9. /loom-review-code               Full code review
+10. /loom-fix-code                  Auto-apply review findings
 ```
 
 ## Per-Project Extensibility
@@ -124,7 +127,7 @@ npx vitest run
 ```
 agents/                     20+ agent definitions
   protocols/                 8 protocol specs (incl. plan.schema.md, toon-format.md)
-commands/                    6 slash commands
+commands/                    7 slash commands
 skills/library.yaml         Library registry
 test/protocol/              57 protocol tests
 test-fixtures/              Test plan fixtures (valid + broken)

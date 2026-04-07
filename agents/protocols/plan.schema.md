@@ -2,7 +2,7 @@
 
 Canonical specification for PLAN.md files consumed by the meta-orchestration pipeline. This document is to PLAN.md what `agent-result.schema.md` is to AgentResult — the authoritative format reference.
 
-All orchestrators (`/roadmap`, `/execute-plan`, `/review-plan`, `/test-plan`) and the `plan-builder-agent` MUST conform to this spec.
+All orchestrators (`/loom-roadmap`, `/loom-execute-plan`, `/loom-review-plan`, `/loom-test-plan`) and the `plan-builder-agent` MUST conform to this spec.
 
 ---
 
@@ -28,7 +28,7 @@ totalWaves: N
 | name | string | yes | Project name. Must match `# Plan: {name}` title. |
 | status | enum | yes | Plan lifecycle state. |
 | created | date string | yes | When the plan was first created. |
-| lastReviewed | date string | no | When `/review-plan` last ran. null if never reviewed. |
+| lastReviewed | date string | no | When `/loom-review-plan` last ran. null if never reviewed. |
 | totalPhases | integer | yes | Number of phases (excluding verification). |
 | totalWaves | integer | yes | Number of execution waves (wave 0 = contracts). |
 

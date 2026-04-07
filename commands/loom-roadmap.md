@@ -88,6 +88,10 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
 
 2. Parse the agent's decision points from its TOON output.
 
+   **Error handling:** If the questioner-agent fails, times out, or returns unparseable output:
+   - Warn user: "Discussion phase skipped due to agent failure. Proceeding to plan generation without locked decisions. Use `--discuss` to retry."
+   - Skip to Step 2 without writing CONTEXT.md
+
 3. **If `--auto`:** Accept all recommended defaults. Display them for awareness:
    ```
    ## Locked Decisions (auto-selected defaults)
@@ -125,7 +129,7 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
    # Project Decisions
 
    Locked decisions made during the discussion phase. Plan generation and execution
-   must honor these choices. To change a decision, re-run `/roadmap --discuss`.
+   must honor these choices. To change a decision, re-run `/loom-roadmap --discuss`.
 
    ## D-01: Authentication Strategy
    **Decision:** JWT with refresh tokens
@@ -139,6 +143,10 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
    **Alternatives considered:** PostgreSQL (concurrent writes but requires server)
    **Impact:** high
    ```
+
+   **Error handling:** If writing CONTEXT.md fails:
+   - Warn user: "Could not write CONTEXT.md. Decisions will be passed inline to plan generation."
+   - Instead of passing the CONTEXT.md file path in Step 2, embed the locked decisions directly in the plan-builder-agent prompt as inline text
 
 6. Pass the CONTEXT.md path to Step 2 (Plan Generation).
 
@@ -185,7 +193,7 @@ Run structural review? This spawns 3 planning agents in parallel:
 - parallelization-agent: wave optimization, conflict prevention
 - agentic-workflow-agent: context budget, task decomposition
 
-(yes / no / review later with /review-plan)
+(yes / no / review later with /loom-review-plan)
 ```
 
 If yes:
@@ -202,13 +210,13 @@ If yes:
      # Plan Changelog
 
      ## YYYY-MM-DD — Initial plan created
-     - Generated via /roadmap --init
+     - Generated via /loom-roadmap --init
      - Phases: N, Waves: N, Deliverables: N
      - Validation: passed (0 errors, N warnings)
      ```
    - Create `.plan-history/roadmap.toon` with auto-derived milestones from phases
    - Create `.plan-history/snapshots/` directory
-3. Display plan summary + suggest next steps: `/review-plan` for full 5-agent review, `/execute-plan --dry-run` to preview waves
+3. Display plan summary + suggest next steps: `/loom-review-plan` for full 5-agent review, `/loom-execute-plan --dry-run` to preview waves
 
 ---
 
@@ -298,7 +306,7 @@ Parallelization: Wave 1 runs 2 tracks in parallel
 
 ## Command: `--validate [path]`
 
-Run the plan validation pipeline standalone. Useful before `/review-plan` or `/execute-plan`.
+Run the plan validation pipeline standalone. Useful before `/loom-review-plan` or `/loom-execute-plan`.
 
 ### Default mode (stages 1-4)
 
@@ -351,8 +359,8 @@ Run the plan validation pipeline standalone. Useful before `/review-plan` or `/e
 - [⚠] Phase 3: "loads in under 200ms" — no test mechanism
 
 ### Result: {N} errors, {N} warnings
-{If errors: "Plan has blocking issues. Run /roadmap --refine to fix."}
-{If clean: "Plan is valid. Ready for /review-plan or /execute-plan."}
+{If errors: "Plan has blocking issues. Run /loom-roadmap --refine to fix."}
+{If clean: "Plan is valid. Ready for /loom-review-plan or /loom-execute-plan."}
 ```
 
 ---
@@ -471,7 +479,7 @@ Present the diff. On approval:
    ```
    ## YYYY-MM-DD — Plan refined
    - Fixed: {list of changes}
-   - Source: /roadmap --refine {with cached findings | with fresh analysis}
+   - Source: /loom-roadmap --refine {with cached findings | with fresh analysis}
    ```
 4. Update `.plan-history/roadmap.toon` with any new/changed milestones
 
@@ -581,7 +589,7 @@ Length: 3 waves (minimum sequential execution)
 3. Spawn `plan-builder-agent` (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
    - Include the current plan
-   - Instruction: "Identify natural boundaries (by domain, by layer, by milestone). Create sub-plans that reference shared contracts. Each sub-plan must be independently executable via /execute-plan."
+   - Instruction: "Identify natural boundaries (by domain, by layer, by milestone). Create sub-plans that reference shared contracts. Each sub-plan must be independently executable via /loom-execute-plan."
 4. Present the proposed split with rationale
 5. On approval: write sub-plan files (`PLAN-{name}.md`), update roadmap.toon
 
@@ -722,10 +730,10 @@ This is additive — if agents don't support progress reporting, the orchestrato
 
 ## Integration Points
 
-- `/review-plan` → writes findings to `.plan-history/reviews/`
-- `/execute-plan` → reads plan (validates stages 1-4 as gate), updates state.toon
-- `/test-plan` → acceptance criteria from plan phases feed test spec generation
+- `/loom-review-plan` → writes findings to `.plan-history/reviews/`
+- `/loom-execute-plan` → reads plan (validates stages 1-4 as gate), updates state.toon
+- `/loom-test-plan` → acceptance criteria from plan phases feed test spec generation
 - `--refine` → consumes review findings + agent analysis → updated plan
 - `--review-integrate` → automates review → plan update cycle
-- `--validate` → used by `--init`, `--refine`, and `/execute-plan` as a pre-flight check
+- `--validate` → used by `--init`, `--refine`, and `/loom-execute-plan` as a pre-flight check
 - `--status` → reads plan + state.toon + roadmap.toon + changelog for unified view

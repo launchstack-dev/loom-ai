@@ -146,7 +146,7 @@ describe('handoff-chain', () => {
     fs.mkdirSync(requestsDir, { recursive: true });
 
     const request = createValidRequest('task-auth-middleware');
-    const filePath = path.join(requestsDir, `${request.taskId}.json`);
+    const filePath = path.join(requestsDir, `${request.taskId}.toon`);
     fs.writeFileSync(filePath, JSON.stringify(request, null, 2));
 
     // Read it back and validate structure
@@ -235,7 +235,7 @@ describe('handoff-chain', () => {
     }
 
     // Write the manifest itself
-    const manifestPath = path.join(root, 'contracts', 'manifest.json');
+    const manifestPath = path.join(root, 'contracts', 'manifest.toon');
     fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 

@@ -2,7 +2,7 @@
 
 Canonical specification for runtime monitoring of background agents. This protocol enables the orchestrator to track agent progress, detect hung agents, and intervene when necessary.
 
-All orchestrators (`/execute-plan`, `/roadmap`) and all execution agents (`implementer-agent`, `contracts-agent`, `wiring-agent`, `verification-agent`) MUST conform to this spec.
+All orchestrators (`/loom-execute-plan`, `/loom-roadmap`) and all execution agents (`implementer-agent`, `contracts-agent`, `wiring-agent`, `verification-agent`) MUST conform to this spec.
 
 ## Progress File
 

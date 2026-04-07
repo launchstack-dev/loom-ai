@@ -4,6 +4,7 @@ import { encode, decode } from '@toon-format/toon';
 import type {
   ScopeCoverage,
   ScopeCoverageCriterion,
+  ScopeCriterionStatus,
   PhaseNode,
 } from './helpers/types.js';
 
@@ -81,7 +82,9 @@ function markTaskFailed(
       return {
         ...c,
         coveringTasks: remainingTasks,
-        status: remainingTasks.length === 0 ? 'orphaned' as const : c.status,
+        status: (c.status === 'covered' || c.status === 'dropped')
+          ? c.status
+          : (remainingTasks.length === 0 ? 'orphaned' as const : c.status),
       };
     }),
   };
@@ -173,6 +176,35 @@ describe('Scope Coverage — Drift Detection', () => {
     // markTaskCompleted should not change it
     const updated = markTaskCompleted(coverage, 'w1-auth');
     expect(updated.criteria[0].status).toBe('covered');
+  });
+
+  it('keeps covered status when sole covering task fails (covered is terminal)', () => {
+    const coverage: ScopeCoverage = {
+      criteria: [
+        { phaseId: 1, criterion: 'Auth middleware validates JWT', coveringTasks: ['w1-auth'], status: 'covered' as ScopeCriterionStatus },
+      ],
+    };
+    const updated = markTaskFailed(coverage, 'w1-auth');
+    // covered is a terminal status — once achieved, it cannot revert to orphaned
+    // even if the covering task is later marked failed (e.g., rollback scenario)
+    expect(updated.criteria[0].status).toBe('covered');
+    expect(updated.criteria[0].coveringTasks).toEqual([]);
+  });
+
+  it('markTaskFailed does not check retry count (orchestrator responsibility)', () => {
+    // markTaskFailed is a pure data transform — it removes the task from coveringTasks
+    // and orphans if empty. The retry-count threshold (retryCount >= 2) is checked by
+    // the orchestrator BEFORE calling markTaskFailed. This test documents that boundary.
+    const coverage: ScopeCoverage = {
+      criteria: [
+        { phaseId: 1, criterion: 'API returns 200', coveringTasks: ['w1-api'], status: 'pending' as ScopeCriterionStatus },
+      ],
+    };
+    // First failure — orchestrator would normally retry, but markTaskFailed
+    // doesn't know about retries. It just removes the task.
+    const updated = markTaskFailed(coverage, 'w1-api');
+    expect(updated.criteria[0].status).toBe('orphaned');
+    expect(updated.criteria[0].coveringTasks).toEqual([]);
   });
 });
 

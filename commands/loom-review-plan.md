@@ -14,6 +14,10 @@ If no arguments are provided, look for a PLAN.md in the current working director
 
 ## Instructions
 
+### Status Line Updates
+
+Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+
 0. **Read protocols.** Read `~/.claude/agents/protocols/validation-rules.md` for AgentResult validation and blocker gate enforcement rules.
 
 1. **Find the plan.** Locate the planning document — check for PLAN.md, plan.md, or whatever the user specified. Read it to confirm it exists and has content.

@@ -52,8 +52,8 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 
 ### Rules
 1. **Blockers must pass**: If a blocker agent returns `status: "failure"` or has any `issues` with `severity: "blocking"`, the pipeline MUST halt
-2. **Blockers run before synthesis**: In `/review-plan`, blockers must complete and pass before the synthesis step
-3. **Blockers run before proceeding**: In `/execute-plan`, a blocker in the `pre-contracts` phase must pass before contracts-agent runs
+2. **Blockers run before synthesis**: In `/loom-review-plan`, blockers must complete and pass before the synthesis step
+3. **Blockers run before proceeding**: In `/loom-execute-plan`, a blocker in the `pre-contracts` phase must pass before contracts-agent runs
 4. **Blocker failure reporting**: When a blocker fails, display its issues prominently with a clear "BLOCKED" label and ask the user how to proceed (fix and retry / override / abort)
 5. **Override tracking**: If the user overrides a blocker, log this decision to `.plan-history/decisions/` with the reason
 
@@ -103,10 +103,10 @@ Plan validation enforces the structural and semantic integrity of PLAN.md files.
 ### When Validation Runs
 
 Plan validation is triggered in four contexts:
-- **`/roadmap --init`** — after the plan-builder-agent generates a new plan
-- **`/roadmap --refine`** — after the plan-builder-agent refines an existing plan
-- **`/roadmap --validate`** — standalone validation (no generation, just check)
-- **`/execute-plan`** — as a gate in Step 1 before any agents are spawned
+- **`/loom-roadmap --init`** — after the plan-builder-agent generates a new plan
+- **`/loom-roadmap --refine`** — after the plan-builder-agent refines an existing plan
+- **`/loom-roadmap --validate`** — standalone validation (no generation, just check)
+- **`/loom-execute-plan`** — as a gate in Step 1 before any agents are spawned
 
 If any **blocking** error is found, the pipeline halts and reports all errors to the user. **Warning**-level issues are reported but do not halt execution. **Info**-level issues are logged but not surfaced unless verbose mode is on.
 
@@ -227,3 +227,18 @@ Run after each wave's verification pass.
 2. **Detect drift**: If a task fails and won't be retried, its criteria become `orphaned` again.
 3. **Flag new orphans**: Display any newly orphaned criteria as SCOPE DRIFT warnings.
 4. **Status `dropped`**: If user explicitly acknowledges and dismisses an orphaned criterion, mark it `dropped`.
+
+### Valid Status Transitions
+
+```
+pending → covered    (covering task succeeded)
+pending → orphaned   (all covering tasks failed with retryCount >= 2)
+orphaned → pending   (user manually assigns a new covering task)
+orphaned → dropped   (user explicitly dismisses the criterion)
+covered → (terminal) (a covered criterion cannot be un-covered)
+dropped → (terminal) (a dropped criterion was explicitly dismissed)
+```
+
+**Invalid transitions** (orchestrator must reject):
+- `covered` → `orphaned`: once a criterion's covering task succeeded, the criterion stays covered even if other covering tasks later fail
+- `dropped` → any other status: user acknowledgment is final

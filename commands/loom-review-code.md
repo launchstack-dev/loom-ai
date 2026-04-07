@@ -23,6 +23,10 @@ Check for `.claude/orchestration.toml` in the project root. If it exists, read t
 
 ## Instructions
 
+### Status Line Updates
+
+Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+
 ### Step 0: Gather the Diff
 
 Based on arguments, get the code to review:
@@ -200,9 +204,15 @@ Plan requires `content` max 5000 chars, no validation found.
 | **Total** | **1** | **7** | **4** |
 ```
 
-### Step 5: Save Report (optional)
+### Step 5: Save Report
 
-If `.plan-execution/` exists, save to `.plan-execution/review-report.md`.
+Save to `.plan-execution/review-report.md` (create `.plan-execution/` if it doesn't exist).
+
+After the report, if any critical or warning findings were found, print:
+
+```
+To auto-apply these findings, run `/loom-fix-code` in a new conversation.
+```
 
 ## Error Handling
 

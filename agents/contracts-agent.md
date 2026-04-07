@@ -39,16 +39,9 @@ You will receive:
    - Export all types — implementers will import from these files
 
 4. **Create the manifest.** Write `.plan-execution/contracts/manifest.toon`:
-   ```json
-   {
-     "contracts": [
-       {
-         "file": "types.ts",
-         "purpose": "Shared TypeScript type definitions",
-         "exports": ["User", "Site", "Event", "PageView"]
-       }
-     ]
-   }
+   ```toon
+   contracts[1]{file,purpose,exports}:
+     types.ts,Shared TypeScript type definitions,"User,Site,Event,PageView"
    ```
 
 ## Progress Reporting

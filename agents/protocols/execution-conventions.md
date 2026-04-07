@@ -30,38 +30,30 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 ### Contract files
 - Use descriptive names: `types.ts`, `schema.sql`, `api-types.ts`, `db-models.ts`
 - Always include a `manifest.toon`:
-  ```json
-  {
-    "contracts": [
-      {"file": "types.ts", "purpose": "Shared TypeScript type definitions", "exports": ["User", "Site", "Event"]},
-      {"file": "schema.sql", "purpose": "Database schema", "tables": ["users", "sites", "events"]}
-    ]
-  }
+  ```toon
+  contracts[2]{file,purpose,exports}:
+    types.ts,Shared TypeScript type definitions,"User,Site,Event"
+    schema.sql,Database schema,"users,sites,events"
   ```
 
 ### Wave summaries
 - `wave-N-summary.toon` — machine-readable, follows this structure:
-  ```json
-  {
-    "wave": 0,
-    "agentResults": ["array of AgentResult objects"],
-    "filesChanged": ["deduplicated list of all files created/modified/deleted"],
-    "exportsAdded": ["deduplicated list of all new exports"],
-    "unresolvedIssues": ["any blocking/warning issues from agents"]
-  }
+  ```toon
+  wave: 0
+  agentResults[N]: (array of AgentResult objects)
+  filesChanged[N]: (deduplicated list of all files created/modified/deleted)
+  exportsAdded[N]: (deduplicated list of all new exports)
+  unresolvedIssues[N]: (any blocking/warning issues from agents)
   ```
 - `wave-N-summary.md` — human-readable narrative for inspection
 
 ### Cross-boundary requests
 - `requests/{taskId}.toon`:
-  ```json
-  {
-    "taskId": "string",
-    "agent": "string",
-    "requests": [
-      {"file": "path", "reason": "why", "suggestedChange": "what"}
-    ]
-  }
+  ```toon
+  taskId: string
+  agent: string
+  requests[N]{file,reason,suggestedChange}:
+    path,why,what
   ```
 
 ## Data Formats — TOON vs JSON
@@ -128,6 +120,62 @@ Orchestrators MUST NOT embed full agent `.md` file contents in spawned agent pro
 - Project-specific agents from `orchestration.toml`
 - Bespoke reviewers (security-reviewer, architecture-reviewer, plan-compliance-reviewer)
 - Plan-builder-agent (also reads `plan.schema.md` from disk)
+
+## Orchestration Status (Status Line Integration)
+
+The orchestrator writes `.plan-execution/status.toon` to surface live progress in the Claude Code status line. This file is read by the user's `statusline-command.sh` and must remain small and fast to parse (simple `grep` per field).
+
+**Format:**
+
+```toon
+command: execute-plan
+phase: implementing
+wave: 2
+totalWaves: 4
+agentsRunning: 3
+agentsDone: 1
+agentsTotal: 5
+agentsFailed: 0
+findings: 0
+updatedAt: 2026-04-06T10:30:00Z
+```
+
+**Field reference:**
+
+| Field | When set | Example values |
+|-------|----------|---------------|
+| `command` | Always | `execute-plan`, `review-code`, `fix-code`, `review-plan`, `test-plan` |
+| `phase` | Always | `initializing`, `contracts`, `implementing`, `wiring`, `verifying`, `reviewing`, `fixing`, `complete` |
+| `wave` | execute-plan | Current wave number |
+| `totalWaves` | execute-plan | Total wave count |
+| `agentsRunning` | When agents spawned | Count of in-flight agents |
+| `agentsDone` | When agents spawned | Count of completed agents |
+| `agentsTotal` | When agents spawned | Total agents in this step |
+| `agentsFailed` | When agents spawned | Count of failed agents |
+| `findings` | review-code, fix-code | Finding count (total or remaining) |
+| `updatedAt` | Always | ISO timestamp |
+
+**Write rules:**
+- Use atomic writes (write `.tmp`, rename)
+- Update at every state transition (wave start, agent complete, phase change)
+- Delete the file when the command completes (clean idle state)
+- If file cannot be written (no `.plan-execution/` dir), skip silently — status line is additive, never gating
+
+**Status line reads this via `awk` — keep one key per line, no nesting, no arrays.**
+
+### Per-Command Updates
+
+Each orchestrator command sets `command` to its name and updates these additional fields:
+
+| Command | Additional fields to update |
+|---------|----------------------------|
+| `execute-plan` | `wave`, `totalWaves`, `agentsRunning/Done/Total/Failed` per wave |
+| `review-code` | `agentsRunning/Done/Total` as reviewers complete, `findings` when report assembled |
+| `review-plan` | `agentsRunning/Done/Total` as planning agents complete |
+| `test-plan` | `agentsRunning/Done/Total` as test generators complete |
+| `fix-code` | `agentsRunning/Done/Total` per fixer batch, `findings` (remaining count, decremented as fixes apply) |
+
+All commands: create `.plan-execution/` if needed, delete `status.toon` when complete.
 
 ## Atomic Writes
 
@@ -210,7 +258,7 @@ Ephemeral execution artifacts in `.plan-execution/` are NOT committed to git. Fo
 ```
 .plan-history/
 ├── reviews/
-│   └── YYYY-MM-DD-review.toon       # /review-plan findings
+│   └── YYYY-MM-DD-review.toon       # /loom-review-plan findings
 ├── decisions/
 │   └── NNN-description.md            # Architecture Decision Records from gates
 ├── executions/
@@ -220,8 +268,8 @@ Ephemeral execution artifacts in `.plan-execution/` are NOT committed to git. Fo
 ```
 
 Orchestrators write to `.plan-history/` when:
-- `/review-plan` completes → saves synthesized findings
-- `/execute-plan` completes a wave → saves wave summary
+- `/loom-review-plan` completes → saves synthesized findings
+- `/loom-execute-plan` completes a wave → saves wave summary
 - Human approves/rejects at a gate → saves decision record
 - Plan is modified after review → appends to changelog
 

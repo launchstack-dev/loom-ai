@@ -20,6 +20,10 @@ Parse arguments:
 
 ## Instructions
 
+### Status Line Updates
+
+Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+
 ### Step 0: Gather Context
 
 1. Read the plan file
@@ -202,7 +206,7 @@ Save the report to `.plan-execution/test-report.md`.
 
 ## Error Handling
 
-- **No plan file found**: Tell the user and suggest `--init` on `/execute-plan` or provide a path.
+- **No plan file found**: Tell the user and suggest `--init` on `/loom-execute-plan` or provide a path.
 - **No source code yet**: Run criteria extraction only. Tell the user to generate tests after implementation.
 - **Test framework not installed**: Suggest installation command and stop.
 - **Playwright not installed for E2E**: Suggest `npm init playwright@latest` and stop.

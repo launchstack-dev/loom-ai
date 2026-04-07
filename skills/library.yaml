@@ -15,103 +15,141 @@ default_dirs:
 library:
   skills:
     - name: execution-protocols
-      description: Inter-agent protocol schemas for the meta-orchestration execution pipeline (AgentResult, state.json, execution conventions)
+      description: Inter-agent protocol schemas for the Loom execution pipeline (AgentResult, state.toon, execution conventions)
+      source: agents/protocols/execution-conventions.md
 
     - name: toon-format-protocol
       description: TOON (Token-Oriented Object Notation) format specification for all on-disk artifacts and agent communication
+      source: agents/protocols/toon-format.md
 
   agents:
     # Planning agents
     - name: feature-coverage-agent
       description: Audits plan schema, API surface, and features against competitors
+      source: agents/feature-coverage-agent.md
 
     - name: strategy-ux-agent
       description: Evaluates positioning, UX, theming, and developer ergonomics
+      source: agents/strategy-ux-agent.md
 
     - name: phasing-agent
       description: Reviews phase boundaries, dependencies, and sequencing risks
+      source: agents/phasing-agent.md
 
     - name: parallelization-agent
       description: Designs multi-agent execution waves and merge strategy
+      source: agents/parallelization-agent.md
 
     - name: agentic-workflow-agent
       description: Decomposes phases into context-bounded tasks for AI agents
+      source: agents/agentic-workflow-agent.md
 
     # Execution agents
     - name: contracts-agent
       description: Wave 0 specialist - creates shared types, interfaces, schemas
+      source: agents/contracts-agent.md
       requires: [skill:execution-protocols]
 
     - name: implementer-agent
       description: Parallel worker within file ownership boundaries
+      source: agents/implementer-agent.md
       requires: [skill:execution-protocols]
 
     - name: wiring-agent
       description: Post-wave integration - barrel files, routes, imports, deps
+      source: agents/wiring-agent.md
       requires: [skill:execution-protocols]
 
     - name: verification-agent
       description: Quality gate - typecheck, tests, lint, ownership drift
+      source: agents/verification-agent.md
       requires: [skill:execution-protocols]
 
     # Testing agents
     - name: acceptance-criteria-agent
       description: Extracts testable acceptance criteria from plan phases, outputs structured test specs
+      source: agents/acceptance-criteria-agent.md
 
     - name: unit-test-agent
       description: Generates unit tests from contracts, acceptance criteria, and source code
+      source: agents/unit-test-agent.md
 
     - name: e2e-test-agent
       description: Generates Playwright E2E tests, supports --chrome and bowser integration
+      source: agents/e2e-test-agent.md
 
     # Code review agents
     - name: plan-compliance-reviewer
       description: Reviews code against PLAN.md deliverables, schemas, and acceptance criteria
+      source: agents/plan-compliance-reviewer.md
 
     - name: security-reviewer
       description: OWASP-focused security audit - injection, auth, XSS, secrets, dependencies
+      source: agents/security-reviewer.md
 
     - name: architecture-reviewer
       description: Architecture drift detection - dependency direction, pattern consistency, contracts
+      source: agents/architecture-reviewer.md
 
     # Planning agents (extended)
     - name: questioner-agent
       description: Discussion phase agent - surfaces architectural decision points with structured options before plan generation
+      source: agents/questioner-agent.md
       requires: [skill:execution-protocols]
 
     - name: plan-builder-agent
       description: Creates structured, execution-ready PLAN.md files from project descriptions
+      source: agents/plan-builder-agent.md
 
     # Utility agents
     - name: meta-agent
       description: Generates new Claude Code agents, skills, and commands
+      source: agents/meta-agent.md
 
     - name: tdd-coach
       description: Drives test-driven development with red-green-refactor
+      source: agents/tdd-coach.md
+
+    # Code fix agents
+    - name: fixer-agent
+      description: Applies code review findings as targeted fixes within file ownership boundaries
+      source: agents/fixer-agent.md
 
   prompts:
-    - name: review-plan
+    - name: loom-review-plan
       description: Launches 5 planning agents in parallel to review a PLAN.md
+      source: commands/loom-review-plan.md
       requires: [agent:feature-coverage-agent, agent:strategy-ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent]
 
-    - name: execute-plan
+    - name: loom-execute-plan
       description: Wave-by-wave execution orchestrator with human approval gates
+      source: commands/loom-execute-plan.md
       requires: [agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, skill:execution-protocols]
 
-    - name: test-plan
+    - name: loom-test-plan
       description: Testing pipeline - acceptance criteria, unit tests, E2E tests with Playwright
+      source: commands/loom-test-plan.md
       requires: [agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent]
 
-    - name: review-code
+    - name: loom-review-code
       description: Comprehensive code review - built-in + bespoke reviewers in parallel
+      source: commands/loom-review-code.md
       requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer]
 
-    - name: roadmap
+    - name: loom-roadmap
       description: Create, track, refine, and visualize project plans and milestones
+      source: commands/loom-roadmap.md
       requires: [agent:plan-builder-agent, agent:questioner-agent]
 
-    - name: library
+    - name: loom-library
       description: Pull-on-demand catalog management - install, sync, search, update agents and commands
+      source: commands/loom-library.md
 
-    - name: help
-      description: Shows meta-orchestration system reference
+    - name: loom-fix-code
+      description: Apply review findings to code - parse, group, spawn fixer-agents, verify
+      source: commands/loom-fix-code.md
+      requires: [agent:fixer-agent]
+
+    - name: loom
+      description: Shows Loom system reference — commands, agents, workflows
+      source: commands/loom.md

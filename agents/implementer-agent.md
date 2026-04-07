@@ -35,18 +35,11 @@ You will receive:
 4. **Handle cross-boundary needs.** If you discover you need to modify a file outside your ownership:
    - Do NOT modify it
    - Write a request to `.plan-execution/requests/{taskId}.toon`:
-     ```json
-     {
-       "taskId": "your-task-id",
-       "agent": "implementer-agent",
-       "requests": [
-         {
-           "file": "path/to/file/you/need",
-           "reason": "Need to add import for UserService",
-           "suggestedChange": "Add 'export { UserService }' to barrel file"
-         }
-       ]
-     }
+     ```toon
+     taskId: your-task-id
+     agent: implementer-agent
+     requests[1]{file,reason,suggestedChange}:
+       path/to/file/you/need,Need to add import for UserService,Add 'export { UserService }' to barrel file
      ```
    - Continue with your implementation, stubbing or working around the missing dependency
 

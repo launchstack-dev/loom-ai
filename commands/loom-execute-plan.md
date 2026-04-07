@@ -67,6 +67,10 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
 3. If drift detected, warn user and ask whether to proceed
 4. Jump to the appropriate step in the main loop below
 
+### Status Line Updates
+
+Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+
 ### Step 1: Initialize
 
 1. Read the plan file. Confirm it exists and has content.
@@ -77,7 +81,7 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
    - **Stage 3 (Ownership):** Check for same-wave file ownership overlaps, verify deliverables fall within ownership boundaries
    - **Stage 4 (Sizing):** Flag phases with >12 deliverables (blocking), 0 acceptance criteria (blocking), >8 deliverables (warning)
 
-   **If blocking errors found:** Display the full validation report and abort. Suggest the user run `/roadmap --refine` or `/roadmap --validate --deep` to fix issues before retrying.
+   **If blocking errors found:** Display the full validation report and abort. Suggest the user run `/loom-roadmap --refine` or `/loom-roadmap --validate --deep` to fix issues before retrying.
 
    **If warnings only:** Display the validation report and ask the user whether to proceed or fix first. Warnings do not block execution but may indicate plan quality issues.
 
@@ -111,6 +115,13 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
      1,All repository functions use parameterized queries,w1-data-layer,pending
      2,Routes access repositories through req.app.locals,w1-api-routes,pending
    ```
+   If writing `scope-coverage.toon` fails (disk error, missing directory), warn the user:
+   ```
+   ⚠ Scope tracking unavailable: could not write scope-coverage.toon.
+     Scope drift detection will be skipped for this run. Continuing execution.
+   ```
+   Continue to Step 2 without scope tracking.
+
 4. If any criterion has 0 covering tasks (orphaned):
    ```
    ⚠ SCOPE REDUCTION: N acceptance criteria have no covering tasks:
@@ -262,9 +273,12 @@ Same as Step 3 but for wave N:
 2. Update state.toon: wave N complete, store file hashes
 
 3. **Scope drift check:**
-   - Read `.plan-execution/scope-coverage.toon`
+   - If `.plan-execution/scope-coverage.toon` does not exist, skip drift check and note "Scope tracking unavailable" in the human gate summary
+   - Otherwise, read `.plan-execution/scope-coverage.toon`
    - For each task that succeeded in this wave, mark its criteria as `covered`
-   - For each task that failed and won't be retried (`retryCount >= 2`), mark its criteria as `orphaned`
+   - For each task that failed and won't be retried (`retryCount >= 2`):
+     - Remove the failed task from each criterion's `coveringTasks`
+     - Mark a criterion as `orphaned` ONLY if its `coveringTasks` becomes empty AND its status is not already `covered` or `dropped`
    - If new orphans detected, display SCOPE DRIFT warning before the human gate
 
 4. **Human approval gate** — same format as Step 4:

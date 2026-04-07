@@ -213,7 +213,7 @@ describe('ownership-detection', () => {
     const resultA = createValidAgentResult({
       agent: 'agent-auth',
       filesCreated: [
-        '.plan-execution/requests/task-auth-001.json',
+        '.plan-execution/requests/task-auth-001.toon',
         'src/auth/middleware.ts',
       ],
       filesModified: [],
@@ -221,9 +221,9 @@ describe('ownership-detection', () => {
     const resultB = createValidAgentResult({
       agent: 'agent-db',
       filesCreated: [
-        '.plan-execution/requests/task-db-001.json',
+        '.plan-execution/requests/task-db-001.toon',
       ],
-      filesModified: ['.plan-execution/requests/task-auth-001.json'],
+      filesModified: ['.plan-execution/requests/task-auth-001.toon'],
     });
 
     const conflicts = detectConflicts([resultA, resultB]);
