@@ -85,35 +85,22 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "security-reviewer",
-  "findings": [
-    {
-      "id": "sec-001",
-      "severity": "critical",
-      "category": "A03-injection",
-      "description": "SQL query built with string concatenation using user input",
-      "file": "src/db/queries.ts",
-      "line": 42,
-      "code": "const query = `SELECT * FROM users WHERE id = '${req.params.id}'`",
-      "fix": "Use parameterized query: db.query('SELECT * FROM users WHERE id = $1', [req.params.id])",
-      "cwe": "CWE-89"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "A01-access-control": 0,
-      "A02-crypto": 0,
-      "A03-injection": 0
-    }
-  }
-}
+```toon
+reviewer: security-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix,cwe}:
+  sec-001,critical,A03-injection,SQL query built with string concatenation using user input,src/db/queries.ts,42,"const query = `SELECT * FROM users WHERE id = '${req.params.id}'`","Use parameterized query: db.query('SELECT * FROM users WHERE id = $1', [req.params.id])",CWE-89
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    A01-access-control: 0
+    A02-crypto: 0
+    A03-injection: 0
 ```
 
 ## Severity Levels

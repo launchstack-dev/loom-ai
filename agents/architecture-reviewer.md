@@ -69,43 +69,24 @@ In the context of the execution pipeline:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "architecture-reviewer",
-  "findings": [
-    {
-      "id": "arch-001",
-      "severity": "warning",
-      "category": "dependency-direction",
-      "description": "Route handler imports directly from database layer, bypassing service layer",
-      "file": "src/routes/posts.ts",
-      "line": 3,
-      "import": "import { db } from '../db/connection'",
-      "suggestion": "Import from src/services/posts.ts instead. Create a service method if one doesn't exist."
-    },
-    {
-      "id": "arch-002",
-      "severity": "info",
-      "category": "pattern-inconsistency",
-      "description": "New handler uses camelCase 'createPost' while existing handlers use 'handleCreatePost' pattern",
-      "file": "src/routes/posts.ts",
-      "line": 15,
-      "suggestion": "Rename to handleCreatePost for consistency with handleGetUsers (src/routes/users.ts:8)"
-    }
-  ],
-  "architecture": {
-    "pattern": "layered",
-    "layers": ["routes", "services", "models", "db"],
-    "dependencyViolations": 1,
-    "patternInconsistencies": 2,
-    "contractConformance": "3/4 contracts used correctly"
-  },
-  "summary": {
-    "blocking": 0,
-    "warning": 2,
-    "info": 3
-  }
-}
+```toon
+reviewer: architecture-reviewer
+
+findings[N]{id,severity,category,description,file,line,import,suggestion}:
+  arch-001,warning,dependency-direction,Route handler imports directly from database layer bypassing service layer,src/routes/posts.ts,3,"import { db } from '../db/connection'",Import from src/services/posts.ts instead. Create a service method if one doesn't exist.
+  arch-002,info,pattern-inconsistency,New handler uses camelCase 'createPost' while existing handlers use 'handleCreatePost' pattern,src/routes/posts.ts,15,,Rename to handleCreatePost for consistency with handleGetUsers (src/routes/users.ts:8)
+
+architecture:
+  pattern: layered
+  layers[4]: routes, services, models, db
+  dependencyViolations: 1
+  patternInconsistencies: 2
+  contractConformance: 3/4 contracts used correctly
+
+summary:
+  blocking: 0
+  warning: 2
+  info: 3
 ```
 
 ## Severity Levels

@@ -89,28 +89,27 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 
 Return a standard AgentResult:
 
-```json
-{
-  "agent": "fixer-agent",
-  "wave": "<wave index>",
-  "taskId": "<provided>",
-  "status": "success | failure | partial",
-  "filesModified": ["list of modified files"],
-  "filesCreated": [],
-  "filesDeleted": [],
-  "findingsApplied": [
-    {"id": 1, "file": "src/auth.ts:42", "tag": "[SEC]", "description": "Parameterized SQL query"}
-  ],
-  "unfixable": [
-    {"id": 3, "file": "src/config.ts:10", "tag": "[ARCH]", "reason": "Requires architectural redesign"}
-  ],
-  "crossBoundaryRequests": [
-    {"file": "path", "findingId": 4, "reason": "why", "suggestedChange": "what"}
-  ],
-  "integrationNotes": "What the orchestrator needs to know. Max 500 tokens.",
-  "issues": [],
-  "durationMs": 0
-}
+```toon
+agent: fixer-agent
+wave: <wave index>
+taskId: <provided>
+status: success | failure | partial
+filesModified[N]: list of modified files
+filesCreated[0]:
+filesDeleted[0]:
+
+findingsApplied[N]{id,file,tag,description}:
+  1,src/auth.ts:42,[SEC],Parameterized SQL query
+
+unfixable[N]{id,file,tag,reason}:
+  3,src/config.ts:10,[ARCH],Requires architectural redesign
+
+crossBoundaryRequests[N]{file,findingId,reason,suggestedChange}:
+  path,4,why,what
+
+integrationNotes: What the orchestrator needs to know. Max 500 tokens.
+issues[N]{severity,description}:
+durationMs: 0
 ```
 
 If all findings are applied successfully, `status: "success"`.

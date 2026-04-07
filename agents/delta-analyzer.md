@@ -10,7 +10,7 @@ You are a gap analysis agent that reads a Delta Report (produced by the converge
 
 You receive via prompt:
 
-1. **Delta Report** — JSON output from the harness runner (read from disk at the provided path)
+1. **Delta Report** — TOON output from the harness runner (read from disk at the provided path)
 2. **Prior iteration's delta analysis** (optional) — for trend tracking and stuck-delta detection
 3. **Available fixer agents and their capabilities** — so you can route fixes appropriately
 4. **Iteration number** — current position in the convergence loop
@@ -70,54 +70,32 @@ Suggest which agent handles each fix:
 
 ## Output Format
 
-```json
-{
-  "agent": "delta-analyzer",
-  "analysis": {
-    "totalDeltas": 10,
-    "noise": 3,
-    "actionable": 5,
-    "manualRequired": 2,
-    "fixes": [
-      {
-        "id": "fix-001",
-        "targetId": "target-003",
-        "priority": 1,
-        "description": "GET /api/users returns 404 instead of empty array for no results",
-        "fixType": "fix-wrong",
-        "complexity": "trivial",
-        "assignTo": "implementer-agent",
-        "context": "Route handler returns 404 when query returns 0 rows. Should return 200 with [].",
-        "files": ["src/routes/users.ts"],
-        "estimatedImpact": 0.15,
-        "dependencyOf": [],
-        "blockedBy": []
-      }
-    ],
-    "noiseItems": [
-      {
-        "targetId": "target-007",
-        "reason": "Anti-aliasing difference at button border radius, score 0.97",
-        "score": 0.97
-      }
-    ],
-    "manualItems": [
-      {
-        "targetId": "target-009",
-        "reason": "Ambiguous: design comp shows both light and dark mode, unclear which is target",
-        "type": "design-decision"
-      }
-    ],
-    "convergenceTrend": {
-      "priorPassing": 3,
-      "currentPassing": 5,
-      "trending": "improving",
-      "stuckTargets": []
-    }
-  },
-  "status": "success",
-  "issues": []
-}
+```toon
+agent: delta-analyzer
+status: success
+
+analysis:
+  totalDeltas: 10
+  noise: 3
+  actionable: 5
+  manualRequired: 2
+
+  fixes[N]{id,targetId,priority,description,fixType,complexity,assignTo,context,files,estimatedImpact,dependencyOf,blockedBy}:
+    fix-001,target-003,1,GET /api/users returns 404 instead of empty array for no results,fix-wrong,trivial,implementer-agent,"Route handler returns 404 when query returns 0 rows. Should return 200 with [].",src/routes/users.ts,0.15,,
+
+  noiseItems[N]{targetId,reason,score}:
+    target-007,"Anti-aliasing difference at button border radius, score 0.97",0.97
+
+  manualItems[N]{targetId,reason,type}:
+    target-009,"Ambiguous: design comp shows both light and dark mode, unclear which is target",design-decision
+
+  convergenceTrend:
+    priorPassing: 3
+    currentPassing: 5
+    trending: improving
+    stuckTargets[0]:
+
+issues[N]{severity,description}:
 ```
 
 ## Stuck Delta Detection

@@ -8,20 +8,18 @@ All orchestrators (`/loom-execute-plan`, `/loom-roadmap`) and all execution agen
 
 Each agent writes periodic updates to `.plan-execution/progress/{taskId}.toon`.
 
-```json
-{
-  "taskId": "string — unique task identifier assigned by orchestrator",
-  "agent": "string — agent name (e.g., 'implementer-agent', 'contracts-agent')",
-  "wave": "number — wave index this agent is executing in",
-  "phase": "initializing | reading-contracts | implementing | writing-files | finalizing",
-  "percentComplete": "number — 0 to 100, monotonically non-decreasing",
-  "currentActivity": "string — max 120 chars. Human-readable description of what the agent is doing right now.",
-  "filesWritten": ["string — absolute paths of files written so far during this execution"],
-  "issuesSoFar": "number — count of issues encountered so far",
-  "heartbeatAt": "string — ISO 8601 timestamp of this write",
-  "startedAt": "string — ISO 8601 timestamp of when the agent began execution",
-  "checkpointCount": "number — monotonically increasing integer, incremented on every write"
-}
+```toon
+taskId: task-003
+agent: implementer-agent
+wave: 1
+phase: implementing
+percentComplete: 65
+currentActivity: "Writing auth middleware"
+filesWritten[2]: src/routes/auth.ts, src/middleware/jwt.ts
+issuesSoFar: 0
+heartbeatAt: 2026-04-07T10:12:30Z
+startedAt: 2026-04-07T10:05:00Z
+checkpointCount: 8
 ```
 
 ## Phase Lifecycle

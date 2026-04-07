@@ -46,32 +46,28 @@ You receive:
 
 Return standard AgentResult:
 
-```json
-{
-  "agent": "api-route-creator",
-  "wave": 0,
-  "taskId": "",
-  "status": "success",
-  "filesCreated": ["src/routes/users.ts", "src/routes/posts.ts"],
-  "filesModified": [],
-  "filesDeleted": [],
-  "exportsAdded": [
-    {"file": "src/routes/users.ts", "name": "usersRouter", "kind": "const"},
-    {"file": "src/routes/posts.ts", "name": "postsRouter", "kind": "const"}
-  ],
-  "dependenciesAdded": [],
-  "integrationNotes": "Created 2 route modules with Zod validation. Each exports a router instance. Wiring-agent needs to register them in src/app.ts. Auth middleware reused from existing src/middleware/auth.ts.",
-  "issues": [],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [
-    {
-      "file": "src/app.ts",
-      "reason": "Register new API routes in the Express app",
-      "suggestedChange": "app.use('/api/users', usersRouter); app.use('/api/posts', postsRouter);"
-    }
-  ],
-  "durationMs": 0
-}
+```toon
+agent: api-route-creator
+wave: 0
+taskId:
+status: success
+filesCreated[2]: src/routes/users.ts, src/routes/posts.ts
+filesModified[0]:
+filesDeleted[0]:
+
+exportsAdded[2]{file,name,kind}:
+  src/routes/users.ts,usersRouter,const
+  src/routes/posts.ts,postsRouter,const
+
+dependenciesAdded[0]:
+integrationNotes: Created 2 route modules with Zod validation. Each exports a router instance. Wiring-agent needs to register them in src/app.ts. Auth middleware reused from existing src/middleware/auth.ts.
+issues[N]{severity,description}:
+contractAmendments[N]{file,issue}:
+
+crossBoundaryRequests[1]{file,reason,suggestedChange}:
+  src/app.ts,Register new API routes in the Express app,"app.use('/api/users', usersRouter); app.use('/api/posts', postsRouter);"
+
+durationMs: 0
 ```
 
 ## Rules

@@ -55,75 +55,43 @@ Assign each test spec a priority:
 
 ## Output Format
 
-Return a JSON object (inside a ```json code fence) following this structure:
+Return a TOON object (inside a ```toon code fence) following this structure:
 
-```json
-{
-  "planFile": "PLAN.md",
-  "generatedAt": "ISO timestamp",
-  "phases": [
-    {
-      "phase": 1,
-      "name": "Phase name from plan",
-      "deliverables": ["src/models/user.ts", "src/routes/users.ts"],
-      "contractTests": [
-        {
-          "id": "ct-1-01",
-          "description": "UserProfile type exports required fields: id, email, name, role",
-          "target": "src/models/user.ts",
-          "priority": "P0",
-          "assertions": [
-            "UserProfile has 'id' field of type string",
-            "UserProfile has 'email' field of type string",
-            "UserProfile has 'role' field with enum ['admin', 'user', 'guest']"
-          ]
-        }
-      ],
-      "behaviorTests": [
-        {
-          "id": "bt-1-01",
-          "description": "POST /api/users creates a new user with valid input",
-          "target": "src/routes/users.ts",
-          "priority": "P0",
-          "setup": "Seed database with test data",
-          "steps": [
-            "Send POST /api/users with valid UserProfile body",
-            "Assert response status is 201",
-            "Assert response body contains created user with id",
-            "Assert GET /api/users/:id returns the same user"
-          ],
-          "teardown": "Clean up created user"
-        }
-      ],
-      "e2eTests": [
-        {
-          "id": "e2e-1-01",
-          "description": "User registration flow: signup → confirm email → login → see dashboard",
-          "priority": "P0",
-          "preconditions": ["Server running", "Database seeded"],
-          "steps": [
-            "Navigate to /signup",
-            "Fill in registration form with valid data",
-            "Submit form",
-            "Check for confirmation message",
-            "Navigate to /login",
-            "Log in with registered credentials",
-            "Assert dashboard page loads with user's name"
-          ]
-        }
-      ]
-    }
-  ],
-  "summary": {
-    "totalTests": 0,
-    "byPriority": { "P0": 0, "P1": 0, "P2": 0 },
-    "byCategory": { "contract": 0, "behavior": 0, "e2e": 0 },
-    "coverageGaps": [
-      "No deletion tests for Comment entity",
-      "No error handling tests for auth middleware"
-    ]
-  }
-}
+```toon
+planFile: PLAN.md
+generatedAt: ISO timestamp
+
+phases[N]{phase,name}:
+  1,Phase name from plan
+
+  # Each phase contains nested blocks:
+
+  # deliverables[N]: src/models/user.ts, src/routes/users.ts
+
+  # contractTests[N]{id,description,target,priority}:
+  #   ct-1-01,UserProfile type exports required fields: id email name role,src/models/user.ts,P0
+  #   # assertions[N]: UserProfile has 'id' field of type string, UserProfile has 'email' field of type string
+
+  # behaviorTests[N]{id,description,target,priority,setup,teardown}:
+  #   bt-1-01,POST /api/users creates a new user with valid input,src/routes/users.ts,P0,Seed database with test data,Clean up created user
+  #   # steps[N]: Send POST /api/users with valid UserProfile body, Assert response status is 201
+
+  # e2eTests[N]{id,description,priority}:
+  #   e2e-1-01,User registration flow: signup → confirm email → login → see dashboard,P0
+  #   # preconditions[N]: Server running, Database seeded
+  #   # steps[N]: Navigate to /signup, Fill in registration form with valid data, Submit form
+
+summary:
+  totalTests: 0
+  byPriority:
+    P0: 0
+    P1: 0
+    P2: 0
+  byCategory:
+    contract: 0
+    behavior: 0
+    e2e: 0
+  coverageGaps[N]: No deletion tests for Comment entity, No error handling tests for auth middleware
 ```
 
 ## Rules

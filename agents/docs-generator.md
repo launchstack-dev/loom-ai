@@ -79,40 +79,28 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "agent": "docs-generator",
-  "filesCreated": [
-    "README.md",
-    "docs/api.md",
-    "docs/onboarding.md",
-    "docs/adr/001-use-postgresql.md",
-    "src/auth/README.md"
-  ],
-  "filesModified": [],
-  "docTypes": {
-    "readme": ["README.md"],
-    "api": ["docs/api.md"],
-    "adr": ["docs/adr/001-use-postgresql.md"],
-    "onboarding": ["docs/onboarding.md"],
-    "module": ["src/auth/README.md"],
-    "loom-guide": ["CLAUDE.md", "docs/codebase-map.md", "docs/architecture-overview.md"]
-  },
-  "skipped": [
-    {"type": "readme", "reason": "README.md already exists and is comprehensive"}
-  ],
-  "improvements": [
-    {
-      "category": "architecture",
-      "severity": "medium",
-      "description": "Route handlers contain business logic — extract to service layer",
-      "files": ["src/routes/users.ts", "src/routes/posts.ts"],
-      "recommendation": "Introduce src/services/ layer to separate concerns before scaling"
-    }
-  ],
-  "status": "success",
-  "issues": []
-}
+```toon
+agent: docs-generator
+status: success
+
+filesCreated[5]: README.md, docs/api.md, docs/onboarding.md, docs/adr/001-use-postgresql.md, src/auth/README.md
+filesModified[0]:
+
+docTypes:
+  readme[1]: README.md
+  api[1]: docs/api.md
+  adr[1]: docs/adr/001-use-postgresql.md
+  onboarding[1]: docs/onboarding.md
+  module[1]: src/auth/README.md
+  loom-guide[3]: CLAUDE.md, docs/codebase-map.md, docs/architecture-overview.md
+
+skipped[N]{type,reason}:
+  readme,"README.md already exists and is comprehensive"
+
+improvements[N]{category,severity,description,files,recommendation}:
+  architecture,medium,"Route handlers contain business logic — extract to service layer","src/routes/users.ts src/routes/posts.ts","Introduce src/services/ layer to separate concerns before scaling"
+
+issues[N]{severity,description}:
 ```
 
 ## Rules

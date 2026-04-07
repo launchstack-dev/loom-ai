@@ -62,26 +62,25 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 
 5. **Return structured AgentResult:**
 
-```json
-{
-  "agent": "contracts-agent",
-  "wave": 0,
-  "taskId": "<provided>",
-  "status": "success",
-  "filesCreated": [".plan-execution/contracts/types.ts", ".plan-execution/contracts/manifest.toon"],
-  "filesModified": [],
-  "filesDeleted": [],
-  "exportsAdded": [
-    {"file": ".plan-execution/contracts/types.ts", "name": "User", "kind": "type"},
-    {"file": ".plan-execution/contracts/types.ts", "name": "Site", "kind": "interface"}
-  ],
-  "dependenciesAdded": [],
-  "integrationNotes": "Designed User type with optional fields for progressive profile completion. Site.domain is unique constraint.",
-  "issues": [],
-  "contractAmendments": [],
-  "crossBoundaryRequests": [],
-  "durationMs": 0
-}
+```toon
+agent: contracts-agent
+wave: 0
+taskId: <provided>
+status: success
+filesCreated[2]: .plan-execution/contracts/types.ts, .plan-execution/contracts/manifest.toon
+filesModified[0]:
+filesDeleted[0]:
+
+exportsAdded[2]{file,name,kind}:
+  .plan-execution/contracts/types.ts,User,type
+  .plan-execution/contracts/types.ts,Site,interface
+
+dependenciesAdded[0]:
+integrationNotes: Designed User type with optional fields for progressive profile completion. Site.domain is unique constraint.
+issues[N]{severity,description}:
+contractAmendments[N]{file,issue}:
+crossBoundaryRequests[N]{file,reason,suggestedChange}:
+durationMs: 0
 ```
 
 ## Design Principles

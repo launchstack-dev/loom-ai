@@ -75,18 +75,15 @@ In brownfield mode, the debate shifts from "which technology should we choose?" 
 - Recommends timeline: migrate now, plan for next quarter, or monitor and revisit
 
 **Synthesis output adds brownfield-specific fields:**
-```json
-{
-  "verdict": "keep | extend | replace | partial-replace",
-  "currentStackAssessment": {
-    "health": "healthy | aging | critical",
-    "remainingLifespan": "estimate in years",
-    "biggestPainPoint": "description"
-  },
-  "migrationCostIfReplace": "S | M | L | XL",
-  "recommendation": "the recommended path forward",
-  "loomGuidance": "what Loom agents should know about this stack decision for future work in this project"
-}
+```toon
+verdict: keep | extend | replace | partial-replace
+currentStackAssessment:
+  health: healthy | aging | critical
+  remainingLifespan: estimate in years
+  biggestPainPoint: description
+migrationCostIfReplace: S | M | L | XL
+recommendation: the recommended path forward
+loomGuidance: what Loom agents should know about this stack decision for future work in this project
 ```
 
 ## Debate Protocol
@@ -115,42 +112,36 @@ trigger = "tech-stack-decision"
 
 ### Per-persona invocation output
 
-```json
-{
-  "persona": "advocate | skeptic | pragmatist",
-  "technology": "the technology being evaluated",
-  "position": "1-2 sentence summary of stance",
-  "arguments": [
-    {
-      "claim": "specific factual claim",
-      "evidence": "supporting data, benchmark, or reference",
-      "strength": "high | medium | low"
-    }
-  ],
-  "risks": ["identified risk 1", "risk 2"],
-  "score": {
-    "performance": 1-10,
-    "operationalComplexity": 1-10,
-    "teamFit": 1-10,
-    "ecosystem": 1-10,
-    "futureFlex": 1-10
-  }
-}
+```toon
+persona: advocate | skeptic | pragmatist
+technology: the technology being evaluated
+position: 1-2 sentence summary of stance
+
+arguments[N]{claim,evidence,strength}:
+  specific factual claim,supporting data or benchmark or reference,high | medium | low
+
+risks[N]: identified risk 1, risk 2
+
+score:
+  performance: 1-10
+  operationalComplexity: 1-10
+  teamFit: 1-10
+  ecosystem: 1-10
+  futureFlex: 1-10
 ```
 
 ### Synthesis (moderator) round output
 
-```json
-{
-  "recommendation": "the recommended technology",
-  "confidence": "high | medium | low",
-  "rationale": "2-3 sentence justification",
-  "tradeoffs": [
-    {"accepting": "what you gain", "sacrificing": "what you lose"}
-  ],
-  "dissent": "strongest counter-argument from the debate",
-  "conditions": ["condition under which this recommendation changes"]
-}
+```toon
+recommendation: the recommended technology
+confidence: high | medium | low
+rationale: 2-3 sentence justification
+
+tradeoffs[N]{accepting,sacrificing}:
+  what you gain,what you lose
+
+dissent: strongest counter-argument from the debate
+conditions[N]: condition under which this recommendation changes
 ```
 
 ## Rules

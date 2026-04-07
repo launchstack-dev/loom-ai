@@ -39,27 +39,23 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "agent": "target-parser",
-  "targetManifest": {
-    "sourceType": "openapi | screenshot | golden | reference | sql | custom",
-    "sourcePath": "path/to/source",
-    "targets": [
-      {
-        "id": "target-001",
-        "name": "GET /api/users response",
-        "comparisonMethod": "json-deep-equal",
-        "baselinePath": ".plan-execution/convergence/targets/api-users-get.json",
-        "metadata": {}
-      }
-    ],
-    "totalTargets": 5
-  },
-  "status": "success",
-  "filesCreated": [".plan-execution/convergence/targets/..."],
-  "issues": []
-}
+```toon
+agent: target-parser
+status: success
+
+targetManifest:
+  sourceType: openapi
+  sourcePath: path/to/source
+  totalTargets: 5
+  targets[5]{id,name,comparisonMethod,baselinePath,metadata}:
+    target-001,GET /api/users response,json-deep-equal,.plan-execution/convergence/targets/api-users-get.json,
+    target-002,POST /api/users response,json-deep-equal,.plan-execution/convergence/targets/api-users-post.json,
+    target-003,Login page screenshot,pixel-diff,.plan-execution/convergence/targets/login.png,"viewport=1280x720 density=2"
+    target-004,App config,json-deep-equal,.plan-execution/convergence/targets/config.json,
+    target-005,README output,text-diff,.plan-execution/convergence/targets/readme.txt,
+
+filesCreated[5]: .plan-execution/convergence/targets/api-users-get.json, .plan-execution/convergence/targets/api-users-post.json, .plan-execution/convergence/targets/login.png, .plan-execution/convergence/targets/config.json, .plan-execution/convergence/targets/readme.txt
+issues[N]{severity,description}:
 ```
 
 ## Comparison Method Reference

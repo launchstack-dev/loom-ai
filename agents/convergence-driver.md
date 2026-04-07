@@ -92,34 +92,34 @@ This file enables resume capability — if the convergence loop is interrupted, 
 
 ## Output Format (Convergence Report)
 
-```json
-{
-  "agent": "convergence-driver",
-  "report": {
-    "status": "converged | stalled | regression | budget_exhausted | max_iterations | timeout",
-    "iterations": 5,
-    "maxIterations": 10,
-    "totalTargets": 12,
-    "passing": 12,
-    "failing": 0,
-    "convergenceHistory": [
-      {"iteration": 1, "passing": 3, "failing": 9, "rate": 0.0, "agentsUsed": 3},
-      {"iteration": 2, "passing": 6, "failing": 6, "rate": 0.33, "agentsUsed": 2},
-      {"iteration": 3, "passing": 9, "failing": 3, "rate": 0.50, "agentsUsed": 2},
-      {"iteration": 4, "passing": 11, "failing": 1, "rate": 0.67, "agentsUsed": 1},
-      {"iteration": 5, "passing": 12, "failing": 0, "rate": 1.0, "agentsUsed": 1}
-    ],
-    "totalAgentsSpawned": 9,
-    "agentBudget": 30,
-    "remainingDeltas": [],
-    "stuckDeltas": [],
-    "noiseFiltered": 3
-  },
-  "status": "success",
-  "filesCreated": [".plan-execution/convergence-state.toon"],
-  "filesModified": [],
-  "issues": []
-}
+```toon
+agent: convergence-driver
+status: success
+
+report:
+  status: converged
+  iterations: 5
+  maxIterations: 10
+  totalTargets: 12
+  passing: 12
+  failing: 0
+  totalAgentsSpawned: 9
+  agentBudget: 30
+  noiseFiltered: 3
+
+  convergenceHistory[5]{iteration,passing,failing,rate,agentsUsed}:
+    1,3,9,0.00,3
+    2,6,6,0.33,2
+    3,9,3,0.50,2
+    4,11,1,0.67,1
+    5,12,0,1.00,1
+
+  remainingDeltas[0]:
+  stuckDeltas[0]:
+
+filesCreated[1]: .plan-execution/convergence-state.toon
+filesModified[0]:
+issues[N]{severity,description}:
 ```
 
 ## Error Handling

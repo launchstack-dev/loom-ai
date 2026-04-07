@@ -83,37 +83,25 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "infra-reviewer",
-  "findings": [
-    {
-      "id": "infra-001",
-      "severity": "critical",
-      "category": "secrets",
-      "description": "Database password hardcoded in docker-compose.yml and committed to git",
-      "file": "docker-compose.yml",
-      "line": 15,
-      "code": "POSTGRES_PASSWORD: supersecret123",
-      "fix": "Use environment variable reference: POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} and add to .env (ensure .env is in .gitignore)"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "dockerfile": 0,
-      "ci-pipeline": 0,
-      "iac": 0,
-      "secrets": 0,
-      "resources": 0,
-      "networking": 0
-    }
-  }
-}
+```toon
+reviewer: infra-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  infra-001,critical,secrets,Database password hardcoded in docker-compose.yml and committed to git,docker-compose.yml,15,POSTGRES_PASSWORD: supersecret123,"Use environment variable reference: POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} and add to .env (ensure .env is in .gitignore)"
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    dockerfile: 0
+    ci-pipeline: 0
+    iac: 0
+    secrets: 0
+    resources: 0
+    networking: 0
 ```
 
 ## Severity Levels

@@ -74,38 +74,26 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "performance-reviewer",
-  "findings": [
-    {
-      "id": "perf-001",
-      "severity": "high",
-      "category": "n-plus-one",
-      "description": "Database query executed inside forEach loop over users array",
-      "file": "src/services/userService.ts",
-      "line": 87,
-      "code": "users.forEach(async (u) => { const orders = await db.orders.findMany({ where: { userId: u.id } }) })",
-      "fix": "Batch into single query: db.orders.findMany({ where: { userId: { in: users.map(u => u.id) } } })"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "n-plus-one": 0,
-      "algorithmic": 0,
-      "rendering": 0,
-      "bundle-size": 0,
-      "io": 0,
-      "pagination": 0,
-      "indexing": 0
-    }
-  }
-}
+```toon
+reviewer: performance-reviewer
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  perf-001,high,n-plus-one,Database query executed inside forEach loop over users array,src/services/userService.ts,87,"users.forEach(async (u) => { const orders = await db.orders.findMany({ where: { userId: u.id } }) })","Batch into single query: db.orders.findMany({ where: { userId: { in: users.map(u => u.id) } } })"
+
+summary:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    n-plus-one: 0
+    algorithmic: 0
+    rendering: 0
+    bundle-size: 0
+    io: 0
+    pagination: 0
+    indexing: 0
 ```
 
 ## Severity Levels

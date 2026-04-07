@@ -4,46 +4,6 @@ Tracks meta-orchestrator state for `/loom-auto`. Written to `.plan-execution/pip
 
 ## Schema
 
-```json
-{
-  "schemaVersion": "number — always 1",
-  "runId": "string — UUID generated at pipeline start",
-  "mode": "string — always 'auto'",
-  "description": "string — the user's original description passed to --from",
-  "roadmapFile": "string — path to ROADMAP.md, default 'ROADMAP.md'",
-  "planFile": "string — path to PLAN.md",
-  "outerIteration": "number — 1-based, current plan-level iteration",
-  "maxIterations": "number — outer loop cap, default 3",
-  "agentsSpawned": "number — cumulative agents spawned across all stages, >= 0",
-  "maxAgents": "number — agent budget ceiling, default 50",
-  "fixCycleCount": "number — fix cycles used in the current iteration, 0-2",
-  "currentStage": "roadmap-create | roadmap-review | roadmap-integrate | roadmap-approve | plan-create | plan-review | plan-integrate | plan-validate | execute | test | review-code | fix-code | complete | escalated",
-
-  "stageHistory": [
-    {
-      "stage": "string — one of currentStage enum values",
-      "status": "succeeded | failed | in_progress | skipped",
-      "iteration": "number — which outer iteration this entry belongs to",
-      "startedAt": "string — ISO 8601",
-      "completedAt": "string | null",
-      "agentsUsed": "number — agents consumed by this stage",
-      "gateResult": "proceed | fix-and-recheck | revise-plan | revise-roadmap | escalate | null"
-    }
-  ],
-
-  "failureLog": [
-    {
-      "iteration": "number",
-      "stage": "string — one of currentStage enum values",
-      "error": "string — short description of the failure",
-      "resolution": "wave-retry | fix-and-recheck | revise-plan | escalate"
-    }
-  ]
-}
-```
-
-## Example
-
 ```toon
 schemaVersion: 1
 runId: uuid

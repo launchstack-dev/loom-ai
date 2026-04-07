@@ -68,35 +68,23 @@ You receive via prompt:
 
 ## Output Format
 
-```json
-{
-  "reviewer": "docs-auditor",
-  "findings": [
-    {
-      "id": "docs-001",
-      "severity": "high",
-      "category": "staleness",
-      "description": "README references createUser() but function was renamed to registerUser()",
-      "file": "README.md",
-      "line": 42,
-      "code": "Call `createUser()` to register a new account",
-      "fix": "Update to: Call `registerUser()` to register a new account"
-    }
-  ],
-  "summary": {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0,
-    "categoryCounts": {
-      "staleness": 0,
-      "missing": 0,
-      "contradiction": 0,
-      "completeness": 0
-    }
-  }
-}
+```toon
+reviewer: docs-auditor
+
+findings[N]{id,severity,category,description,file,line,code,fix}:
+  docs-001,high,staleness,"README references createUser() but function was renamed to registerUser()",README.md,42,"Call `createUser()` to register a new account","Update to: Call `registerUser()` to register a new account"
+
+summary:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 0
+  info: 0
+  categoryCounts:
+    staleness: 1
+    missing: 0
+    contradiction: 0
+    completeness: 0
 ```
 
 ## Severity Levels

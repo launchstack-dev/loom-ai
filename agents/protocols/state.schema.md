@@ -4,58 +4,44 @@ Tracks execution progress for resume, auditing, and orchestrator decision-making
 
 ## Schema
 
-```json
-{
-  "schemaVersion": 1,
-  "runId": "string — UUID generated at execution start",
-  "planFile": "string — path to the plan being executed",
-  "status": "initializing | running | paused | completed | failed",
-  "currentWave": "number — index of the wave currently executing or next to execute",
-  "startedAt": "string — ISO 8601 timestamp",
-  "updatedAt": "string — ISO 8601 timestamp — updated on every state change",
+```toon
+schemaVersion: 1
+runId: a1b2c3d4-uuid
+planFile: PLAN.md
+status: running
+currentWave: 1
+startedAt: 2026-04-07T10:00:00Z
+updatedAt: 2026-04-07T10:15:00Z
 
-  "waves": {
-    "0": {
-      "status": "pending | in_progress | succeeded | failed | skipped",
-      "startedAt": "string | null",
-      "completedAt": "string | null",
-      "agents": ["string — agent names involved in this wave"],
-      "tasks": [
-        {
-          "taskId": "string — unique within this run",
-          "agent": "string — which agent type handles this",
-          "description": "string — short task description",
-          "status": "pending | in_progress | succeeded | failed",
-          "fileOwnership": ["string — paths this task may modify"],
-          "retryCount": "number — incremented on each retry, max 2",
-          "result": "AgentResult | null — populated on completion",
-          "startedAt": "string | null",
-          "completedAt": "string | null"
-        }
-      ],
-      "summaryFile": "string | null — path to wave-N-summary.toon",
-      "verificationResult": {
-        "status": "pass | fail | null",
-        "checks": [
-          {
-            "name": "string — e.g., 'typecheck', 'tests', 'lint', 'ownership-drift'",
-            "status": "pass | fail",
-            "details": "string | null — error output if failed"
-          }
-        ]
-      },
-      "gateApproval": "approved | rejected | pending | null",
-      "fileHashes": {
-        "description": "Content hashes of key files at wave completion, for drift detection on resume",
-        "contracts": {"path": "sha256-hash"},
-        "modified": {"path": "sha256-hash"}
-      }
-    }
-  },
+0:
+  status: succeeded
+  startedAt: 2026-04-07T10:00:00Z
+  completedAt: 2026-04-07T10:05:00Z
+  agents: contracts-agent
+  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,startedAt,completedAt}:
+    task-001,contracts-agent,Create shared types,succeeded,src/types.ts,0,2026-04-07T10:00:00Z,2026-04-07T10:03:00Z
+    task-002,contracts-agent,Create API schemas,succeeded,src/schema.ts,0,2026-04-07T10:00:00Z,2026-04-07T10:04:00Z
+  summaryFile: .plan-execution/wave-0-summary.toon
+  verificationResult: pass
+  verificationChecks[2]{name,status,details}:
+    typecheck,pass,
+    lint,pass,
+  gateApproval: approved
 
-  "rollingContextFile": "string — path to rolling-context.md",
-  "lockPid": "number | null — PID of the process holding the execution lock"
-}
+1:
+  status: in_progress
+  startedAt: 2026-04-07T10:05:00Z
+  completedAt:
+  agents: implementer-agent
+  tasks[2]{taskId,agent,description,status,fileOwnership,retryCount,startedAt,completedAt}:
+    task-003,implementer-agent,Implement auth routes,in_progress,src/routes/auth.ts,0,2026-04-07T10:05:00Z,
+    task-004,implementer-agent,Implement user routes,pending,src/routes/users.ts,0,,
+  summaryFile:
+  verificationResult:
+  gateApproval: pending
+
+rollingContextFile: .plan-execution/rolling-context.md
+lockPid: 12345
 ```
 
 ## Rules
@@ -65,4 +51,4 @@ Tracks execution progress for resume, auditing, and orchestrator decision-making
 3. **Lock file.** Before starting execution, write PID to `.plan-execution/.lock`. Check on startup — if lock exists and PID is alive, abort with error.
 4. **Drift detection on resume.** Before `--resume`, compare current file hashes against `fileHashes` from the last completed wave. Warn if any differ.
 5. **Retry tracking.** Increment `retryCount` before each retry. If `retryCount >= 2`, mark as failed and report to user.
-6. **Wave keys are string numbers** ("0", "1", "2") for JSON compatibility.
+6. **Wave keys are string numbers** ("0", "1", "2") matching TOON block notation.
