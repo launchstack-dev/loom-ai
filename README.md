@@ -84,43 +84,114 @@ agent-monitoring.schema.md    ← Progress reporting, stale detection, dashboard
 pattern-executor.md           ��� Pattern runtime (debate, chain, vote, triage, converge)
 ```
 
-## Typical Workflow
+## Workflows
+
+Pick the workflow that matches your situation:
+
+### Full pipeline
+
+The default path — maximum control at every stage.
+
+```mermaid
+flowchart TD
+    Start{New or existing<br/>codebase?}
+    Start -->|Existing| Init["/loom-init<br/>Analyze codebase,<br/>generate CLAUDE.md"]
+    Start -->|New| Roadmap
+
+    Init --> Roadmap["/loom-roadmap --init<br/>Create ROADMAP.md"]
+    Init -.->|"--full flag<br/>chains automatically"| Roadmap
+
+    Roadmap --> ReviewRoadmap["/loom-review-roadmap<br/>4 agents in parallel"]
+    ReviewRoadmap --> Approve["/loom-roadmap --approve-roadmap"]
+
+    Approve --> Plan["/loom-create-plan<br/>Generate PLAN.md"]
+    Plan --> ReviewPlan["/loom-review-plan<br/>6 agents in parallel"]
+    ReviewPlan --> Integrate["/loom-roadmap --review-integrate"]
+
+    Integrate --> Execute["/loom-execute-plan<br/>Wave-by-wave build"]
+    Execute --> Test["/loom-test-plan --run"]
+    Test --> Review["/loom-review-code"]
+    Review --> Fix["/loom-fix-code"]
+    Fix -.->|"Issues remain"| Review
+
+    style Init fill:#e8f4f8
+    style Roadmap fill:#e8f4f8
+    style Plan fill:#e8f4f8
+    style Execute fill:#f0e8f8
+    style Test fill:#e8f8e8
+    style Review fill:#f8f0e8
+    style Fix fill:#f8f0e8
+```
 
 **Brownfield** (existing codebase):
 ```
-1. /loom-init                        Analyze codebase, generate CLAUDE.md + CONTEXT.md
-2. /loom-roadmap --init --brownfield Create roadmap informed by existing code
+/loom-init                              Analyze codebase, generate CLAUDE.md + CONTEXT.md
+/loom-roadmap --init --brownfield       Create roadmap informed by existing code
+/loom-review-roadmap                    4 agents review the roadmap
+/loom-roadmap --approve-roadmap         Lock roadmap
+/loom-create-plan                       Generate PLAN.md from approved roadmap
+/loom-review-plan                       6 agents analyze plan in parallel
+/loom-roadmap --review-integrate        Apply review findings
+/loom-execute-plan                      Wave-by-wave build
+/loom-test-plan --run                   Generate and run tests
+/loom-review-code                       Full code review
+/loom-fix-code                          Auto-apply findings
 ```
 
-**Greenfield** (new project):
+**Greenfield** (new project) — same pipeline, skip `/loom-init`:
 ```
-1. /loom-roadmap --init --from "description"   Create roadmap from scratch
-```
-
-**Either path continues:**
-```
-3.  /loom-review-roadmap              4 agents review the roadmap
-4.  /loom-roadmap --approve-roadmap   Lock roadmap, enable plan generation
-5.  /loom-roadmap --init --plan       Generate v2 PLAN.md from approved roadmap
-6.  /loom-review-plan                 6 agents analyze plan in parallel
-7.  /loom-roadmap --review-integrate  Apply review findings to the plan
-8.  /loom-roadmap --deps              Verify dependency graph + critical path
-9.  /loom-execute-plan --dry-run      Preview the wave structure
-10. /loom-execute-plan                Run with approval gates
-11. /loom-test-plan --run             Generate and run tests
-12. /loom-review-code                 Full code review
-13. /loom-fix-code                    Auto-apply review findings
-14. /loom-roadmap --status            Track progress across everything
+/loom-roadmap --init --from "description"
 ```
 
-**One-shot brownfield:**
-```
-/loom-init --full --from "add team management"   — onboard + roadmap in one step
+### Autonomous
+
+One command runs the full pipeline with automated gates and feedback loops.
+
+```mermaid
+flowchart LR
+    Auto["/loom-auto --from 'description'"]
+    Auto --> Plan["Plan"]
+    Plan --> Build["Build"]
+    Build --> Test["Test"]
+    Test --> Review["Review"]
+    Review -->|"Pass"| Done["Done"]
+    Review -->|"Fail"| Fix["Fix"]
+    Fix --> Review
+    Fix -->|"Stuck"| Plan
+
+    style Auto fill:#e8f4f8
+    style Done fill:#e8f8e8
 ```
 
-**Fully autonomous:**
 ```
-/loom-auto --from "description"                  — plan, build, test, review, fix until done
+/loom-auto --from "add user authentication with OAuth"
+```
+
+Circuit breakers stop the loop if fixes stall or iterations exceed the budget. Escalates to you with a report of what worked and what didn't.
+
+### Quick brownfield onboard
+
+Analyze an existing codebase and chain directly into roadmap creation:
+
+```
+/loom-init --full --from "add team management"
+```
+
+### Convergence (deterministic targets)
+
+When you have a spec, migration, or reference implementation to match exactly:
+
+```mermaid
+flowchart LR
+    Parse["Parse targets"] --> Harness["Build harness"]
+    Harness --> Compare["Compare"]
+    Compare -->|"Delta > 0"| Fix["Fix gaps"]
+    Fix --> Compare
+    Compare -->|"Delta = 0"| Done["Done"]
+```
+
+```
+/loom-converge --targets spec.json --source src/
 ```
 
 ## Agent Groups
@@ -130,7 +201,7 @@ pattern-executor.md           ��� Pattern runtime (debate, chain, vote, tr
 | **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom-init` |
 | **Strategy & UX** | strategy-agent, ux-agent | `/loom-review-plan`, `/loom-review-roadmap`, `/loom-review-code` |
 | **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap --init` |
-| **Planning** | feature-coverage, phasing, parallelization, agentic-workflow, plan-builder | `/loom-review-plan`, `/loom-roadmap --init --plan` |
+| **Planning** | feature-coverage, phasing, parallelization, agentic-workflow, plan-builder | `/loom-review-plan`, `/loom-create-plan` |
 | **Execution** | contracts, implementer, api-route-creator, api-connector, wiring, verification | `/loom-execute-plan` |
 | **Testing** | acceptance-criteria, unit-test, e2e-test | `/loom-test-plan` |
 | **Code Review** | security, architecture, plan-compliance + 6 built-in reviewers | `/loom-review-code` |
@@ -212,7 +283,7 @@ cd hooks && bun install && bunx vitest run
 ```
 agents/                     30+ agent definitions
   protocols/                 13 protocol specs
-commands/                    12 slash commands
+commands/                    13 slash commands
 hooks/                       6 deterministic enforcement hooks
   lib/                       Shared harness + TOON reader + context resolver
   __tests__/                 Hook tests
@@ -220,5 +291,5 @@ hooks/                       6 deterministic enforcement hooks
 skills/library.yaml          Library registry
 test/protocol/               Protocol tests
 test-fixtures/               Test plan fixtures (valid + broken)
-install.sh                   Symlink installer
+install.sh                   Bootstrap installer (one-time)
 ```
