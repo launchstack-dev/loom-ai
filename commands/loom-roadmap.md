@@ -24,9 +24,10 @@ $ARGUMENTS
 Parse arguments:
 - No args or `--status`: show unified status (roadmap + plan progress + milestones + risk indicators)
 - `--init`: create a new ROADMAP.md interactively using the roadmap-builder-agent
-- `--init --plan`: create a new PLAN.md (v2) from an approved ROADMAP.md using the plan-builder-agent
+- `--init --plan`: alias for `/loom-create-plan` — create PLAN.md from approved ROADMAP.md
 - `--init --full`: run full pipeline: roadmap → roadmap review → plan → plan review (interactive at each gate)
 - `--init --from "description"`: create from a one-line description
+- `--init --brownfield`: run codebase analysis (API surface, tech debt, existing patterns) before discussion phase
 - `--discuss`: run the discussion phase to surface architectural decisions (default with `--init`)
 - `--no-discuss`: skip the discussion phase entirely
 - `--auto`: accept all recommended defaults without interactive prompting
@@ -63,7 +64,7 @@ Before any subcommand, gather available state:
 
 ## Command: `--init`
 
-Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `--init --plan`.
+Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-create-plan`.
 
 ### Step 1: Codebase Context Gathering
 
@@ -93,13 +94,81 @@ hasExistingTypes: true
 existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
 ```
 
-### Step 1.5: Discussion Phase
+### Step 1.5: Brownfield Analysis
+
+**Only if `--brownfield` was passed.**
+
+This step produces a deep analysis of the existing codebase so the roadmap accounts for what's already built. It goes beyond Step 1's basic scan.
+
+1. **Check for cached analysis.** Read `.plan-execution/init-report.toon` if it exists (produced by `/loom-init`).
+   - If the file exists and `completedAt` is less than 7 days old: use cached results. Display: "Using cached analysis from `/loom-init` ({date}). Run `/loom-init` to refresh."
+   - If the file is stale or missing: run fresh analysis (steps 2-3 below).
+
+2. **If no cached analysis**, spawn 2 agents in parallel (single message):
+
+   **api-explorer** (general-purpose):
+   ```
+   "Read your instructions from `~/.claude/agents/api-explorer.md` first.
+    Discover the API surface of this codebase: internal endpoints, external integrations, undocumented routes, database access patterns.
+    Project structure: {codebase context from Step 1}"
+   ```
+
+   **docs-auditor** (general-purpose):
+   ```
+   "Read your instructions from `~/.claude/agents/docs-auditor.md` first.
+    Audit existing documentation for staleness, gaps, contradictions. Assess Loom readiness.
+    Existing docs found: {list from Step 1}"
+   ```
+
+   Also read `CLAUDE.md` and `CONTEXT.md` if they exist (produced by `/loom-init` or manually).
+
+3. **Compile brownfield context** into a structured summary for the discussion and roadmap phases:
+
+   ```toon
+   brownfieldAnalysis:
+     apiEndpoints: {count}
+     externalIntegrations: {count}
+     existingPatterns[N]: {list of detected architectural patterns}
+     technicalDebt[N]: {list of debt items from docs-auditor}
+     documentationGaps[N]: {list of missing docs}
+     loomReadiness: {score}/10
+
+   existingApis[N]{method,path,file,line}:
+     GET,/api/users,src/routes/users.ts,12
+     POST,/api/users,src/routes/users.ts,45
+
+   existingIntegrations[N]{name,file,purpose}:
+     Stripe,src/services/stripe.ts,payment processing
+     SendGrid,src/services/email.ts,transactional email
+   ```
+
+   This context is passed to:
+   - The questioner-agent in Step 1.6 (so discussion questions account for existing infrastructure)
+   - The roadmap-builder-agent in Step 2 (so the roadmap builds on what exists, not from scratch)
+
+4. **Display brownfield summary** before proceeding to discussion:
+
+   ```
+   ## Brownfield Analysis
+
+   API Surface: {N} internal endpoints, {M} external integrations
+   Architecture: {detected pattern}
+   Technical Debt: {N} items flagged
+   Documentation: {gaps summary}
+   Loom Readiness: {score}/10
+
+   This analysis will inform the roadmap — features won't duplicate existing endpoints,
+   and the plan will account for current architecture and tech debt.
+   ```
+
+### Step 1.6: Discussion Phase
 
 **Skip if `--no-discuss` was passed.**
 
 1. Spawn `questioner-agent` (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/questioner-agent.md` first."
    - The codebase context summary from Step 1
+   - The brownfield analysis from Step 1.5 (if `--brownfield` was used)
    - The user's project description (from `--from` or interview answers)
 
 2. Parse the agent's decision points from its TOON output.
@@ -173,7 +242,8 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
    - Instruction: "Read your instructions from `~/.claude/agents/roadmap-builder-agent.md` first, then read the format spec from `~/.claude/agents/protocols/roadmap.schema.md`."
    - The codebase context summary from Step 1
    - The user's answers/description
-   - The discussion phase decisions (from Step 1.5) to embed as Constraints & Decisions
+   - The discussion phase decisions (from Step 1.6) to embed as Constraints & Decisions
+   - The brownfield analysis (from Step 1.5) if `--brownfield` was used — include as "Existing Codebase" context so the roadmap builds on what exists
    - Instruction: "Follow the Reasoning Framework. Output must conform to roadmap.schema.md."
 
 ### Step 3: Validation Loop (max 2 retries)
@@ -241,79 +311,15 @@ Continue looping until the user approves (option 1).
 3. Display roadmap summary + suggest next steps:
    - `/loom-review-roadmap` for 3-agent roadmap review
    - `/loom-roadmap --approve-roadmap` to mark as approved
-   - `/loom-roadmap --init --plan` to generate PLAN.md from the approved roadmap
+   - `/loom-create-plan` to generate PLAN.md from the approved roadmap
 
 ---
 
 ## Command: `--init --plan`
 
-Creates a new PLAN.md (v2, spec-driven) from an approved ROADMAP.md. The roadmap provides the strategy; this command generates the detailed execution spec.
+**Alias for `/loom-create-plan`.** Delegates directly to the standalone plan creation command.
 
-### Step 1: Verify Roadmap
-
-1. Read ROADMAP.md. If it doesn't exist: "No roadmap found. Run `/loom-roadmap --init` first."
-2. Check frontmatter `status`. If not `approved`: "Roadmap status is '{status}'. Approve it first with `/loom-roadmap --approve-roadmap`."
-3. Read the full roadmap content for passing to the plan-builder-agent.
-
-### Step 2: Plan Generation
-
-1. Spawn `plan-builder-agent` (general-purpose) with:
-   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first, then read `~/.claude/agents/protocols/plan.schema.md` and `~/.claude/agents/protocols/spec.schema.md`."
-   - The full ROADMAP.md content
-   - The codebase context summary
-   - Instruction: "Generate a planVersion: 2 spec-driven plan from this approved roadmap. Map features to phases, milestones to wave boundaries, conceptual data model to fully typed schema with indexes and cascades. Include API Specification, State Machines, and Error Handling sections per spec.schema.md."
-
-### Step 3: Validation Loop (max 2 retries)
-
-1. **Run plan validation stages 1-4** (standard) + **Stage 7** (v2 spec completeness) from `validation-rules.md`:
-   - Stages 1-4: structure, dependencies, ownership, sizing
-   - Stage 7: API coverage, state machine coverage, error code consistency, index coverage
-2. Fix loop: same as roadmap validation loop (re-spawn plan-builder-agent with errors, max 2 retries)
-
-### Step 4: Interactive Review (or auto-proceed)
-
-**If `--auto`:** Skip interactive review. Write the plan and proceed.
-
-**Otherwise:** Present the plan summary and enter the interactive discussion loop:
-
-```
-Plan generated with {N} phases across {M} waves.
-API Specification: {N} endpoints
-State Machines: {N} entities
-Error Categories: {N} codes
-
-What would you like to do?
-1. [approve] Approve plan and write to PLAN.md
-2. [discuss phase N] Discuss a specific phase
-3. [api] Review API specification detail
-4. [states] Review state machine definitions
-5. [errors] Review error handling specification
-6. [schema] Review expanded schema/type definitions
-7. [regenerate] Regenerate from roadmap with changes
-8. [edit] Make manual edits directly
-
->
-```
-
-Continue looping until the user approves.
-
-### Step 5: Write and Initialize
-
-1. Write the validated plan to `PLAN.md`
-2. Append to `.plan-history/changelog.md`:
-   ```markdown
-   ## YYYY-MM-DD — Plan created from roadmap
-   - Generated via /loom-roadmap --init --plan
-   - Source: ROADMAP.md (approved)
-   - planVersion: 2
-   - Phases: N, Waves: N, Deliverables: N
-   - API endpoints: N, State machines: N
-   - Validation: passed (0 errors, N warnings)
-   ```
-3. Create `.plan-history/roadmap.toon` with milestones mapped from ROADMAP.md
-4. Display plan summary + suggest next steps:
-   - `/loom-review-plan` for full 5-agent plan review
-   - `/loom-execute-plan --dry-run` to preview waves
+Run `/loom-create-plan` with the same arguments. If `--auto` was passed, forward it.
 
 ---
 
@@ -325,7 +331,7 @@ Runs the complete two-tier pipeline interactively: roadmap → roadmap review �
 2. Run `--review-roadmap` (3-agent review)
 3. Run `--review-integrate --roadmap` (apply findings)
 4. Run `--approve-roadmap` (mark approved)
-5. Run `--init --plan` (creates PLAN.md v2 from roadmap)
+5. Run `/loom-create-plan` (creates PLAN.md v2 from roadmap)
 6. Suggest `/loom-review-plan` for plan review
 
 Each step pauses for user input unless `--auto` is also set.
@@ -338,7 +344,7 @@ Each step pauses for user input unless `--auto` is also set.
 2. If status is already `approved`: "Roadmap is already approved."
 3. Update frontmatter: `status: approved`
 4. Append to changelog: "YYYY-MM-DD — Roadmap approved"
-5. Display: "Roadmap approved. Ready for plan generation via `/loom-roadmap --init --plan`."
+5. Display: "Roadmap approved. Ready for plan generation via `/loom-create-plan`."
 
 ---
 

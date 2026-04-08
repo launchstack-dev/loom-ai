@@ -1,10 +1,10 @@
 # Plan Review Orchestrator
 
-You are an orchestrator that launches 5 specialized planning agents in parallel to review, improve, or create a project plan.
+You are an orchestrator that launches 6 specialized planning agents in parallel to review, improve, or create a project plan.
 
 ## Context
 
-This command reviews a PLAN.md (or equivalent planning document) by spawning 5 specialized agents simultaneously. Each agent focuses on a different dimension of plan quality. After all agents complete, synthesize their findings into a unified summary.
+This command reviews a PLAN.md (or equivalent planning document) by spawning 6 specialized agents simultaneously. Each agent focuses on a different dimension of plan quality. After all agents complete, synthesize their findings into a unified summary.
 
 ## Requirements
 
@@ -28,14 +28,15 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
    - Stage 3 (Ownership): same-wave overlaps, deliverable boundary checks
    - Stage 4 (Sizing): oversized phases, missing criteria
 
-   If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 5 agents still run — they catch different things (feature gaps, UX issues, parallelization opportunities) that structural validation doesn't cover. But surfacing structural errors first gives the user the most actionable feedback.
+   If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 6 agents still run — they catch different things (feature gaps, UX issues, parallelization opportunities) that structural validation doesn't cover. But surfacing structural errors first gives the user the most actionable feedback.
 
-1b. **Check for project-specific agents.** Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section. These will be spawned alongside the 5 built-in agents.
+1b. **Check for project-specific agents.** Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section. These will be spawned alongside the 6 built-in agents.
 
-2. **Launch all agents in parallel using the Agent tool.** Each agent must receive the full text of the plan in its prompt (agents cannot read files from your context). Send ALL Agent tool calls in a SINGLE message so they run concurrently. This includes the 5 built-in agents plus any from `orchestration.toml`:
+2. **Launch all agents in parallel using the Agent tool.** Each agent must receive the full text of the plan in its prompt (agents cannot read files from your context). Send ALL Agent tool calls in a SINGLE message so they run concurrently. This includes the 6 built-in agents plus any from `orchestration.toml`:
 
    - **feature-coverage-agent** — Audit schema, API surface, and features against competitors
-   - **strategy-ux-agent** — Evaluate positioning, dashboard UX, theming, and developer ergonomics
+   - **strategy-agent** — Evaluate positioning, differentiation, audience, feature prioritization (planning mode)
+   - **ux-agent** — Evaluate user flows, state coverage, interaction patterns, a11y targets (planning mode)
    - **phasing-agent** — Review phase boundaries, dependencies, and sequencing risks
    - **parallelization-agent** — Design multi-agent execution waves and merge strategy
    - **agentic-workflow-agent** — Decompose phases into discrete context-bounded tasks for AI agents
@@ -44,18 +45,22 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
 
    Project-specific agents with `outputRole: blocker` must pass (no blocking findings) before proceeding to synthesis. Agents with `outputRole: reviewer` are included in the synthesis like built-in agents.
 
-3. **Synthesize results.** After all 5 agents return, produce a unified summary:
+3. **Synthesize results.** After all 6 agents return, produce a unified summary:
 
    ```
    ## Plan Review Summary
 
-   Five specialized planning agents ran in parallel reviewing the plan. Here's what each one focused on:
+   Six specialized planning agents ran in parallel reviewing the plan. Here's what each one focused on:
 
    Agent: Feature Coverage Agent
    Specialization: [what it focused on]
    Key Feedback: [2-3 most important findings]
    ────────────────────────────────────────
-   Agent: Strategy & UX Agent
+   Agent: Strategy Agent
+   Specialization: [what it focused on]
+   Key Feedback: [2-3 most important findings]
+   ────────────────────────────────────────
+   Agent: UX Agent
    Specialization: [what it focused on]
    Key Feedback: [2-3 most important findings]
    ────────────────────────────────────────

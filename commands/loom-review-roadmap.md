@@ -1,10 +1,10 @@
 # Roadmap Review Orchestrator
 
-You are an orchestrator that launches 3 specialized agents in parallel to review a ROADMAP.md from strategy, scope, and feasibility perspectives.
+You are an orchestrator that launches 4 specialized agents in parallel to review a ROADMAP.md from strategy, scope, feasibility, and UX perspectives.
 
 ## Context
 
-This command reviews a ROADMAP.md by spawning 3 specialized agents simultaneously. Each agent focuses on a different dimension of roadmap quality. After all agents complete, synthesize their findings into a unified summary. This is the roadmap-level equivalent of `/loom-review-plan` (which reviews PLAN.md with 5 agents).
+This command reviews a ROADMAP.md by spawning 4 specialized agents simultaneously. Each agent focuses on a different dimension of roadmap quality. After all agents complete, synthesize their findings into a unified summary. This is the roadmap-level equivalent of `/loom-review-plan` (which reviews PLAN.md with 6 agents).
 
 ## Requirements
 
@@ -34,26 +34,27 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
    - Stage 3 (Milestones): cycle detection, self-deps, undefined references, forward references
    - Stage 4 (Data Model): entity-feature coverage, relationship endpoint validation
 
-   If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 3 agents still run — they catch strategic issues (scope overreach, feature conflicts, UX gaps) that structural validation doesn't cover. But surfacing structural errors first gives the most actionable feedback.
+   If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 4 agents still run — they catch strategic issues (scope overreach, feature conflicts, UX gaps) that structural validation doesn't cover. But surfacing structural errors first gives the most actionable feedback.
 
-1b. **Check for project-specific agents.** Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section with `phase: "roadmap"`. These will be spawned alongside the 3 built-in agents.
+1b. **Check for project-specific agents.** Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section with `phase: "roadmap"`. These will be spawned alongside the 4 built-in agents.
 
 2. **Launch all agents in parallel using the Agent tool.** Each agent must receive the full text of the roadmap in its prompt (agents cannot read files from your context). Send ALL Agent tool calls in a SINGLE message so they run concurrently:
 
    - **scope-feasibility-agent** — Review scope realism, feature conflicts, milestone sizing, constraint compliance, data model soundness
    - **feature-coverage-agent** — Audit features against competitors and best practices, identify gaps and over-engineering
-   - **strategy-ux-agent** — Evaluate vision, success metrics, feature prioritization, UX coherence, developer ergonomics
+   - **strategy-agent** — Evaluate vision, positioning, differentiation, feature prioritization (planning mode)
+   - **ux-agent** — Evaluate user flows, state coverage, interaction patterns, UX coherence (planning mode)
 
    For each built-in agent, use `subagent_type` matching the agent name. For project-specific agents from `orchestration.toml`, use `subagent_type: "general-purpose"` and instruct the agent to read its own `.md` file from the path declared in `orchestration.toml`. Include the full roadmap content in each prompt along with the instruction: "Review this roadmap from your specialized perspective and produce your structured report."
 
    Project-specific agents with `outputRole: blocker` must pass (no blocking findings) before proceeding to synthesis.
 
-3. **Synthesize results.** After all 3 agents return, produce a unified summary:
+3. **Synthesize results.** After all 4 agents return, produce a unified summary:
 
    ```
    ## Roadmap Review Summary
 
-   Three specialized agents reviewed the roadmap in parallel. Here's what each found:
+   Four specialized agents reviewed the roadmap in parallel. Here's what each found:
 
    Agent: Scope Feasibility Agent
    Focus: scope realism, feature conflicts, milestone sizing, constraints
@@ -63,8 +64,12 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
    Focus: competitive analysis, feature gaps, over-engineering
    Key Findings: [2-3 most important findings]
    ────────────────────────────────────────
-   Agent: Strategy & UX Agent
-   Focus: vision clarity, success metrics, prioritization, UX coherence
+   Agent: Strategy Agent
+   Focus: vision clarity, positioning, differentiation, feature prioritization
+   Key Findings: [2-3 most important findings]
+   ────────────────────────────────────────
+   Agent: UX Agent
+   Focus: user flows, state coverage, interaction patterns, a11y targets
    Key Findings: [2-3 most important findings]
    ```
 
@@ -87,14 +92,15 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestra
 type: roadmap-review
 roadmapFile: ROADMAP.md
 reviewedAt: {ISO 8601}
-agentCount: {3 + project-specific count}
+agentCount: {4 + project-specific count}
 structuralErrors: {count}
 structuralWarnings: {count}
 
 agents[N]{name,findingCount,blockingCount,warningCount,infoCount}:
   scope-feasibility-agent,{N},{N},{N},{N}
   feature-coverage-agent,{N},{N},{N},{N}
-  strategy-ux-agent,{N},{N},{N},{N}
+  strategy-agent,{N},{N},{N},{N}
+  ux-agent,{N},{N},{N},{N}
 
 findings[N]{id,agent,severity,dimension,title,description,recommendation}:
   {all findings from all agents, merged and deduped}
