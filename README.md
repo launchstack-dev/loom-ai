@@ -31,15 +31,25 @@ cd meta-orchestration
 ./install.sh
 ```
 
-**Ongoing management** (after bootstrap):
+This one-time bootstrap copies the catalog and `/loom-library` command into `~/.claude/`. After that, **all management is pull-on-demand** via `/loom-library` — no symlinks, no manual file copying.
+
+**Per-project setup:**
 ```
-/loom-library list           — see what's installed
-/loom-library use <name>     — install an agent or command
-/loom-library sync           — re-pull all items, detect changes
-/loom-library update         — check for new catalog entries
+/loom-library use loom-init          — install the onboarding command + its agent deps
+/loom-library use loom-execute-plan  — install execution pipeline + contracts, implementer, wiring, verification agents
+/loom-library use loom-auto          — install everything (pulls all commands + agents transitively)
 ```
 
-The bootstrap script symlinks everything into `~/.claude/`. After that, `/loom-library` manages the catalog with dependency resolution, content hashing, and GitHub source support. Run `/loom` in Claude Code to verify.
+**Ongoing management:**
+```
+/loom-library list           — see what's installed vs available
+/loom-library sync           — re-pull all installed items, detect source changes
+/loom-library update         — check for new catalog entries + changed items
+/loom-library search <query> — find items by name or description
+/loom-library remove <name>  — uninstall (warns about dependents)
+```
+
+`/loom-library` resolves dependencies automatically, tracks content hashes for drift detection, and supports both local and GitHub sources. Run `/loom` in Claude Code to verify.
 
 ## Architecture
 

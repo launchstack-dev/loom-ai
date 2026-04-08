@@ -72,10 +72,11 @@ else
 fi
 
 echo ""
-echo "Done. Available commands:"
-echo "  /review-plan    — 5-agent parallel plan review"
-echo "  /execute-plan   — wave-by-wave execution with approval gates"
-echo "  /test-plan      — acceptance criteria + unit + E2E test generation"
-echo "  /review-code    — built-in + bespoke code review"
-echo "  /roadmap        — plan creation, tracking, and milestone management"
-echo "  /loom           — full reference"
+echo "Done. Bootstrap complete."
+echo ""
+echo "Next: open Claude Code and run /loom-library to manage your install."
+echo "  /loom-library list       — see what's installed vs available"
+echo "  /loom-library use <name> — install an agent or command (resolves deps)"
+echo "  /loom-library sync       — re-pull all installed items"
+echo "  /loom-library update     — check for new catalog entries"
+echo "  /loom                    — full reference"
