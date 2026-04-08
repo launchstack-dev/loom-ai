@@ -16,7 +16,15 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 
 | Command | Description |
 |---------|-------------|
-| `/loom-review-plan [path]` | Launch 5 planning agents in parallel to review a PLAN.md |
+| `/loom-init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
+| `/loom-init --full` | Onboarding + chain into roadmap creation |
+| `/loom-init --full --from "desc"` | Onboarding + roadmap from description |
+| `/loom-init --audit-only` | Analyze only, don't write files |
+| `/loom-init --format all` | Generate CLAUDE.md + AGENTS.md + .cursorrules |
+| `/loom-create-plan` | Generate PLAN.md (v2 spec) from an approved ROADMAP.md |
+| `/loom-create-plan --auto` | Generate plan without interactive review |
+| `/loom-create-plan --v1` | Generate simpler v1 plan (no API specs or state machines) |
+| `/loom-review-plan [path]` | Launch 6 planning agents in parallel to review a PLAN.md |
 | `/loom-execute-plan [path]` | Execute a plan wave-by-wave with human approval gates |
 | `/loom-execute-plan --init` | Scaffold a new PLAN.md template interactively |
 | `/loom-execute-plan --dry-run` | Preview wave structure without executing |
@@ -65,12 +73,13 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-note --assimilate` | Review notes AND apply them to roadmap/plan/context docs |
 | `/loom-note --list` | Show all notes (pending + assimilated + dismissed) |
 | `/loom-note --dismiss <id>` | Dismiss a note by ID |
-| `/loom-review-roadmap [path]` | Launch 3 agents to review a ROADMAP.md |
+| `/loom-review-roadmap [path]` | Launch 4 agents to review a ROADMAP.md |
 | `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
 | `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
-| `/loom-roadmap --init --plan` | Create a PLAN.md (v2 spec) from an approved ROADMAP.md |
+| `/loom-roadmap --init --plan` | Alias for `/loom-create-plan` |
 | `/loom-roadmap --init --full` | Full pipeline: roadmap → review → plan → review (interactive) |
 | `/loom-roadmap --init --from "desc"` | Create a roadmap from a one-line description |
+| `/loom-roadmap --init --brownfield` | Analyze existing codebase before roadmap creation |
 | `/loom-roadmap --discuss` | Run discussion phase to surface architectural decisions |
 | `/loom-roadmap --no-discuss` | Skip the discussion phase |
 | `/loom-roadmap --auto` | Accept all recommended defaults without prompting |
@@ -108,9 +117,12 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 - `scope-feasibility-agent` — Reviews roadmap scope, feature conflicts, milestone sizing
 - `questioner-agent` — Surfaces architectural decisions before roadmap generation
 
+**Strategy & UX** (spawned by `/loom-review-plan`, `/loom-review-roadmap`, and `/loom-review-code`):
+- `strategy-agent` — Positioning, differentiation, feature prioritization (planning mode); strategic drift, sequencing, scope creep (review mode)
+- `ux-agent` — User flows, state coverage, interaction patterns, a11y targets (planning mode); UX conformance, missing states (review mode)
+
 **Planning** (spawned by `/loom-review-plan` and `/loom-roadmap --init --plan`):
 - `feature-coverage-agent` — Audits schema, API surface, features against competitors
-- `strategy-ux-agent` — Evaluates positioning, UX, theming, developer ergonomics
 - `phasing-agent` — Reviews phase boundaries, dependencies, sequencing risks
 - `parallelization-agent` — Designs execution waves, merge strategy, conflict prevention
 - `agentic-workflow-agent` — Decomposes phases into context-bounded agent tasks
@@ -170,15 +182,24 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 ### Typical Workflow
 
 ```
+Greenfield:
+  /roadmap --init --from "desc"  — discussion phase + ROADMAP.md creation
+
+Brownfield (existing codebase):
+  /loom-init                     — analyze codebase, generate CLAUDE.md + CONTEXT.md
+  /roadmap --init --brownfield   — roadmap informed by existing code
+
+Either path continues:
+
 Tier 1 — Roadmap (strategy):
 1.  /roadmap --init              — discussion phase + ROADMAP.md creation
-2.  /review-roadmap              — 3 agents review roadmap
+2.  /review-roadmap              — 4 agents review roadmap
 3.  /roadmap --review-integrate --roadmap — apply roadmap review findings
 4.  /roadmap --approve-roadmap   — lock roadmap, enable plan generation
 
 Tier 2 — Plan (spec):
-5.  /roadmap --init --plan       — generate v2 PLAN.md from approved roadmap
-6.  /review-plan                 — 5 agents analyze plan in parallel
+5.  /create-plan                 — generate v2 PLAN.md from approved roadmap
+6.  /review-plan                 — 6 agents analyze plan in parallel
 7.  /roadmap --review-integrate  — apply plan review findings
 8.  /roadmap --deps              — verify dependency graph + critical path
 
@@ -193,7 +214,12 @@ Tier 4 — Qualify:
 14. /roadmap --status            — track progress across everything
 ```
 
-Or for fully autonomous execution:
+Or one-shot brownfield:
+```
+/loom-init --full --from "desc"   — onboard + roadmap in one step
+```
+
+Or fully autonomous:
 ```
 /loom-auto --from "description"    — plan, build, test, review, fix until done
 ```
