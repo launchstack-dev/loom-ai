@@ -234,6 +234,10 @@ library:
       source: commands/loom-auto.md
       requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-converge, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
 
+    - name: loom-note
+      description: Accumulate notes during development, review and assimilate into roadmap/plan/context docs
+      source: commands/loom-note.md
+
     - name: loom-create-agent
       description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines
       source: commands/loom-create-agent.md

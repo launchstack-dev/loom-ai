@@ -48,7 +48,9 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
 | `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
 | `/loom-auto --dry-run` | Show pipeline plan without executing |
-| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, test, review, fix) |
+| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
+| `/loom-auto --converge-target <path>` | Enable convergence with a golden target file |
+| `/loom-auto --converge-config <path>` | Enable convergence with existing harness config |
 | `/loom-converge --target <path>` | Convergence loop: compare implementation against deterministic target |
 | `/loom-converge --config <path>` | Run convergence with existing harness config |
 | `/loom-converge --max-iterations N` | Cap convergence iterations (default: 10) |
@@ -56,6 +58,13 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
 | `/loom-converge --resume` | Resume convergence from saved state |
 | `/loom-converge --status` | Show current convergence state |
+| `/loom-note <text>` | Add a development note (auto-tagged) |
+| `/loom-note --tag <tag> <text>` | Add a tagged note (architecture, bug, idea, decision, concern, perf, security, ux, debt) |
+| `/loom-note --priority high <text>` | Add a high-priority note |
+| `/loom-note --review` | Review pending notes grouped by tag, suggest placement |
+| `/loom-note --assimilate` | Review notes AND apply them to roadmap/plan/context docs |
+| `/loom-note --list` | Show all notes (pending + assimilated + dismissed) |
+| `/loom-note --dismiss <id>` | Dismiss a note by ID |
 | `/loom-review-roadmap [path]` | Launch 3 agents to review a ROADMAP.md |
 | `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
 | `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
