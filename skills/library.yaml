@@ -1,5 +1,5 @@
 catalog_version: 1
-repo: https://github.com/launchstack-dev/meta-orchestration
+repo: https://github.com/launchstack-dev/loom-ai
 
 default_dirs:
   skills:

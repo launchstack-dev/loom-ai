@@ -28,8 +28,8 @@ Fifteen slash commands that compose 40+ specialized agents:
 
 **Bootstrap** (first time):
 ```bash
-git clone https://github.com/launchstack-dev/meta-orchestration.git
-cd meta-orchestration
+git clone https://github.com/launchstack-dev/loom-ai.git
+cd loom-ai
 ./install.sh
 ```
 
