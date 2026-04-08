@@ -12,6 +12,7 @@ Parse arguments:
 - `--auto`: accept defaults without interactive prompting
 - `--v1`: generate a v1 plan (simpler, no API specs or state machines)
 - `--output <path>`: write plan to a custom path (default: `PLAN.md`)
+- `--review-integrate`: apply plan review findings to PLAN.md (skips generation, goes directly to Step R)
 
 ## Protocols
 
@@ -150,10 +151,29 @@ Continue looping until the user approves.
    Plan written to {path}.
 
    Next steps:
-     /loom-review-plan              — 6 agents analyze the plan in parallel
-     /loom-execute-plan --dry-run   — preview the wave structure
-     /loom-roadmap --status         — see unified roadmap + plan progress
+     /loom-review-plan                    — 6 agents analyze the plan in parallel
+     /loom-create-plan --review-integrate — apply review findings to PLAN.md
+     /loom-execute-plan --dry-run         — preview the wave structure
+     /loom-roadmap --status               — see unified roadmap + plan progress
    ```
+
+### Step R: Review Integrate (`--review-integrate` only)
+
+Skips Steps 0–4. Applies plan review findings directly to an existing PLAN.md.
+
+1. Read the most recent plan review file in `.plan-history/reviews/` (files matching `*-review.toon`, excluding `*-roadmap-review.toon`). If none found: "No plan review found. Run `/loom-review-plan` first." Stop.
+2. Parse findings by severity (blocking → warning → info)
+3. Filter to actionable findings (skip pure observations)
+4. Spawn `plan-builder-agent` (general-purpose) with:
+   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
+   - Current PLAN.md contents
+   - Filtered review findings
+   - Instruction: "Apply these approved review recommendations. Do not change unrelated sections. Annotate each change with the finding that motivated it."
+5. Run validation on the result (stages 1-4, plus Stage 7 for v2 plans)
+6. Show proposed changes for user approval (or auto-apply if `--auto`)
+7. On approval: write plan, snapshot old version to `.plan-history/snapshots/`, update changelog
+
+---
 
 ## Error Handling
 

@@ -38,8 +38,7 @@ Parse arguments:
 - `--validate --deep [path]`: run all validation stages including agent checks
 - `--refine [path]`: refine an existing plan using review history + plan-builder-agent
 - `--refine --roadmap [path]`: refine an existing roadmap using review history + roadmap-builder-agent
-- `--review-integrate`: apply plan review findings to PLAN.md automatically
-- `--review-integrate --roadmap`: apply roadmap review findings to ROADMAP.md automatically
+- `--review-integrate`: apply roadmap review findings to ROADMAP.md automatically
 - `--split [path]`: split a large plan into smaller sub-plans
 - `--deps [path]`: show dependency graph, critical path, bottleneck analysis
 - `--diff`: compare current plan vs last snapshot
@@ -358,7 +357,7 @@ Delegates to `/loom-review-roadmap`. Spawn a general-purpose agent:
 
 ---
 
-## Command: `--review-integrate --roadmap`
+## Command: `--review-integrate`
 
 1. Read the most recent roadmap review file in `.plan-history/reviews/` (files matching `*-roadmap-review.toon`)
 2. Parse findings by severity (blocking → warning → info)
@@ -823,22 +822,6 @@ Manage milestones in `.plan-history/roadmap.toon`.
 
 ---
 
-## Command: `--review-integrate`
-
-Applies plan review findings to PLAN.md. For roadmap review integration, use `--review-integrate --roadmap` (defined above).
-
-1. Read the most recent plan review file in `.plan-history/reviews/` (files matching `*-review.toon`, excluding `*-roadmap-review.toon`)
-2. Parse findings by severity (blocking → warning → info)
-3. Filter to actionable findings (skip pure observations)
-4. Spawn `plan-builder-agent` (general-purpose) with:
-   - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
-   - Current plan
-   - Filtered review findings
-   - Instruction: "Apply these approved review recommendations. Annotate each change with the finding that motivated it."
-5. Run validation on the result (stages 1-4, plus Stage 7 for v2 plans)
-6. Show proposed changes for user approval
-7. On approval: write plan, snapshot old version, update changelog
-
 ---
 
 ## Roadmap TOON Format
@@ -900,6 +883,6 @@ This is additive — if agents don't support progress reporting, the orchestrato
 - `/loom-execute-plan` → reads plan (validates stages 1-4 as gate), updates state.toon
 - `/loom-test-plan` → acceptance criteria from plan phases feed test spec generation
 - `--refine` → consumes review findings + agent analysis → updated plan
-- `--review-integrate` → automates review → plan update cycle
+- `--review-integrate` → automates roadmap review → roadmap update cycle
 - `--validate` → used by `--init`, `--refine`, and `/loom-execute-plan` as a pre-flight check
 - `--status` → reads plan + state.toon + roadmap.toon + changelog for unified view

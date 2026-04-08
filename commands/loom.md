@@ -90,8 +90,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
 | `/loom-roadmap --refine` | Refine plan using review history |
 | `/loom-roadmap --refine --roadmap` | Refine roadmap using review history |
-| `/loom-roadmap --review-integrate` | Apply plan review findings to PLAN.md |
-| `/loom-roadmap --review-integrate --roadmap` | Apply roadmap review findings to ROADMAP.md |
+| `/loom-roadmap --review-integrate` | Apply roadmap review findings to ROADMAP.md |
+| `/loom-create-plan --review-integrate` | Apply plan review findings to PLAN.md |
 | `/loom-roadmap --status` | Detailed execution + milestone progress |
 | `/loom-roadmap --deps` | Show phase dependency graph + critical path |
 | `/loom-roadmap --diff` | Compare current plan vs last snapshot |
@@ -194,13 +194,13 @@ Either path continues:
 Tier 1 — Roadmap (strategy):
 1.  /roadmap --init              — discussion phase + ROADMAP.md creation
 2.  /review-roadmap              — 4 agents review roadmap
-3.  /roadmap --review-integrate --roadmap — apply roadmap review findings
+3.  /roadmap --review-integrate  — apply roadmap review findings
 4.  /roadmap --approve-roadmap   — lock roadmap, enable plan generation
 
 Tier 2 — Plan (spec):
 5.  /create-plan                 — generate v2 PLAN.md from approved roadmap
 6.  /review-plan                 — 6 agents analyze plan in parallel
-7.  /roadmap --review-integrate  — apply plan review findings
+7.  /create-plan --review-integrate — apply plan review findings
 8.  /roadmap --deps              — verify dependency graph + critical path
 
 Tier 3 — Build:

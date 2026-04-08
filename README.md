@@ -108,7 +108,7 @@ flowchart TD
 
     Approve --> Plan["/loom-create-plan<br/>Generate PLAN.md"]
     Plan --> ReviewPlan["/loom-review-plan<br/>6 agents in parallel"]
-    ReviewPlan --> Integrate["/loom-roadmap --review-integrate"]
+    ReviewPlan --> Integrate["/loom-create-plan --review-integrate"]
 
     Integrate --> Execute["/loom-execute-plan<br/>Wave-by-wave build"]
     Execute --> Test["/loom-test-plan --run"]
@@ -133,7 +133,7 @@ flowchart TD
 /loom-roadmap --approve-roadmap         Lock roadmap
 /loom-create-plan                       Generate PLAN.md from approved roadmap
 /loom-review-plan                       6 agents analyze plan in parallel
-/loom-roadmap --review-integrate        Apply review findings
+/loom-create-plan --review-integrate    Apply plan review findings
 /loom-execute-plan                      Wave-by-wave build
 /loom-test-plan --run                   Generate and run tests
 /loom-review-code                       Full code review
