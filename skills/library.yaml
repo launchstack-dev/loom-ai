@@ -149,6 +149,23 @@ library:
       description: Drives test-driven development with red-green-refactor
       source: agents/tdd-coach.md
 
+    # Convergence agents
+    - name: target-parser
+      description: Normalizes deterministic sources into structured target manifests for convergence comparison
+      source: agents/target-parser.md
+
+    - name: harness-builder
+      description: Scaffolds comparison infrastructure — diff scripts, converge.config, and harness runner
+      source: agents/harness-builder.md
+
+    - name: delta-analyzer
+      description: Reads Delta Reports, classifies noise vs actionable gaps, produces prioritized fix lists
+      source: agents/delta-analyzer.md
+
+    - name: convergence-driver
+      description: Iteration orchestrator with circuit breakers — runs the convergence loop until targets match
+      source: agents/convergence-driver.md
+
     # Documentation agents
     - name: project-guidance-agent
       description: Creates CLAUDE.md and AI coding assistant guidance files from codebase analysis
@@ -207,10 +224,15 @@ library:
       source: commands/loom-fix-code.md
       requires: [agent:fixer-agent]
 
+    - name: loom-converge
+      description: Convergence loop - compare implementation against deterministic targets until delta reaches zero
+      source: commands/loom-converge.md
+      requires: [agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:convergence-driver]
+
     - name: loom-auto
-      description: Fully autonomous pipeline - roadmap, plan, build, test, review, fix loops until done
+      description: Fully autonomous pipeline - roadmap, plan, build, converge, test, review, fix loops until done
       source: commands/loom-auto.md
-      requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
+      requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-converge, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
 
     - name: loom-create-agent
       description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines

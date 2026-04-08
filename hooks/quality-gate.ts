@@ -13,7 +13,7 @@ const TERMINAL_STAGES = new Set(["complete", "escalated"]);
 const KNOWN_STAGES = new Set([
   "roadmap-create", "roadmap-review", "roadmap-integrate", "roadmap-approve",
   "plan-create", "plan-review", "plan-integrate", "plan-validate",
-  "execute", "test", "review-code", "fix-code",
+  "execute", "converge", "test", "review-code", "fix-code",
   "complete", "escalated",
 ]);
 
@@ -27,6 +27,7 @@ const STAGE_NAMES: Record<string, string> = {
   "plan-integrate": "Review Integration",
   "plan-validate": "Plan Validation",
   execute: "Execution",
+  converge: "Convergence",
   test: "Testing",
   "review-code": "Code Review",
   "fix-code": "Fix Cycle",

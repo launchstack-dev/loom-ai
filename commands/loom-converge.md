@@ -139,26 +139,59 @@ Examples:
    Config: .plan-execution/converge.config
    ```
 
-### Step 4: Human Approval Gate
+### Step 4: Convergence Requirements Review
 
-Display the convergence setup summary:
+Present the full convergence configuration for human alignment. This is MANDATORY — convergence parameters define what "done" means.
+
+Display per-target details from the parsed manifest and built harness:
+
 ```
-## Convergence Setup Complete
+## Convergence Configuration Review
 
-**Targets:** {N} artifacts from {source type}
-**Comparison methods:** {list}
-**Tolerance thresholds:** {per-method thresholds}
-**Max iterations:** {N}
-**Estimated max agents:** {N x maxIterations} fixer agents
+### Targets ({N} artifacts)
 
-Proceed with convergence loop? (yes / adjust config / abort)
+| # | Target | Source | Comparison | Tolerance | Capture Method |
+|---|--------|--------|------------|-----------|----------------|
+| 1 | GET /api/users | api-users.json | json-deep-equal | 1.00 | HTTP GET to dev server |
+| 2 | Login page | login.png | pixel-diff | 0.95 | Playwright screenshot |
+| 3 | App config | config.json | json-deep-equal | 1.00 | File read |
+
+### Per-Target Options
+
+**GET /api/users:**
+- Ignored fields: timestamp, requestId (runtime-generated)
+- Numeric tolerance: 0.001
+
+**Login page:**
+- Viewport: 1280x720 @ 2x density
+- Anti-aliasing threshold: 5px
+
+### Budget
+
+- Max iterations: {N}
+- Agent budget: {N} fixer agents
+- Estimated worst-case: {N targets × maxIterations} agent invocations
+
+### Golden Targets
+
+Source: {--target path}
+Stored in: .plan-execution/convergence/targets/
+
+Verify the following are correct before proceeding:
+1. Are these the right outputs to test?
+2. Are the comparison methods appropriate per target?
+3. Are the tolerances right? (1.0 = exact match, lower = fuzzy)
+4. Are the right fields being ignored?
+5. Is the capture method correct for each target?
+
+Proceed? (yes / adjust / abort)
 ```
 
 If `--dry-run`: display this summary and stop. Do not proceed to the convergence loop.
 
 Wait for user response:
 - **yes**: proceed to Step 5.
-- **adjust config**: tell the user to edit `.plan-execution/converge.config` and re-run with `--config .plan-execution/converge.config`.
+- **adjust**: ask which targets/methods/tolerances to change. Update `.plan-execution/converge.config` accordingly and re-display.
 - **abort**: stop.
 
 ### Step 5: Convergence Loop

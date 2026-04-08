@@ -12,11 +12,13 @@ Parse arguments:
 - `--from "description"`: create a plan from scratch using the description
 - `--plan <path>`: start from an existing plan file (default: `PLAN.md`)
 - `--roadmap <path>`: path to roadmap file (default: `ROADMAP.md`)
+- `--converge-target <path>`: deterministic target for convergence loop (enables convergence stage)
+- `--converge-config <path>`: existing converge.config (skip target-parser + harness-builder setup)
 - `--resume`: resume from `pipeline-state.toon`
 - `--max-iterations N`: outer loop cap (default: 3)
 - `--max-agents N`: agent budget cap (default: 50)
 - `--dry-run`: show pipeline stages without executing
-- `--stop-after <stage>`: stop after a named stage: `roadmap`, `plan`, `execute`, `test`, `review`, `fix`
+- `--stop-after <stage>`: stop after a named stage: `roadmap`, `plan`, `execute`, `converge`, `test`, `review`, `fix`
 
 ## Protocols
 
@@ -28,6 +30,12 @@ Before doing anything, read these protocol files:
 - `~/.claude/agents/protocols/pipeline-state.schema.md` — pipeline-state.toon schema for this orchestrator
 - `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting and stale detection
 
+If convergence is enabled, also read:
+- `~/.claude/commands/loom-converge.md` — convergence loop orchestrator
+- `~/.claude/agents/convergence-driver.md` — iteration loop, circuit breakers, state tracking
+- `~/.claude/agents/target-parser.md` — target normalization
+- `~/.claude/agents/harness-builder.md` — comparison infrastructure
+
 ---
 
 ## Instructions
@@ -38,11 +46,14 @@ Before doing anything, read these protocol files:
    - `description` from `--from`
    - `roadmapFile` from `--roadmap` (default: `ROADMAP.md`)
    - `planFile` from `--plan` (default: `PLAN.md`)
+   - `convergeTarget` from `--converge-target` (default: null)
+   - `convergeConfig` from `--converge-config` (default: null)
    - `resumeMode` from `--resume`
    - `maxIterations` from `--max-iterations` (default: 3)
    - `maxAgents` from `--max-agents` (default: 50)
    - `dryRun` from `--dry-run`
    - `stopAfter` from `--stop-after`
+   - `convergenceEnabled` = true if `convergeTarget` or `convergeConfig` is set
 
 2. **If `--resume`:** jump to the Resume Logic section below.
 
@@ -59,11 +70,13 @@ Before doing anything, read these protocol files:
    7. Plan Integrate    — loom-roadmap --review-integrate
    8. Plan Validate     — validation stages 1-4 (+ Stage 7 for v2)
    9. Execution         — loom-execute-plan --auto
-   10. Test             — loom-test-plan --run --parallel --auto
-   11. Code Review      — loom-review-code --branch
-   12. Quality Gate     — automated decision matrix
-   13. Fix Cycle        — loom-fix-code --auto (up to 2 cycles)
+   10. Convergence      — loom-converge (if --converge-target or --converge-config)
+   11. Test             — loom-test-plan --run --parallel --auto
+   12. Code Review      — loom-review-code --branch
+   13. Quality Gate     — automated decision matrix
+   14. Fix Cycle        — loom-fix-code --auto (up to 2 cycles)
 
+   Convergence: {convergeTarget or convergeConfig or 'disabled'}
    Outer loop: up to {maxIterations} iterations
    Agent budget: {maxAgents}
    ```
@@ -112,6 +125,9 @@ Before doing anything, read these protocol files:
    agentsSpawned: 0
    maxAgents: {maxAgents}
    fixCycleCount: 0
+   convergenceEnabled: {convergenceEnabled}
+   convergeTarget: {convergeTarget or ""}
+   convergeConfig: {convergeConfig or ""}
    currentStage: roadmap-create
 
    stageHistory[0]{stage,status,iteration,startedAt,completedAt,agentsUsed,gateResult}:
@@ -263,6 +279,131 @@ Check circuit breakers before proceeding.
 
 ---
 
+### Step 3.5: Convergence (Phase B2) — conditional
+
+**Skip this step entirely if `convergenceEnabled == false`.**
+
+This step verifies implementation output matches deterministic targets using the convergence loop. It has two sub-phases: **setup** (requirements alignment) and **loop** (iterative convergence).
+
+Update `pipeline-state.toon`: `currentStage: converge`.
+
+#### Auto-detection
+
+If `convergeTarget` and `convergeConfig` are both null, check:
+1. Read `PLAN.md` — look for convergence-related metadata: `convergenceTarget:`, `goldenFiles:`, or a phase with `pattern: converge`
+2. Check `.plan-execution/converge.config` — if it exists from a prior run, use it
+3. Check `.plan-execution/convergence/targets/` — if target files exist, auto-enable convergence
+
+If any of these are found, set `convergenceEnabled = true` and populate `convergeTarget` or `convergeConfig` accordingly.
+
+#### 3.5a: Convergence Requirements Discussion (MANDATORY — even in --auto)
+
+**This step requires human alignment.** Convergence parameters define what "done" means — the pipeline must not guess.
+
+If `convergeConfig` is provided (user already has a config), skip to 3.5c.
+
+Present a structured requirements discussion:
+
+```
+## Convergence Setup
+
+Before running the convergence loop, we need to align on what to verify and how.
+
+### 1. What outputs are we verifying?
+{Analyze the plan and executed code to propose outputs. Examples:}
+- API responses (e.g., GET /api/users returns expected JSON shape)
+- Generated files (e.g., config output matches golden template)
+- CLI output (e.g., build script produces expected stdout)
+- UI rendering (e.g., page screenshot matches design comp)
+
+### 2. How do we capture actual output?
+{Propose capture mechanism per output:}
+- HTTP requests to running dev server
+- Script execution and stdout capture
+- File read from output directory
+- Browser screenshot via Playwright
+
+### 3. Comparison method per target
+| Target | Method | Rationale |
+|--------|--------|-----------|
+| GET /api/users | json-deep-equal | Structured data, exact match needed |
+| App config | json-deep-equal | Config must be identical |
+| README output | text-diff | Line-by-line text comparison |
+
+### 4. Tolerances and ignore rules
+| Target | Tolerance | Ignored Fields | Rationale |
+|--------|-----------|----------------|-----------|
+| GET /api/users | 1.0 (exact) | timestamp, requestId | These are runtime-generated |
+| UI screenshot | 0.95 | — | Allow minor anti-aliasing differences |
+
+### 5. Golden targets
+{Where do the baseline "correct" outputs come from?}
+- Provided by user at: {--converge-target path}
+- Generated from reference implementation
+- Extracted from spec/plan
+
+Does this look right? Adjust any targets, methods, tolerances, or capture mechanisms before we proceed.
+```
+
+Wait for the user to confirm or adjust. Iterate until they approve.
+
+#### 3.5b: Build Convergence Infrastructure
+
+Once requirements are confirmed, spawn agents to set up the harness:
+
+1. **Parse targets.** Spawn target-parser agent:
+   ```
+   "Read your instructions from ~/.claude/agents/target-parser.md first.
+    Parse targets from: {convergeTarget}
+    Apply the user-confirmed comparison methods and tolerances.
+    Write manifest to: .plan-execution/target-manifest.toon"
+   ```
+
+2. **Build harness.** Spawn harness-builder agent:
+   ```
+   "Read your instructions from ~/.claude/agents/harness-builder.md first.
+    Build harness from manifest: .plan-execution/target-manifest.toon
+    User-confirmed tolerances: {from discussion}
+    User-confirmed ignore rules: {from discussion}
+    Write config to: .plan-execution/converge.config"
+   ```
+
+3. Display the resulting `converge.config` for final confirmation. This is the last chance to adjust before the loop starts.
+
+#### 3.5c: Run Convergence Loop
+
+Spawn a general-purpose agent:
+```
+"Read your instructions from ~/.claude/commands/loom-converge.md first.
+ Run the convergence loop with the following parameters:
+ {if convergeConfig: '--config ' + convergeConfig}
+ {if not convergeConfig: '--config .plan-execution/converge.config'}
+ Max iterations: 10
+ This is running as part of /loom-auto — write convergence-summary.toon when done."
+```
+
+Record agents spawned. Log stage in `stageHistory`.
+
+#### 3.5d: Evaluate Convergence Result
+
+Read `.plan-execution/convergence-summary.toon`:
+
+| Status | Action |
+|--------|--------|
+| `converged` | Proceed to Step 4 (Test). All targets match. |
+| `stalled` | Record in failureLog. Go to quality gate with convergence failure context. |
+| `regression` | Record in failureLog. Go to quality gate with convergence failure context. |
+| `budget_exhausted` | Record in failureLog. Go to quality gate with convergence failure context. |
+| `max_iterations` | Record in failureLog. Go to quality gate with convergence failure context. |
+
+If convergence-summary.toon is missing: warn and continue to Step 4 (convergence is additive, not blocking).
+
+**If `--stop-after converge`:** display convergence summary and stop.
+
+Check circuit breakers before proceeding.
+
+---
+
 ### Step 4: Test (Phase C)
 
 Update `pipeline-state.toon`: `currentStage: test`.
@@ -300,28 +441,34 @@ Proceed to the Pipeline Quality Gate.
 
 ### Step 6: Pipeline Quality Gate
 
-Parse the outputs from Steps 4 and 5:
+Parse the outputs from Steps 3.5, 4, and 5:
 
 ```
-criticalCount  = count of findings where severity == "critical" in review-report.md
-warningCount   = count of findings where severity == "warning" in review-report.md
-testsPassed    = passed test count from Step 4
-testsFailed    = failed test count from Step 4
-testPassRate   = testsPassed / (testsPassed + testsFailed)
-typecheckPass  = run project typecheck, read exit code (true if 0)
+criticalCount    = count of findings where severity == "critical" in review-report.md
+warningCount     = count of findings where severity == "warning" in review-report.md
+testsPassed      = passed test count from Step 4
+testsFailed      = failed test count from Step 4
+testPassRate     = testsPassed / (testsPassed + testsFailed)
+typecheckPass    = run project typecheck, read exit code (true if 0)
+convergeStatus   = status from convergence-summary.toon (or "converged" if convergence disabled)
+convergePassing  = targetsPassing from convergence-summary.toon (or 0)
+convergeTotal    = targetsTotal from convergence-summary.toon (or 0)
 ```
 
 Apply the decision matrix:
 
 | Condition | Action |
 |-----------|--------|
-| `criticalCount == 0` AND `testPassRate == 100%` AND `typecheckPass == true` | **PROCEED** (done) |
+| `criticalCount == 0` AND `testPassRate == 100%` AND `typecheckPass == true` AND `convergeStatus == "converged"` | **PROCEED** (done) |
+| `convergeStatus` is `stalled` or `regression` or `budget_exhausted` or `max_iterations` | **FIX-AND-RECONVERGE** (if fixCycleCount < 2) else **REVISE-PLAN** |
 | `criticalCount <= 3` AND `testPassRate >= 80%` AND `fixCycleCount < 2` | **FIX-AND-RECHECK** |
 | `criticalCount > 3` OR `testPassRate < 80%` OR systemic typecheck failures | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
 | `fixCycleCount >= 2` (already tried fixing twice) | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
 | `outerIteration > 1` AND same structural failure pattern across iterations | **REVISE-ROADMAP** (if iterations remain) else **ESCALATE** |
 
 **On PROCEED:** go to Step 8 (Completion).
+
+**On FIX-AND-RECONVERGE:** go to Step 7 (Fix Cycle) with `reconverge = true`. After fixes are applied, re-run convergence (Step 3.5) before re-checking the quality gate.
 
 **On FIX-AND-RECHECK:** go to Step 7 (Fix Cycle).
 
@@ -369,7 +516,9 @@ Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code
 
 7d. **Re-run verification.** Run typecheck + existing tests.
 
-7e. **Return to Step 6** (Pipeline Quality Gate) with updated results.
+7e. **Re-run convergence (if `reconverge == true`).** Return to Step 3.5 to re-run the convergence loop. The convergence-driver will resume from the existing `convergence-state.toon`, re-running the harness against the now-fixed code.
+
+7f. **Return to Step 6** (Pipeline Quality Gate) with updated results.
 
 Log stage in `stageHistory`.
 
@@ -480,6 +629,7 @@ When `--resume` is passed:
    | `plan-integrate` | Step 2, sub-step 1c |
    | `plan-validate` | Step 2, sub-step 1d |
    | `execute` | Step 3 (pass `--resume` to loom-execute-plan) |
+   | `converge` | Step 3.5 (pass `--resume` to loom-converge) |
    | `test` | Step 4 |
    | `review-code` | Step 5 |
    | `fix-code` | Step 7 |
