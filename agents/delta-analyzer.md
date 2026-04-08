@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: haiku
 ---
 
 # Delta Analyzer

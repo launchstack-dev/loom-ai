@@ -1,5 +1,5 @@
 ---
-model: opus
+model: sonnet
 ---
 
 # E2E Test Agent

@@ -4,7 +4,7 @@ A multi-agent pipeline for planning, executing, testing, and reviewing software 
 
 ## What It Does
 
-Thirteen slash commands that compose 30+ specialized agents:
+Fifteen slash commands that compose 40+ specialized agents:
 
 | Command | What it does |
 |---------|-------------|
@@ -20,6 +20,8 @@ Thirteen slash commands that compose 30+ specialized agents:
 | `/loom-converge` | Convergence loop: compare implementation against deterministic targets |
 | `/loom-auto` | Fully autonomous pipeline with feedback loops |
 | `/loom-note` | Accumulate development notes, review and assimilate into docs |
+| `/loom-create-agent` | Interactive wizard to create project-specific bespoke agents |
+| `/loom-library` | Pull-on-demand catalog management: install, sync, search, update |
 | `/loom` | Full reference |
 
 ## Install

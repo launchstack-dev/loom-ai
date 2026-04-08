@@ -215,6 +215,44 @@ library:
       description: Generates README, API docs, ADRs, onboarding guides, and module documentation
       source: agents/docs-generator.md
 
+    # Extended review agents
+    - name: performance-reviewer
+      description: Performance audit - algorithmic complexity, N+1 queries, memory leaks, bundle size, caching
+      source: agents/performance-reviewer.md
+
+    - name: accessibility-reviewer
+      description: WCAG compliance audit - semantic HTML, ARIA, keyboard nav, color contrast, screen readers
+      source: agents/accessibility-reviewer.md
+
+    - name: dependency-auditor
+      description: Dependency tree audit - CVEs, license conflicts, outdated packages, supply chain risks
+      source: agents/dependency-auditor.md
+
+    - name: api-design-reviewer
+      description: REST/GraphQL API design review - consistency, naming, versioning, pagination, error formats
+      source: agents/api-design-reviewer.md
+
+    - name: database-schema-reviewer
+      description: Database schema audit - normalization, indexes, migrations, constraints, query patterns
+      source: agents/database-schema-reviewer.md
+
+    - name: infra-reviewer
+      description: Infrastructure config review - Docker, CI/CD, env vars, secrets management, scaling
+      source: agents/infra-reviewer.md
+
+    - name: observability-reviewer
+      description: Monitoring and logging audit - structured logging, metrics, tracing, alerting, dashboards
+      source: agents/observability-reviewer.md
+
+    # Architecture agents
+    - name: tech-stack-debater
+      description: Adversarial tech stack evaluation - framework comparisons, trade-off analysis, migration cost
+      source: agents/tech-stack-debater.md
+
+    - name: migration-architect
+      description: Data migration planning - schema transforms, rollback strategies, zero-downtime migration
+      source: agents/migration-architect.md
+
     # Code fix agents
     - name: fixer-agent
       description: Applies code review findings as targeted fixes within file ownership boundaries
