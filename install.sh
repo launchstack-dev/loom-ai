@@ -1,21 +1,18 @@
 #!/bin/bash
 # Loom Installer (bootstrap)
 #
-# DEPRECATED: Use /library for ongoing management after initial install.
-# This script is kept for first-time bootstrap only. It creates symlinks
-# from the repo into ~/.claude/. After running this, use /library sync
-# to manage updates and /library use <name> to install new items.
+# One-time bootstrap: copies agents, protocols, commands, and the library
+# catalog into ~/.claude/. After running this, delete the repo if you like —
+# all ongoing management (updates, new installs) is handled by /loom-library
+# which fetches directly from GitHub.
 #
-# See: /library or commands/library.md for the catalog-based approach.
+# See: /loom-library or commands/loom-library.md for the catalog-based approach.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${HOME}/.claude"
 
-echo "⚠  This installer is for initial bootstrap only."
-echo "   After install, use /library for ongoing management."
-echo ""
 echo "Installing Loom..."
 echo "Source: ${SCRIPT_DIR}"
 echo "Target: ${CLAUDE_DIR}"
@@ -26,57 +23,40 @@ mkdir -p "${CLAUDE_DIR}/agents/protocols"
 mkdir -p "${CLAUDE_DIR}/commands"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 
-# Link agents
+# Copy agents
 for f in "${SCRIPT_DIR}/agents"/*.md; do
   name=$(basename "$f")
   target="${CLAUDE_DIR}/agents/${name}"
-  if [ -e "$target" ] && [ ! -L "$target" ]; then
-    echo "  SKIP ${name} (exists, not a symlink — back up manually)"
-  else
-    ln -sf "$f" "$target"
-    echo "  LINK agents/${name}"
-  fi
+  cp "$f" "$target"
+  echo "  COPY agents/${name}"
 done
 
-# Link protocols
+# Copy protocols
 for f in "${SCRIPT_DIR}/agents/protocols"/*.md; do
   name=$(basename "$f")
   target="${CLAUDE_DIR}/agents/protocols/${name}"
-  if [ -e "$target" ] && [ ! -L "$target" ]; then
-    echo "  SKIP protocols/${name} (exists, not a symlink)"
-  else
-    ln -sf "$f" "$target"
-    echo "  LINK agents/protocols/${name}"
-  fi
+  cp "$f" "$target"
+  echo "  COPY protocols/${name}"
 done
 
-# Link commands
+# Copy commands
 for f in "${SCRIPT_DIR}/commands"/*.md; do
   name=$(basename "$f")
   target="${CLAUDE_DIR}/commands/${name}"
-  if [ -e "$target" ] && [ ! -L "$target" ]; then
-    echo "  SKIP commands/${name} (exists, not a symlink)"
-  else
-    ln -sf "$f" "$target"
-    echo "  LINK commands/${name}"
-  fi
+  cp "$f" "$target"
+  echo "  COPY commands/${name}"
 done
 
-# Link library.yaml
-target="${CLAUDE_DIR}/skills/library/library.yaml"
-if [ -e "$target" ] && [ ! -L "$target" ]; then
-  echo "  SKIP skills/library/library.yaml (exists, not a symlink)"
-else
-  ln -sf "${SCRIPT_DIR}/skills/library.yaml" "$target"
-  echo "  LINK skills/library/library.yaml"
-fi
+# Copy library.yaml
+cp "${SCRIPT_DIR}/skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml"
+echo "  COPY skills/library/library.yaml"
 
 echo ""
-echo "Done. Bootstrap complete."
+echo "Done. You can delete this repo — all updates are managed via /loom-library."
 echo ""
 echo "Next: open Claude Code and run /loom-library to manage your install."
 echo "  /loom-library list       — see what's installed vs available"
 echo "  /loom-library use <name> — install an agent or command (resolves deps)"
-echo "  /loom-library sync       — re-pull all installed items"
+echo "  /loom-library sync       — re-pull all installed items from GitHub"
 echo "  /loom-library update     — check for new catalog entries"
 echo "  /loom                    — full reference"

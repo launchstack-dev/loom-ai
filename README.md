@@ -34,7 +34,7 @@ cd loom-ai
 ./install.sh
 ```
 
-This one-time bootstrap copies the catalog and `/loom-library` command into `~/.claude/`. After that, **all management is pull-on-demand** via `/loom-library` — no symlinks, no manual file copying.
+This one-time bootstrap **copies** everything into `~/.claude/`. You can delete the repo afterwards — all updates are fetched directly from GitHub by `/loom-library`.
 
 **Per-project setup:**
 ```
