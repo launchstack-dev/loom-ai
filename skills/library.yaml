@@ -66,6 +66,22 @@ library:
       description: Schema for .claude/orchestration.toml - project-specific agent registration, pattern config, settings
       source: agents/protocols/orchestration-config.schema.md
 
+    - name: statusline-contract
+      description: Output format contract for the Claude Code status line — defines ambient state shape, renderer protocol, and Starship integration
+      source: agents/protocols/statusline-contract.md
+
+    - name: git-command-contract
+      description: Subcommand dispatch contract for loom-git — defines commit, push, PR, merge, cleanup, review-pr protocols
+      source: agents/protocols/git-command-contract.md
+
+    - name: quick-task-contract
+      description: Contract for loom-quick — mode detection, plan-aware append, mid-execution injection, verification protocol
+      source: agents/protocols/quick-task-contract.md
+
+    - name: loom-quick-routing
+      description: "Natural-language routing skill for /loom-quick — triggers on \"quickly fix\", \"just do\", \"quick task\" patterns"
+      source: skills/loom-quick-routing.md
+
   agents:
     # Planning agents
     - name: feature-coverage-agent
@@ -326,6 +342,18 @@ library:
       description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines
       source: commands/loom-create-agent.md
       requires: [agent:meta-agent]
+
+    - name: loom-statusline-setup
+      description: Setup wizard for the Claude Code status line — configures Starship integration, ambient state, and the statusline renderer
+      source: commands/loom-statusline-setup.md
+
+    - name: loom-git
+      description: Git workflow automation — commit, push, PR, merge, cleanup, review-pr via subcommands
+      source: commands/loom-git.md
+
+    - name: loom-quick
+      description: "Zero-ceremony task execution — standalone, plan-aware, or mid-execution injection"
+      source: commands/loom-quick.md
 
     - name: loom
       description: Shows Loom system reference — commands, agents, workflows

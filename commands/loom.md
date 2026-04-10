@@ -108,6 +108,18 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-create-agent` | Interactive wizard: create a bespoke agent + wire into pipeline |
 | `/loom-create-agent --pipeline review --role "HIPAA checker"` | Quick mode with pipeline and role |
 | `/loom-create-agent --from .claude/agents/existing.md` | Clone and customize an existing agent |
+| `/loom-git` | Git workflow automation — commit, push, PR, merge, cleanup, review-pr |
+| `/loom-git commit` | Auto-conventional commit with smart staging |
+| `/loom-git push` | Push with upstream auto-setup |
+| `/loom-git pr` | Create PR with dirty-tree check and auto-generated title/body |
+| `/loom-git merge [PR#]` | Squash-merge PR with cleanup offer |
+| `/loom-git cleanup [branch]` | Delete remote branch (not local) |
+| `/loom-git review-pr [PR#]` | Comprehensive PR review (diff, comments, CI, conflicts) |
+| `/loom-quick "task description"` | Execute a quick task (auto-detects mode) |
+| `/loom-quick --append "task"` | Force append as new plan phase |
+| `/loom-quick --inject "task"` | Force inject into running execution |
+| `/loom-quick --no-verify "task"` | Skip post-execution verification |
+| `/loom-statusline-setup` | Configure the Claude Code status line (Starship integration, ambient state) |
 | `/loom` | Show this reference |
 
 ### Agent Groups

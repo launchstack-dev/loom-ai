@@ -51,6 +51,16 @@ done
 cp "${SCRIPT_DIR}/skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml"
 echo "  COPY skills/library/library.yaml"
 
+# Link statusline renderer hook
+target="${CLAUDE_DIR}/statusline-command.sh"
+if [ -e "$target" ] && [ ! -L "$target" ]; then
+  echo "  SKIP statusline-command.sh (exists, not a symlink)"
+else
+  ln -sf "${SCRIPT_DIR}/hooks/statusline-command.sh" "$target"
+  chmod +x "$target"
+  echo "  LINK statusline-command.sh"
+fi
+
 echo ""
 echo "Done. You can delete this repo — all updates are managed via /loom-library."
 echo ""

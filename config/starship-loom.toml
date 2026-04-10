@@ -1,0 +1,51 @@
+# Loom Status Line — Starship Custom Module
+#
+# Displays active plan execution status or idle project state in your
+# shell prompt via the statusline-command.sh script.
+#
+# HOW TO USE:
+#   Copy the [custom.loom] section below into your ~/.config/starship.toml
+#   (or wherever your Starship config lives), then add "custom.loom" to your
+#   format string. For example:
+#
+#     format = """
+#     $all\
+#     ${custom.loom}\
+#     $line_break\
+#     $character"""
+#
+# CUSTOMIZATION:
+#   - Symbol: change the symbol in `format` to any Nerd Font glyph or emoji.
+#     Current symbol is the shuttle/weaving character.
+#   - Colors: adjust `style` or inline style overrides in `format`.
+#     Starship supports named colors (blue, green, red, bold, dimmed, etc.)
+#     and hex colors (#ff9900). See https://starship.rs/config/#style-strings
+#   - Visibility: tweak `when` or `detect_files`/`detect_folders` to control
+#     when the module appears. The current setup shows the module whenever a
+#     Loom project is detected (PLAN.md or .plan-execution/ present).
+
+[custom.loom]
+# The statusline script outputs a single plain-text line (max 120 chars).
+# It exits 0 always and produces empty output when there is nothing to show,
+# which causes Starship to hide the module automatically.
+command = "~/.loom-ai/hooks/statusline-command.sh"
+
+# Show this module when a Loom project is detected in the current directory tree.
+when = "test -d .plan-execution -o -f PLAN.md"
+
+# Format string: shuttle symbol + styled output.
+# $output is replaced by whatever statusline-command.sh prints.
+format = "[🧵 $output]($style) "
+style = "bold blue"
+
+# Use a clean bash shell to avoid user aliases or functions interfering.
+shell = ["bash", "--noprofile", "--norc"]
+
+# File/folder detection — Starship skips the module entirely (no shell
+# invocation) when none of these are present, saving prompt latency.
+detect_files = ["PLAN.md"]
+detect_folders = [".plan-execution"]
+detect_extensions = []
+
+# Description shown by `starship explain`.
+description = "Loom plan execution status"

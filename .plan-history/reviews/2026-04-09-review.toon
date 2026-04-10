@@ -1,0 +1,126 @@
+reviewMeta:
+  plan: Claude Code Status Line
+  planVersion: 1
+  reviewDate: 2026-04-09
+  reviewMode: auto
+  agents[N]: feature-coverage, strategy, ux, phasing, parallelization, agentic-workflow
+
+structuralValidation:
+  stage1_structure: PASS
+  stage2_dependencies: PASS (1 warning)
+  stage3_ownership: PASS
+  stage4_sizing: PASS (3 warnings)
+  result: PASS
+  warnings[N]:
+    Phase 5 (Wave 2) depends on Phase 4 (Wave 2) — same-wave dependency means Phase 5 cannot start until Phase 4 finishes within the wave
+    Phases 1, 4, 5, 7 each have only 1 deliverable — consider merging where feasible
+    Phase 1 has 10 acceptance criteria for a single deliverable — heavy validation load for one shell script
+
+agentResults:
+  featureCoverage:
+    specialization: Schema completeness, API surface audit, feature gap analysis
+    keyFindings[N]:
+      StatusLine schema defines mode and text but lacks an error/warning field — if statusline-command.sh encounters a parse error it has no structured way to signal it
+      AmbientState lacks a hookVersion or toolchainHealth indicator — competitors (Starship, Oh My Zsh) surface tool version/env health in status segments
+      No schema for intermediate TOON parse errors — the contract specifies happy-path formats but not what happens when status.toon is partially written or corrupt
+    recommendations[N]:
+      Add an optional error field to StatusLine (string or null) for parse/read failures
+      Consider an extensibility mechanism (custom segments) so users can add project-specific idle indicators without modifying the core script
+      Define a corruption/partial-write handling contract in statusline-contract.md
+
+  strategy:
+    specialization: Positioning, differentiation, audience, feature prioritization
+    keyFindings[N]:
+      The plan correctly targets the Claude Code ecosystem with a zero-dependency shell script — this is the right strategic choice for a CLI status bar
+      Starship integration is positioned as optional, which is good — it avoids a hard dependency on a third-party prompt tool
+      The plan lacks a migration or deprecation story — what happens when Claude Code natively ships a status line feature? The plan should document a sunset path or compatibility layer
+    recommendations[N]:
+      Add a Constraints/Decisions section documenting the intentional choice of bash over Node for the renderer and the rationale (50ms budget)
+      Document the relationship to Claude Code's native statusline_command setting — clarify whether this is using an existing API or proposing a new one
+      Add an Out of Scope section listing features explicitly deferred (e.g., multi-project support, remote/SSH status, notification integration)
+
+  ux:
+    specialization: User flows, state coverage, interaction patterns, accessibility
+    keyFindings[N]:
+      The idle-mode format packs up to 5 indicators into 120 chars — no priority/truncation strategy is defined for when all indicators are present and long
+      Setup skill (Phase 5) offers Starship config but has no uninstall/rollback path — if setup corrupts starship.toml the user has no recovery skill
+      The active-mode format uses bracket notation ([command] phase wave/total) but the plan does not specify behavior during rapid state transitions — if two commands overlap, which one wins?
+    recommendations[N]:
+      Define a truncation priority order for idle-mode segments (e.g., branch > plan-status > last-result > notes-count)
+      Add a --dry-run flag to the setup skill that previews changes before applying them
+      Specify conflict resolution for active state — most-recent-updatedAt wins, or reject concurrent commands
+
+  phasing:
+    specialization: Phase boundaries, dependency sequencing, risk analysis
+    keyFindings[N]:
+      Phase 5 depends on Phase 4 (both Wave 2) — this creates a serial bottleneck within Wave 2, effectively making it a 2-step wave and reducing parallelism
+      Phase 3 (Unit Tests) is in Wave 1 alongside Phases 1 and 2 — but tests for Phase 1 and Phase 2 code cannot be written until that code exists; Phase 3 should depend on Phases 1 AND 2, not just Phase 0
+      Phase 6 (Wiring) depends on all 5 prior phases — this is a merge bottleneck; any delay in any prior phase blocks Wave 3 entirely
+    recommendations[N]:
+      Move Phase 5 to Wave 3 or remove Phase 4 dependency — the setup skill only needs to know the script path (Phase 1), not the Starship config details
+      Add Phase 1 and Phase 2 as explicit dependencies for Phase 3 — tests should be written against the actual implementation, not just the contracts
+      Consider splitting Phase 6 wiring into two tasks: one for library.yaml+install.sh (needs Phases 1-2 only) and one for commands/loom.md (needs Phase 5)
+
+  parallelization:
+    specialization: Multi-agent wave design, merge strategy, resource utilization
+    keyFindings[N]:
+      Wave 1 has 3 phases but Phase 3 (tests) realistically cannot run in parallel with Phases 1-2 due to implicit code dependency — effective parallelism is 2, not 3
+      Wave 2 has only 2 phases with a serial dependency between them — this is effectively a single-threaded wave, wasting the parallelization infrastructure
+      Wave 3 has 2 phases (wiring + e2e test) that could genuinely run in parallel — this is the best-designed wave
+    recommendations[N]:
+      Restructure into 4 waves: W0 (contracts), W1 (shell script + ambient-state in parallel), W2 (tests + starship + setup in parallel, now that code exists), W3 (wiring + e2e)
+      If keeping 3 waves, move Phase 3 to Wave 2 so it runs after implementation code exists and truly in parallel with Starship/Setup work
+      Consider whether the setup skill (Phase 5) truly needs the Starship config (Phase 4) — if it just appends a known TOML snippet, it could be hardcoded and run in parallel
+
+  agenticWorkflow:
+    specialization: Context-bounded task decomposition for AI agent execution
+    keyFindings[N]:
+      Phase 1 (shell script) has 10 acceptance criteria and requires bash/awk/grep expertise plus TOON parsing — this is a large context load for a single agent; the script must handle active mode, idle mode, fallback, and performance constraints
+      Phase 2 depends on parseToon from toon-reader.ts but the plan does not list toon-reader.ts as a read-dependency — the executing agent will need this file in context but may not know to request it
+      Phase 6 (wiring) modifies 3 existing files — the agent needs current file contents in context; the plan should specify which sections of each file to modify
+    recommendations[N]:
+      For Phase 1, include a read-dependency list: statusline-contract.md, statusline-types.ts, and an example status.toon fixture
+      For Phase 2, explicitly list toon-reader.ts as a read-dependency so the agent gets the parseToon function signature
+      For Phase 6, add explicit modification hints: which library.yaml section to append to, which install.sh section handles symlinks, which commands/loom.md section lists commands
+
+crossCuttingThemes:
+  theme1:
+    name: Phase 3 dependency mismatch
+    flaggedBy[N]: phasing, parallelization, agentic-workflow
+    description: Phase 3 (Unit Tests) depends only on Phase 0 (Contracts) but actually needs the implementation code from Phases 1 and 2 to write meaningful tests. This is the highest-confidence structural issue in the plan.
+    severity: blocking
+    recommendation: Add Phase 1 and Phase 2 as dependencies for Phase 3 and move it to Wave 2
+
+  theme2:
+    name: Wave 2 serial bottleneck
+    flaggedBy[N]: phasing, parallelization
+    description: Phase 5 depends on Phase 4 within Wave 2, creating a serial chain that eliminates parallelism benefits. Wave 2 is effectively single-threaded.
+    severity: warning
+    recommendation: Evaluate whether Phase 5 truly needs Phase 4 output or can use a hardcoded Starship snippet; if so, remove the dependency to enable true parallel execution
+
+  theme3:
+    name: Missing read-dependency declarations
+    flaggedBy[N]: agentic-workflow, feature-coverage
+    description: Multiple phases reference files they need to read (toon-reader.ts, existing library.yaml, install.sh) but do not declare them as read-dependencies. Executing agents will lack critical context.
+    severity: warning
+    recommendation: Add explicit read-dependency lists to Phases 1, 2, 3, 6, and 7
+
+  theme4:
+    name: No error/corruption handling contract
+    flaggedBy[N]: feature-coverage, ux
+    description: The statusline contract defines happy-path formats but does not specify behavior when status.toon is corrupt, partially written, or contains unexpected fields.
+    severity: warning
+    recommendation: Add error handling section to statusline-contract.md covering parse failures, partial writes, and version mismatches
+
+  theme5:
+    name: No truncation or priority strategy for idle mode
+    flaggedBy[N]: ux, feature-coverage
+    description: Idle mode can display up to 5 indicators within 120 chars. No truncation priority is defined for when all indicators are present with long values.
+    severity: warning
+    recommendation: Define segment priority order and truncation rules in the contract
+
+overallAssessment:
+  verdict: PASS with recommendations
+  blockingIssues: 1
+  warnings: 4
+  summary: The plan is well-structured with clear phases, good schema definitions, and appropriate technology choices. The primary blocking issue is Phase 3's dependency declaration — it claims to depend only on Phase 0 but realistically requires Phases 1 and 2. Wave 2 parallelism is illusory due to the Phase 4-5 serial dependency. Adding read-dependency declarations and error handling contracts would significantly improve agent execution success rates.
