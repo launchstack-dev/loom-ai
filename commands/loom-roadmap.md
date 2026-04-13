@@ -54,6 +54,21 @@ Additional global flags:
 
 For backward compatibility, --flag syntax is also accepted: `--init`, `--approve-roadmap`, `--refine`, `--validate`, `--deps`, `--diff`, `--history`, `--milestone`, `--snapshot`, `--split`, `--review-roadmap`, `--review-integrate`, `--status`. These are aliases for the positional subcommands above.
 
+### Pattern Flags (available on any subcommand)
+
+These flags invoke a multi-agent pattern before or during the subcommand's main work:
+
+- `--debate "question"`: Run an adversarial debate before proceeding. E.g., `/loom-roadmap init --debate "build vs buy for auth"` debates the question and injects the result as a locked decision in the roadmap.
+- `--chain "task"`: Run a progressive refinement chain on a specific artifact.
+- `--vote "problem"`: Run parallel independent agents on a decision point.
+- `--triage "task"`: Route a subtask through the triage classifier.
+
+When a pattern flag is present:
+1. Read `~/.claude/agents/protocols/orchestration-patterns.md` and `~/.claude/agents/protocols/pattern-executor.md`
+2. Execute the pattern first using the same logic as `/loom debate`, `/loom chain`, `/loom vote`, or `/loom triage`
+3. Inject the pattern's result into the subcommand's context (e.g., debate recommendation becomes a locked decision in the roadmap's Constraints & Decisions section)
+4. Continue with the subcommand's normal flow
+
 ## Step 0: Gather Context (all commands)
 
 Before any subcommand, gather available state:

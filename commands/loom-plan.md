@@ -16,6 +16,21 @@ Parse the first positional argument as the subcommand:
 
 Remaining arguments after the subcommand are passed to the subcommand handler.
 
+### Pattern Flags (available on any subcommand)
+
+These flags invoke a multi-agent pattern before or during the subcommand's main work:
+
+- `--debate "question"`: Run an adversarial debate before proceeding. The debate result is injected as a constraint for the subcommand. E.g., `/loom-plan create --debate "monolith vs microservices"` debates the architecture before generating the plan.
+- `--chain "task"`: Run a progressive refinement chain on a specific artifact produced by the subcommand.
+- `--vote "problem"`: Run parallel independent agents on a specific decision point. E.g., `/loom-plan execute --vote task-3` produces 3 independent implementations of task-3 and picks the best.
+- `--triage "task"`: Route a subtask through the triage classifier before execution.
+
+When a pattern flag is present:
+1. Read `~/.claude/agents/protocols/orchestration-patterns.md` and `~/.claude/agents/protocols/pattern-executor.md`
+2. Execute the pattern first using the same logic as `/loom debate`, `/loom chain`, `/loom vote`, or `/loom triage`
+3. Inject the pattern's result into the subcommand's context (e.g., debate recommendation becomes a locked decision for plan creation, vote winner replaces the single-agent implementation for a task)
+4. Continue with the subcommand's normal flow
+
 ## Protocols
 
 Before doing anything, read:

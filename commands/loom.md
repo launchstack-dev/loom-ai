@@ -18,6 +18,10 @@ Parse the first positional argument as the subcommand:
 - `next`: state-aware next step suggestion
 - `profile [name]`: view or switch model cost profile
 - `status`: project status overview
+- `debate "question"`: adversarial multi-round reasoning between agents
+- `chain "task"`: progressive refinement pipeline (draft → refine → harden)
+- `vote "problem"`: parallel independent solutions + evaluator picks best
+- `triage "task"`: cheap router classifies, routes to appropriate specialist
 
 ---
 
@@ -2720,3 +2724,309 @@ If no `ROADMAP.md` exists, display a basic project overview:
 
 - **File read errors:** Skip any file that cannot be read. Display "error reading" in its status slot.
 - **No state at all:** If no Loom artifacts exist whatsoever, display: "No Loom artifacts found. Get started with `/loom init` (brownfield) or `/loom-roadmap init --from 'description'` (greenfield)."
+
+---
+
+## Subcommand: debate
+
+Run an adversarial multi-round debate between agents to reach a well-reasoned decision.
+
+### Arguments
+
+Parse arguments after `debate`:
+- `"question or topic"` (required): the decision to debate
+- `--agents <a,b>`: specify advocate and critic agents (default: use general-purpose agents with role prompts)
+- `--rounds <N>`: max debate rounds (default: 3, max: 5)
+- `--moderator <agent>`: agent that synthesizes the final recommendation (default: general-purpose)
+
+### Protocols
+
+Before doing anything, read:
+- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 1: Debate
+- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+
+### Instructions
+
+#### Step 0: Resolve Agents
+
+1. If `--agents` specified, use those agent names. Look them up in `orchestration.toml` or library for their `.md` file paths.
+2. If no `--agents`, use `general-purpose` agents with role prompts:
+   - Advocate: "You are an advocate. Argue FOR the strongest position on this question."
+   - Critic: "You are a devil's advocate. Find weaknesses, counter-arguments, and risks in the advocate's position."
+   - Moderator: "You are a neutral moderator. Synthesize the debate into a clear recommendation with tradeoffs."
+3. Check `.claude/orchestration.toml` for `[patterns.*]` entries with `type = "debate"`. If the user's topic matches a configured pattern's trigger, use that pattern's agent config instead.
+
+#### Step 1: Debate Rounds
+
+Execute per `orchestration-patterns.md` Pattern 1:
+
+1. **Round 1 — Advocate:** Spawn advocate agent with the question. Collect position and arguments.
+2. **Round 1 — Critic:** Spawn critic agent with the question + advocate's position. Collect critique.
+3. **Round 2..N — Rebuttal:** Feed critique back to advocate → collect rebuttal. Feed rebuttal to critic → collect counter. Repeat for `--rounds` rounds.
+
+Display each round as it completes:
+```
+## Debate: {topic}
+
+### Round 1
+**Advocate:** {position summary — 2-3 sentences}
+**Critic:** {critique summary — 2-3 sentences}
+
+### Round 2
+**Advocate rebuttal:** {key points}
+**Critic counter:** {key points}
+
+...
+```
+
+#### Step 2: Synthesis
+
+Spawn moderator agent with the full debate transcript:
+"Synthesize this debate into a structured recommendation. Include: decision, confidence level (high/medium/low), key tradeoffs acknowledged, and dissenting considerations worth monitoring."
+
+#### Step 3: Present Result
+
+```
+## Recommendation
+
+**Decision:** {moderator's recommendation}
+**Confidence:** {high/medium/low}
+
+### Key Tradeoffs
+{bulleted list}
+
+### Dissenting Considerations
+{points from the losing side worth monitoring}
+
+### Full Transcript
+{collapse or summarize — available in .plan-execution/debate-{timestamp}.toon}
+```
+
+Save the debate to `.plan-execution/debate-{timestamp}.toon` for reference.
+
+#### Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent in the background:
+- Event type: `debate-complete`
+- Event data: topic, decision, tradeoffs, confidence
+- Wiki path: `.loom/wiki`
+
+### Error Handling
+
+- **Agent failure mid-debate:** If advocate or critic fails, attempt one retry with the same context. If retry fails, synthesize from whatever rounds completed.
+- **No question provided:** Print: "Usage: `/loom debate \"Redis vs Postgres for sessions\"`"
+
+---
+
+## Subcommand: chain
+
+Run a progressive refinement pipeline where each agent builds on the previous agent's output.
+
+### Arguments
+
+Parse arguments after `chain`:
+- `"task description"` (required): what to produce
+- `--agents <a,b,c>`: ordered list of agents (default: draft → refine → harden using general-purpose agents)
+- `--steps <N>`: number of refinement steps if using default agents (default: 3)
+
+### Protocols
+
+Before doing anything, read:
+- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 2: Chain
+- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+
+### Instructions
+
+#### Step 0: Resolve Agents
+
+1. If `--agents` specified, use those in order. Look up `.md` file paths.
+2. If no `--agents`, use general-purpose agents with role prompts:
+   - Step 1 (Draft): "Generate an initial implementation. Optimize for correctness and completeness. Mark uncertainties with TODO comments."
+   - Step 2 (Refine): "Improve this draft: better naming, extract helpers, add error handling, apply project conventions. Remove unnecessary complexity."
+   - Step 3 (Harden): "Harden for production: edge-case handling, input validation, security checks. Remove all TODOs. This must be production-ready."
+3. Check `orchestration.toml` for matching chain patterns.
+
+#### Step 1: Execute Chain
+
+Execute per `orchestration-patterns.md` Pattern 2:
+
+1. Read `CLAUDE.md` for project conventions (passed to all agents as context).
+2. Spawn agent[0] with the task description. Collect output.
+3. Spawn agent[1] with agent[0]'s output + original task. Collect output.
+4. Continue until all agents have run.
+
+Display progress:
+```
+## Chain: {task}
+
+### Step 1 — Draft
+{summary of what was produced}
+
+### Step 2 — Refine
+{summary of changes made}
+
+### Step 3 — Harden
+{summary of hardening applied}
+```
+
+#### Step 2: Present Result
+
+Display the final output. If it's code, show the complete artifact. If it's a document, show the full text.
+
+Save to `.plan-execution/chain-{timestamp}.toon`.
+
+### Error Handling
+
+- **Agent fails mid-chain:** Return the last successful output with a note: "Chain halted at step {N}. Output from step {N-1} returned."
+- **No task provided:** Print usage.
+
+---
+
+## Subcommand: vote
+
+Run parallel independent agents on the same problem, then evaluate and pick the best solution.
+
+### Arguments
+
+Parse arguments after `vote`:
+- `"problem description"` (required): what to solve
+- `--agents <a,b,c>`: agents that independently produce solutions (default: 3 general-purpose agents)
+- `--candidates <N>`: number of parallel solutions if using default agents (default: 3)
+- `--evaluator <agent>`: agent that compares solutions (default: general-purpose)
+- `--isolate`: use git worktrees for full isolation (default: false)
+
+### Protocols
+
+Before doing anything, read:
+- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 3: Voting
+- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+
+### Instructions
+
+#### Step 0: Resolve Agents
+
+1. If `--agents` specified, use those. Otherwise create N general-purpose agents each prompted with: "Solve this problem independently. Take your own approach — do not try to guess what other agents might do."
+2. If `--isolate`, create git worktrees for each agent.
+3. Check `orchestration.toml` for matching vote patterns.
+
+#### Step 1: Parallel Solve
+
+Spawn ALL solver agents in a SINGLE message (parallel execution). Each gets the identical problem statement + project context from CLAUDE.md.
+
+Display progress as agents complete:
+```
+## Vote: {problem}
+
+Spawned {N} independent agents...
+
+  Agent 1: completed (approach: {one-line summary})
+  Agent 2: completed (approach: {one-line summary})
+  Agent 3: working...
+```
+
+#### Step 2: Evaluate
+
+Spawn evaluator agent with all solutions side-by-side:
+"Compare these {N} solutions. Score each on: correctness, security, readability, performance, maintainability. Either pick the best or produce a merged solution taking the strongest parts of each. Explain your reasoning."
+
+#### Step 3: Present Result
+
+```
+## Evaluation
+
+### Scores
+| Agent | Correctness | Security | Readability | Performance | Overall |
+|-------|------------|----------|-------------|-------------|---------|
+| 1     | 8/10       | 9/10     | 7/10        | 8/10        | 8.0     |
+| 2     | 9/10       | 7/10     | 9/10        | 7/10        | 8.0     |
+| 3     | 7/10       | 8/10     | 8/10        | 9/10        | 8.0     |
+
+### Winner: Agent {N}
+{evaluator's reasoning}
+
+### Selected Solution
+{the winning or merged code/artifact}
+```
+
+Clean up worktrees if `--isolate` was used. Save to `.plan-execution/vote-{timestamp}.toon`.
+
+### Error Handling
+
+- **Agent fails:** Evaluate from remaining solutions. Minimum 2 solutions needed.
+- **All agents produce identical solutions:** Note this in evaluation — high confidence in the approach.
+- **No problem provided:** Print usage.
+
+---
+
+## Subcommand: triage
+
+Route a task through a cheap classifier that determines complexity and dispatches to the right specialist.
+
+### Arguments
+
+Parse arguments after `triage`:
+- `"task description"` (required): the task to classify and route
+- `--router <agent>`: classification agent (default: general-purpose with haiku model)
+- `--simple <agent>`: handler for simple tasks (default: general-purpose with sonnet)
+- `--complex <agent>`: handler for complex tasks (default: general-purpose with opus)
+
+### Protocols
+
+Before doing anything, read:
+- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 4: Triage
+- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+
+### Instructions
+
+#### Step 0: Resolve Agents
+
+1. If agents specified via flags, use those.
+2. Otherwise use defaults: haiku router, sonnet for simple, opus for complex.
+3. Check `orchestration.toml` for matching triage patterns.
+
+#### Step 1: Classify
+
+Spawn router agent (haiku-class) with:
+```
+Classify this task:
+- simple: Single-file changes, typo fixes, config updates, simple CRUD, boilerplate, documentation
+- complex: Multi-file refactors, new features with edge cases, security-sensitive code, performance optimization, architectural changes
+- multi: Requires changes across multiple domains (frontend + backend, backend + infra, etc.)
+
+Task: {task description}
+
+Return your classification as: complexity (simple/complex/multi), domains (if multi), and one-line reasoning.
+```
+
+Display:
+```
+## Triage: {task}
+
+Classification: {complexity}
+Reasoning: {one-line}
+{if multi: Domains: {domains}}
+
+Routing to: {agent name} ({model})
+```
+
+#### Step 2: Route and Execute
+
+- **Simple:** Spawn simple handler with the task.
+- **Complex:** Spawn complex handler with the task.
+- **Multi-domain:** Spawn domain specialists in parallel, each with their slice of the task. Merge results.
+
+#### Step 3: Present Result
+
+Display the specialist's output directly. Note the routing decision and cost savings:
+```
+Triage complete. Routed as {complexity} → {agent} ({model}).
+{if simple: Saved ~{X}x cost vs opus.}
+```
+
+Save to `.plan-execution/triage-{timestamp}.toon`.
+
+### Error Handling
+
+- **Router fails:** Fall back to complex handler (safe default — overspend rather than underspend on quality).
+- **Specialist fails:** Retry once with error context. If retry fails, try the next tier up (simple fails → try complex).
+- **No task provided:** Print usage.

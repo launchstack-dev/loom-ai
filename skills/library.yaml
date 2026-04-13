@@ -369,7 +369,7 @@ library:
       requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent, agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent]
 
     - name: loom
-      description: "Root command — init, auto, converge, quick, pause, resume, do, next, profile, status"
+      description: "Root command — init, auto, converge, quick, pause, resume, do, next, profile, status, debate, chain, vote, triage"
       source: commands/loom.md
       requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor, agent:wiki-ingest-agent, agent:wiki-lint-agent, agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:convergence-driver]
 
