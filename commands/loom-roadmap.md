@@ -21,32 +21,38 @@ Before doing anything, read these protocol files:
 
 $ARGUMENTS
 
-Parse arguments:
-- No args or `--status`: show unified status (roadmap + plan progress + milestones + risk indicators)
-- `--init`: create a new ROADMAP.md interactively using the roadmap-builder-agent
-- `--init --plan`: alias for `/loom-create-plan` — create PLAN.md from approved ROADMAP.md
-- `--init --full`: run full pipeline: roadmap → roadmap review → plan → plan review (interactive at each gate)
-- `--init --from "description"`: create from a one-line description
-- `--init --brownfield`: run codebase analysis (API surface, tech debt, existing patterns) before discussion phase
-- `--discuss`: run the discussion phase to surface architectural decisions (default with `--init`)
+Parse the first positional argument as the subcommand:
+- No args or `status`: show unified status (roadmap + plan progress + milestones + risk indicators)
+- `init`: create a new ROADMAP.md interactively using the roadmap-builder-agent
+  - Supports: `--plan`, `--full`, `--from "description"`, `--brownfield`
+  - `init --plan`: alias for `/loom-plan create` — create PLAN.md from approved ROADMAP.md
+  - `init --full`: run full pipeline: roadmap → roadmap review → plan → plan review (interactive at each gate)
+  - `init --from "description"`: create from a one-line description
+  - `init --brownfield`: run codebase analysis (API surface, tech debt, existing patterns) before discussion phase
+- `review`: 4 agents review roadmap in parallel (scope, features, strategy, UX)
+- `approve`: mark ROADMAP.md as approved, unlocking plan generation
+- `refine [path]`: refine an existing plan using review history + plan-builder-agent
+  - `refine --roadmap [path]`: refine an existing roadmap using review history + roadmap-builder-agent
+- `validate [path]`: run validation pipeline on a plan (stages 1-4)
+  - `validate --roadmap [path]`: run roadmap validation pipeline (stages 1-4)
+  - `validate --deep [path]`: run all validation stages including agent checks
+- `deps [path]`: show dependency graph, critical path, bottleneck analysis
+- `diff`: compare current plan vs last snapshot
+- `history`: show plan revision history from .plan-history/changelog.md
+- `milestone`: milestone management
+  - `milestone add "name"`: add a milestone
+  - `milestone complete "name"`: mark milestone complete
+  - `milestone list`: show all milestones with status
+- `snapshot`: save current plan state for versioning
+- `split [path]`: split a large plan into smaller sub-plans
+- `review-integrate`: apply roadmap review findings to ROADMAP.md automatically
+
+Additional global flags:
+- `--discuss`: run the discussion phase to surface architectural decisions (default with `init`)
 - `--no-discuss`: skip the discussion phase entirely
 - `--auto`: accept all recommended defaults without interactive prompting
-- `--approve-roadmap`: mark ROADMAP.md as approved, unlocking plan generation
-- `--review-roadmap`: trigger roadmap review (delegates to /loom-review-roadmap)
-- `--validate [path]`: run validation pipeline on a plan (stages 1-4)
-- `--validate --roadmap [path]`: run roadmap validation pipeline (stages 1-4)
-- `--validate --deep [path]`: run all validation stages including agent checks
-- `--refine [path]`: refine an existing plan using review history + plan-builder-agent
-- `--refine --roadmap [path]`: refine an existing roadmap using review history + roadmap-builder-agent
-- `--review-integrate`: apply roadmap review findings to ROADMAP.md automatically
-- `--split [path]`: split a large plan into smaller sub-plans
-- `--deps [path]`: show dependency graph, critical path, bottleneck analysis
-- `--diff`: compare current plan vs last snapshot
-- `--history`: show plan revision history from .plan-history/changelog.md
-- `--milestone add "name"`: add a milestone
-- `--milestone complete "name"`: mark milestone complete
-- `--milestone list`: show all milestones with status
-- `--snapshot`: save current plan state for versioning
+
+For backward compatibility, --flag syntax is also accepted: `--init`, `--approve-roadmap`, `--refine`, `--validate`, `--deps`, `--diff`, `--history`, `--milestone`, `--snapshot`, `--split`, `--review-roadmap`. These are aliases for the positional subcommands above.
 
 ## Step 0: Gather Context (all commands)
 
@@ -61,9 +67,9 @@ Before any subcommand, gather available state:
 
 ---
 
-## Command: `--init`
+## Command: `init`
 
-Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-create-plan`.
+Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-plan create`.
 
 ### Step 1: Codebase Context Gathering
 
@@ -99,8 +105,8 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
 
 This step produces a deep analysis of the existing codebase so the roadmap accounts for what's already built. It goes beyond Step 1's basic scan.
 
-1. **Check for cached analysis.** Read `.plan-execution/init-report.toon` if it exists (produced by `/loom-init`).
-   - If the file exists and `completedAt` is less than 7 days old: use cached results. Display: "Using cached analysis from `/loom-init` ({date}). Run `/loom-init` to refresh."
+1. **Check for cached analysis.** Read `.plan-execution/init-report.toon` if it exists (produced by `/loom init`).
+   - If the file exists and `completedAt` is less than 7 days old: use cached results. Display: "Using cached analysis from `/loom init` ({date}). Run `/loom init` to refresh."
    - If the file is stale or missing: run fresh analysis (steps 2-3 below).
 
 2. **If no cached analysis**, spawn 2 agents in parallel (single message):
@@ -119,7 +125,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
     Existing docs found: {list from Step 1}"
    ```
 
-   Also read `CLAUDE.md` and `CONTEXT.md` if they exist (produced by `/loom-init` or manually).
+   Also read `CLAUDE.md` and `CONTEXT.md` if they exist (produced by `/loom init` or manually).
 
 3. **Compile brownfield context** into a structured summary for the discussion and roadmap phases:
 
@@ -302,15 +308,15 @@ Continue looping until the user approves (option 1).
      # Plan Changelog
 
      ## YYYY-MM-DD — Initial roadmap created
-     - Generated via /loom-roadmap --init
+     - Generated via /loom-roadmap init
      - Features: N, Milestones: N
      - Validation: passed (0 errors, N warnings)
      ```
    - Create `.plan-history/snapshots/` directory
 3. Display roadmap summary + suggest next steps:
-   - `/loom-review-roadmap` for 3-agent roadmap review
-   - `/loom-roadmap --approve-roadmap` to mark as approved
-   - `/loom-create-plan` to generate PLAN.md from the approved roadmap
+   - `/loom-roadmap review` for 3-agent roadmap review
+   - `/loom-roadmap approve` to mark as approved
+   - `/loom-plan create` to generate PLAN.md from the approved roadmap
 
 ### Step 5.5: Wiki Update (non-blocking)
 
@@ -329,50 +335,167 @@ Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md`
 
 ---
 
-## Command: `--init --plan`
+## Command: `init --plan`
 
-**Alias for `/loom-create-plan`.** Delegates directly to the standalone plan creation command.
+**Alias for `/loom-plan create`.** Delegates directly to the standalone plan creation command.
 
-Run `/loom-create-plan` with the same arguments. If `--auto` was passed, forward it.
+Run `/loom-plan create` with the same arguments. If `--auto` was passed, forward it.
 
 ---
 
-## Command: `--init --full`
+## Command: `init --full`
 
 Runs the complete two-tier pipeline interactively: roadmap → roadmap review → plan → plan review.
 
-1. Run `--init` (creates ROADMAP.md)
-2. Run `--review-roadmap` (3-agent review)
-3. Run `--review-integrate --roadmap` (apply findings)
-4. Run `--approve-roadmap` (mark approved)
-5. Run `/loom-create-plan` (creates PLAN.md v2 from roadmap)
-6. Suggest `/loom-review-plan` for plan review
+1. Run `init` (creates ROADMAP.md)
+2. Run `review` (3-agent review)
+3. Run `review-integrate --roadmap` (apply findings)
+4. Run `approve` (mark approved)
+5. Run `/loom-plan create` (creates PLAN.md v2 from roadmap)
+6. Suggest `/loom-plan review` for plan review
 
 Each step pauses for user input unless `--auto` is also set.
 
 ---
 
-## Command: `--approve-roadmap`
+## Command: `approve`
 
 1. Read ROADMAP.md frontmatter
 2. If status is already `approved`: "Roadmap is already approved."
 3. Update frontmatter: `status: approved`
 4. Append to changelog: "YYYY-MM-DD — Roadmap approved"
-5. Display: "Roadmap approved. Ready for plan generation via `/loom-create-plan`."
+5. Display: "Roadmap approved. Ready for plan generation via `/loom-plan create`."
 
 ---
 
-## Command: `--review-roadmap`
+## Command: `review`
 
-Delegates to `/loom-review-roadmap`. Spawn a general-purpose agent:
+Launches 4 specialized agents in parallel to review the ROADMAP.md from strategy, scope, feasibility, and UX perspectives. This is the roadmap-level equivalent of `/loom-plan review` (which reviews PLAN.md with 6 agents).
+
+If no arguments are provided, look for a ROADMAP.md in the current working directory. If the user provides a file path, use that instead.
+
+### Review Protocols
+
+Before starting, read:
+- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
+- `~/.claude/agents/protocols/validation-rules.md` — Section 7: Roadmap Validation Rules
+
+### Status Line Updates
+
+Write `.plan-execution/status.toon` per `execution-conventions.md` SS "Orchestration Status".
+
+### Step R0: Read protocols
+
+Read `~/.claude/agents/protocols/validation-rules.md` for roadmap validation rules and blocker gate enforcement.
+
+### Step R1: Find the roadmap
+
+Locate the roadmap document — check for ROADMAP.md, roadmap.md, or whatever the user specified. Read it to confirm it exists and has content.
+
+### Step R1a: Structural pre-check
+
+Before spawning agents, run roadmap validation stages 1-4 from `validation-rules.md` Section 7:
+- Stage 1 (Structure): frontmatter, required sections, title match
+- Stage 2 (Features): milestone assignments, entity references, key behaviors
+- Stage 3 (Milestones): cycle detection, self-deps, undefined references, forward references
+- Stage 4 (Data Model): entity-feature coverage, relationship endpoint validation
+
+If structural errors are found, include them as a **"Structural Issues"** section at the top of the final report, before agent results. The 4 agents still run — they catch strategic issues (scope overreach, feature conflicts, UX gaps) that structural validation doesn't cover. But surfacing structural errors first gives the most actionable feedback.
+
+### Step R1b: Check for project-specific agents
+
+Look for `.claude/orchestration.toml` in the project root. If it exists, read it and extract any agents registered under the `planning:` section with `phase: "roadmap"`. These will be spawned alongside the 4 built-in agents.
+
+### Step R2: Launch all agents in parallel
+
+Each agent must receive the full text of the roadmap in its prompt (agents cannot read files from your context). Send ALL Agent tool calls in a SINGLE message so they run concurrently:
+
+- **scope-feasibility-agent** — Review scope realism, feature conflicts, milestone sizing, constraint compliance, data model soundness
+- **feature-coverage-agent** — Audit features against competitors and best practices, identify gaps and over-engineering
+- **strategy-agent** — Evaluate vision, positioning, differentiation, feature prioritization (planning mode)
+- **ux-agent** — Evaluate user flows, state coverage, interaction patterns, UX coherence (planning mode)
+
+For each built-in agent, use `subagent_type` matching the agent name. For project-specific agents from `orchestration.toml`, use `subagent_type: "general-purpose"` and instruct the agent to read its own `.md` file from the path declared in `orchestration.toml`. Include the full roadmap content in each prompt along with the instruction: "Review this roadmap from your specialized perspective and produce your structured report."
+
+Project-specific agents with `outputRole: blocker` must pass (no blocking findings) before proceeding to synthesis.
+
+### Step R3: Synthesize results
+
+After all 4 agents return, produce a unified summary:
+
 ```
-"Read your instructions from ~/.claude/commands/loom-review-roadmap.md first.
- Review the roadmap at ROADMAP.md."
+## Roadmap Review Summary
+
+Four specialized agents reviewed the roadmap in parallel. Here's what each found:
+
+Agent: Scope Feasibility Agent
+Focus: scope realism, feature conflicts, milestone sizing, constraints
+Key Findings: [2-3 most important findings]
+────────────────────────────────────────
+Agent: Feature Coverage Agent
+Focus: competitive analysis, feature gaps, over-engineering
+Key Findings: [2-3 most important findings]
+────────────────────────────────────────
+Agent: Strategy Agent
+Focus: vision clarity, positioning, differentiation, feature prioritization
+Key Findings: [2-3 most important findings]
+────────────────────────────────────────
+Agent: UX Agent
+Focus: user flows, state coverage, interaction patterns, a11y targets
+Key Findings: [2-3 most important findings]
 ```
+
+### Step R4: Identify cross-cutting themes
+
+After the per-agent summaries, add a section highlighting findings that multiple agents flagged independently — these are the highest-confidence issues.
+
+### Step R5: Update roadmap status
+
+If the roadmap's frontmatter has `status: draft`, update it to `status: reviewed` and set `lastReviewed` to today's date. Do NOT change status if it's already `approved`.
+
+### Step R6: Offer next steps
+
+Ask the user if they want to:
+- Apply the recommendations to the roadmap automatically (via `/loom-roadmap review-integrate`)
+- Deep-dive into any specific agent's full report
+- Approve the roadmap as-is (via `/loom-roadmap approve`)
+- Discuss specific features interactively before proceeding
+
+### Step R7: Save Findings
+
+1. Create `.plan-history/reviews/` if it doesn't exist
+2. Save the synthesized report to `.plan-history/reviews/YYYY-MM-DD-roadmap-review.toon` using TOON format:
+
+```toon
+type: roadmap-review
+roadmapFile: ROADMAP.md
+reviewedAt: {ISO 8601}
+agentCount: {4 + project-specific count}
+structuralErrors: {count}
+structuralWarnings: {count}
+
+agents[N]{name,findingCount,blockingCount,warningCount,infoCount}:
+  scope-feasibility-agent,{N},{N},{N},{N}
+  feature-coverage-agent,{N},{N},{N},{N}
+  strategy-agent,{N},{N},{N},{N}
+  ux-agent,{N},{N},{N},{N}
+
+findings[N]{id,agent,severity,dimension,title,description,recommendation}:
+  {all findings from all agents, merged and deduped}
+
+crossCuttingThemes[N]{theme,findingIds,confidence}:
+  {themes flagged by multiple agents}
+```
+
+3. This enables `/loom-roadmap review-integrate` to read findings from disk in autonomous pipelines.
+
+### Review Output Format
+
+Use the structured summary format from Step R3, followed by cross-cutting themes and next steps. Keep each agent's summary concise (3-5 lines) — the full reports are available on request.
 
 ---
 
-## Command: `--review-integrate`
+## Command: `review-integrate`
 
 1. Read the most recent roadmap review file in `.plan-history/reviews/` (files matching `*-roadmap-review.toon`)
 2. Parse findings by severity (blocking → warning → info)
@@ -388,7 +511,7 @@ Delegates to `/loom-review-roadmap`. Spawn a general-purpose agent:
 
 ---
 
-## Command: `--status` (default)
+## Command: `status` (default)
 
 Pure data synthesis — no agents spawned. Read all sources and render a unified view.
 
@@ -472,19 +595,23 @@ Parallelization: Wave 1 runs 2 tracks in parallel
 - {contextual: continue execution / run tests / refine plan / etc.}
 ```
 
+### Step 6: Backlog Count
+
+If `.plan-execution/notes.toon` exists, count notes with `tag == backlog` and `status == pending`. Append to status output: `Backlog: {N} items ({H} high, {M} medium, {L} low)`
+
 ---
 
-## Command: `--validate [path]`
+## Command: `validate [path]`
 
 Run validation standalone. Validates a PLAN.md by default. Use `--roadmap` to validate a ROADMAP.md instead.
 
-### Roadmap mode (`--validate --roadmap`)
+### Roadmap mode (`validate --roadmap`)
 
 Run roadmap validation stages 1-4 from `validation-rules.md` Section 7. Output follows the same format as plan validation but checks features, milestones, and data model coverage instead of phases, dependencies, and file ownership.
 
 ### Plan mode (default)
 
-Useful before `/loom-review-plan` or `/loom-execute-plan`.
+Useful before `/loom-plan review` or `/loom-plan execute`.
 
 ### Default mode (stages 1-4)
 
@@ -537,15 +664,15 @@ Useful before `/loom-review-plan` or `/loom-execute-plan`.
 - [⚠] Phase 3: "loads in under 200ms" — no test mechanism
 
 ### Result: {N} errors, {N} warnings
-{If errors: "Plan has blocking issues. Run /loom-roadmap --refine to fix."}
-{If clean: "Plan is valid. Ready for /loom-review-plan or /loom-execute-plan."}
+{If errors: "Plan has blocking issues. Run /loom-roadmap refine to fix."}
+{If clean: "Plan is valid. Ready for /loom-plan review or /loom-plan execute."}
 ```
 
 ---
 
-## Command: `--refine [path]`
+## Command: `refine [path]`
 
-Execution-aware refinement with structured analysis and change tracking. Refines a PLAN.md by default. Use `--refine --roadmap` to refine a ROADMAP.md instead (delegates to `roadmap-builder-agent` in refinement mode, using the same review findings from `.plan-history/reviews/*-roadmap-review.toon`).
+Execution-aware refinement with structured analysis and change tracking. Refines a PLAN.md by default. Use `refine --roadmap` to refine a ROADMAP.md instead (delegates to `roadmap-builder-agent` in refinement mode, using the same review findings from `.plan-history/reviews/*-roadmap-review.toon`).
 
 ### Step 1: Execution State Check
 
@@ -657,13 +784,13 @@ Present the diff. On approval:
    ```
    ## YYYY-MM-DD — Plan refined
    - Fixed: {list of changes}
-   - Source: /loom-roadmap --refine {with cached findings | with fresh analysis}
+   - Source: /loom-roadmap refine {with cached findings | with fresh analysis}
    ```
 4. Update `.plan-history/roadmap.toon` with any new/changed milestones
 
 ---
 
-## Command: `--deps [path]`
+## Command: `deps [path]`
 
 Algorithmic dependency analysis — no agents spawned.
 
@@ -760,20 +887,20 @@ Length: 3 waves (minimum sequential execution)
 
 ---
 
-## Command: `--split [path]`
+## Command: `split [path]`
 
 1. Read the plan
 2. Run validation (`--validate`) — if there are structural issues, report them first
 3. Spawn `plan-builder-agent` (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first."
    - Include the current plan
-   - Instruction: "Identify natural boundaries (by domain, by layer, by milestone). Create sub-plans that reference shared contracts. Each sub-plan must be independently executable via /loom-execute-plan."
+   - Instruction: "Identify natural boundaries (by domain, by layer, by milestone). Create sub-plans that reference shared contracts. Each sub-plan must be independently executable via /loom-plan execute."
 4. Present the proposed split with rationale
 5. On approval: write sub-plan files (`PLAN-{name}.md`), update roadmap.toon
 
 ---
 
-## Command: `--diff`
+## Command: `diff`
 
 1. Find the most recent snapshot in `.plan-history/snapshots/`
 2. If no snapshots exist, check git history: `git log --oneline -1 -- PLAN.md`
@@ -787,7 +914,7 @@ Length: 3 waves (minimum sequential execution)
 
 ---
 
-## Command: `--history`
+## Command: `history`
 
 Read and display `.plan-history/changelog.md`. Format each entry clearly with date, action, and details.
 
@@ -798,11 +925,11 @@ git log --oneline --follow -- PLAN.md
 
 ---
 
-## Command: `--milestone`
+## Command: `milestone`
 
 Manage milestones in `.plan-history/roadmap.toon`.
 
-### `--milestone add "name"`
+### `milestone add "name"`
 1. Ask: target phase, dependencies (other milestone names), description
 2. Determine effort sizing from deliverable count:
    - S (Small): 1-3 deliverables, 1-2 criteria
@@ -812,13 +939,13 @@ Manage milestones in `.plan-history/roadmap.toon`.
 3. Append to roadmap.toon
 4. Append to changelog
 
-### `--milestone complete "name"`
+### `milestone complete "name"`
 1. Find the milestone in roadmap.toon
 2. Mark as completed with current timestamp
 3. Append to changelog
 4. If milestone corresponds to a phase, verify the phase's wave is `succeeded` in state.toon
 
-### `--milestone list`
+### `milestone list`
 1. Read roadmap.toon
 2. If milestones are empty but plan has phases, auto-derive:
    - One milestone per phase: "{Phase Name} Complete"
@@ -829,7 +956,7 @@ Manage milestones in `.plan-history/roadmap.toon`.
 
 ---
 
-## Command: `--snapshot`
+## Command: `snapshot`
 
 1. Copy `PLAN.md` to `.plan-history/snapshots/YYYY-MM-DD-plan.md`
 2. If `.plan-execution/state.toon` exists, save execution summary alongside
@@ -883,21 +1010,21 @@ This is additive — if agents don't support progress reporting, the orchestrato
 
 ## Error Handling
 
-- **No plan exists**: suggest `--init` to create one
+- **No plan exists**: suggest `init` to create one
 - **No .plan-history/**: create it on first write operation (any command that writes)
 - **No execution state**: show plan-derived status (all phases pending)
 - **Stale roadmap.toon**: reconcile against actual plan file, warn about drift
 - **Review files not found**: skip review integration, note it
-- **Validation failures in --init**: retry with plan-builder-agent (max 2), then ask user
+- **Validation failures in init**: retry with plan-builder-agent (max 2), then ask user
 - **Agent failure**: report which agent failed, continue with available results
-- **Large plan (>15 phases)**: warn about complexity, suggest `--split`
+- **Large plan (>15 phases)**: warn about complexity, suggest `split`
 
 ## Integration Points
 
-- `/loom-review-plan` → writes findings to `.plan-history/reviews/`
-- `/loom-execute-plan` → reads plan (validates stages 1-4 as gate), updates state.toon
-- `/loom-test-plan` → acceptance criteria from plan phases feed test spec generation
-- `--refine` → consumes review findings + agent analysis → updated plan
-- `--review-integrate` → automates roadmap review → roadmap update cycle
-- `--validate` → used by `--init`, `--refine`, and `/loom-execute-plan` as a pre-flight check
-- `--status` → reads plan + state.toon + roadmap.toon + changelog for unified view
+- `/loom-plan review` → writes findings to `.plan-history/reviews/`
+- `/loom-plan execute` → reads plan (validates stages 1-4 as gate), updates state.toon
+- `/loom-plan test` → acceptance criteria from plan phases feed test spec generation
+- `refine` → consumes review findings + agent analysis → updated plan
+- `review-integrate` → automates roadmap review → roadmap update cycle
+- `validate` → used by `init`, `refine`, and `/loom-plan execute` as a pre-flight check
+- `status` → reads plan + state.toon + roadmap.toon + changelog for unified view

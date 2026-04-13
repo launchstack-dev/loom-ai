@@ -8,12 +8,14 @@ $ARGUMENTS
 
 Parse arguments:
 - No flag + text: add a note (e.g., `/loom-note consider rate limiting on the API`)
-- `--tag <tag>`: categorize the note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki)
+- `--tag <tag>`: categorize the note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki, backlog)
 - `--priority <level>`: high, medium, low (default: medium)
 - `--review`: review all pending notes, group by tag, suggest where each belongs
 - `--assimilate`: review notes AND apply them — update roadmap/plan/context docs with relevant notes
 - `--list`: show all notes (pending + assimilated + dismissed)
 - `--dismiss <id>`: mark a note as dismissed (won't appear in review)
+- `--backlog`: show only backlog-tagged notes, sorted by priority
+- `--promote <id>`: move a backlog item to ROADMAP.md feature list
 - `--clear`: clear all dismissed notes from the log
 
 ## Instructions
@@ -33,6 +35,7 @@ When the user provides text (with or without `--tag` / `--priority`):
    - Contains "security", "auth", "injection", "xss" → `security`
    - Contains "debt", "refactor", "cleanup", "hack" → `debt`
    - Contains "wiki", "knowledge", "document this", "remember that" → `wiki`
+   - Contains "backlog", "later", "someday", "future", "v2", "v3" → `backlog`
    - Otherwise → `idea`
 4. Append the note to `notes.toon`.
 5. Confirm briefly: `Noted: [{tag}] {first 60 chars}... (#{id})`
@@ -101,6 +104,40 @@ Placement suggestions follow these rules:
 | `debt` | PLAN.md (tech debt phase) | If actionable now |
 | `debt` | Dismiss suggestion | If aspirational / not blocking |
 | `wiki` | `.loom/wiki/` (via wiki-ingest-agent) | Always — queued for wiki ingestion |
+| `backlog` | ROADMAP.md (feature backlog) | When promoted via `--promote` |
+
+### Viewing Backlog (`--backlog`)
+
+1. Read `.plan-execution/notes.toon`.
+2. Filter to `tag == backlog` AND `status == pending`.
+3. Group by priority (high, medium, low).
+4. Display:
+
+```
+## Backlog ({N} items)
+
+HIGH:
+- [#042] Debugging agent — scientific method with persistent state
+- [#043] UI-specific workflows — design spec, implementation, audit
+
+MEDIUM:
+- [#044] Developer profiling — behavioral analysis, preference adaptation
+
+LOW:
+(none)
+
+Promote to roadmap: /loom-note --promote 042
+```
+
+### Promoting Backlog Items (`--promote <id>`)
+
+1. Read `.plan-execution/notes.toon`, find note by id.
+2. Verify it's tagged `backlog` and `status == pending`. If not: "Note #{id} is not a pending backlog item."
+3. Read ROADMAP.md. If it doesn't exist: "No ROADMAP.md found. Create one with `/loom-roadmap init` first."
+4. Find the feature list section in ROADMAP.md.
+5. Append the note content as a new feature entry.
+6. Update note status to `assimilated` with `assimilatedTo: ROADMAP.md`.
+7. Confirm: "Promoted #{id} to ROADMAP.md feature backlog: {first 60 chars}"
 
 ### Assimilating Notes (`--assimilate`)
 
