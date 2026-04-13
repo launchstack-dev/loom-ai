@@ -102,3 +102,5 @@ summary:
 4. **Use the plan's tech stack** — if the plan says Vitest, write specs for Vitest. If it says Jest, use Jest.
 5. **Include the "why"** — each test description should make it obvious which plan requirement it validates
 6. **Flag ambiguity** — if the plan is vague about behavior (e.g., "handles errors gracefully"), list it as a coverage gap with a suggested clarification
+7. **Don't over-specify** — generate criteria for stated requirements only. Don't invent edge cases, performance targets, or error scenarios the plan doesn't mention. If a reasonable criterion is missing, flag it as an `info` issue rather than adding it silently.
+8. **Document interpretations** — if the plan's acceptance criteria are vague (e.g., "users can log in"), state the specific interpretation you're using (e.g., "email + password, returns JWT, 401 on invalid") in integrationNotes

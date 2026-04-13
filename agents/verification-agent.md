@@ -72,10 +72,19 @@ durationMs: 0
 ## Verification Checks
 
 ### Standard checks (run in order):
-1. **Typecheck** — `tsc --noEmit`, `mypy`, `cargo check`, etc.
-2. **Tests** — `npm test`, `pytest`, `cargo test`, etc.
-3. **Lint** — `eslint`, `ruff`, `clippy`, etc.
-4. **Ownership drift** — `git diff --name-only` vs declared boundaries
+
+1. **Read verification pipeline from config.** Check for `.claude/orchestration.toml` at the project root. If a `[domain].verificationPipeline` array exists, execute those commands in order instead of the defaults below. Example:
+   ```toml
+   [domain]
+   verificationPipeline = ["tsc --noEmit", "bun run lint", "bun test"]
+   ```
+
+2. **If no config, auto-detect and run defaults:**
+   - **Typecheck** — `tsc --noEmit`, `mypy`, `cargo check`, etc. (detected from package.json, pyproject.toml, Cargo.toml)
+   - **Tests** — `npm test`, `pytest`, `cargo test`, etc.
+   - **Lint** — `eslint`, `ruff`, `clippy`, etc.
+
+3. **Ownership drift** — `git diff --name-only` vs declared boundaries (always runs regardless of config)
 
 ### Status determination:
 - **success**: All checks pass, no ownership drift

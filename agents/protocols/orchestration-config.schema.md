@@ -167,6 +167,28 @@ json-deep-equal = 1.0
 semantic-html = 0.95
 row-diff = 1.0
 text-diff = 0.99
+
+# ─────────────────────────────────────────────────────────────
+# Wiki — persistent knowledge base configuration
+# ─────────────────────────────────────────────────────────────
+
+[wiki]
+enabled = true                  # set to false to disable all wiki features
+path = ".loom/wiki"             # wiki root directory (git-tracked)
+maxPages = 500                  # page count circuit breaker
+stalenessDays = 30              # days before a page is marked stale
+archiveThresholdMultiplier = 3  # pages stale for stalenessDays * this value are archived
+autoLint = true                 # run lint checks automatically
+lintSchedule = "post-wave"      # "post-wave" | "post-execution" | "manual"
+
+# ─────────────────────────────────────────────────────────────
+# Domain — abstraction layer for non-code projects
+# ─────────────────────────────────────────────────────────────
+
+[domain]
+type = "code"                   # "code" | "research" | "creative" | "business" | custom
+contractType = "type-files"     # "type-files" | "ontology" | "glossary" | "schema"
+verificationPipeline = ["tsc --noEmit", "bun run lint", "bun test"]  # replaces hardcoded checks
 ```
 
 ## How Orchestrators Use This

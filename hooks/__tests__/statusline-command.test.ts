@@ -39,28 +39,34 @@ function runScript(cwd: string): string {
 }
 
 /**
- * Format a Date as a local-time ISO-like string without timezone suffix.
- * The statusline script's BSD date parser interprets timestamps as local time,
- * so we must produce local time to get correct staleness calculations.
- * Format: 2026-04-09T10:00:00Z (the Z is cosmetic -- BSD date strips it)
- */
-function toLocalISO(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}Z`;
-}
-
-/**
- * Generate a fresh ISO timestamp (within the staleness window).
+ * Generate a fresh UTC ISO timestamp (within the staleness window).
+ * The Node.js renderer uses `new Date(updatedAt)` which interprets Z as UTC.
  */
 function freshTimestamp(): string {
-  return toLocalISO(new Date());
+  return new Date().toISOString();
 }
 
 /**
- * Generate a stale ISO timestamp (older than 300s).
+ * Generate a stale UTC ISO timestamp (older than 300s).
  */
 function staleTimestamp(): string {
-  return toLocalISO(new Date(Date.now() - 600 * 1000)); // 10 minutes ago
+  return new Date(Date.now() - 600 * 1000).toISOString();
+}
+
+/**
+ * Extract the Loom status line (Line 2, starts with 🧵) from renderer output.
+ * The renderer outputs Line 1 (session/CWD) + optional Line 2 (Loom state).
+ */
+function getLoomLine(output: string): string {
+  const lines = output.split("\n");
+  return lines.find((l) => l.includes("\u{1F9F5}")) ?? "";
+}
+
+/**
+ * Strip ANSI escape codes for easier assertion matching.
+ */
+function stripAnsi(s: string): string {
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 describe("statusline-command.sh", () => {
@@ -92,14 +98,15 @@ updatedAt: ${freshTimestamp()}
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("execute-plan");
-      expect(output).toContain("implementing");
-      expect(output).toContain("2/4");
-      expect(output).toContain("agents(3/5)");
+      expect(loom).toContain("execute-plan");
+      expect(loom).toContain("implementing");
+      expect(loom).toContain("2/4");
+      expect(loom).toContain("agents(3/5)");
     });
 
-    it("includes FAILED count when agentsFailed > 0", () => {
+    it("includes FAIL count when agentsFailed > 0", () => {
       writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
 phase: wiring
 wave: 2
@@ -112,8 +119,9 @@ updatedAt: ${freshTimestamp()}
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("FAILED:1");
+      expect(loom).toContain("FAIL:1");
     });
 
     it("includes findings count when findings > 0", () => {
@@ -129,11 +137,12 @@ updatedAt: ${freshTimestamp()}
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("findings:7");
+      expect(loom).toContain("findings:7");
     });
 
-    it("produces single-line output under 120 chars", () => {
+    it("produces Loom line under 120 chars", () => {
       writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
 phase: implementing
 wave: 2
@@ -146,9 +155,10 @@ updatedAt: ${freshTimestamp()}
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output.split("\n")).toHaveLength(1);
-      expect(output.length).toBeLessThanOrEqual(120);
+      expect(loom.split("\n")).toHaveLength(1);
+      expect(loom.length).toBeLessThanOrEqual(120);
     });
   });
 
@@ -166,12 +176,13 @@ status: approved
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
       // Should be in idle mode -- showing plan status and branch
-      expect(output).toContain("approved");
-      expect(output).toContain("main");
+      expect(loom).toContain("approved");
+      expect(loom).toContain("main");
       // Should also show "ok" since phase was complete
-      expect(output).toContain("ok");
+      expect(loom).toContain("ok");
     });
 
     it("renders idle output when status.toon is missing", () => {
@@ -182,9 +193,10 @@ status: draft
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("draft");
-      expect(output).toContain("main");
+      expect(loom).toContain("draft");
+      expect(loom).toContain("main");
     });
 
     it("includes note count in idle mode", () => {
@@ -200,8 +212,9 @@ note3: Review docs
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("3 notes");
+      expect(loom).toContain("3 notes");
     });
 
     it("shows only branch when plan and notes are absent", () => {
@@ -210,19 +223,20 @@ note3: Review docs
       fs.mkdirSync(path.join(tmpDir, ".plan-execution"), { recursive: true });
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toBe("main");
+      expect(loom).toContain("main");
     });
   });
 
   describe("graceful fallback", () => {
-    it("returns empty output when no project files exist at all", () => {
+    it("returns no Loom line when no project files exist at all", () => {
       // Create a tmp dir that is NOT a git repo and has no PLAN.md / .plan-execution
       const bareDir = makeTmpDir();
       try {
         const output = runScript(bareDir);
-        // Should output empty string (no project root found)
-        expect(output).toBe("");
+        // No Loom line (no project root found)
+        expect(getLoomLine(output)).toBe("");
       } finally {
         fs.rmSync(bareDir, { recursive: true, force: true });
       }
@@ -256,10 +270,11 @@ status: approved
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
       // Should fall back to idle mode
-      expect(output).toContain("approved");
-      expect(output).toContain("main");
+      expect(loom).toContain("approved");
+      expect(loom).toContain("main");
     });
   });
 });

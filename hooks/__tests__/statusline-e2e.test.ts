@@ -31,21 +31,34 @@ function runScript(cwd: string): string {
 }
 
 /**
- * Format a Date as a local-time ISO-like string for BSD date compatibility.
- * The shell script uses `date -j -f '%Y-%m-%d %H:%M:%S'` which interprets
- * timestamps as local time on macOS.
+ * Generate a fresh UTC ISO timestamp (within the staleness window).
+ * The Node.js renderer uses `new Date(updatedAt)` which interprets Z as UTC.
  */
-function toLocalISO(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}Z`;
-}
-
 function freshTimestamp(): string {
-  return toLocalISO(new Date());
+  return new Date().toISOString();
 }
 
+/**
+ * Generate a stale UTC ISO timestamp (older than 300s).
+ */
 function staleTimestamp(): string {
-  return toLocalISO(new Date(Date.now() - 600 * 1000));
+  return new Date(Date.now() - 600 * 1000).toISOString();
+}
+
+/**
+ * Extract the Loom status line (starts with 🧵) from renderer output.
+ * The renderer outputs Line 1 (session/CWD) + optional Line 2 (Loom state).
+ */
+function getLoomLine(output: string): string {
+  const lines = output.split("\n");
+  return lines.find((l) => l.includes("\u{1F9F5}")) ?? "";
+}
+
+/**
+ * Strip ANSI escape codes for easier assertion matching.
+ */
+function stripAnsi(s: string): string {
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 describe("statusline E2E integration", () => {
@@ -98,12 +111,16 @@ percentComplete: 60
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      // Contract format: "[command] phase wave/total agents(done/total)"
-      expect(output).toMatch(/^execute-plan implementing 2\/4 agents\(3\/5\)$/);
-      // Single line, within max length
-      expect(output.split("\n")).toHaveLength(1);
-      expect(output.length).toBeLessThanOrEqual(120);
+      // Contract format: Loom line contains command, phase, wave/total, agents
+      expect(loom).toContain("execute-plan");
+      expect(loom).toContain("implementing");
+      expect(loom).toContain("2/4");
+      expect(loom).toContain("agents(3/5)");
+      // Loom line is single line, within max length
+      expect(loom.split("\n")).toHaveLength(1);
+      expect(loom.length).toBeLessThanOrEqual(120);
     });
 
     it("includes failures and findings when present in full project context", () => {
@@ -129,14 +146,15 @@ updatedAt: ${freshTimestamp()}
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
       // Active mode should show all segments
-      expect(output).toContain("review-code");
-      expect(output).toContain("reviewing");
-      expect(output).toContain("1/1");
-      expect(output).toContain("agents(2/3)");
-      expect(output).toContain("FAILED:1");
-      expect(output).toContain("findings:7");
+      expect(loom).toContain("review-code");
+      expect(loom).toContain("reviewing");
+      expect(loom).toContain("1/1");
+      expect(loom).toContain("agents(2/3)");
+      expect(loom).toContain("FAIL:1");
+      expect(loom).toContain("findings:7");
     });
   });
 
@@ -165,8 +183,9 @@ note2: Second note
 `);
 
       const activeOutput = runScript(tmpDir);
-      expect(activeOutput).toContain("execute-plan");
-      expect(activeOutput).toContain("implementing");
+      const activeLoom = stripAnsi(getLoomLine(activeOutput));
+      expect(activeLoom).toContain("execute-plan");
+      expect(activeLoom).toContain("implementing");
 
       // Now make it stale by rewriting with an old timestamp
       const staleStatusContent = `command: execute-plan
@@ -182,14 +201,15 @@ updatedAt: ${staleTimestamp()}
       writeFixture(tmpDir, ".plan-execution/status.toon", staleStatusContent);
 
       const idleOutput = runScript(tmpDir);
+      const idleLoom = stripAnsi(getLoomLine(idleOutput));
 
       // Should now be in idle mode -- no active-mode segments
-      expect(idleOutput).not.toContain("implementing");
-      expect(idleOutput).not.toContain("agents(");
+      expect(idleLoom).not.toContain("implementing");
+      expect(idleLoom).not.toContain("agents(");
       // Should show idle indicators
-      expect(idleOutput).toContain("in-progress");
-      expect(idleOutput).toContain("main");
-      expect(idleOutput).toContain("2 notes");
+      expect(idleLoom).toContain("in-progress");
+      expect(idleLoom).toContain("main");
+      expect(idleLoom).toContain("2 notes");
     });
   });
 
@@ -210,15 +230,16 @@ note3: Third entry
 `);
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
-      expect(output).toContain("in-progress");
-      expect(output).toContain("main");
-      expect(output).toContain("3 notes");
+      expect(loom).toContain("in-progress");
+      expect(loom).toContain("main");
+      expect(loom).toContain("3 notes");
       // No active-mode artifacts
-      expect(output).not.toContain("agents(");
-      expect(output).not.toContain("wave");
-      expect(output.split("\n")).toHaveLength(1);
-      expect(output.length).toBeLessThanOrEqual(120);
+      expect(loom).not.toContain("agents(");
+      // Loom line is single line, within max length
+      expect(loom.split("\n")).toHaveLength(1);
+      expect(loom.length).toBeLessThanOrEqual(120);
     });
   });
 
@@ -307,9 +328,10 @@ note3: C
       fs.mkdirSync(path.join(tmpDir, ".plan-execution"), { recursive: true });
 
       const output = runScript(tmpDir);
+      const loom = stripAnsi(getLoomLine(output));
 
       // Should be idle mode with just the branch
-      expect(output).toBe("main");
+      expect(loom).toContain("main");
     });
   });
 });

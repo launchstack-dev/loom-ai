@@ -93,6 +93,7 @@ If convergence is enabled, also read:
        "PreToolUse": [
          {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/file-ownership.ts", "timeout": 5000}]},
          {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/contract-lock.ts", "timeout": 5000}]},
+         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/wiki-write-guard.ts", "timeout": 5000}]},
          {"matcher": "Agent", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]}
        ],
        "PostToolUse": [
@@ -276,6 +277,24 @@ Log stage result in `stageHistory`.
 **If `--stop-after execute`:** display execution summary and stop.
 
 Check circuit breakers before proceeding.
+
+---
+
+### Step 3.25: Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to update the wiki with execution results:
+
+```
+subagent_type: "general-purpose"
+```
+Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
+- Event type: `wave-complete`
+- Event data: all wave summaries from `.plan-execution/`
+- Wiki path: `.loom/wiki`
+
+**This step is non-blocking.** If wiki-maintainer-agent fails: (1) Record the failure in `.plan-execution/pipeline-state.toon` under `wikiUpdateStatus: failed` with the error summary, (2) Increment a `wikiConsecutiveFailures` counter in pipeline-state.toon, (3) If `wikiConsecutiveFailures >= 2`, add a visible note to the execution summary: "Wiki updates have failed for {N} consecutive waves. Run `/loom-lint --wiki` to diagnose." (4) Continue to the next step. Wiki maintenance never gates the pipeline.
+
+Record agents spawned. Do NOT count wiki maintenance against circuit breaker thresholds.
 
 ---
 
@@ -551,6 +570,13 @@ Agents spawned: {agentsSpawned} / {maxAgents}
 - Critical findings: 0
 - Test pass rate: 100%
 - Typecheck: PASS
+
+### Wiki Updates
+- Status: {SUCCESS | FAILED | SKIPPED}
+- Pages created: {N}
+- Pages updated: {M}
+- Execution log entries: {K}
+- Consecutive failures: {wikiConsecutiveFailures or 0}
 
 All acceptance criteria satisfied. Code is ready for human review.
 ```

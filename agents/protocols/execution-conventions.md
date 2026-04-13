@@ -285,3 +285,62 @@ Orchestrators write to `.plan-history/` when:
 - Plan is modified after review → appends to changelog
 
 This directory syncs via git, survives worktree cleanup, and is available in future sessions.
+
+## Wiki Integration
+
+The project wiki (`.loom/wiki/`) is a persistent knowledge base that compounds across executions. See `wiki-conventions.md` for the full specification.
+
+### Wiki Maintenance Triggers
+
+The orchestrator spawns wiki-maintainer-agent at specific execution events. See `wiki-conventions.md § Wiki Maintenance Triggers` for the full trigger table and what the maintainer does at each point.
+
+Wiki maintenance is **non-blocking**: if wiki-maintainer-agent fails, the orchestrator logs a warning and continues. Wiki health is additive, never gating.
+
+### Execution Log Entries
+
+These execution events are recorded in `.loom/wiki/execution-log.toon`:
+
+- Wave completions (with summary of what was built)
+- Quality gate results (pass/fail with context)
+- Circuit breaker trips (which breaker, why)
+- Human approvals and rejections (with rationale)
+- Fix cycle outcomes (what was fixed, what remains)
+- Convergence milestones (stalls, regressions, completion)
+
+Routine events with no surprises get a single `execution` entry. Decisions, pivots, and escalations get more detailed entries with the `detail` field capturing rationale.
+
+### Wiki Content in Rolling Context
+
+Orchestrators MAY include a wiki summary section in `rolling-context.md` for agents that benefit from project knowledge beyond the immediate wave:
+
+```markdown
+## Project Knowledge [WIKI]
+Key components: auth-middleware (JWT validation), user-service (CRUD + permissions).
+Key decisions: JWT over sessions (performance), Postgres over Redis (simplicity).
+Known issues: auth-middleware lacks rate limiting (tech-debt-rate-limiting).
+```
+
+This section should be kept under 1k tokens and only include pages relevant to the current wave's tasks. It is refreshed from wiki pages at the start of each wave.
+
+## Domain Abstraction
+
+The `[domain]` section in `orchestration.toml` enables Loom to work beyond code projects. See `orchestration-config.schema.md` for the full config schema.
+
+### Configurable Verification Pipeline
+
+Instead of hardcoded typecheck/lint/test commands, the verification-agent reads `[domain].verificationPipeline` from orchestration.toml:
+
+```toml
+[domain]
+verificationPipeline = ["tsc --noEmit", "bun run lint", "bun test"]
+```
+
+If no `[domain]` section exists, the verification-agent falls back to auto-detection based on manifest files (current behavior). This ensures backward compatibility.
+
+### Domain Types
+
+The `[domain].type` field declares the project domain. Currently supported:
+- `code` (default) — software projects with type files, tests, linting
+- `research`, `creative`, `business` — declared for future agent packs
+
+The domain type affects wiki page semantics (what "component" means) but not the orchestration machinery. See `wiki-conventions.md` for domain-specific page interpretations.

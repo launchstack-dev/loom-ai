@@ -1,0 +1,23 @@
+title: Karpathy LLM Wiki Pattern — Ideas for Loom
+source: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+author: Andrej Karpathy
+analyzedDate: 2026-04-12
+status: proposal
+
+corePremise: Knowledge should be compiled once and kept current, not re-derived every time. RAG rediscovers from scratch on every query; a persistent wiki compounds.
+
+sourceArchitecture:
+  layers[3]: raw sources (immutable), wiki (LLM-maintained markdown), schema (governance)
+  specialFiles[2]: index.md (categorical catalog), log.md (append-only chronological record)
+  operations[3]: ingest (process source, touch 10-15 pages), query (search + synthesize + optionally file back), lint (health checks for contradictions/orphans/gaps)
+
+ideas[7]{id,title,loomGap,opportunity,impact}:
+  project-memory,Compounding Project Memory,rolling-context is ephemeral and execution-scoped — knowledge evaporates between runs,Persistent .loom/wiki/ maintained across executions with index.toon and log.toon,Agents start warm not cold — Wave 3 of execution #2 knows lessons from execution #1
+  lint-pattern,Proactive Structural Health Checks,Verification is within-wave only — no cross-artifact structural health sweeps,lint-agent for contract drift + plan-reality divergence + orphaned exports + stale context + unresolved review debt,Catch rot before it compounds across waves
+  ingest-pipeline,Brownfield Ingest Pipeline,/loom-init is one-shot producing two flat files — no interlinked understanding,Make init an ingest pipeline producing structured wiki pages per component with cross-refs,Richer onboarding + incremental updates via /loom-ingest for ongoing changes
+  query-filing,Debugging Sessions as Knowledge,Agent discoveries live only in context windows — future agents rediscover from scratch,Auto-file non-trivial solutions (convergence stalls resolved + tricky integrations + workarounds) into wiki,Convergence and implementation get faster over time as solution patterns accumulate
+  co-evolving-schema,Co-Evolving Orchestration Governance,orchestration.toml is relatively static — set once during init,Config evolves based on execution outcomes — ownership patterns + reviewer weights + wave sizing auto-adjust,System learns from its own history
+  bookkeeping-agent,Dedicated Coordination Maintenance,Hooks enforce rules but nobody proactively maintains coordination artifacts between waves,Coordination-maintenance agent runs between waves updating rolling context + resolving stale requests + verifying state,The bookkeeping agent that never gets bored
+  execution-log,Narrative Execution History,Wave summaries track state not rationale — agents know where system is but not why or what failed,Append-only execution-log.toon with decisions + pivots + rationale in chronological order,Readable narrative for future agents and humans — not just state snapshots
+
+unifyingPrinciple: Loom is the orchestrator; the agents are the workforce; the project wiki is the institutional memory.

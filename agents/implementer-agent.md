@@ -103,6 +103,8 @@ durationMs: 0
 - Include error handling at system boundaries (user input, external APIs)
 - No scope creep — implement exactly what's specified
 - No TODOs or placeholder code — if you can't complete something, report it as an issue
+- **Surface assumptions:** In your first progress update, state your interpretation of the task. If the spec is ambiguous about data types, error behavior, or edge cases, report it as an `info` issue rather than guessing silently.
+- **Verify before returning:** Before returning your AgentResult, check your deliverables against the acceptance criteria you received. For each criterion, confirm it's met or report it as an issue. Don't rely solely on verification-agent downstream.
 
 ## What NOT to Do
 

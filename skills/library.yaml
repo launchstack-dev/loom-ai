@@ -82,6 +82,35 @@ library:
       description: "Natural-language routing skill for /loom-quick — triggers on \"quickly fix\", \"just do\", \"quick task\" patterns"
       source: skills/loom-quick-routing.md
 
+    # Wiki protocols
+    - name: wiki-page-schema
+      description: Schema for individual wiki pages — TOON frontmatter format, categories, cross-references, staleness model
+      source: agents/protocols/wiki-page.schema.md
+
+    - name: wiki-index-schema
+      description: Schema for wiki index.toon — categorical catalog of all wiki pages
+      source: agents/protocols/wiki-index.schema.md
+
+    - name: wiki-log-schema
+      description: Schema for wiki log.toon — append-only chronological record of wiki operations
+      source: agents/protocols/wiki-log.schema.md
+
+    - name: execution-log-schema
+      description: Schema for execution-log.toon — narrative decision, pivot, and milestone history
+      source: agents/protocols/execution-log.schema.md
+
+    - name: wiki-conventions
+      description: Conventions for wiki agents — directory structure, page format, cross-ref rules, staleness model, atomic writes
+      source: agents/protocols/wiki-conventions.md
+
+    - name: wiki-lint-rules
+      description: Structural health check rules for wiki and execution artifacts — contradictions, orphans, drift, staleness
+      source: agents/protocols/wiki-lint-rules.md
+
+    - name: behavioral-guidelines
+      description: Karpathy-inspired behavioral guardrails for agents — assumption surfacing, simplicity, surgical changes, goal-driven verification
+      source: agents/protocols/behavioral-guidelines.md
+
   agents:
     # Planning agents
     - name: feature-coverage-agent
@@ -231,6 +260,27 @@ library:
       description: Generates README, API docs, ADRs, onboarding guides, and module documentation
       source: agents/docs-generator.md
 
+    # Wiki agents
+    - name: wiki-maintainer-agent
+      description: Maintains project wiki — updates pages, cross-references, index after execution events and code changes
+      source: agents/wiki-maintainer-agent.md
+      requires: [skill:wiki-conventions, skill:wiki-page-schema]
+
+    - name: wiki-ingest-agent
+      description: Processes new sources into structured wiki pages with cross-references — codebase, docs, execution results, notes
+      source: agents/wiki-ingest-agent.md
+      requires: [skill:wiki-conventions, skill:wiki-page-schema]
+
+    - name: wiki-lint-agent
+      description: Periodic wiki health check — contradictions, orphaned pages, stale content, missing cross-refs, plan-reality drift
+      source: agents/wiki-lint-agent.md
+      requires: [skill:wiki-lint-rules, skill:wiki-conventions]
+
+    - name: wiki-query-agent
+      description: Searches wiki and synthesizes answers from multiple pages — follows cross-references, optionally files answers back
+      source: agents/wiki-query-agent.md
+      requires: [skill:wiki-conventions]
+
     # Extended review agents
     - name: performance-reviewer
       description: Performance audit - algorithmic complexity, N+1 queries, memory leaks, bundle size, caching
@@ -330,13 +380,23 @@ library:
       requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-converge, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
 
     - name: loom-init
-      description: Brownfield project onboarding - analyze codebase, generate CLAUDE.md and CONTEXT.md, chain into roadmap
+      description: Brownfield project onboarding - analyze codebase, generate CLAUDE.md, CONTEXT.md, and project wiki
       source: commands/loom-init.md
-      requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor]
+      requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor, agent:wiki-ingest-agent, agent:wiki-lint-agent]
 
     - name: loom-note
-      description: Accumulate notes during development, review and assimilate into roadmap/plan/context docs
+      description: Accumulate notes during development, review and assimilate into roadmap/plan/context docs or wiki
       source: commands/loom-note.md
+
+    - name: loom-ingest
+      description: Incremental wiki ingest — process code changes, external docs, or execution results into wiki pages
+      source: commands/loom-ingest.md
+      requires: [agent:wiki-ingest-agent, agent:wiki-maintainer-agent]
+
+    - name: loom-lint
+      description: Structural health check — wiki integrity, contract drift, plan-reality divergence
+      source: commands/loom-lint.md
+      requires: [agent:wiki-lint-agent, skill:wiki-lint-rules]
 
     - name: loom-create-agent
       description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines

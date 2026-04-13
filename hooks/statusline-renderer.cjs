@@ -277,14 +277,14 @@ function renderActiveLine(active, planMeta, pipeline, root) {
 function renderIdleLine(planMeta, statusFile, root) {
   const parts = [];
 
-  // Plan name + status with completion bar
-  if (planMeta && planMeta.name) {
-    let planSeg = planMeta.name;
+  // Plan status (with optional name and phase/wave counts)
+  if (planMeta && (planMeta.name || planMeta.status)) {
+    let planSeg = planMeta.name || '';
     if (planMeta.status) {
       const icon = planMeta.status === 'completed' ? '\x1b[32m\u2713\x1b[0m\x1b[34m'
         : planMeta.status === 'in-progress' ? '\x1b[33m\u25B6\x1b[0m\x1b[34m'
         : '';
-      planSeg += ` ${icon} ${planMeta.status}`;
+      planSeg = planSeg ? `${planSeg} ${icon} ${planMeta.status}` : `${icon} ${planMeta.status}`.trim();
     }
     if (planMeta.totalPhases > 0) {
       planSeg += ` (${planMeta.totalPhases} phases, ${planMeta.totalWaves} waves)`;
@@ -296,12 +296,24 @@ function renderIdleLine(planMeta, statusFile, root) {
   try {
     if (fs.existsSync(statusFile)) {
       const content = fs.readFileSync(statusFile, 'utf-8');
-      const stage = toonGet(content, 'stage') || toonGet(content, 'stageName');
+      const stage = toonGet(content, 'stage') || toonGet(content, 'stageName') || toonGet(content, 'phase');
       const cmd = toonGet(content, 'command');
       if (stage === 'complete' || stage === 'Complete') {
-        parts.push(`\x1b[32mlast: ${cmd || 'pipeline'} \u2713\x1b[0m\x1b[34m`);
+        parts.push(`\x1b[32mlast: ${cmd || 'pipeline'} ok\x1b[0m\x1b[34m`);
       } else if (stage === 'escalated' || stage === 'failed') {
         parts.push(`\x1b[31mlast: ${cmd || 'pipeline'} \u2717\x1b[0m\x1b[34m`);
+      }
+    }
+  } catch {}
+
+  // Note count from notes.toon
+  try {
+    const notesFile = path.join(path.dirname(statusFile), 'notes.toon');
+    if (fs.existsSync(notesFile)) {
+      const notesContent = fs.readFileSync(notesFile, 'utf-8');
+      const noteCount = notesContent.split('\n').filter(l => /^\s*note\d+:/.test(l)).length;
+      if (noteCount > 0) {
+        parts.push(`${noteCount} notes`);
       }
     }
   } catch {}
@@ -359,9 +371,13 @@ function readActiveState(statusFile) {
     if (!updatedAt) return null;
     const fileTime = new Date(updatedAt).getTime();
     if (isNaN(fileTime) || (Date.now() - fileTime) / 1000 > STALENESS_SECONDS) return null;
+    const command = toonGet(content, 'command') || toonGet(content, 'stage');
+    const phase = toonGet(content, 'phase') || toonGet(content, 'stageName');
+    // Require at least command or phase for active mode; otherwise fall back to idle
+    if (!command && !phase) return null;
     return {
-      command: toonGet(content, 'command') || toonGet(content, 'stage'),
-      phase: toonGet(content, 'phase') || toonGet(content, 'stageName'),
+      command,
+      phase,
       wave: toonGet(content, 'wave'),
       totalWaves: toonGet(content, 'totalWaves'),
       agentsDone: toonGet(content, 'agentsDone'),

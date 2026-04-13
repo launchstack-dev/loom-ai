@@ -66,8 +66,20 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
 | `/loom-converge --resume` | Resume convergence from saved state |
 | `/loom-converge --status` | Show current convergence state |
+| `/loom-ingest` | Incremental wiki ingest on uncommitted changes |
+| `/loom-ingest --source <path>` | Ingest a specific file or directory into wiki |
+| `/loom-ingest --url <url>` | Ingest an external document into wiki |
+| `/loom-ingest --execution` | Ingest latest execution results into wiki |
+| `/loom-ingest --full` | Full re-ingest of entire codebase |
+| `/loom-ingest --dry-run` | Preview wiki changes without writing |
+| `/loom-lint` | Run all structural health checks (wiki + execution) |
+| `/loom-lint --wiki` | Wiki-only checks (orphans, stale, cross-refs, contradictions) |
+| `/loom-lint --contracts` | Contract drift detection |
+| `/loom-lint --plan` | Plan-reality divergence |
+| `/loom-lint --fix` | Auto-fix where possible |
+| `/loom-lint --severity <level>` | Filter by minimum severity (blocking, warning, info) |
 | `/loom-note <text>` | Add a development note (auto-tagged) |
-| `/loom-note --tag <tag> <text>` | Add a tagged note (architecture, bug, idea, decision, concern, perf, security, ux, debt) |
+| `/loom-note --tag <tag> <text>` | Add a tagged note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki) |
 | `/loom-note --priority high <text>` | Add a high-priority note |
 | `/loom-note --review` | Review pending notes grouped by tag, suggest placement |
 | `/loom-note --assimilate` | Review notes AND apply them to roadmap/plan/context docs |
@@ -186,6 +198,12 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 - `delta-analyzer` — Triages deltas: noise vs actionable, prioritizes fixes
 - `convergence-driver` — Iteration orchestrator with circuit breakers (stall, regression, budget)
 
+**Wiki** (spawned by `/loom-ingest`, `/loom-lint`, and automatically during execution):
+- `wiki-maintainer-agent` — Updates wiki pages, cross-references, index after execution events and code changes
+- `wiki-ingest-agent` — Processes new sources into structured wiki pages (codebase, docs, execution results, notes)
+- `wiki-lint-agent` — Periodic health checks: contradictions, orphans, staleness, plan-reality drift
+- `wiki-query-agent` — Searches wiki, synthesizes answers from multiple pages, optionally files answers back
+
 **Utility:**
 - `meta-agent` — Generates new agents, skills, and commands from descriptions
 - `tdd-coach` — Drives test-driven development (red-green-refactor cycle)
@@ -276,6 +294,22 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
 ### File Structure (during execution)
 
 ```
+.loom/                            — Persistent knowledge base (git-tracked)
+  wiki/
+    index.toon                — Categorical catalog of all wiki pages
+    log.toon                  — Append-only operation log
+    execution-log.toon        — Narrative decision/pivot history
+    pages/
+      component-*.md          — Code modules, services, components
+      concept-*.md            — Domain concepts and principles
+      decision-*.md           — Architectural decisions with rationale
+      pattern-*.md            — Recurring patterns and best practices
+      convention-*.md         — Project conventions and standards
+      api-surface-*.md        — API endpoint groups
+      tech-debt-*.md          — Known tech debt items
+      external-*.md           — External integrations
+      execution-record-*.md   — Execution event records
+
 .plan-execution/              — Ephemeral (gitignored)
   state.toon              — Execution state (resumable)
   rolling-context.md      — Compressed cross-wave context
@@ -305,6 +339,9 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
     YYYY-MM-DD-plan.md
   roadmap.toon            — Milestones, status, dependencies
   changelog.md            — Plan revision history
+
+research/                         — Design rationale and analysis artifacts
+  karpathy-llm-wiki-analysis.toon — LLM wiki pattern that inspired the wiki system
 ```
 
 ### Adding App-Specific Agents

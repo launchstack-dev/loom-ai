@@ -72,6 +72,19 @@ describe("file-ownership hook", () => {
     const result = await runHook("file-ownership.ts", { garbage: true }, { cwd: tmpDir });
     expect(result.exitCode).toBe(0);
   });
+
+  it("allows writes to .loom/wiki/ during active execution", async () => {
+    writeStateToon(
+      `status: running\ncurrentWave: 1\n1:\n  status: in_progress\n  tasks[1]{taskId,agent,status}:\n    w1-auth,implementer-agent,in_progress`
+    );
+    const wikiFile = path.join(tmpDir, ".loom", "wiki", "pages", "foo.toon");
+    const result = await runHook(
+      "file-ownership.ts",
+      makePreToolUseInput(wikiFile),
+      { cwd: tmpDir }
+    );
+    expect(result.exitCode).toBe(0);
+  });
 });
 
 describe("contract-lock hook", () => {

@@ -194,6 +194,12 @@ When you receive validation errors from a prior attempt:
    - Missing criteria → add testable assertions for each phase
    - Subjective criteria → rewrite as command-based or assertion-based checks
 
+## Simplicity
+
+- **Prefer fewer phases.** If a feature can be built in one phase, don't split it across two. Fewer phases means fewer waves, fewer agent spawns, and lower cost.
+- **Don't gold-plate specs.** Acceptance criteria should be verifiable, not exhaustive. Three clear criteria are better than ten speculative ones.
+- **Ask yourself:** Would a senior architect say this plan is overcomplicated? If yes, simplify.
+
 ## Refinement Mode
 
 When refining an existing plan during execution:
@@ -202,6 +208,7 @@ When refining an existing plan during execution:
 3. **Pending phases** (future waves): Freely modifiable.
 4. Preserve phase numbering for locked phases — renumbering would break state.toon references.
 5. When adding phases, use the next available phase number.
+6. **Surgical refinement:** Only modify phases that review findings specifically target. Don't restructure unrelated phases, rename unchanged deliverables, or "improve" sections that weren't flagged.
 
 ## Phase 0 Requirements
 

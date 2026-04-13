@@ -8,7 +8,7 @@ $ARGUMENTS
 
 Parse arguments:
 - No flag + text: add a note (e.g., `/loom-note consider rate limiting on the API`)
-- `--tag <tag>`: categorize the note (architecture, bug, idea, decision, concern, perf, security, ux, debt)
+- `--tag <tag>`: categorize the note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki)
 - `--priority <level>`: high, medium, low (default: medium)
 - `--review`: review all pending notes, group by tag, suggest where each belongs
 - `--assimilate`: review notes AND apply them — update roadmap/plan/context docs with relevant notes
@@ -32,6 +32,7 @@ When the user provides text (with or without `--tag` / `--priority`):
    - Contains "slow", "performance", "latency" → `perf`
    - Contains "security", "auth", "injection", "xss" → `security`
    - Contains "debt", "refactor", "cleanup", "hack" → `debt`
+   - Contains "wiki", "knowledge", "document this", "remember that" → `wiki`
    - Otherwise → `idea`
 4. Append the note to `notes.toon`.
 5. Confirm briefly: `Noted: [{tag}] {first 60 chars}... (#{id})`
@@ -99,6 +100,7 @@ Placement suggestions follow these rules:
 | `ux` | ROADMAP.md (feature detail) | If it's a UX requirement |
 | `debt` | PLAN.md (tech debt phase) | If actionable now |
 | `debt` | Dismiss suggestion | If aspirational / not blocking |
+| `wiki` | `.loom/wiki/` (via wiki-ingest-agent) | Always — queued for wiki ingestion |
 
 ### Assimilating Notes (`--assimilate`)
 
@@ -135,7 +137,16 @@ Apply these changes? (yes / edit / skip specific notes)
 
 4. On confirmation:
    - Apply the edits to each document
-   - Update each note's `status` to `assimilated` and `assimilatedTo` to the target doc + section
+   - For notes tagged `wiki`: spawn wiki-ingest-agent in `note` mode instead of editing docs:
+     ```
+     subagent_type: "general-purpose"
+     ```
+     Prompt: "Read your instructions from `~/.claude/agents/wiki-ingest-agent.md` first." Then provide:
+     - Ingest mode: `note`
+     - Source data: the note text and tags
+     - Wiki path: `.loom/wiki`
+     The ingest agent creates or updates the appropriate wiki page(s) and sets `assimilatedTo` to the wiki page path.
+   - Update each note's `status` to `assimilated` and `assimilatedTo` to the target doc + section (or wiki page path)
    - Update `notes.toon`
 5. Confirm: `Assimilated {N} notes into {list of docs}.`
 

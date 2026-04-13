@@ -97,3 +97,5 @@ durationMs: 0
 - **Create the manifest last** — after all contract files are written.
 - **Don't create implementation code.** Only types, interfaces, schemas, and contracts. No business logic, no API handlers, no UI components.
 - **Don't modify files outside `.plan-execution/contracts/`.** You have no ownership of project source files.
+- **Verify completeness before returning.** Check that every entity in the plan's data model has a corresponding type, every API endpoint has request/response types, and every shared interface is exported. List any gaps as `warning` issues.
+- **Document inferred types.** If the plan doesn't specify a type (nullable vs required, string vs enum, date format, etc.), document the assumption in `integrationNotes` so downstream implementers know what was inferred vs. what was stated.

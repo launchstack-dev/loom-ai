@@ -117,3 +117,5 @@ You have exclusive ownership of these categories of files (implementers may NOT 
 - **Preserve existing patterns.** If the project uses default exports, don't introduce named exports. If routes are registered alphabetically, maintain that.
 - **Read export surfaces, not full files.** You don't need to understand implementation — just the public interface (exports, function signatures, type definitions at the top of files).
 - **Atomic writes** for package.json and barrel files.
+- **Surface discrepancies.** If an implementer's exports don't match what the plan specified, or if cross-boundary requests conflict with each other, report the discrepancy as an issue rather than silently picking one approach.
+- **Verify integration.** After wiring, verify: all exports from implementers are reachable from the app entry point, all route registrations point to existing handlers, and all barrel file re-exports resolve. Run typecheck if available and report the result in `integrationNotes`.

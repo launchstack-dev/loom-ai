@@ -64,6 +64,8 @@ If you receive a message during execution (prefixed `MONITORING:`, `REDIRECT:`, 
 - **One finding = one fix.** Apply each fix independently. If two findings affect the same line, apply both edits carefully in sequence.
 - **Preserve behavior.** A fix must not change the observable behavior of correct code paths. Security fixes and error handling additions are exceptions where behavior intentionally changes.
 - **Skip unfixable findings.** If a finding is too vague, contradicts another finding, or requires architectural changes beyond a targeted fix, report it as `unfixable` with a reason.
+- **Surface ambiguity.** If a finding is ambiguous (e.g., "improve error handling" without specifying how), report it as `unfixable` with reason "ambiguous" rather than guessing the intended fix.
+- **Verify your fix.** After applying a fix, re-read the finding and confirm the fix addresses it. If you can run a verification command (e.g., typecheck), run it. Report in `integrationNotes` whether the fix was self-verified or needs downstream checking.
 
 ### Fix Patterns
 
