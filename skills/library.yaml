@@ -341,83 +341,47 @@ library:
       source: agents/fixer-agent.md
 
   prompts:
-    - name: loom-review-plan
-      description: Launches 6 planning agents in parallel to review a PLAN.md
-      source: commands/loom-review-plan.md
-      requires: [agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent]
+    # ── Unified noun commands (v2.1) ──────────────────────────────
 
-    - name: loom-execute-plan
-      description: Wave-by-wave execution orchestrator with human approval gates
-      source: commands/loom-execute-plan.md
-      requires: [agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, skill:execution-protocols]
+    - name: loom-plan
+      description: "Plan operations — create, review, execute, test plans via subcommands"
+      source: commands/loom-plan.md
+      requires: [agent:plan-builder-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, skill:execution-protocols, skill:plan-schema, skill:spec-schema]
 
-    - name: loom-test-plan
-      description: Testing pipeline - acceptance criteria, unit tests, E2E tests with Playwright
-      source: commands/loom-test-plan.md
-      requires: [agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent]
+    - name: loom-code
+      description: "Code quality — review with 9+ agents, auto-apply fixes via subcommands"
+      source: commands/loom-code.md
+      requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer, agent:fixer-agent]
 
-    - name: loom-review-code
-      description: Comprehensive code review - built-in + bespoke reviewers in parallel
-      source: commands/loom-review-code.md
-      requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer]
+    - name: loom-wiki
+      description: "Wiki management — ingest, lint, query, status via subcommands"
+      source: commands/loom-wiki.md
+      requires: [agent:wiki-ingest-agent, agent:wiki-maintainer-agent, agent:wiki-lint-agent, agent:wiki-query-agent, skill:wiki-conventions, skill:wiki-lint-rules]
 
-    - name: loom-review-roadmap
-      description: Launch 4 agents to review ROADMAP.md from strategy, scope, feasibility, and UX angles
-      source: commands/loom-review-roadmap.md
-      requires: [agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent]
+    - name: loom-agent
+      description: "Agent management — create bespoke agents, list registered agents"
+      source: commands/loom-agent.md
+      requires: [agent:meta-agent]
 
     - name: loom-roadmap
-      description: Two-tier planning orchestrator - ROADMAP.md (strategy) and PLAN.md (spec) lifecycle
+      description: "Roadmap lifecycle — init, review, approve, refine, validate, status via subcommands"
       source: commands/loom-roadmap.md
-      requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent]
+      requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent, agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent]
 
-    - name: loom-create-plan
-      description: Generate PLAN.md (v2 spec) from approved ROADMAP.md - phases, waves, API specs, state machines
-      source: commands/loom-create-plan.md
-      requires: [agent:plan-builder-agent, skill:plan-schema, skill:spec-schema]
+    - name: loom
+      description: "Root command — init, auto, converge, quick, pause, resume, do, next, profile, status"
+      source: commands/loom.md
+      requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor, agent:wiki-ingest-agent, agent:wiki-lint-agent, agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:convergence-driver]
+
+    # ── Standalone commands (unchanged) ───────────────────────────
 
     - name: loom-library
       description: Pull-on-demand catalog management - install, sync, search, update agents and commands
       source: commands/loom-library.md
 
-    - name: loom-fix-code
-      description: Apply review findings to code - parse, group, spawn fixer-agents, verify
-      source: commands/loom-fix-code.md
-      requires: [agent:fixer-agent]
-
-    - name: loom-converge
-      description: Convergence loop - compare implementation against deterministic targets until delta reaches zero
-      source: commands/loom-converge.md
-      requires: [agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:convergence-driver]
-
-    - name: loom-auto
-      description: Fully autonomous pipeline - roadmap, plan, build, converge, test, review, fix loops until done
-      source: commands/loom-auto.md
-      requires: [prompt:loom-roadmap, prompt:loom-review-roadmap, prompt:loom-review-plan, prompt:loom-execute-plan, prompt:loom-converge, prompt:loom-test-plan, prompt:loom-review-code, prompt:loom-fix-code]
-
-    - name: loom-init
-      description: Brownfield project onboarding - analyze codebase, generate CLAUDE.md, CONTEXT.md, and project wiki
-      source: commands/loom-init.md
-      requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor, agent:wiki-ingest-agent, agent:wiki-lint-agent]
-
     - name: loom-note
-      description: Accumulate notes during development, review and assimilate into roadmap/plan/context docs or wiki
+      description: "Accumulate notes, backlog management, review and assimilate into roadmap/plan/wiki"
       source: commands/loom-note.md
-
-    - name: loom-ingest
-      description: Incremental wiki ingest — process code changes, external docs, or execution results into wiki pages
-      source: commands/loom-ingest.md
-      requires: [agent:wiki-ingest-agent, agent:wiki-maintainer-agent]
-
-    - name: loom-lint
-      description: Structural health check — wiki integrity, contract drift, plan-reality divergence
-      source: commands/loom-lint.md
-      requires: [agent:wiki-lint-agent, skill:wiki-lint-rules]
-
-    - name: loom-create-agent
-      description: Interactive wizard to create project-specific bespoke agents and register them in Loom pipelines
-      source: commands/loom-create-agent.md
-      requires: [agent:meta-agent]
 
     - name: loom-statusline-setup
       description: Setup wizard for the Claude Code status line — configures Starship integration, ambient state, and the statusline renderer
@@ -427,10 +391,88 @@ library:
       description: Git workflow automation — commit, push, PR, merge, cleanup, review-pr via subcommands
       source: commands/loom-git.md
 
-    - name: loom-quick
-      description: "Zero-ceremony task execution — standalone, plan-aware, or mid-execution injection"
-      source: commands/loom-quick.md
+    # ── Deprecated (redirect wrappers, kept for backward compat) ──
 
-    - name: loom
-      description: Shows Loom system reference — commands, agents, workflows
-      source: commands/loom.md
+    - name: loom-review-plan
+      description: "DEPRECATED — use /loom-plan review"
+      source: commands/loom-review-plan.md
+      deprecated: true
+      redirectsTo: loom-plan
+
+    - name: loom-execute-plan
+      description: "DEPRECATED — use /loom-plan execute"
+      source: commands/loom-execute-plan.md
+      deprecated: true
+      redirectsTo: loom-plan
+
+    - name: loom-test-plan
+      description: "DEPRECATED — use /loom-plan test"
+      source: commands/loom-test-plan.md
+      deprecated: true
+      redirectsTo: loom-plan
+
+    - name: loom-create-plan
+      description: "DEPRECATED — use /loom-plan create"
+      source: commands/loom-create-plan.md
+      deprecated: true
+      redirectsTo: loom-plan
+
+    - name: loom-review-code
+      description: "DEPRECATED — use /loom-code review"
+      source: commands/loom-review-code.md
+      deprecated: true
+      redirectsTo: loom-code
+
+    - name: loom-fix-code
+      description: "DEPRECATED — use /loom-code fix"
+      source: commands/loom-fix-code.md
+      deprecated: true
+      redirectsTo: loom-code
+
+    - name: loom-review-roadmap
+      description: "DEPRECATED — use /loom-roadmap review"
+      source: commands/loom-review-roadmap.md
+      deprecated: true
+      redirectsTo: loom-roadmap
+
+    - name: loom-ingest
+      description: "DEPRECATED — use /loom-wiki ingest"
+      source: commands/loom-ingest.md
+      deprecated: true
+      redirectsTo: loom-wiki
+
+    - name: loom-lint
+      description: "DEPRECATED — use /loom-wiki lint"
+      source: commands/loom-lint.md
+      deprecated: true
+      redirectsTo: loom-wiki
+
+    - name: loom-create-agent
+      description: "DEPRECATED — use /loom-agent create"
+      source: commands/loom-create-agent.md
+      deprecated: true
+      redirectsTo: loom-agent
+
+    - name: loom-init
+      description: "DEPRECATED — use /loom init"
+      source: commands/loom-init.md
+      deprecated: true
+      redirectsTo: loom
+
+    - name: loom-auto
+      description: "DEPRECATED — use /loom auto"
+      source: commands/loom-auto.md
+      deprecated: true
+      redirectsTo: loom
+
+    - name: loom-converge
+      description: "DEPRECATED — use /loom converge"
+      source: commands/loom-converge.md
+      deprecated: true
+      redirectsTo: loom
+
+    - name: loom-quick
+      description: "DEPRECATED — use /loom quick"
+      source: commands/loom-quick.md
+      deprecated: true
+      redirectsTo: loom
