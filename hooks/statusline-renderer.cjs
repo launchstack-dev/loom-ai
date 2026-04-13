@@ -46,9 +46,8 @@ function render(data) {
     const task = readCurrentTask(session);
     if (task) line1.push(`\x1b[1m${task}\x1b[0m`);
 
-    const home = os.homedir();
-    const displayDir = dir.startsWith(home) ? '~' + dir.slice(home.length) : dir;
-    line1.push(`\x1b[2m${displayDir}\x1b[0m`);
+    const dirInfo = resolveDir(dir);
+    line1.push(`\x1b[2m${dirInfo.display}\x1b[0m`);
 
     // Session token usage + cost estimate
     const tokenSeg = buildTokenSegment(data, session, model);
@@ -61,7 +60,7 @@ function render(data) {
     const root = findRoot(dir);
     let line2 = '';
     if (root) {
-      line2 = buildLoomLine(root);
+      line2 = buildLoomLine(root, dirInfo.isWorktree);
     }
 
     // ── Output ──
@@ -178,7 +177,7 @@ function readCurrentTask(session) {
 // Line 2: Loom state
 // ═══════════════════════════════════════════════════════════
 
-function buildLoomLine(root) {
+function buildLoomLine(root, isWorktree) {
   const statusFile = path.join(root, '.plan-execution', 'status.toon');
   const pipelineFile = path.join(root, '.plan-execution', 'pipeline-state.toon');
   const planFile = path.join(root, 'PLAN.md');
@@ -187,8 +186,8 @@ function buildLoomLine(root) {
   const active = readActiveState(statusFile);
   const pipeline = readPipelineState(pipelineFile);
 
-  if (active) return renderActiveLine(active, planMeta, pipeline, root);
-  return renderIdleLine(planMeta, statusFile, root);
+  if (active) return renderActiveLine(active, planMeta, pipeline, root, isWorktree);
+  return renderIdleLine(planMeta, statusFile, root, isWorktree);
 }
 
 function readPlanMeta(planFile) {
@@ -223,7 +222,7 @@ function readPipelineState(file) {
   } catch { return null; }
 }
 
-function renderActiveLine(active, planMeta, pipeline, root) {
+function renderActiveLine(active, planMeta, pipeline, root, isWorktree) {
   const parts = [];
 
   // Command + stage breadcrumb: loom-auto › executing
@@ -269,14 +268,16 @@ function renderActiveLine(active, planMeta, pipeline, root) {
     parts.push(`\x1b[2mPh ${estPhase}/${planMeta.totalPhases}\x1b[0m\x1b[1;34m`);
   }
 
-  // Git branch
-  const branch = gitBranch(root);
-  if (branch) parts.push(`\x1b[2m${branch}\x1b[0m\x1b[1;34m`);
+  // Git branch (skip if worktree — already shown in dir segment)
+  if (!isWorktree) {
+    const branch = gitBranch(root);
+    if (branch) parts.push(`\x1b[2m${branch}\x1b[0m\x1b[1;34m`);
+  }
 
   return `\x1b[1;34m\u{1F9F5} ${parts.join(SEP)}\x1b[0m`;
 }
 
-function renderIdleLine(planMeta, statusFile, root) {
+function renderIdleLine(planMeta, statusFile, root, isWorktree) {
   const parts = [];
 
   // Plan status (with optional name and phase/wave counts)
@@ -320,9 +321,11 @@ function renderIdleLine(planMeta, statusFile, root) {
     }
   } catch {}
 
-  // Git branch
-  const branch = gitBranch(root);
-  if (branch) parts.push(`\x1b[2m${branch}\x1b[0m\x1b[34m`);
+  // Git branch (skip if worktree — already shown in dir segment)
+  if (!isWorktree) {
+    const branch = gitBranch(root);
+    if (branch) parts.push(`\x1b[2m${branch}\x1b[0m\x1b[34m`);
+  }
 
   // Update indicator + background check (only when idle, not during active pipeline)
   triggerUpdateCheck();
@@ -351,6 +354,57 @@ function gitBranch(root) {
       cwd: root, timeout: 100, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe']
     }).trim();
   } catch { return ''; }
+}
+
+function resolveDir(dir) {
+  const home = os.homedir();
+  try {
+    const { execSync } = require('child_process');
+    const opts = { cwd: dir, timeout: 200, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] };
+
+    const gitDir = execSync('git rev-parse --git-dir', opts).trim();
+    const commonDir = execSync('git rev-parse --git-common-dir', opts).trim();
+
+    // Resolve to absolute paths for comparison
+    const absGitDir = path.resolve(dir, gitDir);
+    const absCommonDir = path.resolve(dir, commonDir);
+
+    if (absGitDir !== absCommonDir) {
+      // We're in a worktree
+      // Main repo root = commonDir minus /.git
+      const mainRoot = absCommonDir.endsWith('.git')
+        ? absCommonDir.slice(0, -5)  // strip /.git
+        : path.dirname(absCommonDir);
+      const repoName = path.basename(mainRoot);
+      const branch = execSync('git rev-parse --abbrev-ref HEAD', opts).trim();
+      return { display: `${repoName} \u229B ${branch}`, isWorktree: true, repoName, branch };
+    }
+
+    // Not a worktree — show project dir name (last 2 path components if under home)
+    const toplevel = execSync('git rev-parse --show-toplevel', opts).trim();
+    const repoName = path.basename(toplevel);
+    const parentName = path.basename(path.dirname(toplevel));
+    // If under home, show parent/project. If at home root level, just project.
+    if (toplevel.startsWith(home)) {
+      const rel = toplevel.slice(home.length + 1); // strip ~/
+      const parts = rel.split(path.sep);
+      if (parts.length <= 2) {
+        return { display: `~/${rel}`, isWorktree: false, repoName };
+      }
+      // Deep nesting: show ...parent/project
+      return { display: `${parentName}/${repoName}`, isWorktree: false, repoName };
+    }
+    return { display: toplevel, isWorktree: false, repoName };
+  } catch {
+    // Not a git repo — fall back to ~ path or basename
+    if (dir.startsWith(home)) {
+      const rel = dir.slice(home.length + 1);
+      const parts = rel.split(path.sep);
+      if (parts.length <= 2) return { display: `~/${rel}`, isWorktree: false };
+      return { display: path.basename(dir), isWorktree: false };
+    }
+    return { display: dir, isWorktree: false };
+  }
 }
 
 function findRoot(startDir) {
