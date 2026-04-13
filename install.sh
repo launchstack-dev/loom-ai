@@ -78,17 +78,6 @@ fetch_file() {
   return 0
 }
 
-# ── Helper: compute sha256 hash ──
-hash_file() {
-  if command -v shasum &>/dev/null; then
-    shasum -a 256 "$1" | cut -d' ' -f1
-  elif command -v sha256sum &>/dev/null; then
-    sha256sum "$1" | cut -d' ' -f1
-  else
-    echo "unknown"
-  fi
-}
-
 # ── Fetch catalog ──
 echo "Fetching catalog..."
 if fetch_file "skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml"; then
@@ -146,11 +135,22 @@ NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX")
 
+# Count items
+ITEM_COUNT=0
+for entry in "${INFRA_FILES[@]}"; do
+  dst="${entry#*:}"
+  [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
+done
+for entry in "${COMMAND_FILES[@]}"; do
+  dst="${entry#*:}"
+  [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
+done
+
 {
-  echo "schemaVersion: 1"
+  echo "schemaVersion: 2"
   echo "lastSynced: ${NOW}"
   echo ""
-  echo "items[N]{name,type,source,targetPath,installedAt,contentHash}:"
+  echo "items[${ITEM_COUNT}]{name,type,source,targetPath,installedAt}:"
 } > "${STATE_TMP}"
 
 # Record infrastructure items
@@ -159,8 +159,7 @@ for entry in "${INFRA_FILES[@]}"; do
   dst="${entry#*:}"
   name=$(basename "${dst}" | sed 's/\.[^.]*$//')
   if [ -f "${dst}" ]; then
-    hash=$(hash_file "${dst}")
-    echo "  ${name},infrastructure,${BASE}/${src},${dst},${NOW},sha256:${hash}" >> "${STATE_TMP}"
+    echo "  ${name},infrastructure,${src},${dst},${NOW}" >> "${STATE_TMP}"
   fi
 done
 
@@ -170,8 +169,7 @@ for entry in "${COMMAND_FILES[@]}"; do
   dst="${entry#*:}"
   name=$(basename "${dst}" .md)
   if [ -f "${dst}" ]; then
-    hash=$(hash_file "${dst}")
-    echo "  ${name},prompt,${BASE}/${src},${dst},${NOW},sha256:${hash}" >> "${STATE_TMP}"
+    echo "  ${name},prompt,${src},${dst},${NOW}" >> "${STATE_TMP}"
   fi
 done
 
