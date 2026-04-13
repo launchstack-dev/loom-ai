@@ -52,7 +52,7 @@ Additional global flags:
 - `--no-discuss`: skip the discussion phase entirely
 - `--auto`: accept all recommended defaults without interactive prompting
 
-For backward compatibility, --flag syntax is also accepted: `--init`, `--approve-roadmap`, `--refine`, `--validate`, `--deps`, `--diff`, `--history`, `--milestone`, `--snapshot`, `--split`, `--review-roadmap`. These are aliases for the positional subcommands above.
+For backward compatibility, --flag syntax is also accepted: `--init`, `--approve-roadmap`, `--refine`, `--validate`, `--deps`, `--diff`, `--history`, `--milestone`, `--snapshot`, `--split`, `--review-roadmap`, `--review-integrate`, `--status`. These are aliases for the positional subcommands above.
 
 ## Step 0: Gather Context (all commands)
 
@@ -314,7 +314,7 @@ Continue looping until the user approves (option 1).
      ```
    - Create `.plan-history/snapshots/` directory
 3. Display roadmap summary + suggest next steps:
-   - `/loom-roadmap review` for 3-agent roadmap review
+   - `/loom-roadmap review` for 4-agent roadmap review
    - `/loom-roadmap approve` to mark as approved
    - `/loom-plan create` to generate PLAN.md from the approved roadmap
 
@@ -348,7 +348,7 @@ Run `/loom-plan create` with the same arguments. If `--auto` was passed, forward
 Runs the complete two-tier pipeline interactively: roadmap → roadmap review → plan → plan review.
 
 1. Run `init` (creates ROADMAP.md)
-2. Run `review` (3-agent review)
+2. Run `review` (4-agent review)
 3. Run `review-integrate --roadmap` (apply findings)
 4. Run `approve` (mark approved)
 5. Run `/loom-plan create` (creates PLAN.md v2 from roadmap)
