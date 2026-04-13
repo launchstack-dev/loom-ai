@@ -157,6 +157,21 @@ Continue looping until the user approves.
      /loom-roadmap --status               — see unified roadmap + plan progress
    ```
 
+### Step 4.5: Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to capture the plan's architecture and specs:
+
+```
+subagent_type: "general-purpose"
+run_in_background: true
+```
+Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
+- Event type: `plan-created`
+- Event data: PLAN.md path, phase structure, schema definitions, API contracts (v2), acceptance criteria
+- Wiki path: `.loom/wiki`
+
+**This step is non-blocking.** If wiki-maintainer-agent fails, log a warning and continue. Wiki maintenance never gates the workflow.
+
 ### Step R: Review Integrate (`--review-integrate` only)
 
 Skips Steps 0–4. Applies plan review findings directly to an existing PLAN.md.

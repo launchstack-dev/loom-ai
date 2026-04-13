@@ -292,6 +292,23 @@ Same as Step 3 but for wave N:
    - Show next wave preview
    - Ask: proceed / re-run wave / abort
 
+### Step 9.5: Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to capture what was built in this wave:
+
+```
+subagent_type: "general-purpose"
+run_in_background: true
+```
+Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
+- Event type: `wave-complete`
+- Event data: wave summary from `.plan-execution/wave-N-summary.toon`, files created/modified, contracts established (wave 0), implementation decisions
+- Wiki path: `.loom/wiki`
+
+**This step is non-blocking.** If wiki-maintainer-agent fails: (1) Log a warning in state.toon under `wikiUpdateStatus: failed` with the error summary, (2) Increment a `wikiConsecutiveFailures` counter in state.toon, (3) If `wikiConsecutiveFailures >= 2`, add a visible note to the human approval gate: "Wiki updates have failed for {N} consecutive waves. Run `/loom-lint --wiki` to diagnose." (4) Continue to the next step. Wiki maintenance never gates the pipeline.
+
+Do NOT count wiki maintenance against circuit breaker thresholds or agent budgets.
+
 ### Step 10: Repeat or Complete
 
 - If more waves remain, go to Step 5

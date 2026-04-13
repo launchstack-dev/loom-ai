@@ -189,6 +189,21 @@ The `tag:file:line` triple is the content key used for dedup — it uniquely ide
    - Verification: {PASS/FAIL}
    ```
 
+## Step 10.5: Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to capture applied fixes as finalized design decisions:
+
+```
+subagent_type: "general-purpose"
+run_in_background: true
+```
+Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
+- Event type: `fixes-applied`
+- Event data: applied findings (tag, file, description), unfixable findings with reasons (these become documented design constraints), verification result
+- Wiki path: `.loom/wiki`
+
+**This step is non-blocking.** If wiki-maintainer-agent fails, log a warning and continue. Wiki maintenance never gates the workflow.
+
 ---
 
 ## Error Handling

@@ -312,6 +312,21 @@ Continue looping until the user approves (option 1).
    - `/loom-roadmap --approve-roadmap` to mark as approved
    - `/loom-create-plan` to generate PLAN.md from the approved roadmap
 
+### Step 5.5: Wiki Update (non-blocking)
+
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to capture strategic intent:
+
+```
+subagent_type: "general-purpose"
+run_in_background: true
+```
+Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
+- Event type: `roadmap-created`
+- Event data: ROADMAP.md path, feature list, milestones, constraints & decisions
+- Wiki path: `.loom/wiki`
+
+**This step is non-blocking.** If wiki-maintainer-agent fails, log a warning and continue. Wiki maintenance never gates the workflow.
+
 ---
 
 ## Command: `--init --plan`
