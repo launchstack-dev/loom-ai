@@ -817,7 +817,10 @@ Parse arguments after `auto`:
 - `--max-iterations N`: outer loop cap (default: 3)
 - `--max-agents N`: agent budget cap (default: 50)
 - `--dry-run`: show pipeline stages without executing
-- `--stop-after <stage>`: stop after a named stage: `roadmap`, `plan`, `execute`, `converge`, `test`, `review`, `fix`
+- `--stop-after <stage>`: stop after a named stage: `preflight`, `roadmap`, `plan`, `execute`, `converge`, `test`, `review`, `fix`
+- `--skip-preflight`: skip the pre-flight scope contract entirely (no prompt refiner, no scope interrogator)
+- `--light-preflight`: run a lightweight pre-flight (fewer questions, accept more defaults)
+- `--new-contract`: regenerate `scope-contract.toon` even if one already exists
 
 ### Protocols
 
@@ -850,6 +853,9 @@ If convergence is enabled, also read:
    - `maxAgents` from `--max-agents` (default: 50)
    - `dryRun` from `--dry-run`
    - `stopAfter` from `--stop-after`
+   - `skipPreflight` from `--skip-preflight` (default: false)
+   - `lightPreflight` from `--light-preflight` (default: false)
+   - `newContract` from `--new-contract` (default: false)
    - `convergenceEnabled` = true if `convergeTarget` or `convergeConfig` is set
 
 2. **If `--resume`:** jump to the Resume Logic section below.
@@ -858,21 +864,23 @@ If convergence is enabled, also read:
    ```
    ## Pipeline Stages (dry run)
 
-   1. Roadmap Creation  -- loom-roadmap init --auto
+   0.5. Pre-flight     -- prompt-refiner + scope-interrogator → scope-contract.toon {skipPreflight ? 'SKIPPED' : ''}
+   1. Roadmap Creation  -- loom-roadmap init --auto (reads scope-contract.toon)
    2. Roadmap Review    -- loom-roadmap review
    3. Roadmap Integrate -- loom-roadmap review-integrate --roadmap
    4. Roadmap Approve   -- loom-roadmap approve (auto)
-   5. Plan Creation     -- loom-plan create --auto
+   5. Plan Creation     -- loom-plan create --auto (reads scope-contract.toon)
    6. Plan Review       -- loom-plan review
    7. Plan Integrate    -- loom-roadmap review-integrate
    8. Plan Validate     -- validation stages 1-4 (+ Stage 7 for v2)
-   9. Execution         -- loom-plan execute --auto
+   9. Execution         -- loom-plan execute --auto (drift detection per wave)
    10. Convergence      -- loom converge (if --converge-target or --converge-config)
    11. Test             -- loom-plan test --run --parallel --auto
    12. Code Review      -- loom-code review --branch
    13. Quality Gate     -- automated decision matrix
    14. Fix Cycle        -- loom-code fix --auto (up to 2 cycles)
 
+   Pre-flight: {skipPreflight ? 'skipped' : lightPreflight ? 'light' : 'full'}
    Convergence: {convergeTarget or convergeConfig or 'disabled'}
    Outer loop: up to {maxIterations} iterations
    Agent budget: {maxAgents}
@@ -943,6 +951,7 @@ If convergence is enabled, also read:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
     Create a roadmap using --init --from '{description}' --auto.
+    {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- decisions, non-goals, and success criteria should shape features and milestones.'}
     Write the result to {roadmapFile}."
    ```
    Record agents spawned. Update `pipeline-state.toon`: `currentStage: roadmap-create`.
@@ -989,6 +998,63 @@ If convergence is enabled, also read:
 
 Check circuit breakers before proceeding.
 
+#### Step 1.5: Pre-flight Scope Contract
+
+**Skip this step entirely if `skipPreflight == true`.**
+
+**If `scope-contract.toon` already exists in the project root AND `newContract == false`:**
+Read it and display:
+```
+Using existing scope contract ({N} decisions). Pass --new-contract to regenerate.
+```
+Skip to Step 2.
+
+**Otherwise, generate a new scope contract:**
+
+1. **Prompt Refiner.** Spawn a general-purpose agent (model: sonnet):
+   ```
+   "Read your instructions from ~/.claude/agents/prompt-refiner-agent.md first.
+    Refine the following user prompt into a structured project brief.
+    User prompt: '{description}'
+    Codebase context: {summary of tech stack, directory structure, conventions from Step 0/1}
+    Return the refined brief."
+   ```
+   Input: the user's raw prompt (from `--from` or the description gathered in Step 1).
+   Collect the refined brief from the agent's return.
+   Record agents spawned.
+
+2. **User reviews brief.** Present the refined brief summary. Ask: "Does this capture your intent? (yes / adjust)"
+   - If `--auto` was passed (i.e., this is a fully autonomous run): skip review, accept the brief as-is.
+   - If user adjusts: incorporate feedback (no agent respawn needed -- conversational refinement).
+
+3. **Scope Interrogator.** Spawn a general-purpose agent:
+   ```
+   "Read your instructions from ~/.claude/agents/questioner-agent.md first.
+    Run in --scope-contract mode.
+    {if lightPreflight: '--light-preflight'}
+    {if --auto: '--auto'}
+    Input: the refined brief (from step 1 above) + codebase context.
+    Return scope-contract.toon."
+   ```
+   Flag: `--scope-contract` (tells questioner-agent to produce a scope contract, not a generic Q&A).
+   If `lightPreflight`: also pass `--light-preflight` (fewer questions, accept more defaults).
+   If `--auto`: also pass `--auto` (accept all defaults, skip interactive review).
+   Collect `scope-contract.toon` from the agent's return.
+   Record agents spawned.
+
+4. **Write contract.** Save `scope-contract.toon` to the project root. Use atomic write (write to `.tmp`, then rename).
+
+5. **Display summary:**
+   ```
+   Scope contract locked: {N} decisions, {M} acceptance criteria, {K} non-goals
+   Proceeding to roadmap generation...
+   ```
+
+Update `pipeline-state.toon`: `currentStage: preflight-complete`.
+Log stage result in `stageHistory`.
+
+**If `--stop-after preflight`:** display scope contract summary and stop.
+
 #### Step 2: Plan Creation (Phase A)
 
 **If `outerIteration == 1` AND no existing plan file (or `--from` provided):**
@@ -997,6 +1063,7 @@ Check circuit breakers before proceeding.
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
     Create a plan using --init --plan --from '{description}' --auto.
+    {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- contract decisions constrain architecture, success criteria seed acceptance criteria, non-goals define explicit out-of-scope annotations.'}
     Write the result to {planFile}."
    ```
    Record agents spawned. Update `pipeline-state.toon`: `currentStage: plan-create`.
@@ -1051,10 +1118,13 @@ Spawn a general-purpose agent:
 ```
 "Read your instructions from ~/.claude/commands/loom-execute-plan.md first.
  Execute {planFile} with --auto flag.
+ {if scope-contract.toon exists: 'Read scope-contract.toon from the project root. Pass relevant contract decisions to each implementer agent as prompt context.'}
  Report all AgentResults. Track agents spawned."
 ```
 
 Record agents spawned (add to `agentsSpawned`).
+
+**Contract drift detection (if `scope-contract.toon` exists):** Before each wave, read `scope-contract.toon` and compare execution trajectory against contract decisions. If drift is detected (e.g., an agent used ORM when contract specified raw SQL, or an agent implemented a feature listed in `nonGoals`), log it in the wave summary as a **contract violation warning**. Do not halt execution for warnings -- record them for the review stage. Format: `contractViolation: {decisionId} -- expected {contracted}, observed {actual}`.
 
 On completion, read `.plan-execution/state.toon`:
 - If status == `completed`: proceed to Step 4.

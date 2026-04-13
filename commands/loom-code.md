@@ -90,6 +90,7 @@ Also gather context:
 - Read `CLAUDE.md` if it exists (project conventions)
 - Read `package.json` for tech stack
 - Read `.plan-execution/contracts/manifest.toon` if it exists
+- Read `scope-contract.toon` if it exists (pre-flight decisions, acceptance criteria, non-goals)
 - `ls src/` for project structure
 
 #### Step 1: Fan Out -- Built-in Reviewers (parallel)
@@ -160,6 +161,8 @@ Prompt: "Read your instructions from `~/.claude/agents/plan-compliance-reviewer.
 - The plan file path
 - The git diff
 - Contract manifest path if available
+
+If `scope-contract.toon` exists, add to the plan-compliance-reviewer prompt: "Also check code against these scope contract decisions: {include all contract decisions}. Flag violations as [CONTRACT] severity warnings. Example: 'Decision D-03 specified repository pattern but file uses Prisma ORM.'"
 
 #### Parallel Execution Strategy
 
@@ -271,6 +274,7 @@ Each finding is tagged with the reviewer that found it:
 - `[SEC]` -- security-reviewer
 - `[ARCH]` -- architecture-reviewer
 - `[PLAN]` -- plan-compliance-reviewer
+- `[CONTRACT]` -- scope contract violation (plan-compliance-reviewer)
 - `[API-MAP]` -- api-explorer
 
 ## Subcommand: fix

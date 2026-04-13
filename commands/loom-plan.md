@@ -111,6 +111,13 @@ Parse remaining arguments:
 
 4. **Check for pending notes.** Read `.plan-execution/notes.toon` if it exists. Filter for pending notes tagged `architecture`, `decision`, `security`, `perf`. Include them as advisory context for the plan builder.
 
+5. **Read scope contract** if `scope-contract.toon` exists:
+   - Contract decisions → architecture constraints for the plan builder
+   - Contract success criteria → acceptance criteria seeds
+   - Contract tech context → file ownership hints and tech stack confirmation
+   - Contract non-goals → explicit out-of-scope annotations
+   - Pass the full contract to the plan-builder-agent prompt
+
 #### Step 1: Plan Generation
 
 Spawn `plan-builder-agent` (general-purpose):
@@ -585,6 +592,7 @@ For each implementation wave (1, 2, ...):
    - **Specific** contract file paths relevant to this task (from manifest.toon)
    - Rolling context content
    - Technology stack and conventions
+   - If `scope-contract.toon` exists, include relevant contract decisions in the prompt (filter to decisions that affect this task's domain — e.g., data access decisions for data layer tasks, auth decisions for auth tasks)
 6. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
 
 7. **Launch all implementer agents in parallel** using the Agent tool -- send ALL agent calls in a SINGLE message:
@@ -677,6 +685,14 @@ Same as Step 3 but for wave N:
    - Show files changed, verification results
    - Show next wave preview
    - Ask: proceed / re-run wave / abort
+
+#### Step 9.3: Contract Drift Check
+
+If `scope-contract.toon` exists:
+1. Read the contract decisions
+2. For each file modified in this wave, check if the implementation contradicts any contract decision (e.g., contract says "repository + raw SQL" but agent introduced an ORM import)
+3. If violations found, log them in the wave summary: "Contract drift: {decision ID} {decision} — {violation description}"
+4. Do NOT block execution for drift — just warn. The review stage will catch and flag these.
 
 #### Step 9.5: Wiki Update (non-blocking)
 

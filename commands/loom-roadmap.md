@@ -198,6 +198,8 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
 
 **Skip if `--no-discuss` was passed.**
 
+**Pre-flight contract check:** If `scope-contract.toon` exists in the project root, read it. Extract all decisions with source `user-choice` or `codebase-pattern`. These are already-locked decisions — skip generating questions for them in the discussion phase. Pass remaining unlocked areas to the questioner-agent. If ALL categories have locked decisions, skip the discussion phase entirely and proceed to Step 2 with the contract decisions.
+
 1. Spawn `questioner-agent` (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/questioner-agent.md` first."
    - The codebase context summary from Step 1
@@ -277,6 +279,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
    - The user's answers/description
    - The discussion phase decisions (from Step 1.6) to embed as Constraints & Decisions
    - The brownfield analysis (from Step 1.5) if `--brownfield` was used — include as "Existing Codebase" context so the roadmap builds on what exists
+   - If `scope-contract.toon` exists, include it as context: contract decisions become Constraints & Decisions, non-goals become Out of Scope, success criteria seed acceptance criteria.
    - Instruction: "Follow the Reasoning Framework. Output must conform to roadmap.schema.md."
 
 ### Step 3: Validation Loop (max 2 retries)
