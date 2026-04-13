@@ -50,6 +50,8 @@ export interface AmbientState {
   lastResult: "ok" | "failed" | null;
   /** Current git branch name, or null if not in a repo. */
   gitBranch: string | null;
+  /** Whether a catalog update is available (from ~/.cache/loom/update-check.toon). */
+  updateAvailable: boolean;
 }
 
 /**

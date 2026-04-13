@@ -13,7 +13,8 @@ Parse arguments:
 - `search <query>`: Search catalog by name/description substring
 - `add <source>`: Add new item (local path or GitHub URL) to catalog
 - `remove <name>`: Uninstall, warn about dependents
-- `update`: Check all sources for changes, show new catalog entries, confirm before applying
+- `update`: Check all sources for changes, show new catalog entries, confirm before applying. If `--check-only` is appended, report what's available without applying.
+- `upgrade`: Alias for `update` (convenience)
 
 ---
 
@@ -57,6 +58,7 @@ When installing, place files based on their type in library.yaml:
 - `agents` items -> `~/.claude/agents/<name>.md`
 - `prompts` items -> `~/.claude/commands/<name>.md`
 - `skills` items -> `~/.claude/agents/protocols/<name>.md`
+- `infrastructure` items -> use the explicit `target` path from the catalog entry (e.g. `~/.claude/statusline-renderer.cjs`). Expand `~` to the user's home directory. Infrastructure items are NOT `.md` files — preserve the original file extension from the source.
 
 ## Dependency Resolution
 
@@ -72,6 +74,11 @@ When installing an item that has `requires: [...]` in library.yaml:
 ## Command: `list` (default)
 
 1. Read `~/.claude/skills/library/library.yaml`
+1b. If the catalog does NOT contain an `infrastructure:` section, append a notice at the end of the output:
+   ```
+   ⚠ Your install predates self-updating infrastructure. Upgrade:
+     curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
+   ```
 2. Read `~/.claude/skills/library/install-state.toon` (create if missing)
 3. For each catalog item, check whether it appears in install-state
 4. Display grouped by type with counts:
@@ -118,6 +125,24 @@ Installed contracts-agent
 ```
 
 ## Command: `sync`
+
+**Pre-check — Infrastructure bootstrap detection:**
+1. Read `~/.claude/skills/library/library.yaml`
+2. If the catalog does NOT contain an `infrastructure:` section, this is a pre-v2 install. Fetch the remote catalog:
+   - Construct URL from the `repo` field (same logic as `update` Step 0)
+   - Fetch and check if remote has `infrastructure:` section
+   - If yes, print:
+   ```
+   Your Loom installation predates self-updating infrastructure.
+   Re-run the installer to upgrade:
+     curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
+
+   This adds: background update checker, statusline upgrade indicator,
+   and self-updating infrastructure managed by /loom-library update.
+   ```
+   - Continue with sync (don't block — the existing items still sync fine)
+
+**Main sync logic:**
 
 1. Read install-state.toon
 2. For each installed item:
@@ -182,12 +207,31 @@ Remove anyway? (yes / no)
 
 ## Command: `update`
 
+**Pre-check — Infrastructure bootstrap detection:**
+Same check as `sync` above. If the local catalog has no `infrastructure:` section, print the re-install prompt. After the user re-runs the installer, `update` will work fully (including infrastructure updates and cache clearing).
+
+**Step 0 — Catalog self-update:**
+1. Read `repo` field from the local `library.yaml` to get the GitHub repo URL
+2. Construct the raw URL: take the `repo` value (e.g. `https://github.com/launchstack-dev/loom-ai`), convert to `https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/skills/library.yaml`
+3. Fetch the remote `library.yaml` via `curl --max-time 10 -sL "{url}"` (always quote the URL)
+4. If the fetch succeeds and the content is valid (contains `catalog_version:`), overwrite `~/.claude/skills/library/library.yaml` with the fetched content
+5. Report: `Catalog updated (v1 → v2)` or `Catalog is current (v2)`
+
+**Step 1 — Check installed items:**
 1. Run the same check as `sync` (hash comparison for installed items)
 2. Additionally, scan library.yaml for items NOT in install-state (new catalog entries)
-3. Display both sections:
+3. Include `infrastructure` items in both checks
+4. Display all sections:
 ```
+## Catalog
+  Catalog updated (v1 → v2)
+
 ## Changed items
   [rotate] implementer-agent  source changed
+
+## Infrastructure
+  [rotate] statusline-renderer  renderer updated
+  [check]  statusline-command   up to date
 
 ## New in catalog
   [new] tdd-coach             Drives test-driven development
@@ -196,7 +240,14 @@ Remove anyway? (yes / no)
 Update changed items? (yes / no)
 Install new items? (yes / all / select / no)
 ```
+
+**If `--check-only` flag is present:** Display the report above but do NOT apply any changes. Skip steps below.
+
+**Step 2 — Apply:**
 4. Process user choices: update changed items and/or install selected new items using the same logic as `use`.
+
+**Step 3 — Clear update cache:**
+5. After successfully applying updates, delete `~/.cache/loom/update-check.toon` via Bash `rm -f ~/.cache/loom/update-check.toon`. This resets the statusline update indicator so it no longer shows "↑ update" until the next background check detects a new version.
 
 ---
 

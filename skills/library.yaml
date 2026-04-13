@@ -1,4 +1,4 @@
-catalog_version: 1
+catalog_version: 2
 repo: https://github.com/launchstack-dev/loom-ai
 
 default_dirs:
@@ -110,6 +110,22 @@ library:
     - name: behavioral-guidelines
       description: Karpathy-inspired behavioral guardrails for agents — assumption surfacing, simplicity, surgical changes, goal-driven verification
       source: agents/protocols/behavioral-guidelines.md
+
+  infrastructure:
+    - name: statusline-renderer
+      description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
+      source: hooks/statusline-renderer.cjs
+      target: ~/.claude/statusline-renderer.cjs
+
+    - name: statusline-command
+      description: Shell wrapper that delegates to the Node.js statusline renderer
+      source: hooks/statusline-command.sh
+      target: ~/.claude/statusline-command.sh
+
+    - name: loom-update-checker
+      description: Background update check — fetches catalog version from GitHub, writes cache
+      source: hooks/loom-update-checker.cjs
+      target: ~/.claude/loom-update-checker.cjs
 
   agents:
     # Planning agents

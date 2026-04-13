@@ -4,37 +4,60 @@ A multi-agent pipeline for planning, executing, testing, and reviewing software 
 
 ## What It Does
 
-Fifteen slash commands that compose 40+ specialized agents:
+Twenty slash commands that compose 50+ specialized agents, organized by workflow stage:
 
+**Initialization**
 | Command | What it does |
 |---------|-------------|
 | `/loom-init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
+
+**Roadmapping & Planning**
+| Command | What it does |
+|---------|-------------|
 | `/loom-roadmap` | Roadmap creation, milestone tracking, dependency graphs, versioning |
 | `/loom-review-roadmap` | 4 agents review a ROADMAP.md in parallel |
 | `/loom-create-plan` | Generate PLAN.md (v2 spec) from approved ROADMAP.md |
 | `/loom-review-plan` | 6 agents analyze a PLAN.md in parallel |
+
+**Execution**
+| Command | What it does |
+|---------|-------------|
 | `/loom-execute-plan` | Wave-by-wave execution with contracts, parallel implementers, wiring, and verification |
+| `/loom-auto` | Fully autonomous pipeline with feedback loops |
+| `/loom-converge` | Convergence loop: compare implementation against deterministic targets |
+| `/loom-quick` | Execute a quick task without full plan/roadmap ceremony |
+
+**Review & Testing**
+| Command | What it does |
+|---------|-------------|
 | `/loom-test-plan` | Acceptance criteria extraction + unit + E2E test generation |
 | `/loom-review-code` | 9 reviewers (6 built-in + 3 bespoke) with severity-ranked output |
 | `/loom-fix-code` | Auto-apply review findings with parallel fixer-agents and verification |
-| `/loom-converge` | Convergence loop: compare implementation against deterministic targets |
-| `/loom-auto` | Fully autonomous pipeline with feedback loops |
+
+**Knowledge & Maintenance**
+| Command | What it does |
+|---------|-------------|
 | `/loom-note` | Accumulate development notes, review and assimilate into docs |
-| `/loom-create-agent` | Interactive wizard to create project-specific bespoke agents |
+| `/loom-ingest` | Ingest code, docs, and execution results into the project wiki |
+| `/loom-lint` | Structural health checks: wiki, contracts, plan-reality drift |
+
+**Tooling & Infrastructure**
+| Command | What it does |
+|---------|-------------|
 | `/loom-library` | Pull-on-demand catalog management: install, sync, search, update |
+| `/loom-git` | Git workflow automation: commit, push, PR, merge, cleanup, review-pr |
+| `/loom-create-agent` | Interactive wizard to create project-specific bespoke agents |
+| `/loom-statusline-setup` | Configure the Claude Code status line (Starship integration) |
 | `/loom` | Full reference |
 
 ## Install
 
-**Bootstrap** (first time):
+**One-liner** (no repo clone needed):
 ```bash
-gh repo clone launchstack-dev/loom-ai
-# or: git clone https://github.com/launchstack-dev/loom-ai.git
-cd loom-ai
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
-This one-time bootstrap **copies** everything into `~/.claude/`. You can delete the repo afterwards — all updates are fetched directly from GitHub by `/loom-library`.
+This installs a minimal bootstrap into `~/.claude/`: the library catalog, infrastructure files (statusline renderer, update checker), and three core commands (`/loom-library`, `/loom`, `/loom-statusline-setup`). Everything else is pulled on demand.
 
 **Per-project setup:**
 ```
@@ -47,10 +70,13 @@ This one-time bootstrap **copies** everything into `~/.claude/`. You can delete 
 ```
 /loom-library list           — see what's installed vs available
 /loom-library sync           — re-pull all installed items, detect source changes
-/loom-library update         — check for new catalog entries + changed items
+/loom-library update         — check for new catalog entries + update infrastructure
+/loom-library upgrade        — alias for update
 /loom-library search <query> — find items by name or description
 /loom-library remove <name>  — uninstall (warns about dependents)
 ```
+
+The statusline shows a yellow `↑ update` indicator when a newer catalog version is available on GitHub. Run `/loom-library update` to apply updates and clear the indicator.
 
 `/loom-library` resolves dependencies automatically, tracks content hashes for drift detection, and supports both local and GitHub sources. Run `/loom` in Claude Code to verify.
 
@@ -69,6 +95,13 @@ Commands (user-facing)              Agents (spawned by commands)
 /loom-fix-code ───────────────────→ parallel fixer-agents
 /loom-converge ───────────────────→ target-parser → harness → delta-analyzer → driver
 /loom-auto ──────────────────────→ chains all commands with automated gates
+/loom-ingest ─────────────────────→ wiki-ingest-agent → wiki-maintainer-agent
+/loom-lint ───────────────────────→ wiki-lint-agent + contract/plan validators
+
+Infrastructure (background)
+───────────────────────────
+statusline-renderer.cjs       ← Pipeline state + ambient context + update indicator
+loom-update-checker.cjs       ← Background catalog version check (4h throttle)
 
 Protocols (shared contracts)
 ────────────────────────────
@@ -83,6 +116,7 @@ validation-rules.md           ← Output validation, blocker gates, plan validat
 plan.schema.md                ← PLAN.md format specification
 roadmap.schema.md             ← ROADMAP.md format specification
 spec.schema.md                ← v2 spec sections (API specs, state machines)
+wiki-conventions.md           ← Wiki page format, cross-refs, staleness model
 agent-monitoring.schema.md    ← Progress reporting, stale detection, dashboards
 pattern-executor.md           ��� Pattern runtime (debate, chain, vote, triage, converge)
 ```
@@ -211,6 +245,7 @@ flowchart LR
 | **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-review-code --full` |
 | **Convergence** | target-parser, harness-builder, delta-analyzer, convergence-driver | `/loom-converge` |
 | **Architecture** | tech-stack-debater, migration-architect | debate/chain patterns |
+| **Wiki** | wiki-maintainer, wiki-ingest, wiki-lint, wiki-query | `/loom-ingest`, `/loom-lint`, execution events |
 | **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom-init`, docs workflows |
 | **Utility** | meta-agent, tdd-coach, fixer-agent | `/loom-create-agent`, `/loom-fix-code` |
 
@@ -251,7 +286,7 @@ Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`
 
 ## Hooks (Deterministic Enforcement)
 
-Six Claude Code hooks in `hooks/` enforce critical invariants at the tool-call level:
+Seven Claude Code hooks in `hooks/` enforce critical invariants at the tool-call level:
 
 | Hook | Event | What it does |
 |------|-------|-------------|
@@ -261,11 +296,13 @@ Six Claude Code hooks in `hooks/` enforce critical invariants at the tool-call l
 | `status-updater` | SubagentStop | Updates status.toon timestamps |
 | `quality-gate` | Stop | Prevents premature pipeline stops |
 | `typecheck-on-write` | PostToolUse | Runs tsc after TS writes, feeds errors back |
+| `wiki-write-guard` | PreToolUse | Enforces wiki page format and cross-ref integrity on writes to `.loom/wiki/` |
 
 All hooks use a shared harness (`hooks/lib/run-hook.ts`) that adopts Hookify's defensive patterns: always exit 0 on errors, fail open on missing state, atomic stdin consumption. Registered in `.claude/settings.json`.
 
 ## Persistence
 
+- `.loom/wiki/` — persistent knowledge base: wiki pages, index, operation log (git-tracked)
 - `.plan-execution/` — ephemeral execution state (gitignored)
 - `.plan-history/` — reviews, decisions, wave summaries, milestones (git-tracked)
 
@@ -284,15 +321,16 @@ cd hooks && bun install && bunx vitest run
 ## File Structure
 
 ```
-agents/                     30+ agent definitions
-  protocols/                 13 protocol specs
-commands/                    13 slash commands
-hooks/                       6 deterministic enforcement hooks
+agents/                     46 agent definitions
+  protocols/                 23 protocol specs
+commands/                    20 slash commands
+hooks/                       7 deterministic enforcement hooks
   lib/                       Shared harness + TOON reader + context resolver
   __tests__/                 Hook tests
 .claude/settings.json        Hook registrations
-skills/library.yaml          Library registry
+skills/library.yaml          Library registry (commands, agents, infrastructure)
+install.sh                   Curl-friendly minimal bootstrap
+.loom/wiki/                  Persistent knowledge base (git-tracked)
 test/protocol/               Protocol tests
 test-fixtures/               Test plan fixtures (valid + broken)
-install.sh                   Bootstrap installer (one-time)
 ```

@@ -14,6 +14,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 
 ### Commands
 
+#### Initialization
+
 | Command | Description |
 |---------|-------------|
 | `/loom-init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
@@ -21,16 +23,76 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-init --full --from "desc"` | Onboarding + roadmap from description |
 | `/loom-init --audit-only` | Analyze only, don't write files |
 | `/loom-init --format all` | Generate CLAUDE.md + AGENTS.md + .cursorrules |
+
+#### Roadmapping & Planning
+
+| Command | Description |
+|---------|-------------|
+| `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
+| `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
+| `/loom-roadmap --init --plan` | Alias for `/loom-create-plan` |
+| `/loom-roadmap --init --full` | Full pipeline: roadmap → review → plan → review (interactive) |
+| `/loom-roadmap --init --from "desc"` | Create a roadmap from a one-line description |
+| `/loom-roadmap --init --brownfield` | Analyze existing codebase before roadmap creation |
+| `/loom-roadmap --discuss` | Run discussion phase to surface architectural decisions |
+| `/loom-roadmap --no-discuss` | Skip the discussion phase |
+| `/loom-roadmap --auto` | Accept all recommended defaults without prompting |
+| `/loom-roadmap --approve-roadmap` | Mark ROADMAP.md as approved (unlocks plan generation) |
+| `/loom-roadmap --review-roadmap` | Trigger roadmap review (delegates to /loom-review-roadmap) |
+| `/loom-roadmap --review-integrate` | Apply roadmap review findings to ROADMAP.md |
+| `/loom-roadmap --validate` | Run plan validation pipeline (stages 1-4) |
+| `/loom-roadmap --validate --roadmap` | Run roadmap validation pipeline (stages 1-4) |
+| `/loom-roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
+| `/loom-roadmap --refine` | Refine plan using review history |
+| `/loom-roadmap --refine --roadmap` | Refine roadmap using review history |
+| `/loom-roadmap --status` | Detailed execution + milestone progress |
+| `/loom-roadmap --deps` | Show phase dependency graph + critical path |
+| `/loom-roadmap --diff` | Compare current plan vs last snapshot |
+| `/loom-roadmap --history` | Show plan revision history |
+| `/loom-roadmap --milestone add/complete/list` | Manage milestones |
+| `/loom-roadmap --snapshot` | Save current plan state for versioning |
+| `/loom-review-roadmap [path]` | Launch 4 agents to review a ROADMAP.md |
 | `/loom-create-plan` | Generate PLAN.md (v2 spec) from an approved ROADMAP.md |
 | `/loom-create-plan --auto` | Generate plan without interactive review |
 | `/loom-create-plan --v1` | Generate simpler v1 plan (no API specs or state machines) |
+| `/loom-create-plan --review-integrate` | Apply plan review findings to PLAN.md |
 | `/loom-review-plan [path]` | Launch 6 planning agents in parallel to review a PLAN.md |
+
+#### Execution
+
+| Command | Description |
+|---------|-------------|
 | `/loom-execute-plan [path]` | Execute a plan wave-by-wave with human approval gates |
 | `/loom-execute-plan --init` | Scaffold a new PLAN.md template interactively |
 | `/loom-execute-plan --dry-run` | Preview wave structure without executing |
 | `/loom-execute-plan --resume` | Resume from `.plan-execution/state.toon` |
 | `/loom-execute-plan --wave N` | Re-run a single wave |
 | `/loom-execute-plan --contracts-only` | Run only Wave 0 (contracts) |
+| `/loom-auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
+| `/loom-auto --plan PLAN.md` | Autonomous pipeline from existing plan |
+| `/loom-auto --resume` | Resume autonomous pipeline from saved state |
+| `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
+| `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
+| `/loom-auto --dry-run` | Show pipeline plan without executing |
+| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
+| `/loom-auto --converge-target <path>` | Enable convergence with a golden target file |
+| `/loom-auto --converge-config <path>` | Enable convergence with existing harness config |
+| `/loom-converge --target <path>` | Convergence loop: compare implementation against deterministic target |
+| `/loom-converge --config <path>` | Run convergence with existing harness config |
+| `/loom-converge --max-iterations N` | Cap convergence iterations (default: 10) |
+| `/loom-converge --tolerance <threshold>` | Global tolerance override (0.0-1.0) |
+| `/loom-converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
+| `/loom-converge --resume` | Resume convergence from saved state |
+| `/loom-converge --status` | Show current convergence state |
+| `/loom-quick "task description"` | Execute a quick task (auto-detects mode) |
+| `/loom-quick --append "task"` | Force append as new plan phase |
+| `/loom-quick --inject "task"` | Force inject into running execution |
+| `/loom-quick --no-verify "task"` | Skip post-execution verification |
+
+#### Review & Testing
+
+| Command | Description |
+|---------|-------------|
 | `/loom-test-plan [path]` | Generate tests from plan acceptance criteria |
 | `/loom-test-plan --criteria-only` | Extract test specs without generating tests |
 | `/loom-test-plan --unit-only` | Generate unit tests only |
@@ -50,22 +112,18 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-fix-code --dry-run` | Show fix plan without applying changes |
 | `/loom-fix-code --auto` | Skip approval gate after fixes |
 | `/loom-fix-code --finding N` | Fix a single finding by number |
-| `/loom-auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
-| `/loom-auto --plan PLAN.md` | Autonomous pipeline from existing plan |
-| `/loom-auto --resume` | Resume autonomous pipeline from saved state |
-| `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
-| `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
-| `/loom-auto --dry-run` | Show pipeline plan without executing |
-| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
-| `/loom-auto --converge-target <path>` | Enable convergence with a golden target file |
-| `/loom-auto --converge-config <path>` | Enable convergence with existing harness config |
-| `/loom-converge --target <path>` | Convergence loop: compare implementation against deterministic target |
-| `/loom-converge --config <path>` | Run convergence with existing harness config |
-| `/loom-converge --max-iterations N` | Cap convergence iterations (default: 10) |
-| `/loom-converge --tolerance <threshold>` | Global tolerance override (0.0-1.0) |
-| `/loom-converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
-| `/loom-converge --resume` | Resume convergence from saved state |
-| `/loom-converge --status` | Show current convergence state |
+
+#### Knowledge & Maintenance
+
+| Command | Description |
+|---------|-------------|
+| `/loom-note <text>` | Add a development note (auto-tagged) |
+| `/loom-note --tag <tag> <text>` | Add a tagged note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki) |
+| `/loom-note --priority high <text>` | Add a high-priority note |
+| `/loom-note --review` | Review pending notes grouped by tag, suggest placement |
+| `/loom-note --assimilate` | Review notes AND apply them to roadmap/plan/context docs |
+| `/loom-note --list` | Show all notes (pending + assimilated + dismissed) |
+| `/loom-note --dismiss <id>` | Dismiss a note by ID |
 | `/loom-ingest` | Incremental wiki ingest on uncommitted changes |
 | `/loom-ingest --source <path>` | Ingest a specific file or directory into wiki |
 | `/loom-ingest --url <url>` | Ingest an external document into wiki |
@@ -78,45 +136,20 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-lint --plan` | Plan-reality divergence |
 | `/loom-lint --fix` | Auto-fix where possible |
 | `/loom-lint --severity <level>` | Filter by minimum severity (blocking, warning, info) |
-| `/loom-note <text>` | Add a development note (auto-tagged) |
-| `/loom-note --tag <tag> <text>` | Add a tagged note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki) |
-| `/loom-note --priority high <text>` | Add a high-priority note |
-| `/loom-note --review` | Review pending notes grouped by tag, suggest placement |
-| `/loom-note --assimilate` | Review notes AND apply them to roadmap/plan/context docs |
-| `/loom-note --list` | Show all notes (pending + assimilated + dismissed) |
-| `/loom-note --dismiss <id>` | Dismiss a note by ID |
-| `/loom-review-roadmap [path]` | Launch 4 agents to review a ROADMAP.md |
-| `/loom-roadmap` | Show unified status (roadmap + plan + milestones + progress) |
-| `/loom-roadmap --init` | Create a new ROADMAP.md interactively (includes discussion phase) |
-| `/loom-roadmap --init --plan` | Alias for `/loom-create-plan` |
-| `/loom-roadmap --init --full` | Full pipeline: roadmap → review → plan → review (interactive) |
-| `/loom-roadmap --init --from "desc"` | Create a roadmap from a one-line description |
-| `/loom-roadmap --init --brownfield` | Analyze existing codebase before roadmap creation |
-| `/loom-roadmap --discuss` | Run discussion phase to surface architectural decisions |
-| `/loom-roadmap --no-discuss` | Skip the discussion phase |
-| `/loom-roadmap --auto` | Accept all recommended defaults without prompting |
-| `/loom-roadmap --approve-roadmap` | Mark ROADMAP.md as approved (unlocks plan generation) |
-| `/loom-roadmap --review-roadmap` | Trigger roadmap review (delegates to /loom-review-roadmap) |
-| `/loom-roadmap --validate` | Run plan validation pipeline (stages 1-4) |
-| `/loom-roadmap --validate --roadmap` | Run roadmap validation pipeline (stages 1-4) |
-| `/loom-roadmap --validate --deep` | Full validation including agent feasibility + schema completeness |
-| `/loom-roadmap --refine` | Refine plan using review history |
-| `/loom-roadmap --refine --roadmap` | Refine roadmap using review history |
-| `/loom-roadmap --review-integrate` | Apply roadmap review findings to ROADMAP.md |
-| `/loom-create-plan --review-integrate` | Apply plan review findings to PLAN.md |
-| `/loom-roadmap --status` | Detailed execution + milestone progress |
-| `/loom-roadmap --deps` | Show phase dependency graph + critical path |
-| `/loom-roadmap --diff` | Compare current plan vs last snapshot |
-| `/loom-roadmap --history` | Show plan revision history |
-| `/loom-roadmap --milestone add/complete/list` | Manage milestones |
-| `/loom-roadmap --snapshot` | Save current plan state for versioning |
-| `/loom-library` or `/loom-library list` | Show installed items grouped by type |
+
+#### Tooling & Infrastructure
+
+| Command | Description |
+|---------|-------------|
+| `/loom-library` or `/loom-library list` | Show installed items grouped by type (commands, agents, infrastructure) |
 | `/loom-library use <name>` | Install item from catalog, resolve dependencies |
 | `/loom-library sync` | Re-pull all installed items, compare hashes |
 | `/loom-library search <query>` | Search catalog by name/description |
 | `/loom-library add <source>` | Add new item (local path or GitHub URL) |
 | `/loom-library remove <name>` | Uninstall, warn about dependents |
-| `/loom-library update` | Check all sources for changes |
+| `/loom-library update` | Self-update catalog, update installed items + infrastructure, clear update indicator |
+| `/loom-library update --check-only` | Report available updates without applying |
+| `/loom-library upgrade` | Alias for `update` |
 | `/loom-create-agent` | Interactive wizard: create a bespoke agent + wire into pipeline |
 | `/loom-create-agent --pipeline review --role "HIPAA checker"` | Quick mode with pipeline and role |
 | `/loom-create-agent --from .claude/agents/existing.md` | Clone and customize an existing agent |
@@ -127,10 +160,6 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-git merge [PR#]` | Squash-merge PR with cleanup offer |
 | `/loom-git cleanup [branch]` | Delete remote branch (not local) |
 | `/loom-git review-pr [PR#]` | Comprehensive PR review (diff, comments, CI, conflicts) |
-| `/loom-quick "task description"` | Execute a quick task (auto-detects mode) |
-| `/loom-quick --append "task"` | Force append as new plan phase |
-| `/loom-quick --inject "task"` | Force inject into running execution |
-| `/loom-quick --no-verify "task"` | Skip post-execution verification |
 | `/loom-statusline-setup` | Configure the Claude Code status line (Starship integration, ambient state) |
 | `/loom` | Show this reference |
 
@@ -380,4 +409,6 @@ Or use `/loom-create-agent` to interactively create an agent and wire it into a 
 
 ### Distribution
 
-Agents and commands are registered in `~/.claude/skills/library/library.yaml` and can be synced across machines via GitHub using the-library pattern.
+Agents, commands, and infrastructure are registered in `~/.claude/skills/library/library.yaml` and can be synced across machines via GitHub. Infrastructure items (statusline renderer, update checker) are self-updating — `/loom-library update` fetches the latest versions from GitHub and replaces local copies.
+
+A background update checker runs every 4 hours (triggered by the statusline renderer). When a newer `catalog_version` is detected, a yellow `↑ update` indicator appears in the idle statusline. Run `/loom-library update` to apply updates and clear the indicator.

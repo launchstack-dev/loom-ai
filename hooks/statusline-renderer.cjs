@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { spawn } = require('child_process');
 
 const STALENESS_SECONDS = 300;
 const SEP = ' \x1b[2m\u2502\x1b[0m '; // dim │
@@ -67,6 +68,7 @@ function render(data) {
     let output = line1.join(SEP);
     if (line2) output += '\n' + line2;
     process.stdout.write(output);
+
   } catch {}
   process.exit(0);
 }
@@ -322,6 +324,12 @@ function renderIdleLine(planMeta, statusFile, root) {
   const branch = gitBranch(root);
   if (branch) parts.push(`\x1b[2m${branch}\x1b[0m\x1b[34m`);
 
+  // Update indicator + background check (only when idle, not during active pipeline)
+  triggerUpdateCheck();
+  if (readUpdateCache()) {
+    parts.push(`\x1b[33m\u2191 update\x1b[0m\x1b[34m`);
+  }
+
   if (parts.length === 0) return '';
   return `\x1b[34m\u{1F9F5} ${parts.join(SEP)}\x1b[0m`;
 }
@@ -359,8 +367,42 @@ function findRoot(startDir) {
 }
 
 function toonGet(content, key) {
-  const m = content.match(new RegExp(`^${key}:\\s*(.+)$`, 'm'));
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = content.match(new RegExp(`^${escaped}:\\s*(.+)$`, 'm'));
   return m ? m[1].trim() : null;
+}
+
+function readUpdateCache() {
+  try {
+    const cacheFile = path.join(os.homedir(), '.cache', 'loom', 'update-check.toon');
+    if (!fs.existsSync(cacheFile)) return false;
+    const content = fs.readFileSync(cacheFile, 'utf-8');
+    return toonGet(content, 'updateAvailable') === 'true';
+  } catch (e) {
+    try { process.stderr.write(`loom-statusline: readUpdateCache: ${e.message}\n`); } catch {}
+    return false;
+  }
+}
+
+function triggerUpdateCheck() {
+  try {
+    // Check throttle before spawning to avoid unnecessary process creation
+    const cacheFile = path.join(os.homedir(), '.cache', 'loom', 'update-check.toon');
+    if (fs.existsSync(cacheFile)) {
+      const content = fs.readFileSync(cacheFile, 'utf-8');
+      const lastChecked = toonGet(content, 'lastChecked');
+      if (lastChecked) {
+        const elapsed = Date.now() - new Date(lastChecked).getTime();
+        if (!isNaN(elapsed) && elapsed < 4 * 60 * 60 * 1000) return;
+      }
+    }
+    const checker = path.join(os.homedir(), '.claude', 'loom-update-checker.cjs');
+    if (!fs.existsSync(checker)) return;
+    const child = spawn('node', [checker], { detached: true, stdio: 'ignore' });
+    child.unref();
+  } catch (e) {
+    try { process.stderr.write(`loom-statusline: triggerUpdateCheck: ${e.message}\n`); } catch {}
+  }
 }
 
 function readActiveState(statusFile) {

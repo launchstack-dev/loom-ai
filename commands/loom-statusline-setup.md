@@ -15,14 +15,14 @@ No arguments are required. This command is idempotent and safe to run multiple t
 Determine the absolute path to the statusline command script:
 
 ```
-HOOK_SCRIPT="$HOME/.loom-ai/hooks/statusline-command.sh"
+HOOK_SCRIPT="$HOME/.claude/statusline-command.sh"
 ```
 
 Verify the script exists at that path. If it does not exist, report an error and stop:
 
 ```
 Error: statusline-command.sh not found at {path}.
-Run `gh repo clone jensencarlsen/loom-ai ~/.loom-ai` to install Loom first.
+Run: curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
 Ensure the script is executable. If not, run:
@@ -40,7 +40,7 @@ Read `~/.claude/settings.json`.
 
 ```json
 {
-  "statusline_command": "/Users/{username}/.loom-ai/hooks/statusline-command.sh"
+  "statusline_command": "/Users/{username}/.claude/statusline-command.sh"
 }
 ```
 
@@ -67,7 +67,7 @@ command -v starship
 
 ### Step 4: Starship Integration
 
-Read the Loom Starship segment definition from `~/.loom-ai/config/starship-loom.toml`.
+Read the Loom Starship segment definition from `~/.claude/config/starship-loom.toml`.
 
 If that file does not exist, report a warning and skip Starship integration:
 

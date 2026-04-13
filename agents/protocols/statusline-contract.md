@@ -52,7 +52,7 @@ Displayed when `status.toon` is missing, stale, or unreadable.
 **Format:**
 
 ```
-[plan-status] [branch] [notes-count if >0] [last-result if exists]
+[plan-status] [branch] [notes-count if >0] [last-result if exists] [update-indicator]
 ```
 
 **Examples:**
@@ -62,6 +62,7 @@ approved main
 draft feature/auth 3 notes
 approved main ok
 executing feature/auth failed
+main ↑ update
 main
 ```
 
@@ -73,13 +74,15 @@ main
 | branch | `gitBranch` | Only if non-null | Shown as-is |
 | notes-count | `pendingNotes` | Only if > 0 | Format: `N notes` |
 | last-result | `lastResult` | Only if non-null | `ok` or `failed` |
+| update-indicator | `updateAvailable` | Only if true | Format: `↑ update` (yellow) |
 
 **Truncation priority** (drop lowest priority first when exceeding 120 chars):
 
 1. `branch` (highest priority -- keep)
 2. `plan-status`
-3. `last-result`
-4. `notes-count` (lowest priority -- drop first)
+3. `update-indicator`
+4. `last-result`
+5. `notes-count` (lowest priority -- drop first)
 
 If all segments are null/zero, output an empty line (the prompt framework hides the module when output is empty).
 
@@ -111,6 +114,18 @@ The statusline command must never crash or produce multi-line output. All failur
 | AmbientState.lastCommand | `.plan-execution/last-run.toon` or equivalent |
 | AmbientState.lastResult | `.plan-execution/last-run.toon` or equivalent |
 | AmbientState.gitBranch | `git rev-parse --abbrev-ref HEAD` |
+| AmbientState.updateAvailable | `~/.cache/loom/update-check.toon` (`updateAvailable` field) |
+
+### Background Update Check
+
+The statusline renderer spawns a background update checker (`~/.claude/loom-update-checker.cjs`) when idle. The checker:
+
+1. Reads `~/.cache/loom/update-check.toon` — skips if `lastChecked` < 4 hours ago
+2. Fetches `library.yaml` from GitHub, extracts `catalog_version`
+3. Compares with local `~/.claude/skills/library/library.yaml` catalog version
+4. Writes result to `~/.cache/loom/update-check.toon`
+
+The renderer reads this cache file on each idle render. When `updateAvailable: true`, it appends a yellow `↑ update` segment. Running `/loom-library update` clears the cache file, removing the indicator.
 
 ## Type Definitions
 
