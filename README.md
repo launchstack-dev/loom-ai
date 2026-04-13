@@ -300,6 +300,21 @@ Seven Claude Code hooks in `hooks/` enforce critical invariants at the tool-call
 
 All hooks use a shared harness (`hooks/lib/run-hook.ts`) that adopts Hookify's defensive patterns: always exit 0 on errors, fail open on missing state, atomic stdin consumption. Registered in `.claude/settings.json`.
 
+## Wiki Maintenance
+
+The project wiki (`.loom/wiki/`) stays current automatically. Wiki-maintainer-agent runs in the background at four state-change points in the workflow — capturing decisions as they're made, not after the fact:
+
+| Trigger | Event type | What's captured |
+|---------|-----------|-----------------|
+| `/loom-roadmap` (after write) | `roadmap-created` | Strategic intent, features, milestones, constraints |
+| `/loom-create-plan` (after validation) | `plan-created` | Architecture, schemas, API contracts, phase structure |
+| `/loom-execute-plan` (after each wave) | `wave-complete` | Contracts, implementation decisions, files built |
+| `/loom-fix-code` (after verification) | `fixes-applied` | Applied fixes, unfixable items as design constraints |
+
+All triggers are **non-blocking** — wiki failures are logged but never gate the pipeline. `/loom-auto` includes these same triggers plus its own orchestration-level wiki updates.
+
+For manual wiki management: `/loom-ingest` (add content), `/loom-lint --wiki` (health check), `/loom-note --tag wiki` (capture notes for later ingestion).
+
 ## Persistence
 
 - `.loom/wiki/` — persistent knowledge base: wiki pages, index, operation log (git-tracked)
