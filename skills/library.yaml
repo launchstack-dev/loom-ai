@@ -111,6 +111,10 @@ library:
       description: Karpathy-inspired behavioral guardrails for agents — assumption surfacing, simplicity, surgical changes, goal-driven verification
       source: agents/protocols/behavioral-guidelines.md
 
+    - name: scope-contract-schema
+      description: Schema for scope-contract.toon — pre-flight decisions, assumptions, acceptance criteria, non-goals, contract evolution rules
+      source: agents/protocols/scope-contract.schema.md
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -227,10 +231,14 @@ library:
       requires: [skill:execution-protocols]
 
     # Planning agents (extended)
+    - name: prompt-refiner-agent
+      description: Expands loose user prompts into structured project briefs by scanning codebase, inferring scope, and flagging ambiguities
+      source: agents/prompt-refiner-agent.md
+
     - name: questioner-agent
-      description: Discussion phase agent - surfaces architectural decision points with structured options before roadmap generation
+      description: "Scope interrogator — proposal-based decisions with code examples, acceptance criteria generation, brownfield context awareness"
       source: agents/questioner-agent.md
-      requires: [skill:execution-protocols]
+      requires: [skill:execution-protocols, skill:scope-contract-schema]
 
     - name: plan-builder-agent
       description: Creates v1/v2 PLAN.md files - v2 is spec-driven with API specs, state machines, error handling
