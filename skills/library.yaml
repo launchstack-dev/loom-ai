@@ -364,7 +364,7 @@ library:
       requires: [agent:meta-agent]
 
     - name: loom-roadmap
-      description: "Roadmap lifecycle — init, review, approve, refine, validate, status via subcommands"
+      description: "Roadmap lifecycle — init, review, approve, add, insert, remove, reorder, explore, refine, validate, status"
       source: commands/loom-roadmap.md
       requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent, agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent]
 
