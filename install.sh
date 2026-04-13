@@ -53,10 +53,19 @@ fetch_file() {
   local tmp
   tmp=$(mktemp "${dst}.XXXXXX")
 
-  if ! curl --max-filesize 10485760 --max-time 15 --max-redirs 5 -sfSL "${url}" -o "${tmp}"; then
-    echo "  FAIL ${src} (fetch failed)"
-    rm -f "${tmp}"
-    return 1
+  # Try curl first (works for public repos), fall back to gh api (works for private repos)
+  if ! curl --max-filesize 10485760 --max-time 15 --max-redirs 5 -sfSL "${url}" -o "${tmp}" 2>/dev/null; then
+    if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
+      if ! gh api "repos/${REPO}/contents/${src}" --jq '.content' 2>/dev/null | base64 -d > "${tmp}" 2>/dev/null; then
+        echo "  FAIL ${src} (fetch failed via curl and gh)"
+        rm -f "${tmp}"
+        return 1
+      fi
+    else
+      echo "  FAIL ${src} (fetch failed — for private repos, install gh: https://cli.github.com/)"
+      rm -f "${tmp}"
+      return 1
+    fi
   fi
 
   if [ ! -s "${tmp}" ]; then
