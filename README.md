@@ -283,7 +283,7 @@ cd hooks && bun install && bunx vitest run
 
 ## Acknowledgments
 
-The wiki system and agent behavioral guidelines draw heavily from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on how LLMs fail at coding tasks. His insights on silent assumption-making, gold-plating, and the gap between "code that runs" and "code that's correct" shaped two core Loom systems:
+The wiki system and agent behavioral guidelines draw heavily from Andrej Karpathy's observations on how LLMs fail at coding tasks. His insights on silent assumption-making, gold-plating, and the gap between "code that runs" and "code that's correct" shaped two core Loom systems:
 
 - **Behavioral Guidelines** (`agents/protocols/behavioral-guidelines.md`) — four guardrails every agent follows: surface assumptions instead of guessing silently, implement exactly what's specified (no speculative abstractions), make surgical changes that match existing style, and verify against acceptance criteria before claiming done. These directly address the failure patterns Karpathy identified.
 

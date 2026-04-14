@@ -1,6 +1,6 @@
 # Behavioral Guidelines
 
-Behavioral guardrails for all Loom agents, derived from [Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on common LLM coding mistakes. Agents with identified gaps reference this document in their instructions.
+Behavioral guardrails for all Loom agents, derived from Andrej Karpathy's observations on common LLM coding mistakes. Agents with identified gaps reference this document in their instructions.
 
 ## 1. Think Before Coding — Surface Assumptions
 
