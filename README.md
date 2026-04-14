@@ -4,256 +4,208 @@ A multi-agent pipeline for planning, executing, testing, and reviewing software 
 
 ## What It Does
 
-Twenty slash commands that compose 50+ specialized agents, organized by workflow stage:
+Ten noun-grouped commands that compose 48+ specialized agents:
 
-**Initialization**
-| Command | What it does |
-|---------|-------------|
-| `/loom-init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
-
-**Roadmapping & Planning**
-| Command | What it does |
-|---------|-------------|
-| `/loom-roadmap` | Roadmap creation, milestone tracking, dependency graphs, versioning |
-| `/loom-review-roadmap` | 4 agents review a ROADMAP.md in parallel |
-| `/loom-create-plan` | Generate PLAN.md (v2 spec) from approved ROADMAP.md |
-| `/loom-review-plan` | 6 agents analyze a PLAN.md in parallel |
-
-**Execution**
-| Command | What it does |
-|---------|-------------|
-| `/loom-execute-plan` | Wave-by-wave execution with contracts, parallel implementers, wiring, and verification |
-| `/loom-auto` | Fully autonomous pipeline with feedback loops |
-| `/loom-converge` | Convergence loop: compare implementation against deterministic targets |
-| `/loom-quick` | Execute a quick task without full plan/roadmap ceremony |
-
-**Review & Testing**
-| Command | What it does |
-|---------|-------------|
-| `/loom-test-plan` | Acceptance criteria extraction + unit + E2E test generation |
-| `/loom-review-code` | 9 reviewers (6 built-in + 3 bespoke) with severity-ranked output |
-| `/loom-fix-code` | Auto-apply review findings with parallel fixer-agents and verification |
-
-**Knowledge & Maintenance**
-| Command | What it does |
-|---------|-------------|
-| `/loom-note` | Accumulate development notes, review and assimilate into docs |
-| `/loom-ingest` | Ingest code, docs, and execution results into the project wiki |
-| `/loom-lint` | Structural health checks: wiki, contracts, plan-reality drift |
-
-**Tooling & Infrastructure**
-| Command | What it does |
-|---------|-------------|
-| `/loom-library` | Pull-on-demand catalog management: install, sync, search, update |
-| `/loom-git` | Git workflow automation: commit, push, PR, merge, cleanup, review-pr |
-| `/loom-create-agent` | Interactive wizard to create project-specific bespoke agents |
-| `/loom-statusline-setup` | Configure the Claude Code status line (Starship integration) |
-| `/loom` | Full reference |
+**Core Commands**
+| Command | Subcommands | What it does |
+|---------|-------------|-------------|
+| `/loom` | init, auto, converge, quick, pause, resume, do, next, profile, status, debate, chain, vote, triage | Root command — project lifecycle, session management, orchestration patterns |
+| `/loom-plan` | create, review, execute, test, status | Plan lifecycle — create from roadmap, 6-agent review, wave execution, test generation |
+| `/loom-code` | review, fix | Code quality — 9+ parallel reviewers, auto-apply fixes with contract checking |
+| `/loom-roadmap` | init, review, approve, add, insert, remove, reorder, explore, refine, validate, status, deps, diff, history, milestone, snapshot | Roadmap lifecycle — strategy, multi-persona brainstorming, dependency graphs |
+| `/loom-wiki` | ingest, lint, query, status | Wiki management — ingest sources, health checks, search and synthesis |
+| `/loom-agent` | create, list | Agent management — create bespoke agents, view registered agents |
+| `/loom-note` | (add), --review, --assimilate, --backlog, --promote | Notes and backlog — capture ideas, promote to roadmap |
+| `/loom-library` | list, use, sync, update, search, add, remove | Catalog management — install, sync, update agents and commands |
+| `/loom-git` | commit, push, pr, merge, cleanup, review-pr | Git workflow automation |
+| `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
 
 ## Install
 
-**One-liner** (no repo clone needed):
+**One-liner** (works for public and private repos):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
-This installs a minimal bootstrap into `~/.claude/`: the library catalog, infrastructure files (statusline renderer, update checker), and three core commands (`/loom-library`, `/loom`, `/loom-statusline-setup`). Everything else is pulled on demand.
+Installs a minimal bootstrap into `~/.claude/`: the library catalog, infrastructure (statusline renderer, update checker), and three core commands (`/loom-library`, `/loom`, `/loom-statusline-setup`). Everything else is pulled on demand. Falls back to `gh api` for private repos.
 
-**Per-project setup:**
+**Pull what you need:**
 ```
-/loom-library use loom-init          — install the onboarding command + its agent deps
-/loom-library use loom-execute-plan  — install execution pipeline + contracts, implementer, wiring, verification agents
-/loom-library use loom-auto          — install everything (pulls all commands + agents transitively)
+/loom-library use loom-plan      — plan lifecycle + all execution agents
+/loom-library use loom-code      — code review + fixer agents
+/loom-library use loom-roadmap   — roadmap + brainstorming agents
+/loom-library use loom-wiki      — wiki agents
 ```
 
 **Ongoing management:**
 ```
-/loom-library list           — see what's installed vs available
-/loom-library sync           — re-pull all installed items, detect source changes
-/loom-library update         — check for new catalog entries + update infrastructure
-/loom-library upgrade        — alias for update
-/loom-library search <query> — find items by name or description
-/loom-library remove <name>  — uninstall (warns about dependents)
+/loom-library list               — see what's installed vs available
+/loom-library sync               — re-pull all installed items, detect changes
+/loom-library update             — fetch new catalog entries + update everything
 ```
-
-The statusline shows a yellow `↑ update` indicator when a newer catalog version is available on GitHub. Run `/loom-library update` to apply updates and clear the indicator.
-
-`/loom-library` resolves dependencies automatically, tracks content hashes for drift detection, and supports both local and GitHub sources. Run `/loom` in Claude Code to verify.
 
 ## Architecture
 
 ```
-Commands (user-facing)              Agents (spawned by commands)
-──────────────────────              ───────────────────────────
-/loom-init ───────────────────────→ project-guidance + api-explorer + docs-auditor
-/loom-roadmap ────────────────────→ questioner → roadmap-builder → plan-builder
-/loom-review-roadmap ─────────────→ 4 review agents (parallel)
-/loom-review-plan ────────────────→ 6 planning agents (parallel)
-/loom-execute-plan ───────────────→ contracts → implementers → wiring → verification
-/loom-test-plan ──────────────────→ criteria → unit-test → e2e-test
-/loom-review-code ────────────────→ 6 built-in + 3 bespoke reviewers
-/loom-fix-code ───────────────────→ parallel fixer-agents
-/loom-converge ───────────────────→ target-parser → harness → delta-analyzer → driver
-/loom-auto ──────────────────────→ chains all commands with automated gates
-/loom-ingest ─────────────────────→ wiki-ingest-agent → wiki-maintainer-agent
-/loom-lint ───────────────────────→ wiki-lint-agent + contract/plan validators
+Commands (noun-grouped)             Agents (spawned by subcommands)
+───────────────────────             ────────────────────────────────
+/loom init ──────────────────────→ project-guidance + api-explorer + docs-auditor
+/loom auto ──────────────────────→ prompt-refiner → scope-interrogator → roadmap → plan → execute → test → review → fix
+/loom debate/chain/vote/triage ──→ multi-agent orchestration patterns
+/loom-roadmap init ──────────────→ questioner → roadmap-builder
+/loom-roadmap review ────────────→ 4 review agents (parallel)
+/loom-roadmap explore ───────────→ 3-6 persona agents (multi-round brainstorming)
+/loom-plan create ───────────────→ plan-builder (reads scope contract)
+/loom-plan review ───────────────→ 6 planning agents (parallel)
+/loom-plan execute ──────────────→ contracts → implementers → wiring → verification (per wave)
+/loom-plan test ─────────────────→ criteria → unit-test → e2e-test
+/loom-code review ───────────────→ 6 built-in + 3 bespoke reviewers + contract checking
+/loom-code fix ──────────────────→ parallel fixer-agents
+/loom converge ──────────────────→ target-parser → harness → delta-analyzer → driver
+/loom-wiki ingest ───────────────→ wiki-ingest-agent → wiki-maintainer-agent
+/loom-wiki lint ─────────────────→ wiki-lint-agent + contract/plan validators
+
+Pre-flight (scope contract system)
+──────────────────────────────────
+prompt-refiner-agent          ← Expands loose prompts into structured briefs
+questioner-agent (enhanced)   ← Proposal-based scope interrogation with brownfield awareness
+scope-contract.toon           ← Locked decisions, acceptance criteria, non-goals → feeds all agents
 
 Infrastructure (background)
 ───────────────────────────
-statusline-renderer.cjs       ← Pipeline state + ambient context + update indicator
+statusline-renderer.cjs       ← Pipeline state + worktree-aware dir display + update indicator
 loom-update-checker.cjs       ← Background catalog version check (4h throttle)
 
-Protocols (shared contracts)
-────────────────────────────
+Protocols (24 shared contracts)
+───────────────────────────────
 agent-result.schema.md        ← Standard return envelope
+scope-contract.schema.md      ← Pre-flight decisions, criteria, contract evolution
 state.schema.md               ← Execution state for resume
 pipeline-state.schema.md      ← Autonomous pipeline state
 execution-conventions.md      ← File ownership, context tiers, TOON format
-toon-format.md                ← TOON format specification
-orchestration-config.schema.md ← Per-project agent registration
 orchestration-patterns.md     ← Debate, chain, vote, triage, converge patterns
+plan.schema.md / spec.schema.md ← Plan + v2 spec formats
+roadmap.schema.md             ← Roadmap format
+wiki-*.schema.md              ← Wiki page, index, log schemas
 validation-rules.md           ← Output validation, blocker gates, plan validation
-plan.schema.md                ← PLAN.md format specification
-roadmap.schema.md             ← ROADMAP.md format specification
-spec.schema.md                ← v2 spec sections (API specs, state machines)
-wiki-conventions.md           ← Wiki page format, cross-refs, staleness model
 agent-monitoring.schema.md    ← Progress reporting, stale detection, dashboards
-pattern-executor.md           ��� Pattern runtime (debate, chain, vote, triage, converge)
+behavioral-guidelines.md      ← Karpathy-inspired agent guardrails
 ```
 
 ## Workflows
 
-Pick the workflow that matches your situation:
-
-### Full pipeline
-
-The default path — maximum control at every stage.
-
-```mermaid
-flowchart TD
-    Start{New or existing<br/>codebase?}
-    Start -->|Existing| Init["/loom-init<br/>Analyze codebase,<br/>generate CLAUDE.md"]
-    Start -->|New| Roadmap
-
-    Init --> Roadmap["/loom-roadmap --init<br/>Create ROADMAP.md"]
-    Init -.->|"--full flag<br/>chains automatically"| Roadmap
-
-    Roadmap --> ReviewRoadmap["/loom-review-roadmap<br/>4 agents in parallel"]
-    ReviewRoadmap --> Approve["/loom-roadmap --approve-roadmap"]
-
-    Approve --> Plan["/loom-create-plan<br/>Generate PLAN.md"]
-    Plan --> ReviewPlan["/loom-review-plan<br/>6 agents in parallel"]
-    ReviewPlan --> Integrate["/loom-create-plan --review-integrate"]
-
-    Integrate --> Execute["/loom-execute-plan<br/>Wave-by-wave build"]
-    Execute --> Test["/loom-test-plan --run"]
-    Test --> Review["/loom-review-code"]
-    Review --> Fix["/loom-fix-code"]
-    Fix -.->|"Issues remain"| Review
-
-    style Init fill:#e8f4f8
-    style Roadmap fill:#e8f4f8
-    style Plan fill:#e8f4f8
-    style Execute fill:#f0e8f8
-    style Test fill:#e8f8e8
-    style Review fill:#f8f0e8
-    style Fix fill:#f8f0e8
-```
-
-**Brownfield** (existing codebase):
-```
-/loom-init                              Analyze codebase, generate CLAUDE.md + CONTEXT.md
-/loom-roadmap --init --brownfield       Create roadmap informed by existing code
-/loom-review-roadmap                    4 agents review the roadmap
-/loom-roadmap --approve-roadmap         Lock roadmap
-/loom-create-plan                       Generate PLAN.md from approved roadmap
-/loom-review-plan                       6 agents analyze plan in parallel
-/loom-create-plan --review-integrate    Apply plan review findings
-/loom-execute-plan                      Wave-by-wave build
-/loom-test-plan --run                   Generate and run tests
-/loom-review-code                       Full code review
-/loom-fix-code                          Auto-apply findings
-```
-
-**Greenfield** (new project) — same pipeline, skip `/loom-init`:
-```
-/loom-roadmap --init --from "description"
-```
-
-### Autonomous
-
-One command runs the full pipeline with automated gates and feedback loops.
-
-```mermaid
-flowchart LR
-    Auto["/loom-auto --from 'description'"]
-    Auto --> Plan["Plan"]
-    Plan --> Build["Build"]
-    Build --> Test["Test"]
-    Test --> Review["Review"]
-    Review -->|"Pass"| Done["Done"]
-    Review -->|"Fail"| Fix["Fix"]
-    Fix --> Review
-    Fix -->|"Stuck"| Plan
-
-    style Auto fill:#e8f4f8
-    style Done fill:#e8f8e8
-```
+### Full pipeline (maximum control)
 
 ```
-/loom-auto --from "add user authentication with OAuth"
+/loom init                              Brownfield onboarding → CLAUDE.md + wiki
+/loom-roadmap init --brownfield         Create roadmap informed by existing code
+/loom-roadmap explore "feature idea"    Multi-persona brainstorming (optional)
+/loom-roadmap review                    4 agents review in parallel
+/loom-roadmap approve                   Lock roadmap
+/loom-plan create                       Generate PLAN.md (reads scope contract)
+/loom-plan review                       6 agents analyze plan
+/loom-plan create --review-integrate    Apply review findings
+/loom-plan execute                      Wave-by-wave build with contract drift detection
+/loom-plan test --run                   Generate and run tests
+/loom-code review                       9+ reviewers + contract compliance
+/loom-code fix                          Auto-apply findings
 ```
 
-Circuit breakers stop the loop if fixes stall or iterations exceed the budget. Escalates to you with a report of what worked and what didn't.
+### Autonomous (1-shot)
 
-### Quick brownfield onboard
-
-Analyze an existing codebase and chain directly into roadmap creation:
+Pre-flight scope contract → hands-off execution through full roadmap.
 
 ```
-/loom-init --full --from "add team management"
+/loom auto --from "add user auth with RBAC and team management"
 ```
 
-### Convergence (deterministic targets)
+Flow: prompt refiner → scope interrogation (5-15 decisions with code examples) → roadmap → plan → execute → converge → test → review → fix. Circuit breakers stop the loop if stuck. Contract drift detection per wave.
 
-When you have a spec, migration, or reference implementation to match exactly:
+Flags: `--skip-preflight`, `--light-preflight`, `--auto` (accept all defaults).
 
-```mermaid
-flowchart LR
-    Parse["Parse targets"] --> Harness["Build harness"]
-    Harness --> Compare["Compare"]
-    Compare -->|"Delta > 0"| Fix["Fix gaps"]
-    Fix --> Compare
-    Compare -->|"Delta = 0"| Done["Done"]
-```
+### Quick task
 
 ```
-/loom-converge --targets spec.json --source src/
+/loom quick "add rate limiting to the API endpoints"
 ```
+
+### Multi-persona brainstorming
+
+```
+/loom-roadmap explore "should we add real-time collaboration?"
+/loom-roadmap explore "AI search" --depth deep --personas engineer,designer,pm,security,skeptic
+```
+
+Spawns 3-6 persona agents (engineer, designer, PM, security, ops, user, skeptic, data) for 1-3 rounds of structured exploration. Interactive between rounds — focus, add personas, or trigger a debate.
+
+### Orchestration patterns
+
+Invoke directly or as flags on any command:
+
+```
+/loom debate "Redis vs Postgres for sessions"
+/loom chain "draft auth API spec"
+/loom vote "best caching strategy" --candidates 3
+/loom triage "fix this production error"
+
+/loom-plan create --debate "monolith vs microservices"
+/loom-roadmap init --debate "build vs buy for auth"
+```
+
+### Session management
+
+```
+/loom pause                     Snapshot state, WIP commit
+/loom resume                    Restore context, continue where you left off
+/loom next                      State-aware suggestion for next step
+/loom do "review my code"       Natural language routing to the right command
+/loom status                    Project overview
+```
+
+## Pre-flight Scope Contract
+
+The scope contract system converts a loose prompt into a comprehensive decision manifest before any execution begins:
+
+1. **Prompt Refiner** — takes "add auth" and expands it into a structured brief by scanning the codebase
+2. **Scope Interrogator** — proposal-based decisions (not bare questions): shows 2-3 concrete options with code examples, each with implied acceptance criteria
+3. **scope-contract.toon** — locked decisions, assumptions, non-goals, testable success criteria
+
+The contract flows through the entire pipeline:
+- Roadmap reads it → features from decisions, constraints from non-goals
+- Plan reads it → architecture constraints, acceptance criteria seeds
+- Execution reads it per wave → contract drift detection
+- Code review checks against it → `[CONTRACT]` tag for violations
+- Wiki captures decisions as pages automatically
+
+Supports brownfield context: reads wiki pages, init-report, CLAUDE.md to make proposals specific to existing code ("Your codebase already has JWT middleware at `src/middleware/auth.ts`...").
 
 ## Agent Groups
 
 | Group | Agents | Used by |
 |-------|--------|---------|
-| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom-init` |
-| **Strategy & UX** | strategy-agent, ux-agent | `/loom-review-plan`, `/loom-review-roadmap`, `/loom-review-code` |
-| **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap --init` |
-| **Planning** | feature-coverage, phasing, parallelization, agentic-workflow, plan-builder | `/loom-review-plan`, `/loom-create-plan` |
-| **Execution** | contracts, implementer, api-route-creator, api-connector, wiring, verification | `/loom-execute-plan` |
-| **Testing** | acceptance-criteria, unit-test, e2e-test | `/loom-test-plan` |
-| **Code Review** | security, architecture, plan-compliance + 6 built-in reviewers | `/loom-review-code` |
-| **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-review-code --full` |
-| **Convergence** | target-parser, harness-builder, delta-analyzer, convergence-driver | `/loom-converge` |
+| **Pre-flight** | prompt-refiner, questioner (scope interrogator) | `/loom auto`, `/loom-roadmap init` |
+| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom init` |
+| **Strategy & UX** | strategy-agent, ux-agent | `/loom-plan review`, `/loom-roadmap review`, `/loom-code review` |
+| **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap init` |
+| **Planning** | feature-coverage, phasing, parallelization, agentic-workflow, plan-builder | `/loom-plan review`, `/loom-plan create` |
+| **Execution** | contracts, implementer, api-route-creator, api-connector, wiring, verification | `/loom-plan execute` |
+| **Testing** | acceptance-criteria, unit-test, e2e-test | `/loom-plan test` |
+| **Code Review** | security, architecture, plan-compliance + 6 built-in reviewers | `/loom-code review` |
+| **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-code review --full` |
+| **Convergence** | target-parser, harness-builder, delta-analyzer, convergence-driver | `/loom converge` |
 | **Architecture** | tech-stack-debater, migration-architect | debate/chain patterns |
-| **Wiki** | wiki-maintainer, wiki-ingest, wiki-lint, wiki-query | `/loom-ingest`, `/loom-lint`, execution events |
-| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom-init`, docs workflows |
-| **Utility** | meta-agent, tdd-coach, fixer-agent | `/loom-create-agent`, `/loom-fix-code` |
+| **Wiki** | wiki-maintainer, wiki-ingest, wiki-lint, wiki-query | `/loom-wiki`, execution events |
+| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom init`, docs workflows |
+| **Utility** | meta-agent, tdd-coach, fixer-agent | `/loom-agent create`, `/loom-code fix` |
 
 ## Per-Project Extensibility
 
-Create `.claude/orchestration.toml` in any project to add custom agents:
+Create `.claude/orchestration.toml` in any project to add custom agents and configure model profiles:
 
 ```toml
+[settings]
+modelProfile = "balanced"    # quality | balanced | budget
+
 [review.agents.hipaa-reviewer]
 source = ".claude/agents/hipaa-reviewer.md"
 model = "sonnet"
@@ -267,17 +219,32 @@ phase = "post-contracts"
 outputRole = "producer"
 ```
 
-Or use `/loom-create-agent` to interactively create an agent and wire it into a pipeline.
+Or use `/loom-agent create` to interactively create and register an agent.
 
 ## Orchestration Patterns
 
-Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`:
+Available as direct commands (`/loom debate`) or flags on any command (`--debate`):
 
-- **Debate** — adversarial multi-round reasoning for architecture decisions
-- **Chain** — progressive refinement (draft → refine → harden)
-- **Vote** — parallel independent solutions + evaluator picks best
-- **Triage** — cheap router classifies tasks, routes to appropriate specialist
-- **Converge** — iterative comparison against deterministic targets until delta reaches zero
+| Pattern | Best for | How it works |
+|---------|----------|-------------|
+| **Debate** | Decisions with tradeoffs | Advocate + critic argue N rounds, moderator synthesizes |
+| **Chain** | Progressive refinement | Draft → refine → harden pipeline |
+| **Vote** | Critical implementations | N parallel solutions, evaluator picks best |
+| **Triage** | Mixed-complexity work | Cheap router classifies, routes to specialist |
+| **Converge** | Deterministic targets | Iterative comparison until delta = 0 |
+
+## Wiki Maintenance
+
+The project wiki (`.loom/wiki/`) stays current automatically at state-change points:
+
+| Trigger | What's captured |
+|---------|-----------------|
+| `/loom-roadmap` (after write) | Strategic intent, features, milestones, constraints |
+| `/loom-plan create` (after validation) | Architecture, schemas, API contracts, phase structure |
+| `/loom-plan execute` (after each wave) | Contracts, implementation decisions, files built |
+| `/loom-code fix` (after verification) | Applied fixes, unfixable items as design constraints |
+
+All triggers are non-blocking. For manual management: `/loom-wiki ingest`, `/loom-wiki lint`, `/loom-wiki query "question"`.
 
 ## Data Formats
 
@@ -286,7 +253,7 @@ Beyond fan-out and pipeline, configure advanced patterns in `orchestration.toml`
 
 ## Hooks (Deterministic Enforcement)
 
-Seven Claude Code hooks in `hooks/` enforce critical invariants at the tool-call level:
+Seven Claude Code hooks enforce critical invariants at the tool-call level:
 
 | Hook | Event | What it does |
 |------|-------|-------------|
@@ -296,30 +263,13 @@ Seven Claude Code hooks in `hooks/` enforce critical invariants at the tool-call
 | `status-updater` | SubagentStop | Updates status.toon timestamps |
 | `quality-gate` | Stop | Prevents premature pipeline stops |
 | `typecheck-on-write` | PostToolUse | Runs tsc after TS writes, feeds errors back |
-| `wiki-write-guard` | PreToolUse | Enforces wiki page format and cross-ref integrity on writes to `.loom/wiki/` |
-
-All hooks use a shared harness (`hooks/lib/run-hook.ts`) that adopts Hookify's defensive patterns: always exit 0 on errors, fail open on missing state, atomic stdin consumption. Registered in `.claude/settings.json`.
-
-## Wiki Maintenance
-
-The project wiki (`.loom/wiki/`) stays current automatically. Wiki-maintainer-agent runs in the background at four state-change points in the workflow — capturing decisions as they're made, not after the fact:
-
-| Trigger | Event type | What's captured |
-|---------|-----------|-----------------|
-| `/loom-roadmap` (after write) | `roadmap-created` | Strategic intent, features, milestones, constraints |
-| `/loom-create-plan` (after validation) | `plan-created` | Architecture, schemas, API contracts, phase structure |
-| `/loom-execute-plan` (after each wave) | `wave-complete` | Contracts, implementation decisions, files built |
-| `/loom-fix-code` (after verification) | `fixes-applied` | Applied fixes, unfixable items as design constraints |
-
-All triggers are **non-blocking** — wiki failures are logged but never gate the pipeline. `/loom-auto` includes these same triggers plus its own orchestration-level wiki updates.
-
-For manual wiki management: `/loom-ingest` (add content), `/loom-lint --wiki` (health check), `/loom-note --tag wiki` (capture notes for later ingestion).
+| `wiki-write-guard` | PreToolUse | Enforces wiki page format and cross-ref integrity |
 
 ## Persistence
 
 - `.loom/wiki/` — persistent knowledge base: wiki pages, index, operation log (git-tracked)
-- `.plan-execution/` — ephemeral execution state (gitignored)
-- `.plan-history/` — reviews, decisions, wave summaries, milestones (git-tracked)
+- `.plan-execution/` — ephemeral execution state, scope contract (gitignored)
+- `.plan-history/` — reviews, decisions, explorations, wave summaries, milestones (git-tracked)
 
 ## Tests
 
@@ -331,20 +281,17 @@ cd test/protocol && bun install && bunx vitest run
 cd hooks && bun install && bunx vitest run
 ```
 
-117 tests validating the inter-agent protocol: schema validation (with TOON roundtrip fidelity), plan validation (structure, dependency cycles, critical path, file ownership, sizing, criteria quality), scope coverage (orphan detection, drift tracking), context compression, agent monitoring (graded E2E rubric), handoff chains, file ownership detection, and feedback logging.
-
 ## File Structure
 
 ```
-agents/                     46 agent definitions
-  protocols/                 23 protocol specs
-commands/                    20 slash commands
+agents/                     48 agent definitions (including prompt-refiner)
+  protocols/                 24 protocol specs (including scope-contract)
+commands/                    10 noun-grouped commands
 hooks/                       7 deterministic enforcement hooks
   lib/                       Shared harness + TOON reader + context resolver
   __tests__/                 Hook tests
-.claude/settings.json        Hook registrations
 skills/library.yaml          Library registry (commands, agents, infrastructure)
-install.sh                   Curl-friendly minimal bootstrap
+install.sh                   Curl-friendly minimal bootstrap (gh api fallback)
 .loom/wiki/                  Persistent knowledge base (git-tracked)
 test/protocol/               Protocol tests
 test-fixtures/               Test plan fixtures (valid + broken)
