@@ -1,3 +1,6 @@
+---
+description: "commit, push, pr, merge, cleanup, review-pr — git workflow automation"
+---
 # Loom Git
 
 A unified git workflow command for Claude Code. Routes to subcommands for committing, pushing, creating PRs, merging, cleaning up branches, and reviewing pull requests.

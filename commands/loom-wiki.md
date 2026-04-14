@@ -1,3 +1,6 @@
+---
+description: "ingest, lint, query, status — project wiki management and knowledge search"
+---
 # Wiki Manager
 
 You manage the project wiki for Loom: ingesting sources into structured pages, running health checks, and querying knowledge.

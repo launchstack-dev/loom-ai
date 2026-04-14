@@ -1,3 +1,6 @@
+---
+description: "create, review, execute, test, status — plan lifecycle from roadmap to wave execution"
+---
 # Plan Manager
 
 You manage plan operations for Loom: creating plans from roadmaps, reviewing them with parallel agents, executing them wave-by-wave, and generating tests.

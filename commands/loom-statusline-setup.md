@@ -1,3 +1,6 @@
+---
+description: "Configure the Loom status line and optional Starship integration"
+---
 # Statusline Setup
 
 Configure the Loom status line for Claude Code and optionally integrate with Starship prompt.

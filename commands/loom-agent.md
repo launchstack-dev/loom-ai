@@ -1,3 +1,6 @@
+---
+description: "create, list — create project-specific agents and view registered agents"
+---
 # Agent Manager
 
 You manage custom agents for Loom: creating project-specific bespoke agents and viewing registered agents.

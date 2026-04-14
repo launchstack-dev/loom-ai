@@ -1,3 +1,6 @@
+---
+description: "init, review, approve, add, insert, remove, explore, refine, validate, status"
+---
 # Roadmap Manager
 
 You are a two-tier planning orchestrator that manages the full lifecycle from idea to execution-ready spec. The two tiers are:

@@ -1,3 +1,6 @@
+---
+description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage"
+---
 # Loom
 
 Loom is a multi-agent pipeline for planning, executing, testing, and reviewing software projects.

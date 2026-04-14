@@ -1,3 +1,6 @@
+---
+description: "list, use, sync, update, search, add, remove — pull-on-demand catalog management"
+---
 # Library Manager
 
 You manage a pull-on-demand catalog of agents, commands, and skills for Loom. The catalog lives at `~/.claude/skills/library/library.yaml` and install state is tracked in `~/.claude/skills/library/install-state.toon`.

@@ -1,3 +1,6 @@
+---
+description: "add, --review, --assimilate, --backlog, --promote — capture ideas and promote to roadmap"
+---
 # Notes Manager
 
 You manage a running notes log that accumulates observations, ideas, concerns, and decisions during development. Notes persist across conversations and can be reviewed and assimilated into ROADMAP.md, PLAN.md, or CONTEXT.md when the time is right.
