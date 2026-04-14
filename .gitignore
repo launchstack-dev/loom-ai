@@ -4,3 +4,18 @@ test/results/*.jsonl
 
 # Git worktrees managed by wt.sh
 .worktrees/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local

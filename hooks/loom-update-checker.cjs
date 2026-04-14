@@ -48,8 +48,8 @@ function main() {
       if (e.code !== 'ENOENT') log(`local catalog: ${e.code || e.message}`);
     }
 
-    // Fetch remote catalog_version
-    fetchText(REMOTE_URL, 3000, (err, body) => {
+    // Fetch remote catalog_version (try raw URL first, fall back to API with gh token)
+    fetchCatalog((err, body) => {
       try {
         let remoteVersion = localVersion;
         let updateAvailable = false;
@@ -92,14 +92,52 @@ function main() {
   }
 }
 
-function fetchText(url, timeoutMs, cb) {
+function fetchCatalog(cb) {
+  // Try raw URL first (works for public repos)
+  fetchText(REMOTE_URL, 3000, (err, body) => {
+    if (!err && body && body.includes('catalog_version')) {
+      return cb(null, body);
+    }
+    // Fall back to GitHub API with gh auth token (works for private repos)
+    getGhToken((token) => {
+      if (!token) {
+        return cb(err || new Error('no gh token'), null);
+      }
+      const apiUrl = 'https://api.github.com/repos/launchstack-dev/loom-ai/contents/skills/library.yaml';
+      fetchText(apiUrl, 5000, (apiErr, apiBody) => {
+        if (apiErr || !apiBody) return cb(apiErr, null);
+        try {
+          const json = JSON.parse(apiBody);
+          if (json.content) {
+            const decoded = Buffer.from(json.content, 'base64').toString('utf-8');
+            return cb(null, decoded);
+          }
+        } catch {}
+        return cb(new Error('api parse failed'), null);
+      }, { 'Authorization': `token ${token}`, 'User-Agent': 'loom-update-checker', 'Accept': 'application/vnd.github.v3+json' });
+    });
+  });
+}
+
+function getGhToken(cb) {
+  try {
+    const { execSync } = require('child_process');
+    const token = execSync('gh auth token', { timeout: 2000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+    cb(token || null);
+  } catch {
+    cb(null);
+  }
+}
+
+function fetchText(url, timeoutMs, cb, extraHeaders) {
   let done = false;
   function finish(err, data) {
     if (done) return;
     done = true;
     cb(err, data);
   }
-  const req = https.get(url, { timeout: timeoutMs }, (res) => {
+  const headers = extraHeaders || {};
+  const req = https.get(url, { timeout: timeoutMs, headers }, (res) => {
     if (res.statusCode !== 200) {
       res.resume();
       return finish(new Error(`HTTP ${res.statusCode}`));

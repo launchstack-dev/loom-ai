@@ -44,6 +44,11 @@ Installs a minimal bootstrap into `~/.claude/`: the library catalog, infrastruct
 /loom-library update             — fetch new catalog entries + update everything
 ```
 
+**Uninstall:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/uninstall.sh | bash
+```
+
 ## Architecture
 
 ```
@@ -274,20 +279,20 @@ Seven Claude Code hooks enforce critical invariants at the tool-call level:
 ## Tests
 
 ```bash
-# Protocol tests
-cd test/protocol && bun install && bunx vitest run
+# Protocol tests (bun or npm — either works)
+cd test/protocol && npm install && npx vitest run
 
 # Hook tests
-cd hooks && bun install && bunx vitest run
+cd hooks && npm install && npx vitest run
 ```
 
 ## Acknowledgments
 
-The wiki system and agent behavioral guidelines draw heavily from Andrej Karpathy's observations on how LLMs fail at coding tasks. His insights on silent assumption-making, gold-plating, and the gap between "code that runs" and "code that's correct" shaped two core Loom systems:
+The wiki system and agent behavioral guidelines draw from Andrej Karpathy's observations on LLM failure patterns. See [docs/design-philosophy.md](docs/design-philosophy.md) for details.
 
-- **Behavioral Guidelines** (`agents/protocols/behavioral-guidelines.md`) — four guardrails every agent follows: surface assumptions instead of guessing silently, implement exactly what's specified (no speculative abstractions), make surgical changes that match existing style, and verify against acceptance criteria before claiming done. These directly address the failure patterns Karpathy identified.
+## License
 
-- **Persistent Wiki** (`.loom/wiki/`) — a project knowledge base that agents read and write, ensuring decisions survive across sessions and context windows. When an agent makes an architectural choice in wave 2, agents in wave 5 can find it in the wiki rather than re-inferring (and potentially contradicting) it. The wiki is Loom's answer to the "agents don't remember what they decided" problem — context that compounds rather than evaporates.
+[MIT](LICENSE)
 
 ## File Structure
 

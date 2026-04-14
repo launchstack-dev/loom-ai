@@ -32,7 +32,7 @@ blockName:                                    # nested block
 
 ## Toolchain
 
-- Use **bun** / **bunx** over npm / npx when bun is available
+- Prefer **bun** / **bunx** when available; fall back to **npm** / **npx** otherwise
 - Use **vitest** for test suites in the meta-orchestration project
 
 ## Agent Conventions

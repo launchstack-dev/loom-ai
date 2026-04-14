@@ -14,6 +14,8 @@ BRANCH="main"
 BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 CLAUDE_DIR="${HOME}/.claude"
 CACHE_DIR="${HOME}/.cache/loom"
+CHECKSUMS_URL="${BASE}/checksums.sha256"
+VERIFY_INTEGRITY=true
 
 # Files to fetch: source_path -> target_path
 declare -a INFRA_FILES=(
@@ -78,9 +80,43 @@ fetch_file() {
   return 0
 }
 
+# ── Fetch checksums manifest ──
+CHECKSUMS_FILE="${CACHE_DIR}/checksums.sha256"
+echo "Fetching integrity manifest..."
+if fetch_file "checksums.sha256" "${CHECKSUMS_FILE}"; then
+  echo "  OK   checksums.sha256"
+else
+  echo "  WARN No checksums.sha256 found — skipping integrity verification"
+  VERIFY_INTEGRITY=false
+fi
+
+# ── Helper: verify SHA256 checksum of a downloaded file ──
+verify_checksum() {
+  local src="$1"
+  local dst="$2"
+  if [ "${VERIFY_INTEGRITY}" != "true" ]; then return 0; fi
+  local expected
+  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}')
+  if [ -z "${expected}" ]; then
+    echo "  WARN ${src} (no checksum in manifest — skipped)"
+    return 0
+  fi
+  local actual
+  actual=$(shasum -a 256 "${dst}" | awk '{print $1}')
+  if [ "${actual}" != "${expected}" ]; then
+    echo "  FAIL ${src} (checksum mismatch)"
+    echo "       expected: ${expected}"
+    echo "       got:      ${actual}"
+    rm -f "${dst}"
+    return 1
+  fi
+  return 0
+}
+
 # ── Fetch catalog ──
+echo ""
 echo "Fetching catalog..."
-if fetch_file "skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml"; then
+if fetch_file "skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml" && verify_checksum "skills/library.yaml" "${CLAUDE_DIR}/skills/library/library.yaml"; then
   echo "  OK   library.yaml"
 else
   echo "ERROR: Could not fetch library.yaml. Check your network and try again."
@@ -95,7 +131,7 @@ echo "Fetching infrastructure..."
 for entry in "${INFRA_FILES[@]}"; do
   src="${entry%%:*}"
   dst="${entry#*:}"
-  if fetch_file "${src}" "${dst}"; then
+  if fetch_file "${src}" "${dst}" && verify_checksum "${src}" "${dst}"; then
     echo "  OK   $(basename "${dst}")"
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -113,7 +149,7 @@ echo "Fetching commands..."
 for entry in "${COMMAND_FILES[@]}"; do
   src="${entry%%:*}"
   dst="${entry#*:}"
-  if fetch_file "${src}" "${dst}"; then
+  if fetch_file "${src}" "${dst}" && verify_checksum "${src}" "${dst}"; then
     echo "  OK   $(basename "${dst}")"
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))

@@ -3,8 +3,18 @@
  * with JSON on stdin and capturing exit code + output.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import * as path from "node:path";
+
+/** Detect whether bun is available, fall back to npx. */
+const TSX_RUNNER: [string, string[]] = (() => {
+  try {
+    execSync("bun --version", { stdio: "ignore" });
+    return ["bunx", ["tsx"]];
+  } catch {
+    return ["npx", ["--yes", "tsx"]];
+  }
+})();
 
 export interface HookRunResult {
   exitCode: number;
@@ -28,7 +38,7 @@ export function runHook(
 ): Promise<HookRunResult> {
   return new Promise((resolve) => {
     const hookPath = path.join(HOOKS_DIR, hookFile);
-    const child = spawn("bunx", ["tsx", hookPath], {
+    const child = spawn(TSX_RUNNER[0], [...TSX_RUNNER[1], hookPath], {
       cwd: options?.cwd ?? HOOKS_DIR,
       env: { ...process.env, ...options?.env },
       stdio: ["pipe", "pipe", "pipe"],
