@@ -281,6 +281,14 @@ cd test/protocol && bun install && bunx vitest run
 cd hooks && bun install && bunx vitest run
 ```
 
+## Acknowledgments
+
+The wiki system and agent behavioral guidelines draw heavily from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on how LLMs fail at coding tasks. His insights on silent assumption-making, gold-plating, and the gap between "code that runs" and "code that's correct" shaped two core Loom systems:
+
+- **Behavioral Guidelines** (`agents/protocols/behavioral-guidelines.md`) — four guardrails every agent follows: surface assumptions instead of guessing silently, implement exactly what's specified (no speculative abstractions), make surgical changes that match existing style, and verify against acceptance criteria before claiming done. These directly address the failure patterns Karpathy identified.
+
+- **Persistent Wiki** (`.loom/wiki/`) — a project knowledge base that agents read and write, ensuring decisions survive across sessions and context windows. When an agent makes an architectural choice in wave 2, agents in wave 5 can find it in the wiki rather than re-inferring (and potentially contradicting) it. The wiki is Loom's answer to the "agents don't remember what they decided" problem — context that compounds rather than evaporates.
+
 ## File Structure
 
 ```
