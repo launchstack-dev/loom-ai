@@ -168,6 +168,12 @@ library:
       source: agents/implementer-agent.md
       requires: [skill:execution-protocols]
 
+    - name: data-pipeline-agent
+      description: Specialized implementer for data pipeline code — dbt, Dagster, Airflow, SQL, Bauplan
+      source: agents/data-pipeline-agent.md
+      requires: [skill:execution-protocols]
+      kit: data-engineering
+
     - name: wiring-agent
       description: Post-wave integration - barrel files, routes, imports, deps
       source: agents/wiring-agent.md
@@ -190,6 +196,17 @@ library:
     - name: e2e-test-agent
       description: Generates Playwright E2E tests, supports --chrome and bowser integration
       source: agents/e2e-test-agent.md
+
+    - name: data-test-generator
+      description: Generates data engineering tests — schema conformance, data quality, referential integrity, idempotency (dbt, GE, Dagster, raw SQL)
+      source: agents/data-test-generator.md
+      kit: data-engineering
+
+    - name: data-quality-gate
+      description: Pre-execute gate agent — validates schema conformance, nullability, type coercion safety, freshness SLAs, and referential integrity against data contracts
+      source: agents/data-quality-gate.md
+      requires: [skill:execution-protocols, skill:agent-result-schema]
+      kit: data-engineering
 
     # Code review agents
     - name: plan-compliance-reviewer
@@ -348,6 +365,17 @@ library:
       description: Applies code review findings as targeted fixes within file ownership boundaries
       source: agents/fixer-agent.md
 
+    # Data engineering agents
+    - name: data-schema-reviewer
+      description: Reviews data pipeline schemas for normalization, indexing, migration safety, and idempotency
+      source: agents/data-schema-reviewer.md
+      kit: data-engineering
+
+    - name: data-lineage-tracker
+      description: Traces data flow through transforms and writes source-to-target mappings to wiki
+      source: agents/data-lineage-tracker.md
+      kit: data-engineering
+
   prompts:
     # ── Unified noun commands (v2.1) ──────────────────────────────
 
@@ -388,7 +416,7 @@ library:
       source: commands/loom-library.md
 
     - name: loom-note
-      description: "Accumulate notes, backlog management, review and assimilate into roadmap/plan/wiki"
+      description: "add, --review, --assimilate, --organize, --connect, --briefing, --review-tasks, --done, --defer, --backlog, --promote — capture, organize, and manage tasks"
       source: commands/loom-note.md
 
     - name: loom-statusline-setup
@@ -398,4 +426,27 @@ library:
     - name: loom-git
       description: Git workflow automation — commit, push, PR, merge, cleanup, review-pr via subcommands
       source: commands/loom-git.md
+
+    - name: loom-data
+      description: Data engineering command — profile, validate, lineage, test
+      source: commands/loom-data.md
+      kit: data-engineering
+
+kits:
+  # Kit entries are installed via /loom-library use <kit-name>
+  # Each kit bundles related agents, commands, and protocols
+  # See agents/protocols/kit.schema.md for the full kit entry format
+
+  - name: data-engineering
+    description: Data pipeline quality gates, schema review, lineage tracking, and test generation
+    version: 1.0.0
+    minLoomVersion: 3
+    includes:
+      - data-schema-reviewer
+      - data-test-generator
+      - data-pipeline-agent
+      - data-lineage-tracker
+      - data-quality-gate
+      - loom-data
+    command: loom-data.md
 

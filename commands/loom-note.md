@@ -1,5 +1,5 @@
 ---
-description: "add, --review, --assimilate, --backlog, --promote — capture ideas and promote to roadmap"
+description: "add, --review, --assimilate, --organize, --connect, --briefing, --review-tasks, --done, --defer, --backlog, --promote — capture, organize, and manage tasks"
 ---
 # Notes Manager
 
@@ -14,7 +14,13 @@ Parse arguments:
 - `--tag <tag>`: categorize the note (architecture, bug, idea, decision, concern, perf, security, ux, debt, wiki, backlog)
 - `--priority <level>`: high, medium, low (default: medium)
 - `--review`: review all pending notes, group by tag, suggest where each belongs
-- `--assimilate`: review notes AND apply them — update roadmap/plan/context docs with relevant notes
+- `--assimilate`: review notes AND apply them — update roadmap/plan/context docs with relevant notes. In brain repos (repos with `scratch*.md` files), also process scratch pads and daily notes per the project's CLAUDE.md conventions.
+- `--organize`: light scratch pad organization — cluster and group entries by theme. No wiki reads, no archiving. Rewrites scratch pads in-place. Follow the project's CLAUDE.md for specific organize conventions.
+- `--connect`: deep scratch pad organization — like organize but reads wiki and ontology to annotate entries with connections, contradictions, and new-page indicators. No archiving or wiki modification. Follow the project's CLAUDE.md for specific connect conventions.
+- `--briefing`: EA daily briefing — scan wiki for tasks, deadlines, stale items, follow-ups. Write to today's daily note and display. Read-only (no wiki modifications). Follow the project's CLAUDE.md for briefing conventions.
+- `--review-tasks`: show all open tasks across wiki pages, grouped by status and priority. Follow the project's CLAUDE.md for task review conventions.
+- `--done "fragment"`: mark a task as done by matching a text fragment against wiki page tasks.
+- `--defer "fragment"`: defer a task. Optionally pass `--to YYYY-MM-DD` for a specific date.
 - `--list`: show all notes (pending + assimilated + dismissed)
 - `--dismiss <id>`: mark a note as dismissed (won't appear in review)
 - `--backlog`: show only backlog-tagged notes, sorted by priority
