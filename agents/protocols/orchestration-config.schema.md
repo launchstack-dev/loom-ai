@@ -268,6 +268,92 @@ Loop:    harness → delta-analyzer → fixer-agents (parallel) → re-run harne
 Result:  convergence report (iterations, pass/fail per target, agents used)
 ```
 
+## Kit Agent Registration
+
+Kit agents are domain-specific agents installed via kits. They register in orchestration.toml under `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]`, using `insertionPoint` instead of `phase`.
+
+**Key distinction:** The `phase` field is for project-specific agents registered under `[[execution.agents]]` or `[[testing.agents]]`. The `insertionPoint` field is for kit agents registered under `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]`. These are separate axes and do not conflict.
+
+### Kit Agent Registration: `[[kit.<name>.agents]]`
+
+```toml
+[[kit.<name>.agents]]
+name = "agent-name"              # required — must use kit prefix
+source = "path/to/agent.md"     # required — agent prompt file
+model = "sonnet"                 # optional — defaults to settings.defaultModel
+insertionPoint = "pre-verify"    # required — one of: pre-scope, post-scope, pre-execute, post-execute, pre-verify, post-verify
+outputRole = "reviewer"          # required — reviewer | producer | blocker
+condition = "glob pattern"       # optional — agent only activates when matching files exist
+```
+
+### Kit Gate Registration: `[[kit.<name>.gates]]`
+
+```toml
+[[kit.<name>.gates]]
+name = "gate-name"               # required — must use kit prefix
+source = "path/to/gate.md"      # required — gate agent prompt file
+model = "sonnet"                 # optional — defaults to settings.defaultModel
+insertionPoint = "pre-execute"   # required — insertion point where gate checks run
+failAction = "halt"              # required — halt | warn | retry
+condition = "glob pattern"       # optional — gate only activates when matching files exist
+```
+
+### Condition Field
+
+The `condition` field uses glob patterns to conditionally activate kit agents. When present, the agent only runs if matching files exist in the project. Multiple patterns are separated by ` OR `.
+
+```toml
+condition = "**/*.sql OR **/dbt_project.yml OR **/models/**"
+```
+
+If `condition` is omitted, the agent runs unconditionally at its insertion point.
+
+### Complete Example: Data Engineering Kit
+
+```toml
+# ─────────────────────────────────────────────────────────────
+# Kit agents — domain-specific agents installed via kits
+# ─────────────────────────────────────────────────────────────
+
+[[kit.data-engineering.agents]]
+name = "data-schema-reviewer"
+source = "~/.claude/agents/data-schema-reviewer.md"
+model = "sonnet"
+insertionPoint = "pre-verify"
+outputRole = "reviewer"
+condition = "**/*.sql OR **/dbt_project.yml OR **/models/**"
+
+[[kit.data-engineering.agents]]
+name = "data-lineage-tracker"
+source = "~/.claude/agents/data-lineage-tracker.md"
+model = "sonnet"
+insertionPoint = "post-execute"
+outputRole = "producer"
+
+[[kit.data-engineering.agents]]
+name = "data-test-generator"
+source = "~/.claude/agents/data-test-generator.md"
+model = "sonnet"
+insertionPoint = "post-verify"
+outputRole = "producer"
+
+[[kit.data-engineering.gates]]
+name = "data-quality-gate"
+source = "~/.claude/agents/data-quality-gate.md"
+model = "sonnet"
+insertionPoint = "pre-execute"
+failAction = "halt"
+condition = "**/*.sql OR **/dbt_project.yml OR **/models/**"
+```
+
+### How the Orchestrator Processes Kit Agents
+
+1. **Load config** — Parse `orchestration.toml` and collect all `[[kit.*.agents]]` and `[[kit.*.gates]]` entries
+2. **Evaluate conditions** — For each kit agent, check if `condition` glob matches any project files. Skip non-matching agents.
+3. **Schedule by insertion point** — At each pipeline phase, fire all kit agents whose `insertionPoint` matches the current phase
+4. **Gates run first** — At any insertion point, gates execute before non-gate agents. If a gate halts, non-gate agents at that insertion point do not run.
+5. **Process results** — Kit agent results follow the standard AgentResult envelope. Gate agents additionally include gate fields (see `agent-result.schema.md`).
+
 ## Migration from YAML
 
 If a project has `.claude/orchestration.yaml`, orchestrators should check for that as a fallback. TOML is preferred but YAML is still supported for backwards compatibility.

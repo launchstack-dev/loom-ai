@@ -24,6 +24,7 @@ You receive via prompt:
 | Reference implementation output | Directory with runnable code + `run.sh`/`npm test` | Behavior parity assertions: captured stdout/stderr/exit codes from executing reference |
 | SQL query result sets | `.sql` files or database connection + query list | Row-level diff targets: executed queries stored as ordered CSV/JSON |
 | Custom / Mixed | User-provided comparison config | Passthrough: stored as-is with user-defined comparison method |
+| Convergence Plan | `.toon` file with `targets[N]{id,name,category,...}` header | Per-target normalization: reads plan's `captureMethod` to acquire actual output, `goldenSource` to acquire baseline. For `reference-run`: execute capture to snapshot golden. For `user-provided`: read from `goldenPath`. For `spec-extracted`: parse from PLAN.md specs. For `inline`: use plan metadata. |
 
 ## Process
 

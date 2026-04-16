@@ -77,6 +77,20 @@ Break the description into discrete features:
 
 Output: F-01 through F-NN feature definitions.
 
+### Step 5.5: Convergence Indicators
+
+For each feature's key behaviors, identify which produce deterministic, verifiable outputs:
+
+| Output Type | Detection Signal | Example |
+|---|---|---|
+| API response | "returns", "responds with", "sends" | POST /api/teams returns 201 with team JSON |
+| Generated file | "creates", "generates", "writes to" | Config file generated at dist/config.json |
+| CLI exit code | "succeeds", "passes", "exits" | Build command exits with 0 |
+| Rendered page | "renders", "displays", "shows" | Dashboard renders team list in sidebar |
+| Data output | "produces", "outputs", "transforms" | Pipeline outputs parquet to gold/ |
+
+Add `**Convergence targets:**` bullets to features where verifiable outputs exist. Skip features that are purely behavioral or subjective (e.g., "code follows style guide"). Not every feature needs convergence targets — only add them where outputs are capturable and deterministic.
+
 ### Step 6: Milestone Grouping
 
 Group features into milestones by natural delivery boundaries:

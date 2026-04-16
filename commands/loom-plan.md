@@ -435,6 +435,66 @@ Spawn project-specific agents at their declared phase using `subagent_type: "gen
 
 If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limit when spawning.
 
+### Kit Agents (Insertion Points)
+
+In addition to project-specific agents (which use the `phase` field), check `orchestration.toml` for kit agents registered under `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]`. Kit agents use the `insertionPoint` field instead of `phase`. See `agents/protocols/kit.schema.md` for the full specification.
+
+**6 insertion points** (kit agents fire at these pipeline boundaries):
+
+- `pre-scope` -- before scope contract generation (only in `/loom auto`)
+- `post-scope` -- after scope contract locked, before roadmap
+- `pre-execute` -- before each execution wave starts (before contracts-agent or implementers)
+- `post-execute` -- after each execution wave completes (after wiring-agent finishes)
+- `pre-verify` -- before verification agent runs (typecheck, test, lint)
+- `post-verify` -- after verification agent completes
+
+**Important:** Kit insertion points and project-specific phases are separate systems. `insertionPoint` is for kit agents (`[[kit.*.agents]]`). `phase` is for project agents (`[[execution.agents]]`). Both can coexist in the same orchestration.toml without conflict.
+
+**Discovery and execution at each insertion point:**
+
+1. Read all `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]` entries from orchestration.toml
+2. Filter to entries whose `insertionPoint` matches the current pipeline boundary
+3. **Conditional activation:** If an entry has a `condition` field (file ownership glob, e.g., `**/*.sql OR **/dbt_project.yml`), check whether any files in the current wave's ownership match the glob. If no match, skip that agent.
+4. **Topological sort:** If entries declare `after` or `before` fields, sort them accordingly. If a cycle is detected, log: "Kit agent ordering cycle detected: {agent A} → {agent B} → {agent A}. Halting." and set wave status to failed.
+5. **Gates first:** At each insertion point, run gate agents (`[[kit.<name>.gates]]`) before non-gate agents. This ensures quality gates can block before reviewers/producers run.
+6. Spawn each agent using `subagent_type: "general-purpose"`, instructing it to read its `.md` file from the `source` path in orchestration.toml.
+
+**Gate evaluation (for `[[kit.<name>.gates]]` agents):**
+
+After a gate agent returns its AgentResult, inspect the `gate` field:
+
+- `gate: pass` or gate field absent → continue normally
+- `gate: warn` → log inline warning: "⚠ Gate {agent name} at {insertionPoint}: {gateReason}". Increment `gateWarnCount` in wave summary. Continue.
+- `gate: fail` with `failAction: halt` → stop the wave. Display:
+  ```
+  ## Gate Failed: {agent name}
+  
+  Insertion point: {insertionPoint}
+  Reason: {gateReason}
+  
+  Actions:
+    1. retry   — re-run the gate agent
+    2. skip    — ignore this gate and continue
+    3. abort   — stop execution
+  ```
+  Wait for user input (or ESCALATE if `--auto`).
+- `gate: fail` with `failAction: retry` → re-run the gate agent up to `retryMax` times (default 3). Display: "Retrying gate {agent name} (attempt {N}/{retryMax})...". On exhaustion, fall through to halt behavior with note: "Gate retries exhausted."
+- `gate: fail` with `failAction: warn` → same as `gate: warn` above
+- **Malformed gate response** (gate field present but not valid TOON) → treat as `gate: warn` with gateReason: "malformed gate response from {agent}". Never halt on bad data.
+- **Agent timeout** → treat as `gate: warn` with gateReason: "gate agent timed out". Continue.
+
+**Zero-overhead path:** If `orchestration.toml` does not exist, or exists but has no `[[kit.*]]` sections, skip all kit agent logic entirely. Do not read or parse orchestration.toml for kit sections unless `[[kit.` appears in the file.
+
+**Wave summary integration:** After all kit agents at an insertion point complete, record in `wave-N-summary.toon`:
+```toon
+kitGates[N]{agent,insertionPoint,gate,gateReason}:
+  data-quality-gate,pre-execute,pass,"All 12 schema checks passed"
+kitWarnings: 0
+kitHalts: 0
+```
+
+**Status line:** When kit agents are running, update `.plan-execution/status.toon` with `kitAgentsRunning: {N}` and `kitInsertionPoint: {current point}`.
+
 ### Instructions
 
 #### Step 0: Handle Special Flags
@@ -756,6 +816,7 @@ When `--auto` is active, replace all human approval gates (Steps 4 and 9) with t
 - `verification.status == "pass"` (all checks green)
 - Zero blocking issues in any AgentResult
 - Zero file ownership violations
+- Zero gate halts from kit agents (`kitHalts == 0` in wave summary)
 
 **RETRY** (re-run failed agents, max 2 retries per wave) if:
 - Verification failed
@@ -774,11 +835,17 @@ On retry:
 - Verification failures are in files NOT owned by this wave
 - OR `wave.retryCount >= 2`
 - OR reconciliation found blocking conflicts that auto-resolve failed
+- OR any kit gate returned `gate: fail` with `failAction: halt` (gate halt — display gate agent name, insertion point, and gateReason in escalation)
 
 On escalate:
 1. Set wave status to "failed" in state.toon
 2. Set run status to "paused"
 3. The calling orchestrator (`/loom auto`) reads state.toon and decides: revise plan or give up
+
+**GATE-WARN** (proceed with logged warnings) if:
+- Kit gates returned `gate: warn` (or `gate: fail` with `failAction: warn`)
+- AND all other conditions would PROCEED
+- Log all gate warnings in the wave summary. Do not block.
 
 ### Runtime Feedback
 

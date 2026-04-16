@@ -1,0 +1,34 @@
+planFile: PLAN-kit-system.md
+reviewedAt: 2026-04-15T13:05:00Z
+agentCount: 6
+structuralPrecheck: pass
+
+blockingIssues[4]{agent,description}:
+  strategy,Insertion point enum (pre-scope/post-scope/etc) does not map to existing orchestration.toml phase vocabulary (post-contracts/post-implementer/post-wiring/post-criteria). Phase 0 must reconcile.
+  ux,Gate failure UX undefined — what does the user see when gate:fail halts the pipeline? Need structured error with gateReason and available actions.
+  ux,Install vs activate gap — kit installs globally but activates per-project via orchestration.toml. Need auto-activation or clear post-install message.
+  parallelization,Phase 5 depends on Phase 4 agent names — either pre-define names in Phase 0 or serialize Phases 4 and 5.
+
+warnings[8]{agent,description}:
+  strategy,post-criteria is used in Phase 4 but is not one of the 6 defined insertion points — either add a 7th or map it.
+  strategy,Add degradation criteria to Phase 3 for malformed gate responses and agent timeouts.
+  ux,Partial kit removal state undefined — what happens if 3 of 6 items removed.
+  ux,Unknown colon-subcommand (loom data:foo) needs defined error message.
+  ux,gate:warn and failAction:retry have no UX specification.
+  feature-coverage,Kit Entry schema missing version field — loom-library update cannot track kit-level versions.
+  feature-coverage,Gate primitive not reconciled with existing outputRole:blocker and issues severity:blocking patterns.
+  phasing,loom.md touched in Wave 1 and Wave 2 — agents need exact section anchors not full-file ownership.
+
+infoItems[6]{agent,description}:
+  feature-coverage,Missing subcommands: loom data:fix and loom data:diff would match existing code review patterns.
+  feature-coverage,Add minLoomVersion to kit entry for compatibility checking.
+  feature-coverage,Data engineering agents need declared schema formats and supported frameworks.
+  parallelization,Phase 4 should be 5 parallel sub-agents within the wave — confirmed safe since all files are independent.
+  phasing,Add Phase 0 spike — write one stub agent and sample kit entry to validate round-trip before Wave 1.
+  phasing,Split Phase 3 into 3a (loom-plan.md insertion points) and 3b (loom.md quality gate) for atomic rollback.
+
+crossCuttingThemes[4]:
+  Insertion point vocabulary mismatch (strategy + feature-coverage + parallelization)
+  Phase 5 depends on Phase 4 naming (phasing + parallelization + strategy)
+  loom.md surgical editing risk (phasing + agentic-workflow + parallelization)
+  Missing error/failure UX for gates and kit operations (ux + strategy)

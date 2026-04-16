@@ -115,6 +115,10 @@ library:
       description: Schema for scope-contract.toon — pre-flight decisions, assumptions, acceptance criteria, non-goals, contract evolution rules
       source: agents/protocols/scope-contract.schema.md
 
+    - name: convergence-plan-schema
+      description: Schema for convergence-plan.toon — targets, methods, tolerances, capture config, budget, planning decisions
+      source: agents/protocols/convergence-plan.schema.md
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -287,6 +291,11 @@ library:
     - name: convergence-driver
       description: Iteration orchestrator with circuit breakers — runs the convergence loop until targets match
       source: agents/convergence-driver.md
+
+    - name: convergence-planner-agent
+      description: Interactive convergence target discovery — proposes outputs to verify, comparison methods, tolerances through interview
+      source: agents/convergence-planner-agent.md
+      requires: [skill:convergence-plan-schema]
 
     # Documentation agents
     - name: project-guidance-agent

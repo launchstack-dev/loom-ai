@@ -197,6 +197,10 @@ Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MU
 #### Acceptance Criteria
 - [ ] {testable criterion}
 - [ ] {another testable criterion}
+
+#### Convergence Targets *(optional)*
+- {deterministic output to verify, e.g., "GET /api/users returns JSON array (ignore: timestamps)"}
+- {e.g., "Error responses match shape: {error: {code, message}}"}
 ```
 
 ### Phase Fields
@@ -212,6 +216,7 @@ Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MU
 | File Ownership | yes | Directories (with `**` glob) and/or individual files this phase exclusively controls. |
 | Deliverables | yes | Table of files with Action (Create/Modify/Delete) and Owner hint. |
 | Acceptance Criteria | yes | Checkbox list of testable criteria. |
+| Convergence Targets | no | Free-text bullets listing deterministic, verifiable outputs. Read by convergence-planner-agent as high-confidence seeds. Only include outputs that are capturable and deterministic (API responses, generated files, CLI exit codes, rendered pages). |
 
 ### Dependency Syntax
 

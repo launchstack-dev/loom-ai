@@ -97,6 +97,20 @@ For every entity with a status/state/lifecycle field:
 - Define invalid transitions with error codes and messages
 - Mark terminal states explicitly
 
+### Step 2.8: Convergence Target Extraction
+
+For each phase's deliverables and acceptance criteria, identify outputs that can be verified deterministically:
+
+1. **API endpoints** — every endpoint with a defined response shape → `json-deep-equal` target (ignore timestamps, request IDs)
+2. **Generated files** — every build output or config file → `text-diff` or `json-deep-equal` target
+3. **CLI commands** — every command with deterministic stdout/exit code → `cli-exit-code` target
+4. **State machines** — every state transition → `json-deep-equal` on entity state
+5. **UI pages** — critical user flows → `pixel-diff` target (flag as fragile)
+
+Add an `#### Convergence Targets` subsection to phases that have verifiable outputs. Not every phase needs one — skip phases that only do refactoring, wiring, or subjective work.
+
+If ROADMAP.md features have `**Convergence targets:**` bullets, use those as seeds — map them to the specific phases that implement those features.
+
 ### Step 3: Isolation Boundaries
 Group implementation work by file ownership:
 - Same directory = same owner (e.g., all files in `src/routes/` belong to one phase)
@@ -128,11 +142,13 @@ For each proposed phase:
 - Count files-in (files the agent must read from prior phases): >15 → context overflow risk, split.
 - Ensure each phase has a clear, single responsibility.
 
-### Step 6: Criteria Quality
+### Step 6: Criteria Quality + Convergence Flagging
 For every phase, write acceptance criteria as:
 - `[command] exits with [code]` (e.g., "npx tsc --noEmit exits with code 0")
 - `[API call] returns [response]` (e.g., "GET /api/users returns 200 with JSON array")
 - `[assertion about code]` (e.g., "All repository functions use parameterized queries")
+
+For each criterion, also ask: "Can this be verified automatically and deterministically?" If yes, ensure it appears in the phase's `#### Convergence Targets` section (from Step 2.8). Convergence-suitable criteria describe deterministic outputs (API responses, file contents, exit codes). Non-convergence criteria describe code quality, style, or manual review items.
 
 NEVER use:
 - Subjective language ("should work well", "good error handling", "clean code")

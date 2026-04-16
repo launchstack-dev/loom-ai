@@ -45,6 +45,11 @@ Do NOT intercept any of the following:
    - "what does this function do"
    - "where is the config loaded"
 
+4. **Kit colon-subcommands**: Requests that match the `<word>:<word>` pattern (e.g., "data:validate", "ml:train"). These are kit commands routed through Kit Dispatch, not quick tasks. Examples:
+   - "run data:validate"
+   - "loom data:lineage"
+   - "data:profile this project"
+
 ## Instructions
 
 When triggered, invoke the Skill tool with `skill: 'loom-quick'` and the task description as args. Pass any detected flags before the task description.

@@ -32,11 +32,11 @@ nonGoals[N]:
   Mobile-specific API
   Data migration from external systems
 
-successCriteria[N]{id,criterion,testable,verificationMethod}:
-  SC-01,All CRUD endpoints return correct status codes,true,integration test
-  SC-02,RBAC enforced on all protected routes,true,auth test suite
-  SC-03,TypeScript compiles with no errors,true,tsc --noEmit
-  SC-04,All tests pass,true,vitest run
+successCriteria[N]{id,criterion,testable,verificationMethod,convergenceMethod,convergenceTolerance}:
+  SC-01,All CRUD endpoints return correct status codes,true,integration test,json-deep-equal,1.0
+  SC-02,RBAC enforced on all protected routes,true,auth test suite,json-deep-equal,1.0
+  SC-03,TypeScript compiles with no errors,true,tsc --noEmit,cli-exit-code,1.0
+  SC-04,All tests pass,true,vitest run,cli-exit-code,1.0
 
 techContext:
   stack: typescript,express,better-sqlite3
@@ -103,6 +103,8 @@ Typed array. Every criterion that must pass for the contract to be considered fu
 | `criterion` | string | What must be true. Written as a testable assertion. |
 | `testable` | boolean | `true` if the criterion can be verified automatically. `false` for manual-only checks. |
 | `verificationMethod` | string | How to verify. Examples: `integration test`, `vitest run`, `tsc --noEmit`, `grep for pattern`, `manual review`. |
+| `convergenceMethod` | enum (optional) | Convergence comparison method if this criterion is convergence-testable. One of: `json-deep-equal`, `pixel-diff`, `text-diff`, `cli-exit-code`, `semantic-html`, `row-diff`. Empty if not convergence-suitable. |
+| `convergenceTolerance` | float (optional) | Score threshold 0.0-1.0 for convergence comparison. 1.0 = exact match. Empty if not convergence-suitable. |
 
 ### techContext
 

@@ -380,6 +380,7 @@ targetParser = "target-parser"
 harnessBuilder = "harness-builder"
 deltaAnalyzer = "delta-analyzer"
 driver = "convergence-driver"
+planner = "convergence-planner-agent"
 maxIterations = 10
 trigger = "convergence-task"
 
@@ -398,6 +399,7 @@ text-diff = 0.99
 | harnessBuilder | string        | yes      | Agent that scaffolds comparison infrastructure           |
 | deltaAnalyzer  | string        | yes      | Agent that triages gaps and prioritizes fixes            |
 | driver         | string        | yes      | Agent that orchestrates the iteration loop               |
+| planner        | string        | no       | Agent that interactively discovers targets (default: null — skip planning, require `--target`) |
 | maxIterations  | integer       | no       | Max convergence iterations (default: 10, max: 50)        |
 | tolerance      | object        | no       | Per-method score thresholds (default: 1.0 for all)       |
 | trigger        | string        | yes      | Event or command that activates this pattern             |

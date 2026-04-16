@@ -164,6 +164,9 @@ The core of the roadmap. Each feature is a subsection with a unique ID.
 - {concrete, observable behavior 2}
 - {concrete, observable behavior 3}
 
+**Convergence targets:** *(optional — deterministic outputs to verify)*
+- {verifiable output derived from key behaviors, e.g., "POST /api/teams returns 201 with team JSON (ignore: timestamps, id)"}
+
 **Open questions:** *(optional — for interactive discussion)*
 - {question that needs user input before plan generation}
 ```
@@ -174,6 +177,7 @@ The core of the roadmap. Each feature is a subsection with a unique ID.
 - Every feature must reference at least one entity from the Data Model section
 - Every feature must be assigned to exactly one milestone
 - Key behaviors must be concrete and observable (not "handles errors gracefully")
+- Convergence targets are optional free-text bullets listing outputs that can be verified deterministically (API responses, generated files, CLI exit codes, rendered pages). The convergence-planner-agent reads these as high-confidence seeds during target discovery. Only include targets that are capturable and deterministic — skip subjective or timing-dependent behaviors.
 - Open questions are resolved during the interactive discussion phase before plan generation
 - At least 2 features required (a single feature is likely too coarse-grained)
 - Description should focus on user value, not implementation details

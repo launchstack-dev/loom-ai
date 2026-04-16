@@ -46,6 +46,22 @@ For each phase, produce a structured test spec with three categories:
 - UI interactions — form submissions, navigation, state management
 - Real-world scenarios — the "acceptance criteria" section of the plan
 
+### Step 2.5: Convergence Classification
+
+For each test spec, classify whether it can be verified via the convergence loop (deterministic, capturable, repeatable):
+
+| Classification | Convergence? | Method | Examples |
+|---|---|---|---|
+| API response shape | YES | `json-deep-equal` | GET /api/users returns expected JSON structure |
+| CLI exit code | YES | `cli-exit-code` | TypeScript compilation, test suite, lint |
+| File content | YES | `text-diff` or `json-deep-equal` | Generated config, build output |
+| Visual rendering | YES (fragile) | `pixel-diff` | Page screenshot matches baseline |
+| Timing/performance | NO | — | Response time under 200ms (varies per run) |
+| Code quality | NO | — | Functions use parameterized queries (manual review) |
+| Subjective UX | NO | — | Error messages are clear (human judgment) |
+
+Mark convergence-suitable specs in the output with `convergenceMethod` and `convergenceTolerance` fields. The convergence-planner-agent reads these to auto-populate its target list.
+
 ### Step 3: Prioritize
 
 Assign each test spec a priority:

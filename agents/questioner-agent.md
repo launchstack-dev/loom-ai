@@ -233,7 +233,7 @@ The contract must include:
 - `decisions[N]{id,category,question,answer,rationale,source}` -- every decision with its source (`codebase-pattern`, `user-choice`, `inferred`, `default-accepted`)
 - `assumptions[N]{id,assumption,validated,validatedBy}` -- every assumption validated or flagged
 - `nonGoals[N]` -- explicit out-of-scope items (prevents scope creep during execution)
-- `successCriteria[N]{id,criterion,testable,verificationMethod}` -- every acceptance criterion with verification method
+- `successCriteria[N]{id,criterion,testable,verificationMethod,convergenceMethod,convergenceTolerance}` -- every acceptance criterion with verification method. For criteria that are deterministic and automatically verifiable, also set `convergenceMethod` (one of: `json-deep-equal`, `pixel-diff`, `text-diff`, `cli-exit-code`, `semantic-html`, `row-diff`) and `convergenceTolerance` (0.0-1.0, default 1.0). Leave both empty for criteria that require manual review or are non-deterministic.
 - `techContext` -- stack, test framework, existing patterns, related files
 
 Write the contract to the path specified by the orchestrator (default: `scope-contract.toon` in project root).

@@ -1,5 +1,5 @@
 ---
-description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage"
+description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage + kit:subcommands"
 ---
 # Loom
 
@@ -25,6 +25,26 @@ Parse the first positional argument as the subcommand:
 - `chain "task"`: progressive refinement pipeline (draft → refine → harden)
 - `vote "problem"`: parallel independent solutions + evaluator picks best
 - `triage "task"`: cheap router classifies, routes to appropriate specialist
+- If argument matches `<word>:<word>` pattern (e.g., `data:validate`): kit colon-subcommand — route to kit command file (see Kit Dispatch below)
+
+---
+
+## Kit Dispatch
+
+When the first argument matches `<word>:<word>` (contains exactly one colon with non-empty text on both sides):
+
+1. Split on `:` → `kitPrefix` and `subcommand`
+2. Read `~/.claude/skills/library/library.yaml` `kits:` section
+3. Find a kit whose `name` matches `kitPrefix` OR whose `command` basename (minus `.md`) matches `kitPrefix`
+4. If no kit found: print "Kit '{kitPrefix}' not installed. Run `/loom-library use {kitPrefix}` to install." Stop.
+5. If kit found but its command file is not installed (not in install-state.toon): print "Kit '{kitPrefix}' is registered but its command is not installed. Run `/loom-library use {kitName}` to install." Stop.
+6. If `subcommand` is empty (user typed `data:` with no subcommand):
+   - Read the kit's command file
+   - Display its available subcommands (from the command file's argument parsing section)
+   - Stop.
+7. Invoke the Skill tool with `skill: "{kit command name}"` and `args: "{subcommand} {remaining args}"`.
+
+If the subcommand is not recognized by the kit's command file, the command file handles the error (showing valid subcommands + did-you-mean for edit distance <= 2).
 
 ---
 
@@ -201,6 +221,28 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-git review-pr [PR#]` | Comprehensive PR review (diff, comments, CI, conflicts) |
 | `/loom-statusline-setup` | Configure the Claude Code status line (Starship integration, ambient state) |
 | `/loom` | Show this reference |
+
+#### Kit Commands
+
+Kit commands use colon-delimited subcommands: `loom <kit>:<subcommand>`.
+
+| Command | Description |
+|---------|-------------|
+| `/loom <kit>:` | Show available subcommands for an installed kit |
+
+**Installed kits are listed here when present.** If no kits are installed:
+```
+Kit Commands: none installed. Run /loom-library list --kits to see available kits.
+```
+
+When kits are installed, this section dynamically lists them. For example with the data-engineering kit:
+
+| Command | Description |
+|---------|-------------|
+| `loom data:profile` | Scan project for data sources, schemas, and pipeline definitions |
+| `loom data:validate` | Run data quality gate against the current codebase |
+| `loom data:lineage` | Trace and display data source-to-target flow |
+| `loom data:test` | Generate data-specific tests |
 
 ### Agent Groups
 
@@ -1175,56 +1217,29 @@ If `convergeTarget` and `convergeConfig` are both null, check:
 
 If any of these are found, set `convergenceEnabled = true` and populate `convergeTarget` or `convergeConfig` accordingly.
 
-##### 3.5a: Convergence Requirements Discussion (MANDATORY -- even in --auto)
-
-**This step requires human alignment.** Convergence parameters define what "done" means -- the pipeline must not guess.
+##### 3.5a: Convergence Planning
 
 If `convergeConfig` is provided (user already has a config), skip to 3.5c.
 
-Present a structured requirements discussion:
+If `convergeTarget` is provided (user gave a direct target file), skip to 3.5b.
 
-```
-## Convergence Setup
+**Otherwise, run the convergence planner** to discover and refine targets interactively:
 
-Before running the convergence loop, we need to align on what to verify and how.
+1. Spawn convergence-planner-agent (general-purpose):
+   ```
+   "Read your instructions from ~/.claude/agents/convergence-planner-agent.md first.
+    Mode: {if --auto pipeline: 'auto', else: 'light'}
+    PLAN.md path: {planFile}
+    Scope contract path: scope-contract.toon (if exists)
+    Codebase context: {tech stack summary}
+    Write plan to: .plan-execution/convergence-plan.toon"
+   ```
 
-### 1. What outputs are we verifying?
-{Analyze the plan and executed code to propose outputs. Examples:}
-- API responses (e.g., GET /api/users returns expected JSON shape)
-- Generated files (e.g., config output matches golden template)
-- CLI output (e.g., build script produces expected stdout)
-- UI rendering (e.g., page screenshot matches design comp)
+2. If planner fails: record in failureLog, go to quality gate with convergence failure context.
 
-### 2. How do we capture actual output?
-{Propose capture mechanism per output:}
-- HTTP requests to running dev server
-- Script execution and stdout capture
-- File read from output directory
-- Browser screenshot via Playwright
+3. Read `.plan-execution/convergence-plan.toon`. Set `convergeTarget` to this file path for Step 3.5b.
 
-### 3. Comparison method per target
-| Target | Method | Rationale |
-|--------|--------|-----------|
-| GET /api/users | json-deep-equal | Structured data, exact match needed |
-| App config | json-deep-equal | Config must be identical |
-| README output | text-diff | Line-by-line text comparison |
-
-### 4. Tolerances and ignore rules
-| Target | Tolerance | Ignored Fields | Rationale |
-|--------|-----------|----------------|-----------|
-| GET /api/users | 1.0 (exact) | timestamp, requestId | These are runtime-generated |
-| UI screenshot | 0.95 | -- | Allow minor anti-aliasing differences |
-
-### 5. Golden targets
-{Where do the baseline "correct" outputs come from?}
-- Provided by user at: {--converge-target path}
-- Generated from reference implementation
-- Extracted from spec/plan
-
-Does this look right? Adjust any targets, methods, tolerances, or capture mechanisms before we proceed.
-```
-
-Wait for the user to confirm or adjust. Iterate until they approve.
+Record agents spawned.
 
 ##### 3.5b: Build Convergence Infrastructure
 
@@ -1326,6 +1341,8 @@ typecheckPass    = run project typecheck, read exit code (true if 0)
 convergeStatus   = status from convergence-summary.toon (or "converged" if convergence disabled)
 convergePassing  = targetsPassing from convergence-summary.toon (or 0)
 convergeTotal    = targetsTotal from convergence-summary.toon (or 0)
+gateFailCount    = count of kit agent AgentResults where gate == "fail" AND failAction == "halt"
+gateWarnCount    = count of kit agent AgentResults where gate == "warn" OR (gate == "fail" AND failAction == "warn")
 ```
 
 Apply the decision matrix:
@@ -1338,6 +1355,8 @@ Apply the decision matrix:
 | `criticalCount > 3` OR `testPassRate < 80%` OR systemic typecheck failures | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
 | `fixCycleCount >= 2` (already tried fixing twice) | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
 | `outerIteration > 1` AND same structural failure pattern across iterations | **REVISE-ROADMAP** (if iterations remain) else **ESCALATE** |
+| `gateFailCount > 0` AND any `failAction == "halt"` | **ESCALATE** — kit gate blocked the pipeline. Display gate agent name, insertion point, gateReason. |
+| `gateWarnCount > 0` AND all other conditions pass | **PROCEED** with warnings logged — gate warnings do not block. |
 
 **On PROCEED:** go to Step 8 (Completion).
 
@@ -1545,11 +1564,13 @@ You are an orchestrator that drives a deterministic convergence loop -- comparin
 ### Arguments
 
 Parse arguments after `converge`:
-- `--target <path>` -- path to the deterministic source (required on first run)
-- `--config <path>` -- path to an existing converge.config (skip target-parser and harness-builder)
+- `--plan` -- run convergence planner (interactive target discovery, no `--target` required)
+- `--target <path>` -- path to the deterministic source (skip planner, use this file directly)
+- `--config <path>` -- path to an existing converge.config (skip planner + target-parser + harness-builder)
+- `--light` -- fewer questions in planner (one consolidated batch)
 - `--max-iterations N` -- override max iterations (default: 10)
 - `--tolerance <threshold>` -- global tolerance override (0.0-1.0)
-- `--dry-run` -- run target-parser and harness-builder, show manifest and config, stop before iteration loop
+- `--dry-run` -- run planner/target-parser/harness-builder, show setup, stop before iteration loop
 - `--resume` -- resume from `.plan-execution/convergence-state.toon`
 - `--status` -- show current convergence state without running anything
 - No args: show usage help
@@ -1571,8 +1592,10 @@ Read convergence-related protocols:
 Drive a deterministic convergence loop -- compare implementation output
 against a known-good target, iterate until the delta reaches zero.
 
-  --target <path>         Path to deterministic source (required on first run)
-  --config <path>         Path to existing converge.config (skip setup)
+  --plan                  Interactive target discovery (no --target required)
+  --target <path>         Direct target file (skip planner)
+  --config <path>         Existing converge.config (skip planner + setup)
+  --light                 Fewer questions in planner (one batch)
   --max-iterations N      Override max iterations (default: 10)
   --tolerance <threshold> Global tolerance override (0.0-1.0)
   --dry-run               Run setup only, show manifest and config, stop
@@ -1580,7 +1603,9 @@ against a known-good target, iterate until the delta reaches zero.
   --status                Show current convergence state without running
 
 Examples:
-  /loom converge --target tests/golden/api-responses.json
+  /loom converge --plan                     Interactive: discover targets from codebase
+  /loom converge --plan --light             Quick: one-batch discovery
+  /loom converge --target tests/golden/api-responses.json   Direct target
   /loom converge --config .plan-execution/converge.config --max-iterations 5
   /loom converge --resume
   /loom converge --status
@@ -1611,9 +1636,40 @@ Examples:
 6. Restore state variables from the file.
 7. Jump to Step 5 (Convergence Loop) at the saved iteration.
 
-**If `--dry-run`:** proceed through Steps 2-4 normally; Step 4 will stop execution.
+**If `--dry-run`:** proceed through Steps 1.5-4 normally; Step 4 will stop execution.
 
-**If neither `--target` nor `--config` nor `--resume` provided:** show usage help and stop.
+**If neither `--plan` nor `--target` nor `--config` nor `--resume` provided:** show usage help and stop.
+
+#### Step 1.5: Run Convergence Planner (skip if --target or --config provided)
+
+**If `--plan` is set OR if no `--target` is provided (and no `--config`, no `--resume`):**
+
+1. Spawn convergence-planner-agent (general-purpose):
+   ```
+   "Read your instructions from `~/.claude/agents/convergence-planner-agent.md` first.
+
+    Mode: {--light ? 'light' : 'interactive'}
+    PLAN.md path: {planFile or 'PLAN.md'}
+    Scope contract path: scope-contract.toon (if exists)
+    Codebase context: {tech stack summary from project scanning}
+    {if --target provided: 'Seed target: ' + targetPath}
+    Write plan to: .plan-execution/convergence-plan.toon"
+   ```
+
+2. If planner fails: "Convergence planning failed: {error}. Provide a target directly with `--target <path>` to skip the planner." Stop.
+
+3. Read `.plan-execution/convergence-plan.toon`.
+
+4. Display plan summary:
+   ```
+   ## Convergence Plan
+
+   Targets: {N} across {M} categories
+   Method: {list of comparison methods used}
+   Budget: {maxIterations} iterations, {agentBudget} agent budget
+   ```
+
+5. Set the target source for Step 2 to `.plan-execution/convergence-plan.toon` (target-parser reads the plan as a source type).
 
 #### Step 2: Parse Targets (skip if --config provided)
 

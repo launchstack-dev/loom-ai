@@ -1,5 +1,5 @@
 ---
-description: "list, use, sync, update, search, add, remove — pull-on-demand catalog management"
+description: "list, use, sync, update, search, add, remove — pull-on-demand catalog and kit management"
 ---
 # Library Manager
 
@@ -15,9 +15,11 @@ Parse arguments:
 - `sync`: Re-pull all installed items, compare content directly
 - `search <query>`: Search catalog by name/description substring
 - `add <source>`: Add new item (local path or GitHub URL) to catalog
-- `remove <name>`: Uninstall, warn about dependents
+- `remove <name>`: Uninstall, warn about dependents. If `<name>` matches a kit in the `kits:` section of library.yaml, treat as kit removal (see Kit Operations below).
 - `update`: Check all sources for changes, show new catalog entries, confirm before applying. If `--check-only` is appended, report what's available without applying.
 - `upgrade`: Alias for `update` (convenience)
+
+When `use` or `remove` receives a name, first check if it matches a kit in the `kits:` section of library.yaml. If it does, dispatch to kit-specific logic (see Kit Operations below). If not, fall through to individual item logic as before.
 
 ---
 
@@ -249,6 +251,75 @@ Process user choices: update changed items and/or install selected new items usi
 
 **Step 3 — Clear update cache:**
 After successfully applying updates, delete `~/.cache/loom/update-check.toon` via Bash `rm -f ~/.cache/loom/update-check.toon`. This resets the statusline update indicator.
+
+---
+
+## Kit Operations
+
+Kits are named bundles of related items defined in the `kits:` section of library.yaml. Each kit entry has: `name`, `description`, `version`, `minLoomVersion`, and `includes` (a list of item references like `agent:contracts-agent`, `skill:execution-protocols`, `prompt:loom-plan`).
+
+### `use <kit-name>` (when name matches a kit)
+
+1. Read library.yaml `kits:` section, find the kit by name.
+2. Check `minLoomVersion` against the local `catalog_version` in library.yaml. If the kit requires a higher version, warn:
+   ```
+   Kit <kit-name> requires Loom catalog version <N>, you have <M>. Install anyway? (yes/no)
+   ```
+   If the user declines, abort.
+3. Install all items in the kit's `includes` list sequentially, showing progress:
+   ```
+   [1/6] Installing data-schema-reviewer...
+   [2/6] Installing data-quality-gate...
+   ```
+4. Each item is installed using the existing `use` logic (source resolution, dependency resolution, target path, write). Items already present in install-state.toon are skipped with a note: `[3/6] data-lineage-tracker — already installed, skipping`.
+5. After all items are installed, show a kit-level summary:
+   ```
+   Installed <kit-name> kit: 6 items (5 agents, 1 command)
+
+   To activate kit agents in your project's pipelines, add to .claude/orchestration.toml:
+     See the kit's suggested config at: kits/<kit-name>/orchestration-fragment.toml
+     Or run: /loom-agent create --from ~/.claude/agents/<first-agent-in-kit>.md
+   ```
+6. If any item fails to install, report which succeeded and which failed. Do not roll back successful items — leave them installed. The kit is in a partial state. Suggest: `loom-library use <kit-name>` to retry (it will skip already-installed items).
+
+### `list` (kit section)
+
+After the existing type sections (Agents, Commands, Skills), add a **Kits** section.
+
+A kit is **installed** if ALL items in its `includes` list are present in install-state.toon. If only some are installed, show as **partial**. If none are installed, show as **available**.
+
+```
+## Kits (1 installed, 0 available)
+
+  [check] data-engineering    v1.0.0  Data pipeline quality gates, schema review, lineage tracking  (6 items)
+  [x]     ml-ops             v1.0.0  Machine learning model training, evaluation, deployment       (4 items)
+```
+
+Partial kit display:
+```
+  [~]     data-engineering    v1.0.0  Data pipeline quality gates (3/6 items installed)
+```
+
+### `list --kits`
+
+Show ONLY the Kits section (skip Agents, Commands, Skills).
+
+### `remove <kit-name>` (when name matches a kit)
+
+1. Find the kit in library.yaml `kits:` section.
+2. For each item in the kit's `includes` list, check if it also appears in another **installed** kit's `includes` list.
+3. If shared items are found, warn for each:
+   ```
+   data-schema-reviewer is also used by kit ml-ops. Remove anyway? (yes/no)
+   ```
+   If the user declines for a shared item, skip it and continue with the rest.
+4. Remove items one by one using the existing `remove` logic (delete target file, update install-state.toon). Show progress:
+   ```
+   [1/6] Removing data-schema-reviewer...
+   [2/6] Removing data-quality-gate...
+   ```
+5. If any removal fails (file locked, permission error), report what was removed and what failed. Leave install-state.toon consistent with what is actually on disk.
+6. On partial failure, suggest: `loom-library remove <kit-name>` to retry failed items.
 
 ---
 
