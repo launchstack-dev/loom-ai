@@ -168,6 +168,26 @@ semantic-html = 0.95
 row-diff = 1.0
 text-diff = 0.99
 
+[patterns.tdd-convergence]
+type = "converge-criteria"
+criteriaPlanner = "criteria-planner-agent"
+harnessBuilder = "criteria-harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "criteria-convergence-task"
+
+[patterns.tdd-convergence.reviewers]
+security = "security-reviewer"
+code-review = "code-reviewer"
+performance = "performance-reviewer"
+
+[patterns.tdd-convergence.blocking]
+test-runner = true
+security = true
+code-review = true
+performance = false
+
 # ─────────────────────────────────────────────────────────────
 # Wiki — persistent knowledge base configuration
 # ─────────────────────────────────────────────────────────────
@@ -258,7 +278,7 @@ Phase 2:
 Result: specialist output(s)
 ```
 
-### `converge`
+### `converge` (target mode)
 ```
 Phase 1: spawn target-parser → normalize source into target manifest
 Phase 2: spawn harness-builder → create comparison infrastructure
@@ -266,6 +286,18 @@ Gate:    human approval of targets + tolerances
 Loop:    harness → delta-analyzer → fixer-agents (parallel) → re-run harness
          Circuit break: stall | regression | budget | max iterations
 Result:  convergence report (iterations, pass/fail per target, agents used)
+```
+
+### `converge-criteria` (criteria mode)
+```
+Phase 1: spawn criteria-planner → discover criteria, generate test stubs, configure reviewers
+Phase 2: spawn criteria-harness-builder → create test + review harness
+Gate:    human approval of criteria plan + test stubs
+Loop:    tests + reviewers → delta-analyzer → fixer-agents (layered priority) → re-run
+         Fix order: test failures → security → code review → advisory
+         Conflict detection: oscillating findings → freeze criterion
+         Circuit break: stall | regression | all-frozen | budget | max iterations
+Result:  convergence report (iterations, pass/fail per criterion, frozen conflicts)
 ```
 
 ## Kit Agent Registration

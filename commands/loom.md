@@ -116,6 +116,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-plan execute --resume` | Resume from `.plan-execution/state.toon` |
 | `/loom-plan execute --wave N` | Re-run a single wave |
 | `/loom-plan execute --contracts-only` | Run only Wave 0 (contracts) |
+| `/loom-plan execute --no-auto-commit` | Disable per-wave auto-commits |
 | `/loom auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
 | `/loom auto --plan PLAN.md` | Autonomous pipeline from existing plan |
 | `/loom auto --resume` | Resume autonomous pipeline from saved state |
@@ -123,14 +124,22 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom auto --max-agents N` | Cap total agent spawns (default: 50) |
 | `/loom auto --dry-run` | Show pipeline plan without executing |
 | `/loom auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
-| `/loom auto --converge-target <path>` | Enable convergence with a golden target file |
-| `/loom auto --converge-config <path>` | Enable convergence with existing harness config |
-| `/loom converge --target <path>` | Convergence loop: compare implementation against deterministic target |
-| `/loom converge --config <path>` | Run convergence with existing harness config |
+| `/loom auto --no-auto-commit` | Disable per-wave and per-iteration auto-commits |
+| `/loom auto --converge-target <path>` | Enable target convergence with a golden target file |
+| `/loom auto --converge-config <path>` | Enable target convergence with existing harness config |
+| `/loom auto --converge-criteria` | Enable criteria convergence (TDD + reviews) for each plan phase |
+| `/loom auto --converge-criteria --reviewers X,Y` | Criteria convergence with specific reviewer types |
+| `/loom converge --target <path>` | Target convergence: compare implementation against deterministic reference |
+| `/loom converge --criteria` | Criteria convergence: TDD + reviews until all conditions pass |
+| `/loom converge --criteria --phase N` | Criteria convergence for a specific plan phase |
+| `/loom converge --criteria --reviewers security,code-review` | Criteria convergence with specific reviewer types |
+| `/loom converge --criteria --no-soft` | Criteria convergence with tests only (no agent reviews) |
+| `/loom converge --criteria --no-hard` | Review-only convergence (no tests, just agent reviews on existing code) |
+| `/loom converge --config <path>` | Run convergence with existing harness config (either mode) |
 | `/loom converge --max-iterations N` | Cap convergence iterations (default: 10) |
-| `/loom converge --tolerance <threshold>` | Global tolerance override (0.0-1.0) |
-| `/loom converge --dry-run` | Parse targets + build harness, show setup, stop before loop |
-| `/loom converge --resume` | Resume convergence from saved state |
+| `/loom converge --tolerance <threshold>` | Global tolerance override for target mode (0.0-1.0) |
+| `/loom converge --dry-run` | Parse targets/criteria + build harness, show setup, stop before loop |
+| `/loom converge --resume` | Resume convergence from saved state (either mode) |
 | `/loom converge --status` | Show current convergence state |
 | `/loom quick "task description"` | Execute a quick task (auto-detects mode) |
 | `/loom quick --append "task"` | Force append as new plan phase |
@@ -302,11 +311,18 @@ When kits are installed, this section dynamically lists them. For example with t
 - `infra-reviewer` -- Dockerfile, CI pipelines, IaC, secrets, resource limits, networking
 - `observability-reviewer` -- Structured logging, metrics, tracing, health checks, alerting
 
-**Convergence Loop** (spawned by `/loom converge`):
+**Target Convergence** (spawned by `/loom converge --target` or `--plan`):
+- `convergence-planner-agent` -- Interactive target discovery from plan + codebase
 - `target-parser` -- Normalizes deterministic sources into comparable target manifests
 - `harness-builder` -- Scaffolds comparison infrastructure (diff scripts, config, runner)
 - `delta-analyzer` -- Triages deltas: noise vs actionable, prioritizes fixes
 - `convergence-driver` -- Iteration orchestrator with circuit breakers (stall, regression, budget)
+
+**Criteria Convergence** (spawned by `/loom converge --criteria`):
+- `criteria-planner-agent` -- Discovers criteria from plan, generates test stubs, configures reviewers
+- `criteria-harness-builder` -- Builds test runner + reviewer agent harness with conflict tracking
+- `delta-analyzer` -- Shared with target convergence, layered priority (tests > security > code review)
+- `convergence-driver` -- Shared with target convergence, adapted scoring for pass/fail + conflict handling
 
 **Wiki** (spawned by `/loom-wiki ingest`, `/loom-wiki lint`, and automatically during execution):
 - `wiki-maintainer-agent` -- Updates wiki pages, cross-references, index after execution events and code changes
@@ -386,17 +402,35 @@ Outer Loop (max 3 iterations):
 
 ### Convergence Pipeline (/loom converge)
 
+Two modes sharing a common driver loop:
+
+**Target Convergence** (`--target` / `--plan`):
 ```
 target-parser(source) -> target manifest
 harness-builder(manifest) -> comparison harness + converge.config
 Human approval gate: review targets + tolerances
 [Convergence Loop]:
-  harness -> Delta Report
+  harness -> Delta Report (score per target, 0.0-1.0)
   delta-analyzer -> prioritized fix list
   fixer-agents (parallel) -> code changes
   harness -> new Delta Report
   Circuit break if: stalled | regression | budget exhausted | max iterations
 Final: convergence report (pass/fail per target)
+```
+
+**Criteria Convergence** (`--criteria`):
+```
+criteria-planner(plan) -> criteria-plan.toon + test stubs
+criteria-harness-builder(plan + stubs) -> test + review harness + converge.config
+Human approval gate: review criteria + test stubs
+[Convergence Loop]:
+  tests -> hard criteria results (pass/fail)
+  reviewers (parallel) -> soft criteria findings
+  delta-analyzer -> fix list (layered: tests > security > code review > advisory)
+  fixer-agents (parallel) -> code changes
+  conflict-tracker -> detect oscillating findings, freeze criteria
+  Circuit break if: stalled | regression | all frozen | budget exhausted | max iterations
+Final: convergence report (pass/fail per criterion, frozen conflicts)
 ```
 
 Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` -- the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
@@ -431,11 +465,19 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
     {taskId}.toon
   scope-coverage.toon     -- Acceptance criteria coverage matrix
   wave-N-summary.toon     -- Per-wave results
-  convergence/            -- Convergence loop state
-    targets/              -- Normalized target artifacts
-    convergence-state.toon -- Iteration state (resumable)
+  convergence-state.toon  -- Iteration state (resumable, either mode)
+  convergence/            -- Convergence loop state (target artifacts, golden files)
+    targets/              -- Normalized target artifacts (target mode)
     convergence-report.md -- Final convergence report
-    converge.config       -- Target-to-method mapping + tolerances
+    converge.config       -- Target-to-method mapping + tolerances (target mode)
+    criteria/             -- Criteria convergence state (criteria mode)
+      criteria-plan.toon  -- Criteria plan (criteria mode)
+      tests/              -- Generated test stubs (hard criteria)
+      harness/            -- Test + review runner scripts
+        reviewers/        -- Per-reviewer prompt templates
+        conflict-tracker.toon -- Conflict detection state
+      actual/             -- Per-iteration results
+      converge.config     -- Criteria harness config
   continue-here.toon      -- Session pause/resume snapshot
 
 .plan-history/                -- Persistent (git-tracked)
@@ -856,8 +898,10 @@ Parse arguments after `auto`:
 - `--from "description"`: create a plan from scratch using the description
 - `--plan <path>`: start from an existing plan file (default: `PLAN.md`)
 - `--roadmap <path>`: path to roadmap file (default: `ROADMAP.md`)
-- `--converge-target <path>`: deterministic target for convergence loop (enables convergence stage)
-- `--converge-config <path>`: existing converge.config (skip target-parser + harness-builder setup)
+- `--converge-target <path>`: deterministic target for target convergence (enables convergence stage)
+- `--converge-config <path>`: existing converge.config for target convergence (skip setup)
+- `--converge-criteria`: enable criteria convergence (TDD + reviews) for each plan phase
+- `--converge-criteria --reviewers <types>`: criteria convergence with specific reviewer types
 - `--resume`: resume from `pipeline-state.toon`
 - `--max-iterations N`: outer loop cap (default: 3)
 - `--max-agents N`: agent budget cap (default: 50)
@@ -866,6 +910,7 @@ Parse arguments after `auto`:
 - `--skip-preflight`: skip the pre-flight scope contract entirely (no prompt refiner, no scope interrogator)
 - `--light-preflight`: run a lightweight pre-flight (fewer questions, accept more defaults)
 - `--new-contract`: regenerate `scope-contract.toon` even if one already exists
+- `--no-auto-commit`: disable per-wave and per-iteration auto-commits (code accumulates in working tree)
 
 ### Protocols
 
@@ -877,11 +922,16 @@ Before doing anything, read these protocol files:
 - `~/.claude/agents/protocols/pipeline-state.schema.md` -- pipeline-state.toon schema for this orchestrator
 - `~/.claude/agents/protocols/agent-monitoring.schema.md` -- progress reporting and stale detection
 
-If convergence is enabled, also read:
-- Convergence logic is embedded in this orchestrator (see Subcommand: converge below)
+If target convergence is enabled (`--converge-target` or `--converge-config`), also read:
 - `~/.claude/agents/convergence-driver.md` -- iteration loop, circuit breakers, state tracking
 - `~/.claude/agents/target-parser.md` -- target normalization
 - `~/.claude/agents/harness-builder.md` -- comparison infrastructure
+
+If criteria convergence is enabled (`--converge-criteria`), also read:
+- `~/.claude/agents/convergence-driver.md` -- iteration loop (supports both modes)
+- `~/.claude/agents/criteria-planner-agent.md` -- criteria discovery and test generation
+- `~/.claude/agents/criteria-harness-builder.md` -- test + review harness
+- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan format
 
 ### Instructions
 
@@ -901,7 +951,19 @@ If convergence is enabled, also read:
    - `skipPreflight` from `--skip-preflight` (default: false)
    - `lightPreflight` from `--light-preflight` (default: false)
    - `newContract` from `--new-contract` (default: false)
-   - `convergenceEnabled` = true if `convergeTarget` or `convergeConfig` is set
+   - `convergeCriteria` from `--converge-criteria` (default: false)
+   - `convergeReviewers` from `--reviewers` (default: null — use all)
+   - `convergenceEnabled` = true if `convergeTarget` or `convergeConfig` or `convergeCriteria` is set
+   - `noAutoCommit` from `--no-auto-commit` (default: false)
+
+   **Agent team detection.** Check whether `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set in the environment:
+   ```
+   agentTeamsEnabled = process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS === "1"
+   ```
+   - If `agentTeamsEnabled == true`: use the team coordination protocol from `team-coordination.md`. The lead dispatcher creates teammates for each pipeline stage, and context passes through disk (stage-context files), not the lead's context window.
+   - If `agentTeamsEnabled == false` (default): use checkpoint+clear mode. The single agent executes stages sequentially, writes stage context to disk after each stage, and checks budget utilization against checkpoint thresholds. At checkpoint warning: compress context aggressively. At checkpoint critical: write full state to disk, recommend `/clear` then `--resume`.
+
+   Set `executionMode` to `"team"` or `"checkpoint-clear"` accordingly. Log: `"Execution mode: {executionMode}"`.
 
 2. **If `--resume`:** jump to the Resume Logic section below.
 
@@ -919,14 +981,16 @@ If convergence is enabled, also read:
    7. Plan Integrate    -- loom-roadmap review-integrate
    8. Plan Validate     -- validation stages 1-4 (+ Stage 7 for v2)
    9. Execution         -- loom-plan execute --auto (drift detection per wave)
-   10. Convergence      -- loom converge (if --converge-target or --converge-config)
+   10. Convergence      -- loom converge (if --converge-target, --converge-config, or --converge-criteria)
+   10b. Criteria Conv.  -- loom converge --criteria --auto (if --converge-criteria, per plan phase)
    11. Test             -- loom-plan test --run --parallel --auto
    12. Code Review      -- loom-code review --branch
    13. Quality Gate     -- automated decision matrix
    14. Fix Cycle        -- loom-code fix --auto (up to 2 cycles)
 
    Pre-flight: {skipPreflight ? 'skipped' : lightPreflight ? 'light' : 'full'}
-   Convergence: {convergeTarget or convergeConfig or 'disabled'}
+   Convergence: {convergeTarget or convergeConfig or convergeCriteria or 'disabled'}
+   Auto-commit: {noAutoCommit ? 'disabled' : 'per-wave + per-converge-iteration'}
    Outer loop: up to {maxIterations} iterations
    Agent budget: {maxAgents}
    ```
@@ -979,6 +1043,7 @@ If convergence is enabled, also read:
    convergenceEnabled: {convergenceEnabled}
    convergeTarget: {convergeTarget or ""}
    convergeConfig: {convergeConfig or ""}
+   noAutoCommit: {noAutoCommit}
    currentStage: roadmap-create
 
    stageHistory[0]{stage,status,iteration,startedAt,completedAt,agentsUsed,gateResult}:
@@ -1163,6 +1228,7 @@ Spawn a general-purpose agent:
 ```
 "Read your instructions from ~/.claude/commands/loom-execute-plan.md first.
  Execute {planFile} with --auto flag.
+ {if noAutoCommit: '--no-auto-commit'}
  {if scope-contract.toon exists: 'Read scope-contract.toon from the project root. Pass relevant contract decisions to each implementer agent as prompt context.'}
  Report all AgentResults. Track agents spawned."
 ```
@@ -1179,6 +1245,8 @@ On completion, read `.plan-execution/state.toon`:
   - Check circuit breakers. If clear, go to Step 2 (Phase A with `--refine`).
 
 Log stage result in `stageHistory`.
+
+**Write stage context.** Write `.plan-execution/stage-context/execute.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from execution wave summaries: `stage: execute`, `wave` (last completed wave), files changed, exports added, findings, summary, key decisions, and next-stage hints. Use atomic write.
 
 **If `--stop-after execute`:** display execution summary and stop.
 
@@ -1204,18 +1272,27 @@ Record agents spawned. Do NOT count wiki maintenance against circuit breaker thr
 
 **Skip this step entirely if `convergenceEnabled == false`.**
 
-This step verifies implementation output matches deterministic targets using the convergence loop. It has two sub-phases: **setup** (requirements alignment) and **loop** (iterative convergence).
+This step verifies implementation using convergence loops. Two modes:
+- **Target convergence** (if `convergeTarget` or `convergeConfig` is set): compare output to golden references
+- **Criteria convergence** (if `convergeCriteria` is true): TDD + agent reviews against plan acceptance criteria
 
 Update `pipeline-state.toon`: `currentStage: converge`.
 
 ##### Auto-detection
 
-If `convergeTarget` and `convergeConfig` are both null, check:
+If `convergeTarget` and `convergeConfig` are both null and `convergeCriteria` is false, check:
 1. Read `PLAN.md` -- look for convergence-related metadata: `convergenceTarget:`, `goldenFiles:`, or a phase with `pattern: converge`
 2. Check `.plan-execution/converge.config` -- if it exists from a prior run, use it
-3. Check `.plan-execution/convergence/targets/` -- if target files exist, auto-enable convergence
+3. Check `.plan-execution/convergence/targets/` -- if target files exist, auto-enable target convergence
+4. Check `.plan-execution/convergence/criteria-plan.toon` -- if it exists from a prior run, auto-enable criteria convergence
 
-If any of these are found, set `convergenceEnabled = true` and populate `convergeTarget` or `convergeConfig` accordingly.
+If any of 1-3 are found, set `convergenceEnabled = true` and populate `convergeTarget` or `convergeConfig` accordingly.
+If 4 is found, set `convergenceEnabled = true` and `convergeCriteria = true`.
+
+##### Mode Routing
+
+- If `convergeCriteria` is true: jump to **3.5e: Criteria Convergence** below.
+- Otherwise: proceed with target convergence (3.5a-3.5d).
 
 ##### 3.5a: Convergence Planning
 
@@ -1273,6 +1350,7 @@ Spawn a general-purpose agent:
  {if convergeConfig: '--config ' + convergeConfig}
  {if not convergeConfig: '--config .plan-execution/converge.config'}
  Max iterations: 10
+ {if noAutoCommit: '--no-auto-commit'}
  This is running as part of /loom auto -- write convergence-summary.toon when done."
 ```
 
@@ -1294,6 +1372,59 @@ If convergence-summary.toon is missing: warn and continue to Step 4 (convergence
 
 **If `--stop-after converge`:** display convergence summary and stop.
 
+##### 3.5e: Criteria Convergence (if `convergeCriteria == true`)
+
+Run criteria convergence as an auto-mode `/loom converge --criteria`:
+
+1. **Plan criteria.** Spawn criteria-planner-agent:
+   ```
+   "Read your instructions from ~/.claude/agents/criteria-planner-agent.md first.
+    Mode: auto
+    PLAN.md path: {planFile}
+    {if convergeReviewers: 'Reviewer types: ' + convergeReviewers}
+    Scope contract path: scope-contract.toon (if exists)
+    Codebase context: {tech stack summary}
+    Write plan to: .plan-execution/convergence/criteria-plan.toon
+    Write tests to: .plan-execution/convergence/criteria/tests/"
+   ```
+
+2. If planner fails: record in failureLog, go to quality gate with criteria convergence failure context.
+
+3. **Build harness.** Spawn criteria-harness-builder:
+   ```
+   "Read your instructions from ~/.claude/agents/criteria-harness-builder.md first.
+    Build criteria convergence harness:
+    Criteria plan: .plan-execution/convergence/criteria-plan.toon
+    Test stubs: .plan-execution/convergence/criteria/tests/
+    Project tech stack: {tech stack summary}
+    Write outputs to:
+    - .plan-execution/convergence/criteria/converge.config
+    - .plan-execution/convergence/criteria/harness/"
+   ```
+
+4. If harness-builder fails: record in failureLog, go to quality gate.
+
+5. **Run convergence loop.** Spawn convergence-driver:
+   ```
+   "Read your instructions from ~/.claude/agents/convergence-driver.md first.
+    Convergence mode: criteria
+    Config: .plan-execution/convergence/criteria/converge.config
+    Harness runner: .plan-execution/convergence/criteria/harness/run-harness.sh
+    Criteria plan: .plan-execution/convergence/criteria-plan.toon
+    Max iterations: 10
+    Agent budget: {from orchestration.toml or 30}
+    {if noAutoCommit: '--no-auto-commit'}
+    This is running as part of /loom auto -- write convergence-summary.toon when done."
+   ```
+
+6. Record agents spawned. Log stage in `stageHistory`.
+
+7. **Evaluate result.** Same logic as 3.5d -- read convergence-summary.toon and route based on status. Additionally, if frozen conflicts exist, log them in failureLog as info-level (non-blocking).
+
+**If both target and criteria convergence are enabled**, run target convergence first (3.5a-3.5d), then criteria convergence (3.5e). Criteria convergence runs even if target convergence succeeded -- they verify different things.
+
+**Write stage context.** Write `.plan-execution/stage-context/converge.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from convergence-summary.toon: `stage: converge`, `iteration` (final iteration count), findings resolved/remaining, convergence outcome summary, key decisions (e.g., frozen conflicts), and next-stage hints. Use atomic write.
+
 Check circuit breakers before proceeding.
 
 #### Step 4: Test (Phase C)
@@ -1309,6 +1440,8 @@ Spawn a general-purpose agent:
 
 Record agents spawned. Log stage in `stageHistory`.
 
+**Write stage context.** Write `.plan-execution/stage-context/test.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from test results: `stage: test`, files changed (test files created), findings remaining (failed test count), summary of test pass rate, key decisions (test framework choices), and next-stage hints (failing test patterns for review). Use atomic write.
+
 **If `--stop-after test`:** display test results and stop.
 
 #### Step 5: Code Review
@@ -1322,6 +1455,8 @@ Spawn a general-purpose agent:
 ```
 
 Record agents spawned. Log stage in `stageHistory`.
+
+**Write stage context.** Write `.plan-execution/stage-context/review.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from review-report.md: `stage: review`, findings remaining (critical + warning count), summary of review outcome, key decisions (flagged blocking issues), and next-stage hints (priority fixes for fix cycle). Use atomic write.
 
 **If `--stop-after review`:** display review summary and stop.
 
@@ -1339,8 +1474,10 @@ testsFailed      = failed test count from Step 4
 testPassRate     = testsPassed / (testsPassed + testsFailed)
 typecheckPass    = run project typecheck, read exit code (true if 0)
 convergeStatus   = status from convergence-summary.toon (or "converged" if convergence disabled)
-convergePassing  = targetsPassing from convergence-summary.toon (or 0)
-convergeTotal    = targetsTotal from convergence-summary.toon (or 0)
+convergeMode     = convergenceMode from convergence-summary.toon (or "target")
+convergePassing  = if convergeMode == "criteria": criteriaPassing, else: targetsPassing (from convergence-summary.toon, or 0)
+convergeTotal    = if convergeMode == "criteria": criteriaTotal, else: targetsTotal (from convergence-summary.toon, or 0)
+convergeFrozen   = if convergeMode == "criteria": criteriaFrozen, else: 0 (from convergence-summary.toon)
 gateFailCount    = count of kit agent AgentResults where gate == "fail" AND failAction == "halt"
 gateWarnCount    = count of kit agent AgentResults where gate == "warn" OR (gate == "fail" AND failAction == "warn")
 ```
@@ -1411,6 +1548,8 @@ Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code
 7f. **Return to Step 6** (Pipeline Quality Gate) with updated results.
 
 Log stage in `stageHistory`.
+
+**Write stage context.** Write `.plan-execution/stage-context/fix.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from fix cycle results: `stage: fix`, files changed (files modified by fixers), findings resolved/remaining (before vs after counts), summary of what was fixed, key decisions (fix strategies chosen), and next-stage hints (remaining issues for quality gate). Use atomic write.
 
 **If `--stop-after fix`:** display fix results and stop.
 
@@ -1507,6 +1646,13 @@ When `--resume` is passed:
 3. If `currentStage == complete`: "Pipeline already completed. Nothing to resume." Stop.
 4. If `currentStage == escalated`: display the escalation report and ask the human what to do.
 
+4.5. **Reconstruct context from stage summaries.** Read all files in `.plan-execution/stage-context/` to rebuild pipeline context:
+   - For each `stage-context/*.toon` file, parse `stage`, `wave`, `summary`, `keyDecisions`, `nextStageHints`
+   - Regenerate `rolling-context.md` from stage summaries using tiered compression (hot/warm/cold)
+   - If `continue-here.toon` exists, read `context` field for additional compressed context
+   - This ensures fresh context after a `/clear` + `--resume` cycle
+   - Display: `"Context reconstructed from {count} stage summaries"`
+
 5. Re-enter the loop at the correct point:
 
    | `currentStage` value | Re-entry point |
@@ -1525,7 +1671,7 @@ When `--resume` is passed:
    | `review-code` | Step 5 |
    | `fix-code` | Step 7 |
 
-6. Restore all state variables from `pipeline-state.toon`: `outerIteration`, `agentsSpawned`, `fixCycleCount`, `maxIterations`, `maxAgents`.
+6. Restore all state variables from `pipeline-state.toon`: `outerIteration`, `agentsSpawned`, `fixCycleCount`, `maxIterations`, `maxAgents`, `noAutoCommit`.
 7. Continue the loop from the re-entry point.
 
 ### Error Handling
@@ -1559,18 +1705,34 @@ Update the status line at every stage transition and after every agent completes
 
 ## Subcommand: converge
 
-You are an orchestrator that drives a deterministic convergence loop -- comparing current implementation output against a known-good target and iterating until the delta reaches zero or a circuit breaker fires.
+You are an orchestrator that drives convergence loops. Two modes:
+
+- **Target convergence** (default): compare implementation output against a known-good reference. Iterate until the delta reaches zero or a circuit breaker fires.
+- **Criteria convergence** (`--criteria`): run tests and agent reviews against the codebase. Iterate until all blocking criteria pass (TDD + code review + security).
 
 ### Arguments
 
 Parse arguments after `converge`:
-- `--plan` -- run convergence planner (interactive target discovery, no `--target` required)
-- `--target <path>` -- path to the deterministic source (skip planner, use this file directly)
-- `--config <path>` -- path to an existing converge.config (skip planner + target-parser + harness-builder)
+
+**Mode selection (mutually exclusive):**
+- `--target <path>` -- target convergence: path to the deterministic source
+- `--plan` -- target convergence: run convergence planner (interactive target discovery)
+- `--criteria` -- criteria convergence: TDD + agent reviews
+
+**Criteria mode options:**
+- `--phase N` -- scope criteria to a specific plan phase (criteria mode only)
+- `--reviewers <types>` -- comma-separated reviewer types: security,code-review,performance,architecture (criteria mode only)
+- `--no-soft` -- tests only, skip agent reviews (criteria mode only)
+- `--no-hard` -- reviews only, skip test generation (criteria mode only)
+
+**Shared options:**
+- `--config <path>` -- path to an existing converge.config (skip planner + setup, either mode)
 - `--light` -- fewer questions in planner (one consolidated batch)
+- `--auto` -- accept all defaults, no interaction
 - `--max-iterations N` -- override max iterations (default: 10)
-- `--tolerance <threshold>` -- global tolerance override (0.0-1.0)
-- `--dry-run` -- run planner/target-parser/harness-builder, show setup, stop before iteration loop
+- `--tolerance <threshold>` -- global tolerance override for target mode (0.0-1.0)
+- `--dry-run` -- run planner/setup, show config, stop before iteration loop
+- `--no-auto-commit` -- disable per-iteration auto-commits during convergence loop
 - `--resume` -- resume from `.plan-execution/convergence-state.toon`
 - `--status` -- show current convergence state without running anything
 - No args: show usage help
@@ -1580,8 +1742,9 @@ Parse arguments after `converge`:
 #### Step 0: Read Protocols
 
 Read convergence-related protocols:
-- `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge)
+- `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
 - `~/.claude/agents/protocols/pattern-executor.md` (Converge execution)
+- If `--criteria`: also read `~/.claude/agents/protocols/criteria-plan.schema.md`
 
 #### Step 1: Handle Special Flags
 
@@ -1589,48 +1752,67 @@ Read convergence-related protocols:
 ```
 ## Usage: /loom converge
 
-Drive a deterministic convergence loop -- compare implementation output
-against a known-good target, iterate until the delta reaches zero.
+Two modes: target convergence (match a reference) and criteria convergence (satisfy conditions).
 
-  --plan                  Interactive target discovery (no --target required)
+### Target Convergence (match a reference)
+  --plan                  Interactive target discovery
   --target <path>         Direct target file (skip planner)
-  --config <path>         Existing converge.config (skip planner + setup)
-  --light                 Fewer questions in planner (one batch)
-  --max-iterations N      Override max iterations (default: 10)
   --tolerance <threshold> Global tolerance override (0.0-1.0)
-  --dry-run               Run setup only, show manifest and config, stop
-  --resume                Resume from .plan-execution/convergence-state.toon
-  --status                Show current convergence state without running
+
+### Criteria Convergence (TDD + reviews)
+  --criteria                   Enable criteria mode
+  --criteria --phase N         Scope to a specific plan phase
+  --criteria --reviewers X,Y   Choose reviewer types (security,code-review,performance,architecture)
+  --criteria --no-soft         Tests only (skip agent reviews)
+  --criteria --no-hard         Reviews only (skip test generation)
+
+### Shared Options
+  --config <path>         Existing converge.config (skip setup, either mode)
+  --light                 Fewer questions in planner (one batch)
+  --auto                  Accept all defaults, no interaction
+  --max-iterations N      Override max iterations (default: 10)
+  --dry-run               Run setup only, show config, stop before loop
+  --no-auto-commit        Disable per-iteration auto-commits
+  --resume                Resume from saved state
+  --status                Show current convergence state
 
 Examples:
-  /loom converge --plan                     Interactive: discover targets from codebase
-  /loom converge --plan --light             Quick: one-batch discovery
-  /loom converge --target tests/golden/api-responses.json   Direct target
-  /loom converge --config .plan-execution/converge.config --max-iterations 5
+  /loom converge --plan                     Target: discover targets from codebase
+  /loom converge --plan --light             Target: one-batch discovery
+  /loom converge --target golden/api.json   Target: direct reference file
+  /loom converge --criteria                 Criteria: TDD + all reviewers from plan
+  /loom converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
+  /loom converge --criteria --no-soft       Criteria: pure TDD (tests only)
+  /loom converge --criteria --reviewers security,code-review   Criteria: specific reviewers
+  /loom converge --criteria --no-hard       Review-only: iterate code reviews on existing code
   /loom converge --resume
   /loom converge --status
 ```
 
 **If `--status`:**
 1. Read `.plan-execution/convergence-state.toon`.
-2. If file does not exist: "No convergence state found. Use `--target` to start a new run." Stop.
-3. Display current state:
+2. If file does not exist: "No convergence state found. Use `--target` or `--criteria` to start a new run." Stop.
+3. Detect mode from `convergenceMode` field (default: `target` for backwards compatibility).
+4. Display current state:
    - Current iteration and max iterations
-   - Passing and failing target counts
+   - Mode (target or criteria)
+   - **Target mode:** passing and failing target counts, per-target scores
+   - **Criteria mode:** passing, failing, and frozen criterion counts. Hard vs soft breakdown. Active conflicts.
    - Convergence rate (improvement percentage from last iteration)
    - Iteration history with per-iteration passing counts
    - Circuit breaker status
-4. Suggest next action based on state:
+5. Suggest next action based on state:
    - If `status == converged`: "Convergence complete. No action needed."
    - If `status == running` or `status == paused`: "Run `/loom converge --resume` to continue."
    - If `status == stalled` or `status == regression`: "Review stuck deltas below. Manual intervention may be needed before `--resume`."
    - If `status == budget_exhausted`: "Increase agent budget in orchestration.toml and `--resume`."
-5. Stop.
+   - **Criteria mode only:** If frozen conflicts exist: "The following criteria have conflicting reviewer findings and were frozen. Review manually: {list}."
+6. Stop.
 
 **If `--resume`:**
 1. Read `.plan-execution/convergence-state.toon`.
-2. If file does not exist: "No convergence state found. Use `--target` to start a new run." Stop.
-3. Validate the state file has required fields: `iteration`, `maxIterations`, `configPath`, `targetManifestPath`.
+2. If file does not exist: "No convergence state found. Use `--target` or `--criteria` to start a new run." Stop.
+3. Validate the state file has required fields: `iteration`, `maxIterations`, `convergenceMode`, `configPath`, `specPath`. The `specPath` points to the target manifest (target mode) or criteria-plan.toon (criteria mode).
 4. If `status == converged`: "Convergence already complete. Nothing to resume." Stop.
 5. If `status == regression` or `status == stalled`: warn the user about the prior failure, ask if they want to continue anyway.
 6. Restore state variables from the file.
@@ -1638,9 +1820,17 @@ Examples:
 
 **If `--dry-run`:** proceed through Steps 1.5-4 normally; Step 4 will stop execution.
 
-**If neither `--plan` nor `--target` nor `--config` nor `--resume` provided:** show usage help and stop.
+**If neither `--plan` nor `--target` nor `--config` nor `--resume` nor `--criteria` provided:** show usage help and stop.
 
-#### Step 1.5: Run Convergence Planner (skip if --target or --config provided)
+**If `--criteria` and (`--target` or `--plan`) both provided:** "Error: `--criteria` and `--target`/`--plan` are mutually exclusive. Use `--criteria` for TDD + reviews, or `--target`/`--plan` for golden reference matching." Stop.
+
+**If `--no-soft` and `--no-hard` both provided:** "Error: `--no-soft` and `--no-hard` cannot be combined -- that would produce zero criteria." Stop.
+
+**If `--criteria` with `--config`:** skip criteria planner + harness builder. Set `configPath` to the provided config path and jump directly to Step 5 (Convergence Loop). The convergence-driver reads `convergenceMode: criteria` from the config.
+
+**If `--criteria` (without `--config`):** jump to Step 1.5C (Criteria Convergence Path).
+
+#### Step 1.5: Run Convergence Planner (target mode -- skip if --target or --config provided)
 
 **If `--plan` is set OR if no `--target` is provided (and no `--config`, no `--resume`):**
 
@@ -1671,7 +1861,112 @@ Examples:
 
 5. Set the target source for Step 2 to `.plan-execution/convergence-plan.toon` (target-parser reads the plan as a source type).
 
-#### Step 2: Parse Targets (skip if --config provided)
+#### Step 1.5C: Criteria Convergence Path (only if --criteria)
+
+This path replaces Steps 1.5 through 4 for criteria mode. It uses criteria-planner-agent and criteria-harness-builder instead of convergence-planner-agent, target-parser, and harness-builder.
+
+**Step 1.5C.1: Run Criteria Planner**
+
+1. Determine mode flags:
+   - `--light` → light mode
+   - `--auto` → auto mode
+   - Otherwise → interactive mode
+
+2. Spawn criteria-planner-agent (general-purpose):
+   ```
+   "Read your instructions from `~/.claude/agents/criteria-planner-agent.md` first.
+
+    Mode: {--auto ? 'auto' : --light ? 'light' : 'interactive'}
+    PLAN.md path: {planFile or 'PLAN.md'}
+    {if --phase: 'Phase filter: ' + phaseNumber}
+    {if --reviewers: 'Reviewer types: ' + reviewerTypes}
+    {if --no-soft: 'Hard criteria only (no agent reviews)'}
+    {if --no-hard: 'Soft criteria only (no test generation)'}
+    Scope contract path: scope-contract.toon (if exists)
+    Codebase context: {tech stack summary}
+    Write plan to: .plan-execution/convergence/criteria-plan.toon
+    Write tests to: .plan-execution/convergence/criteria/tests/"
+   ```
+
+3. If planner fails: "Criteria planning failed: {error}." Stop.
+
+4. Read `.plan-execution/convergence/criteria-plan.toon`.
+
+5. Display criteria summary:
+   ```
+   ## Criteria Convergence Plan
+
+   Hard criteria (tests): {N} criteria, {M} test files
+   Soft criteria (reviews): {N} criteria across {M} reviewers
+   Blocking: {N} criteria must pass
+   Advisory: {N} criteria reported but non-blocking
+   Budget: {maxIterations} iterations, {agentBudget} agent budget
+   ```
+
+**Step 1.5C.2: Build Criteria Harness**
+
+1. Spawn criteria-harness-builder agent (general-purpose):
+   ```
+   "Read your instructions from `~/.claude/agents/criteria-harness-builder.md` first.
+
+    Build criteria convergence harness:
+    Criteria plan: .plan-execution/convergence/criteria-plan.toon
+    Test stubs: .plan-execution/convergence/criteria/tests/
+    Project tech stack: {summary from package.json}
+
+    Write outputs to:
+    - .plan-execution/convergence/criteria/converge.config
+    - .plan-execution/convergence/criteria/harness/"
+   ```
+
+2. If harness-builder fails: "Criteria harness build failed: {error}." Stop.
+
+**Step 1.5C.3: Criteria Requirements Review**
+
+Present the full criteria plan for human alignment:
+
+```
+## Criteria Convergence Review
+
+### Hard Criteria (Tests)
+| # | Criterion | Tests | Priority | Source |
+|---|-----------|-------|----------|--------|
+| C-01 | Blocks unauthenticated requests | 1 test | P0 | plan |
+| C-02 | Returns 401 with error shape | 3 tests | P0 | plan |
+
+### Soft Criteria (Reviews)
+| # | Criterion | Reviewer | Blocking? | Priority |
+|---|-----------|----------|-----------|----------|
+| C-04 | No injection vulnerabilities | security | Yes | P0 |
+| C-05 | Code review clean | code-review | Yes | P1 |
+
+### Iteration Priority Order
+1. Fix test failures (correctness)
+2. Fix security findings (safety)
+3. Fix code review findings (quality)
+4. Fix advisory findings (if budget remains)
+
+### Budget
+- Max iterations: {N}
+- Agent budget: {N}
+- Per iteration: 1 test run + {N} reviewers + fixers
+
+Proceed? (yes / adjust / abort)
+```
+
+If `--dry-run`: display this and stop.
+If `--auto`: skip display, proceed directly.
+
+Wait for response:
+- **yes**: set `configPath` to `.plan-execution/convergence/criteria/converge.config` and jump to Step 5.
+- **adjust**: ask what to change. Update criteria-plan.toon and re-display.
+- **abort**: stop.
+
+After approval, jump directly to Step 5 (Convergence Loop). The convergence-driver detects `convergenceMode: criteria` from the converge.config and adapts its scoring and reporting accordingly.
+
+---
+
+#### Step 2: Parse Targets (target mode -- skip if --config provided)
 
 1. Validate that the `--target` path exists. If not: "Target path `{path}` does not exist. Check the path and try again." Stop.
 
@@ -1792,23 +2087,48 @@ Wait for user response:
 
 1. Read agent budget from `orchestration.toml` field `settings.maxParallelAgents` (default: 30).
 
-2. Spawn convergence-driver agent (general-purpose):
+2. Determine mode and paths:
+   - **Target mode** (default): `configPath = .plan-execution/converge.config`, `runnerPath = .plan-execution/harness/runner.sh`, `specPath = .plan-execution/target-manifest.toon`, `convergenceMode = target`
+   - **Criteria mode** (from Step 1.5C): `configPath = .plan-execution/convergence/criteria/converge.config`, `runnerPath = .plan-execution/convergence/criteria/harness/run-harness.sh`, `specPath = .plan-execution/convergence/criteria-plan.toon`, `convergenceMode = criteria`
+
+3. Spawn convergence-driver agent (general-purpose):
+
+   **Target mode:**
    ```
    "Read your instructions from `~/.claude/agents/convergence-driver.md` first.
 
     Run the convergence loop with the following parameters:
-    Config: {converge.config path}
-    Harness runner: .plan-execution/harness/runner.sh
-    Target manifest: .plan-execution/target-manifest.toon
+    Convergence mode: target
+    Config: {configPath}
+    Harness runner: {runnerPath}
+    Target manifest: {specPath}
     Max iterations: {--max-iterations or 10}
     Tolerance thresholds: {from converge.config}
     Agent budget: {from orchestration.toml or 30}
+    Auto-commit: {--no-auto-commit ? false : true}
     Resume at iteration: {iteration number, 1 if fresh start}"
    ```
 
-3. The convergence-driver handles the full iteration loop internally, spawning delta-analyzer and fixer agents as needed.
+   **Criteria mode:**
+   ```
+   "Read your instructions from `~/.claude/agents/convergence-driver.md` first.
 
-4. Monitor progress by reading `.plan-execution/convergence-state.toon` periodically. Display progress updates:
+    Run the convergence loop with the following parameters:
+    Convergence mode: criteria
+    Config: {configPath}
+    Harness runner: {runnerPath}
+    Criteria plan: {specPath}
+    Max iterations: {--max-iterations or 10}
+    Agent budget: {from orchestration.toml or 30}
+    Auto-commit: {--no-auto-commit ? false : true}
+    Resume at iteration: {iteration number, 1 if fresh start}"
+   ```
+
+4. The convergence-driver handles the full iteration loop internally, spawning delta-analyzer and fixer agents as needed.
+
+5. Monitor progress by reading `.plan-execution/convergence-state.toon` periodically. Display progress updates based on mode:
+
+   **Target mode:**
    ```
    === Convergence Progress ===  [iteration {i}/{max}]
 
@@ -1823,14 +2143,69 @@ Wait for user response:
        Iter 3: {n3}/{total} passing  (rate: {r3}%)
    ```
 
-5. Update `.plan-execution/status.toon` at each progress check.
+   **Criteria mode:**
+   ```
+   === Criteria Convergence Progress ===  [iteration {i}/{max}]
+
+     Criteria: {passing}/{total} passing  ({pct}%)
+       Hard (tests):    {hardPassing}/{hardTotal}
+       Soft (reviews):  {softPassing}/{softTotal}
+     Blocking:  {blockingPassing}/{blockingTotal} passing
+     Frozen:    {frozenCriteria} conflicts
+     Rate:      {rate}% improvement from last iteration
+     Agents:    {used}/{budget} budget used
+
+     History:
+       Iter 1: {n1}/{total} passing  (blocking: {b1} failing, conflicts: {c1})
+       Iter 2: {n2}/{total} passing  (blocking: {b2} failing, conflicts: {c2})
+       Iter 3: {n3}/{total} passing  (blocking: {b3} failing, conflicts: {c3})
+   ```
+
+6. Update `.plan-execution/status.toon` at each progress check.
+
+#### Step 5.5: Convergence Context Checkpoint (every 3 iterations)
+
+After each progress check in Step 5, evaluate whether a context checkpoint is appropriate:
+
+1. **Check iteration count.** Read current iteration from `.plan-execution/convergence-state.toon`. If `iteration % 3 == 0` and `iteration > 0` (i.e., after iterations 3, 6, 9, ...):
+
+2. **Write all convergence state to disk atomically:**
+   - Ensure `convergence-state.toon` is current (written by convergence-driver)
+   - Ensure all `convergence/iterations/iter-*.toon` files are current
+   - Write `.plan-execution/stage-context/converge.toon` with current convergence progress
+   - Update `rolling-context.md` with convergence iteration summaries
+
+3. **Present checkpoint prompt:**
+   ```
+   ## Convergence Checkpoint (Iteration {i}/{max})
+
+   State saved to disk:
+   - Convergence state: .plan-execution/convergence-state.toon
+   - Iteration summaries: .plan-execution/convergence/iterations/ ({i} files)
+   - Stage context: .plan-execution/stage-context/converge.toon
+   - Rolling context: .plan-execution/rolling-context.md
+
+   Progress: {passing}/{total} passing ({pct}%)
+   Iterations used: {i}/{max}
+
+   Run `/clear` for fresh context, then:
+     /loom converge --resume
+   ```
+
+4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue iteration loop. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
+
+5. **If not `--auto`:** display the checkpoint prompt and wait:
+   - `continue` -- proceed without clearing (default)
+   - `clear` -- user will manually run `/clear` then `--resume`
 
 #### Step 6: Report Results
 
-When the convergence-driver completes, read the final `.plan-execution/convergence-state.toon` and display the convergence report:
+When the convergence-driver completes, read the final `.plan-execution/convergence-state.toon` and display a mode-appropriate report:
+
+**Target mode report:**
 
 ```markdown
-## Convergence Report
+## Convergence Report (Target)
 
 **Status:** {converged | stalled | regression | budget_exhausted | max_iterations}
 **Iterations:** {N} of {max}
@@ -1850,20 +2225,54 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
 - Budget remaining: {budget - N}
 
 ### Next Steps
-{contextual recommendations based on final status:
- - converged: "All targets match within tolerance. Convergence complete."
- - stalled: "The following deltas are stuck. Review the stuck targets above and consider manual intervention, then run `/loom converge --resume`."
- - regression: "Scores regressed during iteration {N}. Review the fixer agent changes for unintended side effects."
- - budget_exhausted: "Agent budget exhausted with {failing} targets remaining. Increase budget in orchestration.toml and run `/loom converge --resume`."
- - max_iterations: "Max iterations reached with {failing} targets remaining. Consider increasing --max-iterations or reviewing stuck deltas for structural issues."}
+{contextual recommendations based on final status}
+```
+
+**Criteria mode report:**
+
+```markdown
+## Convergence Report (Criteria)
+
+**Status:** {converged | stalled | regression | budget_exhausted | max_iterations}
+**Iterations:** {N} of {max}
+**Criteria:** {passing}/{total} passing  |  **Frozen:** {frozen} conflicts
+
+### Criteria Results
+| # | Criterion | Type | Status | Iterations |
+|---|-----------|------|--------|------------|
+| C-01 | Blocks unauthenticated requests | hard | pass | 2 |
+| C-02 | Returns 401 with error shape | hard | pass | 3 |
+| C-06 | Clean separation of concerns | soft | frozen | -- |
+
+### Reviewer Summary
+| Reviewer | Findings | Resolved | Remaining |
+|----------|----------|----------|-----------|
+| test-runner | 5 | 5 | 0 |
+| security-reviewer | 2 | 2 | 0 |
+| code-reviewer | 3 | 2 | 1 (frozen) |
+
+### Frozen Conflicts (if any)
+- C-06: "Extract auth logic to helper" ↔ "Inline is clearer" -- frozen for human review
+
+### Agent Usage
+- Total agents spawned: {N} (fixers: {F}, reviewers: {R})
+- Budget remaining: {budget - N}
+
+### Next Steps
+{contextual recommendations -- same status-based logic, plus:
+ - If frozen conflicts exist: "Review frozen conflicts above. These represent reviewer disagreements that cannot be resolved automatically."
+ - converged with frozen: "All blocking criteria pass. {N} frozen conflicts remain for human review."}
 ```
 
 #### Step 7: Save State
 
-1. Save convergence report to `.plan-execution/convergence-report.md`.
+1. Save convergence report to `.plan-execution/convergence/convergence-report.md`.
 
 2. If this run was triggered during a `/loom auto` pipeline (check for `.plan-execution/pipeline-state.toon`), save a summary to `.plan-execution/convergence-summary.toon` for the outer loop to read:
+
+   **Target mode:**
    ```toon
+   convergenceMode: target
    status: {converged | stalled | regression | budget_exhausted | max_iterations}
    iterations: {N}
    maxIterations: {max}
@@ -1874,17 +2283,35 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
    completedAt: {ISO timestamp}
    ```
 
+   **Criteria mode:**
+   ```toon
+   convergenceMode: criteria
+   status: {converged | stalled | regression | budget_exhausted | max_iterations}
+   iterations: {N}
+   maxIterations: {max}
+   criteriaPassing: {n}
+   criteriaTotal: {total}
+   criteriaFrozen: {frozen}
+   blockingPassing: {n}
+   blockingTotal: {total}
+   agentsUsed: {N}
+   frozenConflicts: {count}
+   completedAt: {ISO timestamp}
+   ```
+
 3. Update final `.plan-execution/status.toon`.
 
 ### Error Handling
 
-- **No `--target` and no `--config` and not `--resume`**: show usage help and stop.
-- **Target path does not exist**: "Target path `{path}` does not exist. Check the path and try again." Stop.
-- **target-parser fails**: "Target parsing failed: {error}. Cannot converge without targets." Stop.
-- **harness-builder fails**: "Harness build failed: {error}. Cannot converge without a comparison harness." Stop.
+- **No `--target`, `--criteria`, `--config`, or `--resume`**: show usage help and stop.
+- **Target path does not exist** (target mode): "Target path `{path}` does not exist. Check the path and try again." Stop.
+- **PLAN.md missing** (criteria mode): "No PLAN.md found. Criteria convergence requires a plan with acceptance criteria." Stop.
+- **target-parser fails** (target mode): "Target parsing failed: {error}. Cannot converge without targets." Stop.
+- **criteria-planner fails** (criteria mode): "Criteria planning failed: {error}." Stop.
+- **harness-builder fails** (either mode): "Harness build failed: {error}. Cannot converge without a harness." Stop.
 - **convergence-driver fails**: Save partial state to `.plan-execution/convergence-state.toon` for `--resume`. Display what completed and suggest: "Run `/loom converge --resume` to continue from iteration {N}."
-- **convergence-state.toon missing on `--resume`**: "No convergence state found. Use `--target` to start a new run." Stop.
-- **convergence-state.toon from a different target**: Compare `targetPath` in state with current `--target`. If they differ: "Warning: existing convergence state is for a different target (`{old}`). Continue with existing state or start fresh? (continue / fresh)" If fresh, delete old state and start from Step 2.
+- **convergence-state.toon missing on `--resume`**: "No convergence state found. Use `--target` or `--criteria` to start a new run." Stop.
+- **convergence-state.toon from a different source**: Compare `convergenceMode` + source path in state with current flags. If they differ: "Warning: existing convergence state is for a different {mode/source} (`{old}`). Continue with existing state or start fresh? (continue / fresh)" If fresh, delete old state and restart.
 - **Agent failure during loop**: The convergence-driver handles internal agent failures. If the driver itself fails, save state and offer `--resume`.
 
 ### Status Line Updates
@@ -2196,9 +2623,12 @@ Snapshot the current workflow state for session handoff. Allows the user to clos
 Parse arguments after `pause`:
 - No args: snapshot current state
 - `--no-commit`: skip the WIP git commit
+- `--compact`: optimized for context pressure -- writes stage summaries, updates rolling-context.md, writes continue-here.toon, skips git commit. Designed for use before `/clear` when context is running low.
 - `--message "text"`: add a human-readable note to the snapshot
 
 ### Instructions
+
+**If `--compact` is set:** jump to the Compact Pause section below.
 
 #### Step 1: Detect Running Workflow
 
@@ -2295,6 +2725,67 @@ To resume a specific workflow directly:
   /loom-plan execute --resume   (if command was execute-plan)
   /loom converge --resume  (if command was converge)
 ```
+
+#### Compact Pause (--compact)
+
+Optimized for context pressure situations. Skips git commit, skips detailed context gathering -- focuses on getting state to disk fast so the user can `/clear` and resume.
+
+**Step C1: Detect running workflow.** Same detection logic as Step 1 above. If no state files found, print "No active workflow detected. Nothing to pause." and stop.
+
+**Step C2: Write stage summaries for all completed work.**
+
+1. Read `.plan-execution/state.toon` to identify completed waves.
+2. For each completed wave that does NOT already have a `stage-context/*.toon` file, generate one from the wave summary:
+   - Read `wave-N-summary.toon`
+   - Write `stage-context/execute.toon` (or appropriate stage name) with fields: `stage`, `wave`, `summary`, `filesChanged`, `keyDecisions`, `nextStageHints`
+   - Use atomic write (`.tmp` then rename)
+3. If convergence state exists, ensure `stage-context/converge.toon` is written from `convergence-state.toon`.
+
+**Step C3: Update rolling-context.md.**
+
+Regenerate `.plan-execution/rolling-context.md` from all stage-context files using tiered compression:
+- Most recent stage: HOT (full summary with all fields)
+- Previous 2-3 stages: WARM (key decisions + interface changes)
+- Older stages: COLD (one-line summary)
+- Target: under 10k tokens total
+
+Use atomic write.
+
+**Step C4: Write continue-here.toon.**
+
+Same format as Step 3 above, but with `compactMode: true` added:
+
+```toon
+pausedAt: {ISO-8601 timestamp}
+command: {running command}
+phase: {current step}
+compactMode: true
+planPath: {PLAN.md path or null}
+roadmapPath: {ROADMAP.md path or null}
+resumeStep: {exact step to resume from}
+nextAction: {what was about to happen}
+context: {compressed rolling-context.md, max 2000 tokens}
+gitRef: {current HEAD sha}
+message: {user's --message text, or null}
+stateFiles[N]: {list of all .plan-execution/ state files that exist}
+```
+
+Use atomic write (`.tmp` then rename).
+
+**Step C5: Print resume instructions.**
+
+Determine the appropriate resume command:
+- If `pipeline-state.toon` exists: `/loom auto --resume`
+- If `state.toon` exists (without pipeline-state): `/loom-plan execute --resume`
+- If `convergence-state.toon` exists: `/loom converge --resume`
+- Fallback: `/loom resume`
+
+Print:
+```
+State saved. Run `/clear` then `/loom resume`
+```
+
+That single line is the entire output. No headers, no details. The user is under context pressure -- minimize output.
 
 ---
 
@@ -2480,7 +2971,8 @@ Analyze the user's text against known patterns and project state. Use both keywo
 | "resume", "continue", "pick up" | `/loom resume` | Only if resumable state exists |
 | "onboard", "init", "analyze codebase" | `/loom init` | Always available |
 | "auto", "autonomous", "do everything" | `/loom auto` | Append `--from "{text}"` if text contains a description |
-| "converge", "match target", "golden" | `/loom converge` | Requires target path in text |
+| "converge", "match target", "golden" | `/loom converge --target` | Requires target path in text |
+| "tdd", "test first", "criteria", "code review converge", "review until clean" | `/loom converge --criteria` | Extract --phase, --reviewers from text |
 | "commit", "push", "pr", "merge" | `/loom-git {subcommand}` | Extract git subcommand from text |
 | "ingest", "update wiki" | `/loom-wiki ingest` | Only if wiki exists |
 | "lint", "health check" | `/loom-wiki lint` | Always available |

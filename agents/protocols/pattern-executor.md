@@ -98,6 +98,35 @@ Iterative convergence loop toward a deterministic target.
 
 **Budget:** 2 (setup: target-parser + harness-builder) + iterations x (1 delta-analyzer + N fixers). Capped by `maxIterations`. Report `agentsUsed` cumulatively.
 
+### Criteria Converge
+
+Iterative test + review loop that converges when all blocking criteria pass.
+
+1. Spawn criteria-planner-agent with the plan. Collect criteria plan + test stubs.
+2. Spawn criteria-harness-builder with the plan + stubs. Collect harness config.
+3. **Human approval gate** (skip in auto mode): review criteria plan and test stubs.
+4. Enter convergence loop (max `maxIterations` from config):
+   a. Run harness: execute tests (hard criteria) + spawn reviewer agents (soft criteria).
+   b. Collect delta report with per-criterion pass/fail and findings.
+   c. Spawn delta-analyzer with report → fix list (layered priority: tests > security > code review > advisory).
+   d. Check for conflicts: if findings oscillate between iterations, freeze that criterion.
+   e. Spawn fixer agents in parallel for actionable findings.
+   f. After fixers complete, re-run harness.
+   g. Compute convergence rate: `(prior blocking failing - current blocking failing) / prior blocking failing`.
+   h. Circuit break if: rate < 0.01 for 2 consecutive iterations, regression, all blocking frozen, or budget exhausted.
+5. Produce convergence report with final status.
+
+**Error handling:**
+- **criteria-planner fails:** Abort pattern, return error.
+- **criteria-harness-builder fails:** Abort pattern, return error.
+- **delta-analyzer fails mid-loop:** Use previous iteration's fix list if available, otherwise halt loop and return partial result.
+- **Fixer agent fails:** Mark that finding as unresolved, continue with remaining fixers.
+- **Reviewer agent fails:** Score that reviewer's criteria as failing with error details, continue.
+- **All fixers fail in an iteration:** Halt loop, return partial result.
+- **Conflict detected:** Freeze criterion, continue loop with remaining criteria.
+
+**Budget:** 2 (setup: criteria-planner + criteria-harness-builder) + iterations x (1 delta-analyzer + N reviewers + M fixers). Reviewer agents count toward budget. Capped by `maxIterations`. Report `agentsUsed` cumulatively.
+
 ---
 
 ## PatternResult
@@ -107,7 +136,7 @@ Every pattern invocation returns a `PatternResult` to the orchestrator.
 | Field        | Type     | Required | Description                                  |
 |--------------|----------|----------|----------------------------------------------|
 | `pattern`    | string   | yes      | Pattern name from `orchestration.toml`       |
-| `type`       | enum     | yes      | `debate`, `chain`, `vote`, `triage`, or `converge` |
+| `type`       | enum     | yes      | `debate`, `chain`, `vote`, `triage`, `converge`, or `converge-criteria` |
 | `result`     | string   | yes      | Final output text                            |
 | `agentsUsed` | integer  | yes      | Total agent invocations consumed             |
 | `transcript` | string   | debate   | Compressed argument history                  |
@@ -117,6 +146,10 @@ Every pattern invocation returns a `PatternResult` to the orchestrator.
 | `iterations` | integer  | converge | Number of convergence iterations completed   |
 | `finalDelta` | object   | converge | `{ passing: N, failing: N, total: N }`       |
 | `converged`  | boolean  | converge | True if all targets passed within tolerance  |
+| `iterations` | integer  | converge-criteria | Number of convergence iterations completed |
+| `criteriaDelta` | object | converge-criteria | `{ passing: N, failing: N, frozen: N, total: N }` |
+| `converged`  | boolean  | converge-criteria | True if all blocking criteria pass (frozen excluded) |
+| `frozenConflicts` | integer | converge-criteria | Number of criteria frozen due to reviewer conflicts |
 
 ---
 
@@ -150,3 +183,13 @@ Every pattern invocation returns a `PatternResult` to the orchestrator.
 | Converge | Harness fails       | Retry once; then halt                            |
 | Converge | Stall detected      | Halt loop; return partial with stall flag        |
 | Converge | Regression detected | Halt loop; return partial with regression flag   |
+| Converge-Criteria | criteria-planner fails | Abort; return error result             |
+| Converge-Criteria | criteria-harness fails | Abort; return error result              |
+| Converge-Criteria | delta-analyzer fails | Use prior fix list or halt with partial  |
+| Converge-Criteria | Fixer fails        | Mark finding unresolved, continue               |
+| Converge-Criteria | Reviewer fails     | Score criteria as failing, continue              |
+| Converge-Criteria | All fixers fail    | Halt loop; return partial result                 |
+| Converge-Criteria | Conflict detected  | Freeze criterion, continue loop                  |
+| Converge-Criteria | Stall detected     | Halt loop; return partial with stall flag        |
+| Converge-Criteria | Regression detected | Halt loop; return partial with regression flag  |
+| Converge-Criteria | All blocking frozen | Halt loop; return partial with stall flag       |

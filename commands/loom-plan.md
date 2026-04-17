@@ -421,6 +421,7 @@ Parse remaining arguments:
 - `--contracts-only`: run only Wave 0 (contracts agent), then stop
 - `--rollback-wave N`: revert to the git state before wave N
 - `--auto`: skip human approval gates, use automated quality gates instead
+- `--no-auto-commit`: disable per-wave auto-commits (code accumulates in working tree)
 
 ### Project-Specific Agents
 
@@ -520,9 +521,20 @@ kitHalts: 0
 
 **If `--resume`:**
 1. Read `.plan-execution/state.toon`
-2. Check for drift: compare current file hashes against `fileHashes` from last completed wave
-3. If drift detected, warn user and ask whether to proceed
-4. Jump to the appropriate step in the main loop below
+2. **Reconstruct context from stage summaries.** Read all files in `.plan-execution/stage-context/` to rebuild pipeline position:
+   - For each `stage-context/*.toon` file, parse `stage`, `wave`, `summary`, `keyDecisions`, `nextStageHints`
+   - Determine last completed wave from state.toon `currentWave` and wave statuses
+   - Regenerate `rolling-context.md` from stage summaries using tiered compression (hot/warm/cold)
+   - This ensures fresh context after a `/clear` + `--resume` cycle
+3. Check for drift: compare current file hashes against `fileHashes` from last completed wave
+4. If drift detected, warn user and ask whether to proceed
+5. Display resume summary:
+   ```
+   Resuming execution from wave {N+1}/{total}
+   Completed waves: {list}
+   Context reconstructed from {count} stage summaries
+   ```
+6. Jump to the appropriate step in the main loop below
 
 #### Status Line Updates
 
@@ -601,7 +613,7 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
    - Instruction to return an AgentResult as the last block of output
 
 5. Parse the AgentResult from the agent's return value
-6. Write `wave-0-summary.toon` and `wave-0-summary.md`
+6. Write `wave-0-summary.toon` and `wave-0-summary.md` to `.plan-execution/`. Also copy `wave-0-summary.toon` to `.plan-history/executions/wave-0-summary.toon` for persistence (see `execution-conventions.md` § Persistence).
 7. Update `rolling-context.md` with Wave 0 as HOT entry
 8. Update state.toon: wave 0 tasks complete
 
@@ -616,6 +628,40 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
    - Wave index: 0
 3. Parse verification AgentResult
 4. Update state.toon with verification result
+
+5. **Write stage context.** Write `.plan-execution/stage-context/contracts.toon` following the `StageContext` schema from `stage-context.schema.md`. Populate fields from the Wave 0 agent results and verification outcome:
+   ```toon
+   stage: contracts
+   wave: 0
+   iteration: 0
+   startedAt: {wave 0 start timestamp}
+   completedAt: {verification completion timestamp}
+   durationMs: {wall-clock duration}
+   inputTokensEstimate: {estimated from prompt sizes}
+   outputTokensEstimate: {estimated from agent output sizes}
+   filesChanged[N]: {files from wave-0-summary.toon filesCreated + filesModified}
+   exportsAdded[N]: {exports from wave-0-summary.toon}
+   findingsResolved: 0
+   findingsRemaining: {count from verification result}
+   summary: {1-3 sentence summary of contracts generated}
+   keyDecisions[N]: {architectural decisions from contracts-agent}
+   nextStageHints[N]: {context for the next wave}
+   ```
+   Use atomic write: write to `stage-context/contracts.toon.tmp`, then rename to `stage-context/contracts.toon`.
+
+#### Step 3.5: Auto-Commit Wave 0
+
+**Skip if `--no-auto-commit` is set.**
+
+If verification passed (Step 3):
+1. Read `wave-0-summary.toon` to get `filesCreated` and `filesModified`.
+2. Stage those files: `git add {filesCreated} {filesModified}`.
+3. Also stage `.plan-history/executions/wave-0-summary.toon` if it was written.
+4. Create commit:
+   ```
+   git commit -m "feat(wave-0): contracts — {entity list from wave summary}"
+   ```
+5. If commit fails (nothing to stage, hook rejection), log warning and continue.
 
 #### Step 4: Human Approval Gate
 
@@ -717,13 +763,50 @@ If not `--auto` and blocking conflicts found, report to user and ask how to proc
    - Wave index
    - Project conventions
 3. Parse wiring AgentResult
-4. Write `wave-N-summary.toon` and `wave-N-summary.md`
+4. Write `wave-N-summary.toon` and `wave-N-summary.md` to `.plan-execution/`. Also copy `wave-N-summary.toon` to `.plan-history/executions/wave-N-summary.toon` for persistence.
 
 #### Step 8: Verify Wave N
 
 Same as Step 3 but for wave N:
 - Include all file ownership from all implementers + wiring agent
 - Run typecheck, tests, lint, ownership drift
+
+After verification completes, **write stage context.** Write `.plan-execution/stage-context/execute.toon` following the `StageContext` schema from `stage-context.schema.md`. Populate fields from the Wave N agent results and verification outcome:
+   ```toon
+   stage: execute
+   wave: {N}
+   iteration: 0
+   startedAt: {wave N start timestamp}
+   completedAt: {verification completion timestamp}
+   durationMs: {wall-clock duration}
+   inputTokensEstimate: {estimated from all agent prompt sizes}
+   outputTokensEstimate: {estimated from all agent output sizes}
+   filesChanged[N]: {deduplicated files from all implementer + wiring AgentResults}
+   exportsAdded[N]: {deduplicated exports from all AgentResults}
+   findingsResolved: {count from verification improvements vs prior wave}
+   findingsRemaining: {count from verification result}
+   summary: {1-3 sentence summary of what was implemented}
+   keyDecisions[N]: {decisions from implementer agents}
+   nextStageHints[N]: {context for the next wave or stage}
+   ```
+   Use atomic write: write to `stage-context/execute.toon.tmp`, then rename to `stage-context/execute.toon`.
+
+#### Step 8.5: Auto-Commit Wave N
+
+**Skip if `--no-auto-commit` is set.**
+
+If verification passed (Step 8):
+1. Read `wave-N-summary.toon` to get `filesCreated` and `filesModified`.
+2. Stage those files: `git add {filesCreated} {filesModified}`.
+3. Also stage `.plan-history/executions/wave-N-summary.toon` if it was written.
+4. Determine commit prefix:
+   - If `filesCreated` is non-empty → `feat`
+   - If `filesCreated` is empty (all modifications) → `refactor`
+5. Create commit:
+   ```
+   git commit -m "{prefix}(wave-{N}): {phase description from plan}"
+   ```
+6. If commit fails, log warning and continue.
 
 #### Step 9: Update Context + Gate
 
@@ -748,6 +831,50 @@ Same as Step 3 but for wave N:
    - Show files changed, verification results
    - Show next wave preview
    - Ask: proceed / re-run wave / abort
+
+#### Step 9.1: Context Checkpoint (every 2 waves)
+
+After updating context and before the contract drift check, evaluate whether a context checkpoint is appropriate:
+
+1. **Check wave count.** If `N % 2 == 0` and `N > 0` (i.e., after waves 2, 4, 6, ...):
+
+2. **Write all state to disk atomically:**
+   - Ensure `state.toon` is current (already done in Step 9.2)
+   - Ensure `rolling-context.md` is current (already done in Step 9.1)
+   - Ensure all `stage-context/*.toon` files are current
+   - Write a checkpoint marker to `.plan-execution/checkpoint.toon`:
+     ```toon
+     checkpointAt: {ISO timestamp}
+     wave: {N}
+     totalWaves: {total}
+     completedWaves[N]: {list of completed wave indices}
+     resumeCommand: /loom-plan execute --resume
+     stateFiles[N]: state.toon,rolling-context.md,scope-coverage.toon
+     ```
+     Use atomic write (`.tmp` then rename).
+
+3. **Present checkpoint prompt:**
+   ```
+   ## Context Checkpoint (Wave {N}/{total})
+
+   State saved to disk:
+   - Execution state: .plan-execution/state.toon (wave {N} complete)
+   - Rolling context: .plan-execution/rolling-context.md
+   - Stage summaries: .plan-execution/stage-context/
+   - Scope coverage: .plan-execution/scope-coverage.toon
+
+   Waves completed: {N}/{total}
+   Next wave: Wave {N+1} -- {description}
+
+   Run `/clear` for fresh context, then:
+     /loom-plan execute --resume
+   ```
+
+4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue to the next step. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
+
+5. **If not `--auto`:** display the checkpoint prompt and wait for user input:
+   - `continue` -- proceed without clearing (default)
+   - `clear` -- user will manually run `/clear` then `--resume`
 
 #### Step 9.3: Contract Drift Check
 

@@ -136,3 +136,27 @@ A plan is "complete" and ready for downstream consumption when:
 - **converge.config** (`harness-builder.md` output): harness-builder reads the manifest (from target-parser) and builds the config. Plan tolerances, ignore fields, and metadata flow through.
 - **Scope Contract** (`scope-contract.schema.md`): Plan non-targets should include scope-contract non-goals. Plan targets may reference scope-contract success criteria.
 - **Pipeline State** (`pipeline-state.schema.md`): The auto pipeline reads `convergence-plan.toon` to feed target-parser when convergence is enabled.
+
+## Iteration Context on Disk
+
+During convergence, the convergence-driver writes a per-iteration summary to disk after each iteration:
+
+```
+.plan-execution/convergence/iterations/
+├── iter-1.toon
+├── iter-2.toon
+└── ...
+```
+
+Each file follows the **ConvergenceIterationSummary** format defined in `agents/protocols/stage-context.schema.md § ConvergenceIterationSummary Schema`. Fields include: `iteration`, `mode`, `startedAt`, `completedAt`, `durationMs`, `harnessResult`, `findingsBefore`, `findingsAfter`, `findingsFixed`, `findingsNew`, `filesModified`, `stalled`, and `summary`.
+
+### Disk-Based Context Strategy
+
+The convergence-driver uses a disk-based sliding window instead of accumulating iteration history in its conversation context:
+
+- After each iteration, the driver writes `iter-{N}.toon` atomically (write `.tmp`, rename).
+- When starting iteration N (where N >= 2), the driver reads ONLY the last 2 iteration summaries from disk: `iter-{N-1}.toon` and `iter-{N-2}.toon`.
+- These summaries are passed to the delta-analyzer for trend detection and stuck-fix identification.
+- The compact `history` table in `convergence-state.toon` provides a numerical overview of all prior iterations without full detail.
+
+This approach prevents context degradation during long convergence loops (5-10 iterations). Without it, carrying every iteration's full findings, fix lists, and file diffs would consume the driver's context window and reduce decision quality in later iterations.

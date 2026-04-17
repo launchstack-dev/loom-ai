@@ -19,6 +19,17 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 ├── requests/                   # Cross-boundary requests from implementers
 │   └── {taskId}.toon           # One file per request
 ├── scope-coverage.toon         # Acceptance criteria coverage matrix
+├── stage-context/              # Structured stage summaries (see stage-context.schema.md)
+│   ├── contracts.toon
+│   ├── execute.toon
+│   ├── review.toon
+│   ├── test.toon
+│   ├── converge.toon
+│   └── fix.toon
+├── convergence/
+│   └── iterations/             # Per-iteration summaries (preserved across iterations)
+│       ├── iter-1.toon
+│       └── ...
 ├── wave-0-summary.toon         # Machine-readable wave summary
 ├── wave-0-summary.md           # Human-readable wave summary
 ├── wave-1-summary.toon
@@ -261,6 +272,106 @@ Base API structure with health endpoint.
 ## Wave 0 [COLD]
 Shared contracts: types.ts, schema.sql, api-types.ts.
 ```
+
+## Auto-Commit Convention
+
+By default, the orchestrator creates a git commit after each wave completes verification. This keeps diffs reviewable and git history aligned with the plan structure.
+
+### Per-Wave Commits (execution)
+
+After verification passes (Step 3 for Wave 0, Step 8 for Wave N) and before the human/auto gate:
+
+1. Stage all files created or modified by this wave's agents (from the wave summary's `filesCreated` + `filesModified`).
+2. Also stage `.plan-history/executions/wave-N-summary.toon` if it was written.
+3. Create a commit with a conventional message derived from the wave summary:
+
+```
+{prefix}(wave-{N}): {summary from wave description}
+```
+
+Prefix rules (same as `/loom-git commit`):
+- Wave 0 → `feat(wave-0): contracts — {entity list}`
+- Implementation waves → `feat(wave-{N}): {phase description}`
+- If wave only modified existing files (no new files) → `refactor(wave-{N}): {description}`
+
+Examples:
+```
+feat(wave-0): contracts — User, Post, Comment types + API routes
+feat(wave-1): auth middleware and user CRUD endpoints
+feat(wave-2): post service with comment threading
+refactor(wave-3): extract shared validation helpers
+```
+
+4. If the commit fails (nothing to stage, hook rejection), log a warning and continue. Auto-commit is best-effort — it never blocks the pipeline.
+
+### Per-Iteration Commits (convergence)
+
+After each convergence iteration completes (harness re-run + fixers applied):
+
+1. Stage all files modified by fixer agents in this iteration.
+2. Create a commit:
+
+```
+fix(converge-iter-{N}): {summary of what was fixed}
+```
+
+For criteria mode, the summary is derived from the delta report's resolved findings:
+```
+fix(converge-iter-1): 3 test failures fixed (auth middleware)
+fix(converge-iter-2): SQL injection in user lookup (C-04)
+fix(converge-iter-3): code review findings — naming, error handling
+```
+
+For target mode, from the delta report's improved targets:
+```
+fix(converge-iter-1): 6 API response targets now passing
+fix(converge-iter-2): pixel diff for login page within tolerance
+```
+
+3. If the iteration made no code changes (only harness ran), skip the commit.
+
+### Opting Out
+
+Pass `--no-auto-commit` to `/loom-plan execute`, `/loom converge`, or `/loom auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
+
+### Interaction with Git Tags
+
+Git tags (`plan-exec-wave-N-pre`) are created **before** the wave runs. Auto-commits happen **after** verification passes. This means:
+- `plan-exec-wave-N-pre` → tag points to the state before wave N
+- The auto-commit after wave N → contains wave N's changes
+- `--rollback-wave N` still works: reset to the pre-tag, which is before both the code and the commit
+
+## Stage Context Writing
+
+Stage context files capture structured summaries of what happened at each pipeline boundary. They follow the `StageContext` schema defined in `stage-context.schema.md`.
+
+### When to Write
+
+- **`/loom-plan execute`:** After each wave's verification step -- write `stage-context/contracts.toon` after Wave 0 verification, write `stage-context/execute.toon` after Wave N verification.
+- **`/loom auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
+
+### What to Include
+
+Every stage context file must contain all `StageContext` fields per `stage-context.schema.md`:
+
+- `stage`, `wave`, `iteration` -- identity fields
+- `startedAt`, `completedAt`, `durationMs` -- timing
+- `inputTokensEstimate`, `outputTokensEstimate` -- token usage
+- `filesChanged`, `exportsAdded` -- artifact tracking
+- `findingsResolved`, `findingsRemaining` -- quality tracking
+- `summary` -- 1-3 sentence description of outcomes
+- `keyDecisions` -- architectural or implementation decisions made
+- `nextStageHints` -- context the next stage should know about
+
+### Atomic Write Requirement
+
+Stage context files MUST use atomic writes: write to `stage-context/{stage}.toon.tmp`, then rename to `stage-context/{stage}.toon`. This prevents partial reads by downstream consumers (rolling-context regeneration, convergence driver).
+
+### Relationship to rolling-context.md
+
+Stage context files are the **structured source of truth** for stage outcomes. `rolling-context.md` is the **compressed derivative** -- the orchestrator reads stage context files and regenerates `rolling-context.md` using tiered compression (hot/warm/cold). Agents never read stage context files directly; they consume `rolling-context.md` from their prompt. Only the orchestrator and lead dispatcher read stage context files from disk.
+
+---
 
 ## Persistence — .plan-history/
 

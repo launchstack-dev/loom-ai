@@ -41,3 +41,38 @@ blockName:                                    # nested block
 - Execution agents write progress heartbeats to `.plan-execution/progress/{taskId}.toon`
 - File writes must be atomic: write to `.tmp`, then rename
 - See `agents/protocols/execution-conventions.md` for directory structure and file naming
+
+## Context Management
+
+### Budget Cap
+
+- **Hard cap: 100k tokens** per agent spawn (half the default 200k context window)
+- With a 1M context window, the cap scales to 500k tokens
+- The cap is configurable via `agentBudgetCap` in `.claude/orchestration.toml` under `[settings.contextBudget]`
+- Spawns exceeding the cap are blocked with a suggestion to split the task
+
+### Estimation Algorithm
+
+- Token estimation uses the **characters / 4** heuristic (`Math.ceil(text.length / 4)`)
+- File-based estimation uses `fs.statSync(path).size / 4` (byte size, not character count)
+- A fixed **5000-token overhead** is added for system prompt, tool definitions, and formatting
+- See `hooks/lib/token-estimator.ts` for implementation and `agents/protocols/context-budget.md` for the full spec
+
+### Stage Summary Writes
+
+- Every pipeline stage must write a StageContext summary to `.plan-execution/stage-context/{stage}.toon`
+- Writes must be **atomic**: write to `{path}.tmp`, then `fs.renameSync` to `{path}`
+- Stage summaries are the structured source of truth; `rolling-context.md` is the compressed derivative
+- See `agents/protocols/stage-context.schema.md` for the full StageContext schema
+
+### Budget Configuration
+
+Configure context budget settings in `.claude/orchestration.toml`:
+
+```toml
+[settings.contextBudget]
+contextWindow = 200000          # total context window (default 200k, set 1000000 for 1M)
+# agentBudgetCap = 100000       # derived as contextWindow / 2 unless overridden
+checkpointWarning = 0.35        # warn when this fraction of window remains
+checkpointCritical = 0.25       # critical checkpoint when this fraction remains
+```

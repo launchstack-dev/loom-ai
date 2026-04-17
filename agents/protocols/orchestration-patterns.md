@@ -17,7 +17,7 @@ For step-by-step execution mechanics, see `pattern-executor.md` in this director
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `pattern` | string | yes | Pattern name from orchestration.toml config |
-| `type` | enum | yes | `debate`, `chain`, `vote`, `triage`, or `converge` |
+| `type` | enum | yes | `debate`, `chain`, `vote`, `triage`, `converge`, or `converge-criteria` |
 | `result` | string | yes | Final output or recommendation |
 | `agentsUsed` | integer | yes | Total agents spawned (for budget tracking) |
 | `transcript` | string | debate | Compressed argument history |
@@ -431,13 +431,156 @@ Orchestrator execution:
 
 ---
 
+## Pattern 6: Criteria Converge
+
+**Description:** An iterative pipeline that runs tests and agent reviews against the codebase, then loops until all blocking criteria pass (or circuit breaks). Unlike target convergence (Pattern 5) which compares output to a golden reference, criteria convergence verifies that the code satisfies stated conditions — tests for correctness, agent reviews for quality.
+
+This is TDD at the plan level: tests are written before implementation, and the convergence loop drives the code to green.
+
+### When to use
+
+- TDD workflows: write tests from plan acceptance criteria, converge until they pass
+- Code review convergence: iterate until reviewers return zero findings
+- Security hardening: converge until security scanner finds nothing
+- Quality gates: ensure code meets multiple quality dimensions before merge
+- Per-plan verification: auto-wrap any plan phase with criteria convergence
+- Any project where "done" means "satisfies these conditions" rather than "matches this reference"
+
+### How it works
+
+1. **Orchestrator spawns** criteria-planner-agent to discover criteria from the plan, generate test stubs, and configure reviewers.
+2. **Spawns** criteria-harness-builder to create test runner + reviewer harness.
+3. **Human approval gate:** review criteria plan and test stubs.
+4. **Enter iteration loop** (max `maxIterations`):
+   a. Run harness: execute tests (hard criteria) + spawn reviewers (soft criteria) → Delta Report.
+   b. Spawn delta-analyzer with report → prioritized fix list (tests first, then security, then code review).
+   c. Spawn fixer agents in parallel for actionable findings.
+   d. Re-run harness → check convergence.
+   e. Conflict detection: if reviewers oscillate (fix A reintroduces finding B), freeze that criterion.
+   f. Circuit break if: convergence rate < 1% for 2+ iterations, regression, conflicts consuming all criteria, budget exhausted.
+5. **Produce convergence report:** iterations, pass/fail per criterion, frozen conflicts, reviewer findings history.
+
+**Cost control:** Setup is 2 agents (criteria-planner + criteria-harness-builder). Each iteration costs 1 test run + N reviewer agents + 1 delta-analyzer + M fixer agents. Reviewers run in parallel. Total bounded by `maxIterations` and `agentBudget`.
+
+**Iteration priority order:**
+1. Fix test failures (hard criteria) — correctness first
+2. Fix security findings (blocking soft) — safety second
+3. Fix code review findings (blocking soft) — quality third
+4. Fix advisory findings — only if budget remains
+
+**Data flow:**
+```
+criteria-planner(plan) → criteria-plan.toon + test stubs
+criteria-harness-builder(plan + stubs) → harness + converge.config
+[Loop]:
+  harness(tests + reviewers) → Delta Report
+  delta-analyzer(report) → fix list (layered priority)
+  fixer-agents(fixes) → code changes (parallel)
+  harness(updated state) → new Delta Report
+  conflict-tracker(history) → frozen criteria
+  if converged or circuit-break → exit loop
+convergence-report → final result
+```
+
+### orchestration.toml config
+
+```toml
+[patterns.tdd-convergence]
+type = "converge-criteria"
+criteriaPlanner = "criteria-planner-agent"
+harnessBuilder = "criteria-harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "criteria-convergence-task"
+
+[patterns.tdd-convergence.reviewers]
+security = "security-reviewer"
+code-review = "code-reviewer"
+performance = "performance-reviewer"
+architecture = "architecture-reviewer"
+
+[patterns.tdd-convergence.blocking]
+test-runner = true
+security = true
+code-review = true
+performance = false
+architecture = false
+```
+
+| Field             | Type                  | Required | Description |
+|-------------------|-----------------------|----------|-------------|
+| type              | `"converge-criteria"` | yes      | Pattern type identifier |
+| criteriaPlanner   | string                | yes      | Agent that discovers criteria and generates tests |
+| harnessBuilder    | string                | yes      | Agent that builds test + review harness |
+| deltaAnalyzer     | string                | yes      | Agent that triages findings and prioritizes fixes |
+| driver            | string                | yes      | Agent that orchestrates the iteration loop |
+| maxIterations     | integer               | no       | Max iterations (default: 10, max: 50) |
+| reviewers         | object                | no       | Map of reviewer type → agent name. Omit to use defaults. |
+| blocking          | object                | no       | Map of reviewer type → boolean. Which reviewers block convergence. |
+| trigger           | string                | yes      | Event or command that activates this pattern |
+
+### Example: Per-plan TDD convergence
+
+```toml
+[patterns.plan-tdd]
+type = "converge-criteria"
+criteriaPlanner = "criteria-planner-agent"
+harnessBuilder = "criteria-harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 8
+trigger = "plan-phase-criteria"
+
+[patterns.plan-tdd.reviewers]
+security = "security-reviewer"
+code-review = "code-reviewer"
+
+[patterns.plan-tdd.blocking]
+test-runner = true
+security = true
+code-review = true
+```
+
+Orchestrator execution:
+1. Spawn `criteria-planner-agent` with: "Extract criteria from phase 3 of PLAN.md, generate test stubs, configure security + code reviewers"
+2. Spawn `criteria-harness-builder` with: "Build harness for criteria-plan.toon"
+3. Human reviews criteria plan and test stubs.
+4. **Iteration 1:** Run harness → 5/7 criteria failing. 3 test failures, 1 security finding, 1 code review finding. Spawn delta-analyzer → fix list prioritizes test failures. Spawn fixers. Re-run → 3/7 failing.
+5. **Iteration 2:** All tests pass. Security finding fixed. 1 code review finding remains. Spawn fixer. Re-run → 1/7 failing.
+6. **Iteration 3:** Code review finding fixed, but new finding appears at same location ("extract helper" vs "keep inline"). Conflict detected → freeze C-06. 0 blocking criteria failing.
+7. Convergence report: 3 iterations, 6/7 passed, 1 frozen conflict, 8 agents used.
+
+### Composing Target + Criteria Convergence
+
+Target and criteria convergence can run in sequence for comprehensive verification:
+
+```
+execute → criteria-converge → target-converge
+```
+
+- **Criteria converge first:** "Does it work? Is it safe? Is it clean?"
+- **Target converge second:** "Does the output match the reference?"
+
+Or in parallel for independent verification:
+- Criteria converge checks behavior (tests + reviews)
+- Target converge checks output fidelity (golden files)
+
+Configure via the auto pipeline:
+```toml
+[auto]
+stages = ["roadmap-create", "plan-create", "execute", "converge-criteria", "converge", "test", "review-code", "fix-code"]
+```
+
+---
+
 ## Config Schema Reference
 
 All patterns live under the `[patterns]` table in `orchestration.toml`. The general structure:
 
 ```toml
 [patterns.<pattern-name>]
-type = "debate" | "chain" | "vote" | "triage" | "converge"
+type = "debate" | "chain" | "vote" | "triage" | "converge" | "converge-criteria"
 trigger = "<event-or-command-name>"
 # ... type-specific fields
 ```
@@ -489,6 +632,24 @@ trigger = "convergence-task"
 
 [patterns.api-convergence.tolerance]
 json-deep-equal = 1.0
+
+[patterns.tdd-convergence]
+type = "converge-criteria"
+criteriaPlanner = "criteria-planner-agent"
+harnessBuilder = "criteria-harness-builder"
+deltaAnalyzer = "delta-analyzer"
+driver = "convergence-driver"
+maxIterations = 10
+trigger = "criteria-convergence-task"
+
+[patterns.tdd-convergence.reviewers]
+security = "security-reviewer"
+code-review = "code-reviewer"
+
+[patterns.tdd-convergence.blocking]
+test-runner = true
+security = true
+code-review = true
 ```
 
 ### Pattern selection guidance
@@ -500,5 +661,6 @@ json-deep-equal = 1.0
 | Vote      | Critical implementations        | High     | Medium*  | Highest    |
 | Triage    | Mixed-complexity workloads      | Low-Med  | Low      | Varies     |
 | Converge  | Deterministic target matching   | High     | High     | Highest    |
+| Converge-Criteria | TDD, code review, security gates | Medium-High | High | High |
 
 *Vote has medium latency because agents run in parallel, despite higher total cost.
