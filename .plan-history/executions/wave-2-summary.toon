@@ -1,0 +1,13 @@
+wave: 2
+status: success
+agentCount: 2
+
+agentResults[2]{agent,taskId,status,filesCreated,filesModified}:
+  implementer-agent,w2-convergence,success,"commands/loom-converge.md","agents/convergence-driver.md agents/convergence-planner-agent.md"
+  implementer-agent,w2-wiki,success,"agents/wiki-maintainer-triggers.md",""
+
+filesChanged[4]: agents/convergence-driver.md,agents/convergence-planner-agent.md,commands/loom-converge.md,agents/wiki-maintainer-triggers.md
+
+exportsAdded[0]{name,file,kind}:
+
+unresolvedIssues[0]:

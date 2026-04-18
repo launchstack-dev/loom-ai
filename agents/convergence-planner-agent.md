@@ -89,6 +89,54 @@ Skip candidates with low confidence unless no high/medium candidates exist.
 
 ---
 
+## Step 1b: Tier Assignment
+
+After discovering convergence targets/criteria, assign each to a `testTier` based on its scope and nature. The tier determines which convergence runner verifies the criterion and at what boundary it gates execution. Reference `convergence-tier.schema.md` for tier definitions and `taxonomy.md` for hierarchy-to-tier mappings.
+
+### Assignment Rules
+
+Apply these rules in order. The first matching rule determines the tier:
+
+| Rule | Condition | Assigned Tier | Rationale |
+|------|-----------|---------------|-----------|
+| 1 | Criterion maps to a wave-level plan phase or tests isolated unit behavior | `unit` | Wave-scoped, gates each wave via `block-wave` |
+| 2 | Criterion maps to feature-level scope or tests cross-phase wiring/contracts | `integration` | Feature-scoped, gates feature completion via `block-feature` |
+| 3 | Criterion describes a complete user workflow or end-to-end story | `e2e` | Milestone-scoped, gates milestone completion via `block-milestone` |
+| 4 | Criterion concerns code quality, security, performance, or architecture review | `qa-review` | Phase-scoped, advisory gating |
+
+### Tier Assignment Examples
+
+```toon
+# From plan acceptance criteria (wave-level phase output):
+criteria: Blocks unauthenticated requests → testTier: unit
+criteria: Logs auth attempts → testTier: unit
+
+# From feature-level contracts (cross-phase integration):
+criteria: Returns 401 with error shape across all endpoints → testTier: integration
+criteria: No N+1 queries in user lookup → testTier: integration
+
+# From user workflows (milestone-level stories):
+criteria: User can sign up and complete onboarding → testTier: e2e
+criteria: Admin can bulk-approve pending accounts → testTier: e2e
+
+# From quality/security reviews (phase-level advisory):
+criteria: No injection vulnerabilities → testTier: qa-review
+criteria: Clean separation of concerns → testTier: qa-review
+criteria: No XSS vectors in error responses → testTier: qa-review
+```
+
+### Auto Mode Tier Assignment
+
+In `--auto` mode, tier assignment uses the rules above with no interaction. If a criterion's scope is ambiguous (could be `unit` or `integration`), default to `unit` — narrower scope means faster feedback.
+
+### Including testTier in Output
+
+The `testTier` column must be included in both:
+- The proposal summary table shown to the user (so they can review/override tier assignments)
+- The final `convergence-plan.toon` output in the `criteria` typed array
+
+---
+
 ## Step 2: Generate Proposal Batches
 
 Group candidates by category. Present 2-4 targets per batch.
@@ -232,11 +280,11 @@ After all decisions are made, present a consolidated summary:
 ```
 ## Convergence Plan Summary ({N} targets across {M} categories)
 
-| # | Target | Category | Method | Tolerance | Capture | Golden Source |
-|---|--------|----------|--------|-----------|---------|--------------|
-| 1 | GET /api/users | api | json-deep-equal | 1.0 | HTTP GET | reference run |
-| 2 | POST /api/users | api | json-deep-equal | 1.0 | HTTP POST | reference run |
-| 3 | Login page | ui | pixel-diff | 0.95 | Playwright | reference run |
+| # | Target | Category | Method | Tolerance | Capture | Golden Source | Tier |
+|---|--------|----------|--------|-----------|---------|--------------|------|
+| 1 | GET /api/users | api | json-deep-equal | 1.0 | HTTP GET | reference run | integration |
+| 2 | POST /api/users | api | json-deep-equal | 1.0 | HTTP POST | reference run | integration |
+| 3 | Login page | ui | pixel-diff | 0.95 | Playwright | reference run | e2e |
 
 ### Excluded (non-targets)
 - {item} — {rationale}
