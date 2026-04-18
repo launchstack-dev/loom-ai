@@ -201,6 +201,9 @@ Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MU
 #### Convergence Targets *(optional)*
 - {deterministic output to verify, e.g., "GET /api/users returns JSON array (ignore: timestamps)"}
 - {e.g., "Error responses match shape: {error: {code, message}}"}
+
+#### Convergence Tiers *(optional)*
+- {tier assignments for this phase's verification, referencing convergence-tier.schema.md}
 ```
 
 ### Phase Fields
@@ -217,6 +220,7 @@ Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MU
 | Deliverables | yes | Table of files with Action (Create/Modify/Delete) and Owner hint. |
 | Acceptance Criteria | yes | Checkbox list of testable criteria. |
 | Convergence Targets | no | Free-text bullets listing deterministic, verifiable outputs. Read by convergence-planner-agent as high-confidence seeds. Only include outputs that are capturable and deterministic (API responses, generated files, CLI exit codes, rendered pages). |
+| Convergence Tiers | no | Optional tier assignments for this phase's verification strategy. References tier names from `convergence-tier.schema.md`. When omitted, the default tier for the phase's hierarchy level (per `taxonomy.md`) applies. |
 
 ### Dependency Syntax
 
@@ -355,3 +359,12 @@ See `test-fixtures/broken-plan/PLAN.md` — demonstrates common errors:
 - Untestable criteria ("loads in under 200ms")
 - Undefined type reference (`UserProfile` never defined)
 - Missing frontmatter
+
+---
+
+## Relationship to Convergence Schemas
+
+- **convergence-tier.schema.md** -- Defines the 4 convergence tiers (unit, integration, e2e, qa-review) that map to plan hierarchy levels. Phases may optionally specify convergence tier overrides in their Convergence Tiers section.
+- **taxonomy.md** -- Defines the planning hierarchy (milestone > feature > phase > wave) and the default convergence tier assignment for each level.
+- **criteria-plan.schema.md** -- Criteria entries derived from plan acceptance criteria include a `testTier` column referencing convergence tier names.
+- **e2e-story.schema.md** -- E2E stories reference milestones defined through the plan's phase-to-milestone mapping.

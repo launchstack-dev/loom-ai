@@ -411,3 +411,13 @@ A well-structured roadmap should have clear feature decomposition, proper milest
 | Vague success metric | "Good performance" — not measurable |
 | Missing out-of-scope | Empty Out of Scope section suggests incomplete analysis |
 | All P0 priorities | Every feature marked P0 — no real prioritization |
+
+---
+
+## Relationship to Convergence Schemas
+
+- **taxonomy.md** -- Defines the planning hierarchy where milestones and features (roadmap-level concepts) map to convergence tiers: milestones to e2e, features to integration.
+- **convergence-tier.schema.md** -- Defines the convergence tier that applies at the milestone level (e2e tier) and feature level (integration tier).
+- **criteria-plan.schema.md** -- Criteria plans generated from roadmap features include a `testTier` column for convergence tier assignment.
+- **e2e-story.schema.md** -- E2E stories reference milestones defined in the roadmap via `milestoneRef` (format: `M-NN`).
+- **interpretation-conflict.schema.md** -- Interpretation conflicts reference features (`featureRef: F-NN`) defined in the roadmap.

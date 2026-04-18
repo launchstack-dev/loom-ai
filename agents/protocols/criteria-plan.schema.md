@@ -16,14 +16,14 @@ convergenceMode: criteria
 
 intent: Auth middleware blocks unauthenticated requests, returns proper errors, and passes security review.
 
-criteria[N]{id,name,type,verifier,passCondition,blocking,priority,source,rationale}:
-  C-01,Blocks unauthenticated requests,hard,test-runner,all-pass,true,P0,plan-acceptance,Explicit acceptance criterion in PLAN.md
-  C-02,Returns 401 with error shape,hard,test-runner,all-pass,true,P0,plan-acceptance,API contract requirement
-  C-03,Logs auth attempts,hard,test-runner,all-pass,true,P1,plan-acceptance,Observability requirement from plan
-  C-04,No injection vulnerabilities,soft,security-review,zero-critical,true,P0,inferred,Auth middleware handles user input
-  C-05,No XSS vectors in error responses,soft,security-review,zero-critical,true,P0,inferred,Error responses include user-supplied data
-  C-06,Clean separation of concerns,soft,code-review,zero-blocking,false,P2,inferred,Maintainability of auth layer
-  C-07,No N+1 queries in user lookup,soft,performance-review,zero-blocking,false,P2,inferred,Auth checks run on every request
+criteria[N]{id,name,type,verifier,passCondition,blocking,priority,source,rationale,testTier}:
+  C-01,Blocks unauthenticated requests,hard,test-runner,all-pass,true,P0,plan-acceptance,Explicit acceptance criterion in PLAN.md,unit
+  C-02,Returns 401 with error shape,hard,test-runner,all-pass,true,P0,plan-acceptance,API contract requirement,integration
+  C-03,Logs auth attempts,hard,test-runner,all-pass,true,P1,plan-acceptance,Observability requirement from plan,unit
+  C-04,No injection vulnerabilities,soft,security-review,zero-critical,true,P0,inferred,Auth middleware handles user input,qa-review
+  C-05,No XSS vectors in error responses,soft,security-review,zero-critical,true,P0,inferred,Error responses include user-supplied data,qa-review
+  C-06,Clean separation of concerns,soft,code-review,zero-blocking,false,P2,inferred,Maintainability of auth layer,qa-review
+  C-07,No N+1 queries in user lookup,soft,performance-review,zero-blocking,false,P2,inferred,Auth checks run on every request,integration
 
 reviewers[N]{id,type,agent,dimensions,blocking,model}:
   R-01,test-runner,vitest-runner,all-tests,true,
@@ -86,6 +86,7 @@ Typed array. Every criterion to satisfy during convergence.
 | `priority` | enum | `P0` (must-pass), `P1` (should-pass), `P2` (nice-to-pass). Affects fix ordering. |
 | `source` | enum | `plan-acceptance` (explicit in plan), `plan-implied` (inferred from deliverables), `inferred` (discovered from codebase analysis), `user-added` (manually added). |
 | `rationale` | string | Why this criterion exists. Traces back to plan requirement. |
+| `testTier` | enum | Convergence tier for this criterion: `unit`, `integration`, `e2e`, `qa-review`. Determines which convergence tier verifies this criterion. See `convergence-tier.schema.md`. |
 
 ### reviewers
 

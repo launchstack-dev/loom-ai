@@ -32,6 +32,9 @@ crossBoundaryRequests[N]{file,reason,suggestedChange}:
 
 durationMs: 12500
 
+verificationStatus: verified
+diagnoseLog: "Ran type-check and unit tests. All 14 tests pass. No type errors detected."
+
 gate: pass
 gateReason: "All schema migrations have matching rollback scripts and pass dry-run validation."
 failAction: halt
@@ -49,6 +52,11 @@ retryMax: 3
 4. **crossBoundaryRequests** — instead of modifying files outside your ownership, write a request here. The wiring-agent will process these.
 5. **contractAmendments** — if contracts are wrong or incomplete, document it here. The orchestrator decides whether to re-run contracts-agent or proceed.
 6. **Arrays can be empty** but must be present. All fields are required.
+7. **verificationStatus** indicates whether the agent's output has been verified against acceptance criteria:
+   - `verified` — output passes all acceptance criteria checks
+   - `unverified` — output was produced but not yet verified
+   - `skipped` — verification was intentionally skipped (e.g., contracts-only wave)
+8. **diagnoseLog** is an optional narrative written by the agent before applying fixes. It captures the diagnosis reasoning so downstream agents or reviewers can understand what was found and why fixes were applied. Omit if no diagnosis was performed.
 
 ## Gate Primitive
 
@@ -92,6 +100,8 @@ issues[N]{severity,description,file,line}:
 contractAmendments[N]{file,issue}:
 crossBoundaryRequests[N]{file,reason,suggestedChange}:
 durationMs: 3200
+verificationStatus: verified
+diagnoseLog:
 gate: pass
 gateReason: "All 12 schema migration checks passed. Rollback scripts verified."
 failAction: halt
@@ -116,6 +126,8 @@ issues[N]{severity,description,file,line}:
 contractAmendments[N]{file,issue}:
 crossBoundaryRequests[N]{file,reason,suggestedChange}:
 durationMs: 1800
+verificationStatus: unverified
+diagnoseLog: "Scanned migrations/ for rollback scripts. Found 12 of 13 migrations have corresponding rollback. Migration 003 is missing."
 gate: fail
 gateReason: "1 of 12 checks failed: migration 003_add_users_index.sql missing rollback script."
 failAction: halt
