@@ -26,12 +26,17 @@ Before generating proposals, read:
 
 ## Input Context
 
-The orchestrator provides:
-- PLAN.md content or path (required)
+The orchestrator provides one of these primary inputs:
+
+- **ROADMAP.md content** (preferred in dual-track mode) — when invoked in parallel with plan-builder-agent during `/loom-plan create`, the criteria planner receives the roadmap directly and does NOT depend on PLAN.md output. Extract features, milestones, and acceptance criteria directly from the roadmap structure.
+- **PLAN.md content or path** (standalone mode) — when invoked outside the dual-track pipeline, receives the plan as before.
+
+Additional context (provided in both modes):
 - Phase filter (optional — which phases to extract criteria for)
 - `scope-contract.toon` if it exists
 - `.plan-execution/` state if it exists
 - Codebase context (tech stack, existing test files, existing linters/analyzers)
+- Quality history from wiki (if available — see Step 0)
 
 ## Flags
 
@@ -44,14 +49,45 @@ The orchestrator provides:
 
 ---
 
+## Step 0: Wiki Quality History Query
+
+Before generating criteria, query the project wiki for quality history to inform criteria priorities and known problem areas.
+
+1. **Check for wiki.** If `.loom/wiki/` exists:
+   - Search for entries tagged with `quality`, `bug`, `regression`, `test-failure`, `security`, `performance`, or `incident`.
+   - Extract recurring problem patterns (e.g., "auth bypasses found in 3 reviews", "N+1 queries in user listing").
+   - Extract previously established quality baselines (e.g., "test coverage at 85%", "zero critical security findings since M-02").
+
+2. **Integrate quality history into criteria discovery:**
+   - Recurring problems → elevate related criteria to `P0` and `blocking: true` (e.g., if auth bypasses recur, security review criteria become P0).
+   - Known regressions → add explicit regression-prevention criteria with `source: wiki-history`.
+   - Quality baselines → use as pass conditions for soft criteria (e.g., if coverage was 85%, set that as the floor).
+
+3. **If `.loom/wiki/` does not exist:** skip this step. No quality history available. Proceed with standard criteria discovery.
+
+Quality history is advisory — it informs priority and blocking decisions but does not override explicit plan acceptance criteria.
+
+---
+
 ## Step 1: Criteria Discovery
 
 Scan these sources to build a candidate criteria list:
 
-### 1a. Plan Acceptance Criteria (highest confidence)
+### 1a. Acceptance Criteria Extraction (highest confidence)
 
-Read the plan's `#### Acceptance Criteria` sections. Each checkbox item becomes a candidate hard criterion:
+**Dual-track mode (roadmap input):** Read the roadmap's feature descriptions, milestone definitions, and any `success criteria` or `acceptance criteria` sections. Each testable condition becomes a candidate hard criterion. Since no PLAN.md exists yet, infer phase-level criteria from feature decomposition and milestone boundaries per `taxonomy.md`.
 
+**Standalone mode (plan input):** Read the plan's `#### Acceptance Criteria` sections. Each checkbox item becomes a candidate hard criterion.
+
+Example from roadmap:
+```markdown
+### Feature: Auth Middleware
+- Blocks unauthenticated requests with 401
+- Returns structured error responses
+- Logs all auth attempts
+```
+
+Example from plan:
 ```markdown
 #### Acceptance Criteria
 - [ ] Unauthenticated requests receive 401
@@ -66,9 +102,11 @@ C-02,Error responses include error shape,hard,test-runner,all-pass,true,P0,plan-
 C-03,Auth attempts logged with timestamp and IP,hard,test-runner,all-pass,true,P0,plan-acceptance
 ```
 
-### 1b. Plan Deliverables (medium confidence)
+In dual-track mode, use `source: roadmap-acceptance` instead of `source: plan-acceptance` to distinguish the origin. Both are treated identically for priority and blocking purposes.
 
-Infer criteria from stated deliverables that imply testable behavior:
+### 1b. Deliverables (medium confidence)
+
+Infer criteria from stated deliverables (from roadmap features or plan deliverables) that imply testable behavior:
 - API endpoint → request/response contract tests
 - Database model → CRUD operation tests
 - UI component → render and interaction tests
@@ -106,8 +144,9 @@ Build an internal candidate list. For each candidate:
 - Name, description, rationale
 - Type: hard (testable) or soft (reviewable)
 - Recommended verifier, pass condition, blocking status
-- Priority and source
-- Confidence: high (explicit in plan), medium (implied), low (inferred)
+- Priority and source (valid sources: `plan-acceptance`, `roadmap-acceptance`, `plan-implied`, `inferred`, `user-added`, `wiki-history`)
+- Confidence: high (explicit in plan/roadmap), medium (implied), low (inferred)
+- If wiki quality history elevated the priority or blocking status, note this in the rationale
 
 ---
 

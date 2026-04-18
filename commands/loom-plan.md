@@ -61,9 +61,10 @@ Subcommands:
   status     Show plan progress
 
 Examples:
-  /loom-plan create                    Generate plan from ROADMAP.md
+  /loom-plan create                    Generate plan + criteria from ROADMAP.md
   /loom-plan create --auto             Non-interactive plan creation
   /loom-plan create --v1               Simpler plan without API specs
+  /loom-plan create --estimate         Print token cost estimate without spawning agents
   /loom-plan create --review-integrate Apply review findings to PLAN.md
   /loom-plan review                    6-agent parallel plan review
   /loom-plan execute                   Execute PLAN.md wave-by-wave
@@ -91,6 +92,7 @@ Parse remaining arguments:
 - `--v1`: generate a v1 plan (simpler, no API specs or state machines)
 - `--output <path>`: write plan to a custom path (default: `PLAN.md`)
 - `--review-integrate`: apply plan review findings to PLAN.md (skips generation, goes directly to Step R)
+- `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
 
 ### Instructions
 
@@ -121,9 +123,35 @@ Parse remaining arguments:
    - Contract non-goals → explicit out-of-scope annotations
    - Pass the full contract to the plan-builder-agent prompt
 
-#### Step 1: Plan Generation
+#### Step 0.5: Estimate Mode (`--estimate` only)
 
-Spawn `plan-builder-agent` (general-purpose):
+If `--estimate` is set:
+
+1. Compute the token estimate for the dual-track plan creation pipeline using the `characters / 4` heuristic (see `agents/protocols/context-budget.md`):
+   - **plan-builder-agent prompt:** roadmap text + codebase context + agent instructions overhead → `Math.ceil(totalChars / 4)`
+   - **criteria-planner-agent prompt:** roadmap text + wiki quality history (estimate 2000 tokens if `.loom/wiki/` exists, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
+   - **interpretation-reviewer-agent prompt:** estimated plan output (use 8000 tokens as a conservative default) + estimated criteria-plan output (use 4000 tokens as a conservative default) + agent instructions overhead → `Math.ceil(totalChars / 4)`
+   - **Fixed overhead per agent:** 5000 tokens (system prompt, tool definitions, formatting)
+   - **Total:** sum of all three agent estimates + (3 * 5000 overhead)
+
+2. Print the estimate to stdout in TOON format:
+   ```toon
+   estimateMode: true
+   agents[3]: plan-builder-agent, criteria-planner-agent, interpretation-reviewer-agent
+   planBuilderTokens: {N}
+   criteriaPlannerTokens: {N}
+   interpretationReviewerTokens: {N}
+   overheadTokens: 15000
+   totalEstimatedTokens: {N}
+   ```
+
+3. Exit 0. Do not create any files or spawn any agents.
+
+#### Step 1: Dual-Track Plan Generation (parallel)
+
+Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent tool calls in a SINGLE message so they run concurrently. Neither agent reads the other's output.
+
+**Agent A: plan-builder-agent** (general-purpose):
 ```
 "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first,
  then read `~/.claude/agents/protocols/plan.schema.md` and
@@ -146,6 +174,97 @@ Spawn `plan-builder-agent` (general-purpose):
  {If merging existing plan: Existing plan to preserve where applicable:
  {existing PLAN.md text}}"
 ```
+
+**Agent B: criteria-planner-agent** (general-purpose, `--auto` mode):
+```
+"Read your instructions from `~/.claude/agents/criteria-planner-agent.md` first,
+ then read `~/.claude/agents/protocols/criteria-plan.schema.md` and
+ `~/.claude/agents/protocols/taxonomy.md`.
+
+ Generate a criteria-plan.toon from this approved roadmap. You are running in
+ dual-track mode alongside plan-builder-agent. You receive the ROADMAP directly --
+ do NOT wait for or reference PLAN.md output.
+
+ Extract acceptance criteria, infer testable conditions, and classify by convergence
+ tier (unit, integration, e2e, qa-review) per taxonomy.md.
+
+ Roadmap content:
+ {full ROADMAP.md text}
+
+ Codebase context:
+ {context summary from Step 0}
+
+ {If scope-contract.toon exists: Scope contract:
+ {scope-contract.toon content}}
+
+ {If wiki quality history found: Quality history from wiki:
+ {quality history entries}}"
+```
+
+Both agents run independently. Collect both AgentResults before proceeding.
+
+#### Step 1.5: Interpretation Review (conflict detection)
+
+After both agents from Step 1 complete, spawn the **interpretation-reviewer-agent** to compare the plan and criteria outputs for conflicts and coverage gaps. This agent reads `~/.claude/agents/protocols/interpretation-conflict.schema.md` for its output format.
+
+Spawn `interpretation-reviewer-agent` (general-purpose):
+```
+"Read your instructions from `~/.claude/agents/interpretation-reviewer-agent.md` first,
+ then read `~/.claude/agents/protocols/interpretation-conflict.schema.md`.
+
+ Compare the plan and criteria plan for interpretation conflicts and coverage gaps.
+ The plan and criteria were generated independently from the same roadmap by different
+ agents (dual-track). Identify:
+ - Semantic mismatches: where the plan describes a behavior one way but the criteria
+   verify it differently
+ - Coverage gaps (plan-only): behaviors in the plan with no corresponding criterion
+ - Coverage gaps (test-only): criteria that don't trace to any plan requirement
+
+ Plan content:
+ {PLAN.md output from plan-builder-agent}
+
+ Criteria plan content:
+ {criteria-plan.toon output from criteria-planner-agent}
+
+ Roadmap content (original shared input):
+ {full ROADMAP.md text}
+
+ Return an AgentResult with conflicts and gaps in your integrationNotes."
+```
+
+Parse the interpretation-reviewer-agent's AgentResult. Extract the conflict report.
+
+**In auto mode (`--auto`):**
+- If any conflict has `severity: blocking` → log all conflicts to stderr, then exit 1. Message: `"Blocking interpretation conflicts detected. Resolve before proceeding.\n{conflict list}"`
+- If only `severity: warning` or `severity: info` → log warnings to stderr, continue to Step 2.
+
+**In manual/interactive mode:**
+- If any conflict has `severity: blocking` → present each blocking conflict as a numbered prompt with side-by-side comparison:
+  ```
+  ## Interpretation Conflict {N}/{total}: {id}
+  Severity: blocking
+
+  Plan says:
+    {planInterpretation}
+
+  Criteria says:
+    {testInterpretation}
+
+  Feature: {featureRef}  Phase: {phaseRef}
+
+  Actions:
+    1. Use plan interpretation (update criteria)
+    2. Use criteria interpretation (update plan)
+    3. Resolve manually (edit both)
+    4. Accept as-is (downgrade to warning)
+
+  >
+  ```
+  Wait for user resolution on each blocking conflict before proceeding.
+
+- If only warnings/info → display summary, continue to Step 2.
+
+Save the conflict report to `.plan-execution/interpretation-conflicts.toon`.
 
 #### Step 2: Validation Loop (max 2 retries)
 
@@ -207,6 +326,8 @@ Continue looping until the user approves.
 
 1. Write the validated plan to `PLAN.md` (or `--output` path).
 
+1b. Write `criteria-plan.toon` to the project root (always generated during plan creation, not gated behind `--converge-criteria`). This is the output from criteria-planner-agent in Step 1, potentially updated by conflict resolutions from Step 1.5.
+
 2. Append to `.plan-history/changelog.md`:
    ```markdown
    ## YYYY-MM-DD -- Plan created from roadmap
@@ -217,6 +338,8 @@ Continue looping until the user approves.
    {If v2:
    - API endpoints: {N}, State machines: {N}
    - Validation: passed (0 errors, {N} warnings)}
+   - Criteria plan: criteria-plan.toon ({N} criteria, {M} reviewers)
+   - Interpretation conflicts: {N} blocking, {M} warning, {K} info
    ```
 
 3. Create `.plan-history/roadmap.toon` with milestones mapped from ROADMAP.md (if it doesn't exist).
@@ -226,6 +349,8 @@ Continue looping until the user approves.
 5. Display next steps:
    ```
    Plan written to {path}.
+   Criteria plan written to criteria-plan.toon.
+   {If conflicts: Interpretation conflicts saved to .plan-execution/interpretation-conflicts.toon.}
 
    Next steps:
      /loom-plan review                    -- 6 agents analyze the plan in parallel
@@ -277,14 +402,15 @@ Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
 Write `.plan-execution/status.toon` at every phase transition:
 ```toon
 command: plan-create
-phase: {context-gathering | generating | validating | reviewing | writing | complete}
+phase: {context-gathering | generating | conflict-review | validating | reviewing | writing | complete}
 wave: 0
 totalWaves: 1
 agentsRunning: {N}
 agentsDone: {N}
-agentsTotal: 1
+agentsTotal: {3 for dual-track: plan-builder + criteria-planner + interpretation-reviewer}
 agentsFailed: 0
 findings: 0
+conflicts: {N}
 updatedAt: {ISO timestamp}
 ```
 
