@@ -574,6 +574,39 @@ stages = ["roadmap-create", "plan-create", "execute", "converge-criteria", "conv
 
 ---
 
+## 4-Tier Convergence Model
+
+Patterns 5 (Converge) and 6 (Criteria Converge) support a **4-tier convergence model** that maps verification scope to the planning hierarchy. The tier model is defined in `convergence-tier.schema.md` and referenced by the convergence-driver (`convergence-driver.md`) and convergence-planner (`convergence-planner-agent.md`).
+
+### Tier Summary
+
+| Tier | Level | Hierarchy | Runner | Gating |
+|------|-------|-----------|--------|--------|
+| unit | 4 | wave | vitest-runner | block-wave |
+| integration | 3 | feature | integration-test-agent | block-feature |
+| e2e | 2 | milestone | e2e-runner-agent | block-milestone |
+| qa-review | 1 | milestone | interpretation-reviewer-agent | advisory |
+
+### How Tiers Interact with Convergence Patterns
+
+- **Per-wave gates (tier 4 — unit):** After each implementation wave, the convergence driver runs unit-tier verification. Failures block the next wave.
+- **Per-feature gates (tier 3 — integration):** After all waves for a feature complete, integration tests run. Failures block the feature from being marked done.
+- **Per-milestone gates (tier 2 — e2e):** End-to-end stories (`e2e-story.schema.md`) are verified by the `e2e-runner-agent` using the `e2e-test-writer-agent` to generate test scripts. Failures block milestone completion.
+- **QA review gates (tier 1 — qa-review):** The `interpretation-reviewer-agent` checks for interpretation conflicts (`interpretation-conflict.schema.md`) and produces an interpretation report (`interpretation-report.schema.md`). Findings are advisory — they inform but do not block.
+
+### Convergence Configuration
+
+The tier to use is specified in `converge.config` or via the `--tier` flag on `/loom converge`. The convergence-planner-agent assigns tiers based on the criteria-plan's `testTier` field (`criteria-plan.schema.md`). Stage context files (`stage-context.schema.md`) include an optional `tier` field to record which convergence tier was active.
+
+### Related Agents and Schemas
+
+- **Agents:** `convergence-driver.md`, `convergence-planner-agent.md`, `e2e-runner-agent.md`, `e2e-test-writer-agent.md`, `interpretation-reviewer-agent.md`
+- **Schemas:** `convergence-tier.schema.md`, `e2e-story.schema.md`, `interpretation-conflict.schema.md`, `interpretation-report.schema.md`, `criteria-plan.schema.md`, `taxonomy.md`
+- **Commands:** `/loom converge` (`loom-converge.md`), `/loom auto` (`loom.md`)
+- **Hooks:** `hooks/context-budget-test.ts` — preflight budget check (`checkTestAgentBudget`) enforcing 100k token cap before spawning test/convergence agents
+
+---
+
 ## Config Schema Reference
 
 All patterns live under the `[patterns]` table in `orchestration.toml`. The general structure:

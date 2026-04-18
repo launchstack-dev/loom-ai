@@ -15,6 +15,8 @@ Defines the `StageContext` TOON format written at every pipeline boundary, and t
 │   ├── execute.toon
 │   ├── review.toon
 │   ├── test.toon
+│   ├── e2e.toon
+│   ├── qa-review.toon
 │   ├── converge.toon
 │   └── fix.toon
 └── convergence/
@@ -52,7 +54,7 @@ nextStageHints[2]:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `stage` | enum | One of: `contracts`, `execute`, `review`, `test`, `converge`, `fix`. |
+| `stage` | enum | One of: `contracts`, `execute`, `review`, `test`, `e2e`, `qa-review`, `converge`, `fix`. |
 | `wave` | integer >= 0 | Current wave number. |
 | `iteration` | integer >= 0 | Convergence iteration number. `0` for non-convergence stages. |
 | `startedAt` | ISO 8601 | When the stage began. |
@@ -67,6 +69,7 @@ nextStageHints[2]:
 | `summary` | string | 1-3 sentence description of what happened. |
 | `keyDecisions` | string[] | Architectural or implementation decisions made during this stage. |
 | `nextStageHints` | string[] | Context the next stage should know about. |
+| `tier` | enum (optional) | Convergence tier when stage is test-related (`test`, `e2e`, `qa-review`). One of: `unit`, `integration`, `e2e`, `qa-review`. Omit for non-test stages. |
 
 ## Stage-Specific Examples
 
@@ -145,6 +148,7 @@ nextStageHints[2]:
 stage: test
 wave: 2
 iteration: 0
+tier: unit
 startedAt: 2026-04-17T09:22:30Z
 completedAt: 2026-04-17T09:25:10Z
 durationMs: 160000
@@ -159,6 +163,53 @@ keyDecisions[1]:
   Used factory pattern for test user fixtures to avoid brittle setup
 nextStageHints[1]:
   Failing tests target the same error handling paths flagged by review
+```
+
+### e2e
+
+```toon
+stage: e2e
+wave: 3
+iteration: 0
+tier: e2e
+startedAt: 2026-04-17T10:00:00Z
+completedAt: 2026-04-17T10:08:45Z
+durationMs: 525000
+inputTokensEstimate: 35000
+outputTokensEstimate: 22000
+filesChanged[3]: tests/e2e/user-registration.spec.ts,tests/e2e/login-flow.spec.ts,tests/e2e/dashboard.spec.ts
+exportsAdded[0]:
+findingsResolved: 0
+findingsRemaining: 2
+summary: Generated 3 E2E stories covering user registration, login, and dashboard flows. 2 stories fail due to missing route handlers.
+keyDecisions[1]:
+  Used Playwright page object model for test fixtures
+nextStageHints[1]:
+  Failing e2e stories target routes not yet wired in app.ts
+```
+
+### qa-review
+
+```toon
+stage: qa-review
+wave: 3
+iteration: 0
+tier: qa-review
+startedAt: 2026-04-17T10:10:00Z
+completedAt: 2026-04-17T10:15:30Z
+durationMs: 330000
+inputTokensEstimate: 40000
+outputTokensEstimate: 15000
+filesChanged[0]:
+exportsAdded[0]:
+findingsResolved: 0
+findingsRemaining: 3
+summary: QA review found 3 findings -- 1 critical missing input sanitization, 1 warning for accessibility, 1 info for test coverage gap.
+keyDecisions[1]:
+  Flagged input sanitization as critical -- must be resolved before milestone
+nextStageHints[2]:
+  Fix stage must address sanitization in src/routes/users.ts first
+  Accessibility warning is advisory -- does not block convergence
 ```
 
 ### converge
@@ -295,9 +346,10 @@ summary: Fixed 1 finding but introduced 1 regression. Net progress zero -- stall
 ### StageContext
 
 1. **Required fields.** `stage`, `wave`, `startedAt`, `completedAt`, `durationMs`, `summary` must be present and non-empty.
-2. **Valid stage enum.** `stage` must be one of: `contracts`, `execute`, `review`, `test`, `converge`, `fix`.
+2. **Valid stage enum.** `stage` must be one of: `contracts`, `execute`, `review`, `test`, `e2e`, `qa-review`, `converge`, `fix`.
 3. **Non-negative integers.** `wave`, `iteration`, `durationMs`, `inputTokensEstimate`, `outputTokensEstimate`, `findingsResolved`, `findingsRemaining` must be >= 0.
 4. **Iteration only in convergence.** `iteration` must be `0` unless `stage` is `converge` or `fix` during convergence.
+4a. **Tier only on test-related stages.** `tier` may only be present when `stage` is `test`, `e2e`, or `qa-review`. When present, must be one of: `unit`, `integration`, `e2e`, `qa-review` (per convergence-tier.schema.md).
 5. **Timestamps ordered.** `completedAt` must be after `startedAt`.
 6. **Duration consistent.** `durationMs` must approximately equal the difference between `completedAt` and `startedAt` (within 1000ms tolerance for clock skew).
 7. **Arrays may be empty.** `filesChanged`, `exportsAdded`, `keyDecisions`, `nextStageHints` may be empty arrays (`[0]:`) but must be present.
@@ -327,3 +379,44 @@ When a stage runs, the orchestrator:
 3. Regenerates `rolling-context.md` with updated tiering.
 
 Agents read `rolling-context.md` from their prompt -- they never read stage context files directly. Only the orchestrator and lead dispatcher read stage context files from disk.
+
+## Rolling Context Compression for Test Results
+
+Test-related stages (`test`, `e2e`, `qa-review`) produce results that accumulate across convergence iterations. To keep `rolling-context.md` within its 10k token budget, test results follow a tiered compression scheme:
+
+### HOT -- Current Iteration Results
+
+The most recent iteration's test results are included in full:
+- Complete findings list with file paths and line numbers
+- All pass/fail details per test case or story
+- Full `tier` and `harnessResult` from the iteration summary
+- Retained until the next iteration completes
+
+### WARM -- Prior Iteration Summaries
+
+Iterations from (current - 1) through (current - 3) are compressed to:
+- Finding count delta (resolved vs introduced)
+- List of files modified by fixers
+- Stall detection status
+- One-line summary per iteration
+
+### COLD -- Archived
+
+Iterations older than (current - 3) are compressed to:
+- One line: `Iter N: {findingsFixed} fixed, {findingsNew} new, {harnessResult}`
+- No file paths, no finding details
+
+### Compression Triggers
+
+The orchestrator applies test result compression when:
+1. A new convergence iteration completes (shifts tiers forward)
+2. `rolling-context.md` exceeds 8k tokens (early compression to stay under 10k cap)
+3. A new test-related stage runs (resets HOT tier for that stage's results)
+
+## Wiki Injection for Execution Agents
+
+Rolling-context wiki injection is **default-on** for all execution agents. The orchestrator includes a `## Project Knowledge [WIKI]` section in `rolling-context.md` containing relevant wiki pages for the current wave's tasks (see `execution-conventions.md` for the format).
+
+This ensures all agents -- including test agents (`e2e-runner-agent`, `qa-review-agent`) -- have access to project knowledge without reading wiki files directly. The wiki section is kept under 1k tokens and refreshed at the start of each wave.
+
+To disable wiki injection for a specific agent, set `wikiInjection: false` in the agent's task definition within the wave plan. This is rarely needed and primarily exists for agents that operate on isolated, context-free tasks.

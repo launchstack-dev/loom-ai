@@ -933,6 +933,11 @@ If criteria convergence is enabled (`--converge-criteria`), also read:
 - `~/.claude/agents/criteria-harness-builder.md` -- test + review harness
 - `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan format
 
+Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
+- `~/.claude/agents/protocols/convergence-tier.schema.md` -- 4-tier definitions (unit/integration/e2e/qa-review) with gating behavior
+- `~/.claude/agents/protocols/behavioral-guidelines.md` -- TDD red-green gate, diagnose-before-fix, verification gate
+- `~/.claude/agents/protocols/interpretation-conflict.schema.md` -- interpretation conflict format for dual-track review
+
 ### Instructions
 
 #### Step 0: Initialize
@@ -971,25 +976,33 @@ If criteria convergence is enabled (`--converge-criteria`), also read:
    ```
    ## Pipeline Stages (dry run)
 
-   0.5. Pre-flight     -- prompt-refiner + scope-interrogator → scope-contract.toon {skipPreflight ? 'SKIPPED' : ''}
-   1. Roadmap Creation  -- loom-roadmap init --auto (reads scope-contract.toon)
-   2. Roadmap Review    -- loom-roadmap review
-   3. Roadmap Integrate -- loom-roadmap review-integrate --roadmap
-   4. Roadmap Approve   -- loom-roadmap approve (auto)
-   5. Plan Creation     -- loom-plan create --auto (reads scope-contract.toon)
-   6. Plan Review       -- loom-plan review
-   7. Plan Integrate    -- loom-roadmap review-integrate
-   8. Plan Validate     -- validation stages 1-4 (+ Stage 7 for v2)
-   9. Execution         -- loom-plan execute --auto (drift detection per wave)
-   10. Convergence      -- loom converge (if --converge-target, --converge-config, or --converge-criteria)
-   10b. Criteria Conv.  -- loom converge --criteria --auto (if --converge-criteria, per plan phase)
-   11. Test             -- loom-plan test --run --parallel --auto
-   12. Code Review      -- loom-code review --branch
-   13. Quality Gate     -- automated decision matrix
-   14. Fix Cycle        -- loom-code fix --auto (up to 2 cycles)
+   0.5. Pre-flight       -- prompt-refiner + scope-interrogator → scope-contract.toon {skipPreflight ? 'SKIPPED' : ''}
+   1. Roadmap Creation    -- loom-roadmap init --auto (reads scope-contract.toon)
+   2. Roadmap Review      -- loom-roadmap review
+   3. Roadmap Integrate   -- loom-roadmap review-integrate --roadmap
+   4. Roadmap Approve     -- loom-roadmap approve (auto)
+   5. Plan Creation       -- dual-track: plan-builder + criteria-planner in parallel
+   5b. Interpretation     -- interpretation-reviewer: conflict detection (blocks on blocking conflicts)
+   6. Plan Review         -- loom-plan review
+   7. Plan Integrate      -- loom-roadmap review-integrate
+   8. Plan Validate       -- validation stages 1-4 (+ Stage 7 for v2)
+   9. Execution           -- loom-plan execute --auto (drift detection per wave)
+      9a. Unit gate       -- after each wave (block-wave, all-pass)
+      9b. QA review       -- after each wave (advisory, zero-critical)
+      9c. Integration     -- after each feature boundary (block-feature, all-pass)
+      9d. E2E             -- after each milestone boundary (block-milestone, zero-blocking)
+   10. Convergence        -- loom converge (if --converge-target, --converge-config, or --converge-criteria)
+   10b. Criteria Conv.    -- loom converge --criteria --auto (if --converge-criteria, per plan phase)
+   11. Test               -- loom-plan test --run --parallel --auto
+   12. Code Review        -- loom-code review --branch
+   13. Quality Gate       -- automated decision matrix
+   14. Fix Cycle          -- loom-code fix --auto (diagnose-before-fix, up to 2 cycles)
 
    Pre-flight: {skipPreflight ? 'skipped' : lightPreflight ? 'light' : 'full'}
+   Planning: dual-track (plan-builder + criteria-planner + interpretation-reviewer)
+   Convergence tiers: unit (wave) → integration (feature) → e2e (milestone) + qa-review (advisory)
    Convergence: {convergeTarget or convergeConfig or convergeCriteria or 'disabled'}
+   Behavioral hardening: TDD red-green gate, diagnose-before-fix, verification gate
    Auto-commit: {noAutoCommit ? 'disabled' : 'per-wave + per-converge-iteration'}
    Outer loop: up to {maxIterations} iterations
    Agent budget: {maxAgents}
@@ -1062,21 +1075,24 @@ If criteria convergence is enabled (`--converge-criteria`), also read:
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
     Create a roadmap using --init --from '{description}' --auto.
     {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- decisions, non-goals, and success criteria should shape features and milestones.'}
-    Write the result to {roadmapFile}."
+    Write the result to {roadmapFile}.
+    Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `pipeline-state.toon`: `currentStage: roadmap-create`.
 
 1b. **Review roadmap.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Review the roadmap at {roadmapFile}. Save findings to .plan-history/reviews/."
+    Review the roadmap at {roadmapFile}. Save findings to .plan-history/reviews/.
+    Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: roadmap-review`.
 
 1c. **Integrate review findings.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Run --review-integrate --roadmap to apply review findings to {roadmapFile}."
+    Run --review-integrate --roadmap to apply review findings to {roadmapFile}.
+    Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: roadmap-integrate`.
 
@@ -1100,7 +1116,8 @@ If criteria convergence is enabled (`--converge-criteria`), also read:
     - Failed stage: {failedStage}
     - Error: {errorSummary}
     - Root cause: {rootCauseAnalysis}
-    Only modify features/milestones related to the failure."
+    Only modify features/milestones related to the failure.
+    Your AgentResult MUST include verificationStatus."
    ```
    Then run steps 1b-1d as above.
 
@@ -1165,30 +1182,110 @@ Log stage result in `stageHistory`.
 
 **If `--stop-after preflight`:** display scope contract summary and stop.
 
-#### Step 2: Plan Creation (Phase A)
+#### Step 2: Plan Creation (Phase A) -- Dual-Track Planning
 
 **If `outerIteration == 1` AND no existing plan file (or `--from` provided):**
 
-2a. **Create plan.** Spawn a general-purpose agent:
-   ```
-   "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Create a plan using --init --plan --from '{description}' --auto.
-    {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- contract decisions constrain architecture, success criteria seed acceptance criteria, non-goals define explicit out-of-scope annotations.'}
-    Write the result to {planFile}."
-   ```
-   Record agents spawned. Update `pipeline-state.toon`: `currentStage: plan-create`.
+2a. **Dual-track plan generation (parallel).** Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent tool calls in a SINGLE message so they run concurrently. Neither agent reads the other's output.
+
+Update `pipeline-state.toon`: `currentStage: plan-create`.
+
+**Agent A: plan-builder-agent** (general-purpose):
+```
+"Read your instructions from ~/.claude/agents/plan-builder-agent.md first,
+ then read ~/.claude/agents/protocols/plan.schema.md and
+ ~/.claude/agents/protocols/spec.schema.md.
+
+ Generate a spec-driven plan from the approved roadmap.
+ Map features to phases, milestones to wave boundaries, conceptual data model to
+ fully typed schema with indexes and cascades.
+
+ Roadmap content:
+ {full ROADMAP.md text}
+
+ Codebase context:
+ {context summary from Step 0}
+
+ {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- contract decisions constrain architecture, success criteria seed acceptance criteria, non-goals define explicit out-of-scope annotations.'}
+
+ Write the result to {planFile}.
+ Your AgentResult MUST include verificationStatus (verified, unverified, or skipped)."
+```
+
+**Agent B: criteria-planner-agent** (general-purpose):
+```
+"Read your instructions from ~/.claude/agents/criteria-planner-agent.md first,
+ then read ~/.claude/agents/protocols/criteria-plan.schema.md and
+ ~/.claude/agents/protocols/taxonomy.md.
+
+ Generate a criteria-plan.toon from the approved roadmap. You are running in
+ dual-track mode alongside plan-builder-agent. You receive the ROADMAP directly --
+ do NOT wait for or reference PLAN.md output.
+
+ Extract acceptance criteria, infer testable conditions, and classify by convergence
+ tier (unit, integration, e2e, qa-review) per taxonomy.md and convergence-tier.schema.md.
+
+ Roadmap content:
+ {full ROADMAP.md text}
+
+ Codebase context:
+ {context summary from Step 0}
+
+ {if scope-contract.toon exists: Scope contract:
+ {scope-contract.toon content}}
+
+ Write criteria-plan.toon to the project root.
+ Your AgentResult MUST include verificationStatus (verified, unverified, or skipped)."
+```
+
+Record agents spawned (2). Collect both AgentResults before proceeding.
+
+2a.5. **Interpretation review (conflict detection).** After both agents from 2a complete, spawn the **interpretation-reviewer-agent** to compare the plan and criteria outputs for conflicts and coverage gaps.
+
+```
+"Read your instructions from ~/.claude/agents/interpretation-reviewer-agent.md first,
+ then read ~/.claude/agents/protocols/interpretation-conflict.schema.md.
+
+ Compare the plan and criteria plan for interpretation conflicts and coverage gaps.
+ The plan and criteria were generated independently from the same roadmap by different
+ agents (dual-track). Identify:
+ - Semantic mismatches: where the plan describes a behavior one way but the criteria
+   verify it differently
+ - Coverage gaps (plan-only): behaviors in the plan with no corresponding criterion
+ - Coverage gaps (test-only): criteria that don't trace to any plan requirement
+
+ Plan content:
+ {PLAN.md output from plan-builder-agent}
+
+ Criteria plan content:
+ {criteria-plan.toon output from criteria-planner-agent}
+
+ Roadmap content (original shared input):
+ {full ROADMAP.md text}
+
+ Return an AgentResult with conflicts and gaps in your integrationNotes.
+ Your AgentResult MUST include verificationStatus."
+```
+
+Record agents spawned. Save the conflict report to `.plan-execution/interpretation-conflicts.toon`.
+
+**Conflict gating (auto mode):**
+- If any conflict has `severity: blocking` → **HALT**. Log all conflicts to stderr. Set `currentStage: escalated`. Exit 1 with message: `"Blocking interpretation conflicts detected between plan-builder and criteria-planner. Resolve before proceeding.\n{conflict list}"`. Write escalation report with the conflict details and recommended resolution actions.
+- If only `severity: warning` or `severity: info` → log warnings to stderr, continue to Step 2b.
 
 2b. **Review plan.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-review-plan.md first.
-    Review the plan at {planFile}. Save findings to .plan-history/reviews/."
+    Review the plan at {planFile}. Save findings to .plan-history/reviews/.
+    Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: plan-review`.
 
 2c. **Integrate review findings.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Run --review-integrate to apply review findings to {planFile}."
+    Run --review-integrate to apply review findings to {planFile}.
+    Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: plan-integrate`.
 
@@ -1202,6 +1299,8 @@ Log stage result in `stageHistory`.
 
    If validation passes: update `currentStage: plan-validate`, proceed.
 
+2e. **Write criteria-plan.toon.** Save the criteria-planner-agent output (from 2a, potentially updated by conflict resolutions from 2a.5) to the project root. This file is always generated during plan creation -- it is not gated behind `--converge-criteria`.
+
 **If `outerIteration > 1` (plan revision after failure):**
 
 2a-alt. **Revise plan.** Spawn a general-purpose agent:
@@ -1212,7 +1311,8 @@ Log stage result in `stageHistory`.
     - Failed stage: {failedStage}
     - Error: {errorSummary}
     - What was tried: {priorAttemptSummary}
-    Lock completed phases. Only edit pending/failed phases."
+    Lock completed phases. Only edit pending/failed phases.
+    Your AgentResult MUST include verificationStatus."
    ```
    Then run steps 2b-2d as above.
 
@@ -1220,7 +1320,7 @@ Log stage result in `stageHistory`.
 
 Check circuit breakers before proceeding.
 
-#### Step 3: Execution (Phase B)
+#### Step 3: Execution (Phase B) -- with 4-Tier Convergence Gates
 
 Update `pipeline-state.toon`: `currentStage: execute`.
 
@@ -1230,12 +1330,69 @@ Spawn a general-purpose agent:
  Execute {planFile} with --auto flag.
  {if noAutoCommit: '--no-auto-commit'}
  {if scope-contract.toon exists: 'Read scope-contract.toon from the project root. Pass relevant contract decisions to each implementer agent as prompt context.'}
- Report all AgentResults. Track agents spawned."
+ Report all AgentResults. Track agents spawned.
+ All implementer agent AgentResults MUST include verificationStatus (verified, unverified, or skipped) per behavioral-guidelines.md section 7."
 ```
 
 Record agents spawned (add to `agentsSpawned`).
 
 **Contract drift detection (if `scope-contract.toon` exists):** Before each wave, read `scope-contract.toon` and compare execution trajectory against contract decisions. If drift is detected (e.g., an agent used ORM when contract specified raw SQL, or an agent implemented a feature listed in `nonGoals`), log it in the wave summary as a **contract violation warning**. Do not halt execution for warnings -- record them for the review stage. Format: `contractViolation: {decisionId} -- expected {contracted}, observed {actual}`.
+
+##### 4-Tier Convergence Gates (per convergence-tier.schema.md)
+
+After execution completes (or interleaved with wave execution if the executor supports it), enforce the 4-tier convergence gate hierarchy. Read `criteria-plan.toon` (generated in Step 2) to determine which criteria map to which tiers and boundaries.
+
+**Tier 4 -- Unit tests (after each wave, gatingBehavior: block-wave):**
+
+After each wave completes, run the unit test gate before proceeding to the next wave:
+
+1. Run the project test runner (vitest by default, or the runner specified in project config):
+   ```
+   "Run unit tests for files changed in wave {waveIndex}.
+    passCondition: all-pass -- every unit test must pass.
+    Report results as an AgentResult with verificationStatus."
+   ```
+2. If any unit test fails: **block the next wave**. Record the failure in the wave summary. The executor must fix failing tests before advancing. If fix fails after 1 retry, record in failureLog and escalate to quality gate.
+
+**Tier 2 -- QA Review (after each wave, gatingBehavior: advisory):**
+
+After each wave completes (and after unit tests pass), run a QA review:
+
+1. Spawn qa-review-agent (general-purpose):
+   ```
+   "Review wave {waveIndex} deliverables against acceptance criteria from criteria-plan.toon.
+    passCondition: zero-critical -- critical findings block, warnings are advisory.
+    Report results as an AgentResult with verificationStatus."
+   ```
+2. If critical findings exist: log as blocking issue in wave summary. Advisory findings are recorded but do not block.
+
+**Tier 3 -- Integration tests (after each feature boundary, gatingBehavior: block-feature):**
+
+When a feature boundary is crossed (all phases for a feature are complete), run integration tests:
+
+1. Spawn integration-test-agent (general-purpose):
+   ```
+   "Run integration tests for feature '{featureName}'.
+    Verify cross-phase wiring within the feature.
+    passCondition: all-pass -- all integration tests must pass.
+    Report results as an AgentResult with verificationStatus."
+   ```
+2. If any integration test fails: **block the feature** from being marked complete. Record in failureLog. The executor must resolve before proceeding to the next feature.
+
+**Tier 1 -- E2E tests (after each milestone boundary, gatingBehavior: block-milestone):**
+
+When a milestone boundary is crossed (all features in a milestone are complete), run e2e tests:
+
+1. Spawn e2e-runner-agent (general-purpose):
+   ```
+   "Run end-to-end tests for milestone '{milestoneName}'.
+    Execute Playwright tests derived from E2EStory definitions in criteria-plan.toon.
+    passCondition: zero-blocking -- zero blocking failures required.
+    Report results as an AgentResult with verificationStatus."
+   ```
+2. If any blocking e2e test fails: **block the milestone** from being marked complete. Record in failureLog. The executor must resolve before proceeding.
+
+##### Execution Completion
 
 On completion, read `.plan-execution/state.toon`:
 - If status == `completed`: proceed to Step 4.
@@ -1246,7 +1403,7 @@ On completion, read `.plan-execution/state.toon`:
 
 Log stage result in `stageHistory`.
 
-**Write stage context.** Write `.plan-execution/stage-context/execute.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from execution wave summaries: `stage: execute`, `wave` (last completed wave), files changed, exports added, findings, summary, key decisions, and next-stage hints. Use atomic write.
+**Write stage context.** Write `.plan-execution/stage-context/execute.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from execution wave summaries: `stage: execute`, `wave` (last completed wave), files changed, exports added, findings, summary, key decisions, convergence tier results (unit/integration/e2e pass rates per boundary), and next-stage hints. Use atomic write.
 
 **If `--stop-after execute`:** display execution summary and stop.
 
@@ -1309,7 +1466,8 @@ If `convergeTarget` is provided (user gave a direct target file), skip to 3.5b.
     PLAN.md path: {planFile}
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary}
-    Write plan to: .plan-execution/convergence-plan.toon"
+    Write plan to: .plan-execution/convergence-plan.toon
+    Your AgentResult MUST include verificationStatus."
    ```
 
 2. If planner fails: record in failureLog, go to quality gate with convergence failure context.
@@ -1327,7 +1485,8 @@ Once requirements are confirmed, spawn agents to set up the harness:
    "Read your instructions from ~/.claude/agents/target-parser.md first.
     Parse targets from: {convergeTarget}
     Apply the user-confirmed comparison methods and tolerances.
-    Write manifest to: .plan-execution/target-manifest.toon"
+    Write manifest to: .plan-execution/target-manifest.toon
+    Your AgentResult MUST include verificationStatus."
    ```
 
 2. **Build harness.** Spawn harness-builder agent:
@@ -1336,7 +1495,8 @@ Once requirements are confirmed, spawn agents to set up the harness:
     Build harness from manifest: .plan-execution/target-manifest.toon
     User-confirmed tolerances: {from discussion}
     User-confirmed ignore rules: {from discussion}
-    Write config to: .plan-execution/converge.config"
+    Write config to: .plan-execution/converge.config
+    Your AgentResult MUST include verificationStatus."
    ```
 
 3. Display the resulting `converge.config` for final confirmation. This is the last chance to adjust before the loop starts.
@@ -1351,7 +1511,8 @@ Spawn a general-purpose agent:
  {if not convergeConfig: '--config .plan-execution/converge.config'}
  Max iterations: 10
  {if noAutoCommit: '--no-auto-commit'}
- This is running as part of /loom auto -- write convergence-summary.toon when done."
+ This is running as part of /loom auto -- write convergence-summary.toon when done.
+ Your AgentResult MUST include verificationStatus."
 ```
 
 Record agents spawned. Log stage in `stageHistory`.
@@ -1385,7 +1546,8 @@ Run criteria convergence as an auto-mode `/loom converge --criteria`:
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary}
     Write plan to: .plan-execution/convergence/criteria-plan.toon
-    Write tests to: .plan-execution/convergence/criteria/tests/"
+    Write tests to: .plan-execution/convergence/criteria/tests/
+    Your AgentResult MUST include verificationStatus."
    ```
 
 2. If planner fails: record in failureLog, go to quality gate with criteria convergence failure context.
@@ -1399,7 +1561,8 @@ Run criteria convergence as an auto-mode `/loom converge --criteria`:
     Project tech stack: {tech stack summary}
     Write outputs to:
     - .plan-execution/convergence/criteria/converge.config
-    - .plan-execution/convergence/criteria/harness/"
+    - .plan-execution/convergence/criteria/harness/
+    Your AgentResult MUST include verificationStatus."
    ```
 
 4. If harness-builder fails: record in failureLog, go to quality gate.
@@ -1414,7 +1577,10 @@ Run criteria convergence as an auto-mode `/loom converge --criteria`:
     Max iterations: 10
     Agent budget: {from orchestration.toml or 30}
     {if noAutoCommit: '--no-auto-commit'}
-    This is running as part of /loom auto -- write convergence-summary.toon when done."
+    This is running as part of /loom auto -- write convergence-summary.toon when done.
+    All fixer-agent invocations within the convergence loop MUST include diagnoseLog
+    per behavioral-guidelines.md section 6 (Diagnose Before Fix).
+    Your AgentResult MUST include verificationStatus."
    ```
 
 6. Record agents spawned. Log stage in `stageHistory`.
@@ -1435,7 +1601,8 @@ Spawn a general-purpose agent:
 ```
 "Read your instructions from ~/.claude/commands/loom-test-plan.md first.
  Run tests with --run --parallel --auto flags.
- Report test results: passed count, failed count, pass rate."
+ Report test results: passed count, failed count, pass rate.
+ Your AgentResult MUST include verificationStatus."
 ```
 
 Record agents spawned. Log stage in `stageHistory`.
@@ -1451,7 +1618,8 @@ Update `pipeline-state.toon`: `currentStage: review-code`.
 Spawn a general-purpose agent:
 ```
 "Read your instructions from ~/.claude/commands/loom-review-code.md first.
- Review the current branch. Write findings to .plan-execution/review-report.md."
+ Review the current branch. Write findings to .plan-execution/review-report.md.
+ Your AgentResult MUST include verificationStatus."
 ```
 
 Record agents spawned. Log stage in `stageHistory`.
@@ -1480,13 +1648,18 @@ convergeTotal    = if convergeMode == "criteria": criteriaTotal, else: targetsTo
 convergeFrozen   = if convergeMode == "criteria": criteriaFrozen, else: 0 (from convergence-summary.toon)
 gateFailCount    = count of kit agent AgentResults where gate == "fail" AND failAction == "halt"
 gateWarnCount    = count of kit agent AgentResults where gate == "warn" OR (gate == "fail" AND failAction == "warn")
+unitGatePass     = all unit test gates passed during execution (from tier 4 results in stage context)
+integrationGatePass = all integration test gates passed during execution (from tier 3 results in stage context)
+e2eGatePass      = all e2e test gates passed during execution (from tier 1 results in stage context)
+unverifiedCount  = count of agent AgentResults where verificationStatus == "unverified"
+missingDiagnoseCount = count of fixer-agent AgentResults where diagnoseLog is empty or missing
 ```
 
 Apply the decision matrix:
 
 | Condition | Action |
 |-----------|--------|
-| `criticalCount == 0` AND `testPassRate == 100%` AND `typecheckPass == true` AND `convergeStatus == "converged"` | **PROCEED** (done) |
+| `criticalCount == 0` AND `testPassRate == 100%` AND `typecheckPass == true` AND `convergeStatus == "converged"` AND `unitGatePass` AND `integrationGatePass` AND `e2eGatePass` | **PROCEED** (done). If `unverifiedCount > 0`: log WARNING with count of unverified agent results. If `missingDiagnoseCount > 0`: log WARNING with count of fixer-agents missing diagnoseLog. |
 | `convergeStatus` is `stalled` or `regression` or `budget_exhausted` or `max_iterations` | **FIX-AND-RECONVERGE** (if fixCycleCount < 2) else **REVISE-PLAN** |
 | `criticalCount <= 3` AND `testPassRate >= 80%` AND `fixCycleCount < 2` | **FIX-AND-RECHECK** |
 | `criticalCount > 3` OR `testPassRate < 80%` OR systemic typecheck failures | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
@@ -1517,13 +1690,31 @@ Apply the decision matrix:
 
 Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code`.
 
-7a. **Apply fixes.** Spawn a general-purpose agent:
+7a. **Apply fixes (diagnose-before-fix per behavioral-guidelines.md section 6).** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-fix-code.md first.
+    Read ~/.claude/agents/protocols/behavioral-guidelines.md section 6 (Diagnose Before Fix).
     Run with --auto --severity critical,warning flags.
-    Apply fixes from .plan-execution/review-report.md."
+    Apply fixes from .plan-execution/review-report.md.
+
+    MANDATORY: For every fix, follow the diagnose-before-fix protocol:
+    1. Read the finding and understand what failed
+    2. Query wiki for architectural constraints (/loom-wiki query)
+    3. Diagnose root cause before making any code change
+    4. Write diagnosis to diagnoseLog in your AgentResult BEFORE applying the fix
+    5. Apply the fix
+    6. Verify the fix
+
+    Your AgentResult MUST include:
+    - verificationStatus: verified (if tests confirm fix), unverified, or skipped
+    - diagnoseLog: narrative of what was found, root cause, architectural constraints,
+      and why the fix was chosen. An empty diagnoseLog is a protocol violation."
    ```
    Record agents spawned.
+
+   **Validate fixer AgentResult.** After receiving the fixer-agent's AgentResult:
+   - If `diagnoseLog` is empty or missing: log a WARNING -- `"Fixer-agent returned without diagnoseLog. This is a protocol violation per behavioral-guidelines.md section 6."`
+   - If `verificationStatus` is `unverified`: log a WARNING -- `"Fixer-agent did not verify its fixes. Prioritize for verification-agent review."`
 
 7b. **Convergence detection.** Compare before/after:
    - Did `criticalCount` decrease? (progress)
@@ -1538,7 +1729,8 @@ Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code
    ```
    "Read your instructions from ~/.claude/commands/loom-review-code.md first.
     Run a quick review (code style + security only).
-    Write updated findings to .plan-execution/review-report.md."
+    Write updated findings to .plan-execution/review-report.md.
+    Your AgentResult MUST include verificationStatus."
    ```
 
 7d. **Re-run verification.** Run typecheck + existing tests.
@@ -1574,10 +1766,26 @@ Agents spawned: {agentsSpawned} / {maxAgents}
 |-------|--------|-----------|--------|------|
 {stageHistory rows}
 
+### Planning
+- Mode: dual-track (plan-builder + criteria-planner + interpretation-reviewer)
+- Interpretation conflicts: {conflict count} ({blocking count} blocking, {warning count} warning)
+
 ### Quality Metrics
 - Critical findings: 0
 - Test pass rate: 100%
 - Typecheck: PASS
+
+### 4-Tier Convergence Gates
+- Unit (wave): {unitGateResults} -- {passed}/{total} waves passed
+- QA Review (wave): {qaReviewResults} -- {critical findings count} critical
+- Integration (feature): {integrationGateResults} -- {passed}/{total} features passed
+- E2E (milestone): {e2eGateResults} -- {passed}/{total} milestones passed
+
+### Behavioral Hardening
+- Agents with verificationStatus: {verifiedCount + unverifiedCount + skippedCount} / {totalAgents}
+  - verified: {verifiedCount}, unverified: {unverifiedCount}, skipped: {skippedCount}
+- Fixer agents with diagnoseLog: {diagnoseLogCount} / {totalFixerAgents}
+  - Protocol violations (empty diagnoseLog): {missingDiagnoseCount}
 
 ### Wiki Updates
 - Status: {SUCCESS | FAILED | SKIPPED}
@@ -1630,6 +1838,7 @@ Check these conditions before every stage transition. If any triggers, go to Ste
 | **Fix stall** | Same review findings (tag:file:line match) after 2 fix cycles | loom-code fix cannot resolve it |
 | **Wave deadlock** | A wave failed 2x AND plan revision did not change that wave's phases | Structural issue in plan decomposition |
 | **Validation failure** | Plan fails validation stages 1-4 after `--review-integrate` | Review recommendations broke the plan |
+| **Interpretation conflict** | Blocking interpretation conflicts between plan-builder and criteria-planner after dual-track generation | Dual-track outputs are incompatible -- human resolution required |
 
 When a breaker trips:
 1. Record the breaker name and condition in `pipeline-state.toon` failureLog.
@@ -1661,10 +1870,11 @@ When `--resume` is passed:
    | `roadmap-review` | Step 1, sub-step 1b |
    | `roadmap-integrate` | Step 1, sub-step 1c |
    | `roadmap-approve` | Step 1, sub-step 1d |
-   | `plan-create` | Step 2, sub-step 1a |
-   | `plan-review` | Step 2, sub-step 1b |
-   | `plan-integrate` | Step 2, sub-step 1c |
-   | `plan-validate` | Step 2, sub-step 1d |
+   | `plan-create` | Step 2, sub-step 2a (dual-track: plan-builder + criteria-planner) |
+   | `plan-interpret` | Step 2, sub-step 2a.5 (interpretation review) |
+   | `plan-review` | Step 2, sub-step 2b |
+   | `plan-integrate` | Step 2, sub-step 2c |
+   | `plan-validate` | Step 2, sub-step 2d |
    | `execute` | Step 3 (pass `--resume` to loom-plan execute) |
    | `converge` | Step 3.5 (pass `--resume` to loom converge) |
    | `test` | Step 4 |

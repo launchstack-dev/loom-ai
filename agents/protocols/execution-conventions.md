@@ -26,10 +26,19 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 │   ├── test.toon
 │   ├── converge.toon
 │   └── fix.toon
+├── conflicts/                  # Interpretation conflict reports (interpretation-reviewer-agent)
+│   └── {conflictId}.toon       # Per-conflict report — see interpretation-conflict.schema.md
 ├── convergence/
-│   └── iterations/             # Per-iteration summaries (preserved across iterations)
-│       ├── iter-1.toon
-│       └── ...
+│   ├── iterations/             # Per-iteration summaries (preserved across iterations)
+│   │   ├── iter-1.toon
+│   │   └── ...
+│   └── e2e/                    # End-to-end convergence artifacts (tier 2)
+│       ├── stories/            # E2E story definitions — see e2e-story.schema.md
+│       │   └── {storyId}.toon
+│       ├── tests/              # Generated test scripts (e2e-test-writer-agent output)
+│       │   └── {storyId}.test.ts
+│       └── screenshots/        # Visual regression captures (e2e-runner-agent output)
+│           └── {storyId}-{timestamp}.png
 ├── wave-0-summary.toon         # Machine-readable wave summary
 ├── wave-0-summary.md           # Human-readable wave summary
 ├── wave-1-summary.toon
@@ -455,3 +464,44 @@ The `[domain].type` field declares the project domain. Currently supported:
 - `research`, `creative`, `business` — declared for future agent packs
 
 The domain type affects wiki page semantics (what "component" means) but not the orchestration machinery. See `wiki-conventions.md` for domain-specific page interpretations.
+
+## Convergence and Quality Infrastructure
+
+### 4-Tier Convergence
+
+The convergence pipeline uses a 4-tier model defined in `convergence-tier.schema.md` (see `orchestration-patterns.md § 4-Tier Convergence Model` for the full pattern description). Tier-aware agents and their schemas:
+
+| Tier | Agent | Schema | Directory |
+|------|-------|--------|-----------|
+| unit (4) | vitest-runner (CLI) | — | — |
+| integration (3) | integration-test-agent | — | — |
+| e2e (2) | `e2e-runner-agent.md`, `e2e-test-writer-agent.md` | `e2e-story.schema.md` | `.plan-execution/convergence/e2e/` |
+| qa-review (1) | `interpretation-reviewer-agent.md` | `interpretation-conflict.schema.md`, `interpretation-report.schema.md` | `.plan-execution/conflicts/` |
+
+### Interpretation Conflict Detection
+
+The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
+
+### E2E Story Verification
+
+End-to-end stories are defined in `e2e-story.schema.md` and stored in `.plan-execution/convergence/e2e/stories/`. The `e2e-test-writer-agent` generates test scripts from stories into `.plan-execution/convergence/e2e/tests/`. The `e2e-runner-agent` executes those tests and captures screenshots to `.plan-execution/convergence/e2e/screenshots/`.
+
+### Wiki Maintenance Triggers
+
+The orchestrator spawns `wiki-maintainer-agent` at execution events defined in `wiki-maintainer-triggers.md`. This includes convergence milestones, wave completions, and quality gate results. Wiki maintenance is non-blocking (see § Wiki Integration above).
+
+### Preflight Budget Checks
+
+Before spawning test or convergence agents, the orchestrator runs `hooks/context-budget-test.ts` (`checkTestAgentBudget`) to verify the agent's estimated token usage is within the 100k budget cap. See `context-budget.md` and `stage-context.schema.md` for the budget and stage context specifications.
+
+### Planning Taxonomy
+
+The planning hierarchy (milestone > feature > phase > wave) is defined in `taxonomy.md`. It is referenced by the convergence-tier schema, criteria-plan schema (`criteria-plan.schema.md` — `testTier` field), and the convergence-planner-agent for tier assignment.
+
+### Execution Logging
+
+Execution events are logged to `.loom/wiki/execution-log.toon` following `execution-log.schema.md`. The schema includes 16 event types for convergence, testing, and QA tracking. The statusline contract (`statusline-contract.md`) defines 5 segments for surfacing convergence and test progress.
+
+### Behavioral Guidelines
+
+All execution agents follow `behavioral-guidelines.md`, which mandates TDD-first development, diagnose-before-fix discipline, and verification gates on all AgentResults. The `agent-result.schema.md` requires `verificationStatus` and `diagnoseLog` fields.

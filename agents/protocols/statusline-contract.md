@@ -30,6 +30,8 @@ execute-plan implementing 2/4 agents(3/5)
 execute-plan contracts 0/4 agents(0/2)
 review-code reviewing agents(2/3) findings:7
 execute-plan wiring 2/4 agents(1/1) FAILED:1
+execute-plan converging 3/4 agents(5/5) pass:42 fail:2 qa:3 iter:2 rate:95%
+execute-plan implementing 1/4 agents(2/4) pass:18 iter:1 rate:100%
 ```
 
 **Segment rules:**
@@ -42,8 +44,27 @@ execute-plan wiring 2/4 agents(1/1) FAILED:1
 | agents(done/total) | `agentsDone`/`agentsTotal` | Yes | Format: `agents(D/T)` |
 | failures | `agentsFailed` | Only if > 0 | Format: `FAILED:N` |
 | findings | `findings` | Only if > 0 | Format: `findings:N` |
+| test-pass | `testPass` | Only if > 0 | Format: `pass:N` |
+| test-fail | `testFail` | Only if > 0 | Format: `fail:N` |
+| qa-findings | `qaFindings` | Only if > 0 | Format: `qa:N` |
+| convergence-iter | `convergenceIteration` | Only if > 0 | Format: `iter:N` |
+| convergence-rate | `convergencePassRate` | Only if set | Format: `rate:N%` (integer percent, 0-100) |
 
-**Truncation:** Active mode segments are never truncated. If the line exceeds 120 characters (unlikely given field sizes), drop `findings` first, then `failures`.
+**Truncation priority** (drop lowest priority first when exceeding 120 chars):
+
+1. `command` (highest priority -- keep)
+2. `phase`
+3. `wave/total`
+4. `agents(done/total)`
+5. `failures`
+6. `test-pass`
+7. `test-fail`
+8. `convergence-iter`
+9. `convergence-rate`
+10. `qa-findings`
+11. `findings` (lowest priority -- drop first)
+
+When the terminal width is narrower than 120 characters, the statusline renderer receives the width from the prompt framework (e.g., Starship's `$COLUMNS`). Segments are dropped from the bottom of the priority list (lowest priority first) until the line fits within the available width. If the width is unknown or zero, the 120-character default is used.
 
 ### Idle Mode
 
@@ -108,6 +129,11 @@ The statusline command must never crash or produce multi-line output. All failur
 | State | Source |
 |-------|--------|
 | ActiveState | `.plan-execution/status.toon` (flat key-value TOON, one key per line) |
+| ActiveState.testPass | `.plan-execution/status.toon` — aggregate pass count across all test tiers |
+| ActiveState.testFail | `.plan-execution/status.toon` — aggregate fail count across all test tiers |
+| ActiveState.qaFindings | `.plan-execution/status.toon` — count of QA review findings (all severities) |
+| ActiveState.convergenceIteration | `.plan-execution/status.toon` — current convergence outer-loop iteration number (1-based) |
+| ActiveState.convergencePassRate | `.plan-execution/status.toon` — overall pass rate as integer 0-100 (tests passed / tests total * 100) |
 | AmbientState.planStatus | Plan file metadata (implementation-defined) |
 | AmbientState.planName | Plan file metadata (implementation-defined) |
 | AmbientState.pendingNotes | Count of files in `.loom-notes/` or equivalent |
