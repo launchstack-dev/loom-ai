@@ -368,3 +368,5 @@ See `test-fixtures/broken-plan/PLAN.md` — demonstrates common errors:
 - **taxonomy.md** -- Defines the planning hierarchy (milestone > feature > phase > wave) and the default convergence tier assignment for each level.
 - **criteria-plan.schema.md** -- Criteria entries derived from plan acceptance criteria include a `testTier` column referencing convergence tier names.
 - **e2e-story.schema.md** -- E2E stories reference milestones defined through the plan's phase-to-milestone mapping.
+- **interpretation-conflict.schema.md** -- Interpretation conflicts reference plan phases (`phaseRef`) and roadmap features (`featureRef`). Blocking conflicts discovered during dual-track planning halt plan execution.
+- **delta-report** -- DeltaReport entities (defined in PLAN.md Schema section) are produced at convergence boundaries (wave, feature, milestone) and include `phaseRef`, `featureRef`, and `milestoneRef` fields linking back to plan structures.

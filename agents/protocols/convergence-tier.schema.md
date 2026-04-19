@@ -8,7 +8,7 @@ Defines the 4 convergence tiers that map to the planning hierarchy levels define
 
 ```toon
 name: unit
-level: 4
+level: 1
 hierarchyLevel: wave
 runner: vitest-runner
 passCondition: all-pass
@@ -21,7 +21,7 @@ gatingBehavior: block-wave
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | enum | yes | Tier name: `unit`, `integration`, `e2e`, `qa-review`. |
-| level | integer | yes | Numeric level 1-4. 1 = broadest (e2e), 4 = narrowest (unit). |
+| level | integer | yes | Numeric level 1-4, ascending order of cost. 1 = cheapest (unit), 4 = most expensive (qa-review). |
 | hierarchyLevel | enum | yes | Planning hierarchy level this tier maps to: `wave`, `phase`, `feature`, `milestone`. |
 | runner | string | yes | Agent or CLI tool that executes verification at this tier. |
 | passCondition | enum | yes | What constitutes a pass: `all-pass`, `zero-critical`, `zero-blocking`. |
@@ -32,11 +32,11 @@ gatingBehavior: block-wave
 
 ## Tier Definitions
 
-### Unit (Level 4 -- Wave)
+### Unit (Level 1 -- Wave)
 
 ```toon
 name: unit
-level: 4
+level: 1
 hierarchyLevel: wave
 runner: vitest-runner
 passCondition: all-pass
@@ -46,11 +46,11 @@ gatingBehavior: block-wave
 
 Unit tests verify individual wave outputs in isolation. Every wave must pass all unit tests before the next wave can begin. The default runner is `vitest-runner` but can be overridden per project (e.g., `jest-runner`, `pytest-runner`).
 
-### Integration (Level 3 -- Feature)
+### Integration (Level 2 -- Feature)
 
 ```toon
 name: integration
-level: 3
+level: 2
 hierarchyLevel: feature
 runner: integration-test-agent
 passCondition: all-pass
@@ -60,11 +60,25 @@ gatingBehavior: block-feature
 
 Integration tests verify cross-phase wiring within a feature. A feature cannot be marked complete until its integration tests pass. The `integration-test-agent` runs generated integration tests and reports results.
 
-### QA Review (Level 2 -- Phase)
+### E2E (Level 3 -- Milestone)
+
+```toon
+name: e2e
+level: 3
+hierarchyLevel: milestone
+runner: e2e-runner-agent
+passCondition: all-pass
+defaultEnabled: true
+gatingBehavior: block-milestone
+```
+
+End-to-end stories verify complete user workflows across all features in a milestone. The `e2e-runner-agent` executes Playwright tests derived from E2EStory definitions. A milestone cannot be marked complete until e2e verification passes.
+
+### QA Review (Level 4 -- Phase)
 
 ```toon
 name: qa-review
-level: 2
+level: 4
 hierarchyLevel: phase
 runner: qa-review-agent
 passCondition: zero-critical
@@ -74,20 +88,6 @@ gatingBehavior: advisory
 
 QA review verifies phase deliverables against acceptance criteria using agent-based review (code review, security review, etc.). The pass condition is `zero-critical` -- critical findings block, but warnings and info findings are advisory.
 
-### E2E (Level 1 -- Milestone)
-
-```toon
-name: e2e
-level: 1
-hierarchyLevel: milestone
-runner: e2e-runner-agent
-passCondition: zero-blocking
-defaultEnabled: true
-gatingBehavior: block-milestone
-```
-
-End-to-end stories verify complete user workflows across all features in a milestone. The `e2e-runner-agent` executes Playwright tests derived from E2EStory definitions. A milestone cannot be marked complete until e2e verification passes with zero blocking failures.
-
 ---
 
 ## Typed Array Form
@@ -96,10 +96,10 @@ All 4 tiers as a typed array:
 
 ```toon
 tiers[4]{name,level,hierarchyLevel,runner,passCondition,defaultEnabled,gatingBehavior}:
-  unit,4,wave,vitest-runner,all-pass,true,block-wave
-  integration,3,feature,integration-test-agent,all-pass,true,block-feature
-  qa-review,2,phase,qa-review-agent,zero-critical,true,advisory
-  e2e,1,milestone,e2e-runner-agent,zero-blocking,true,block-milestone
+  unit,1,wave,vitest-runner,all-pass,true,block-wave
+  integration,2,feature,integration-test-agent,all-pass,true,block-feature
+  e2e,3,milestone,e2e-runner-agent,all-pass,true,block-milestone
+  qa-review,4,phase,qa-review-agent,zero-critical,true,advisory
 ```
 
 ---
