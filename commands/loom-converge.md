@@ -24,15 +24,26 @@ Parse arguments after `converge`:
 
 **Criteria mode options:**
 - `--phase N` -- scope criteria to a specific plan phase (criteria mode only)
+- `--feature F-NN` -- scope criteria to a feature boundary (criteria mode only)
 - `--reviewers <types>` -- comma-separated reviewer types: security,code-review,performance,architecture (criteria mode only)
 - `--no-soft` -- tests only, skip agent reviews (criteria mode only)
 - `--no-hard` -- reviews only, skip test generation (criteria mode only)
+
+**Tier selection (criteria mode):**
+- `--tier <name>` -- run only a single convergence tier: `unit`, `integration`, `e2e`, or `qa-review`
+- `--full` -- run all 4 tiers in order: unit → integration → e2e → qa-review
+- `--approve-qa` -- bulk-approve all non-blocking QA review findings
+
+**Opt-out flags (criteria mode):**
+- `--no-tests` -- skip unit and integration tiers (prints stderr warning)
+- `--no-e2e` -- skip e2e tier (prints stderr warning)
+- `--no-qa-review` -- skip qa-review tier (prints stderr warning)
 
 **Shared options:**
 - `--config <path>` -- path to an existing converge.config (skip planner + setup, either mode)
 - `--light` -- fewer questions in planner (one consolidated batch)
 - `--auto` -- accept all defaults, no interaction
-- `--max-iterations N` -- override max iterations (default: 10)
+- `--max-iterations N` -- override max iterations (default: 5)
 - `--tolerance <threshold>` -- global tolerance override for target mode (0.0-1.0)
 - `--dry-run` -- run planner/setup, show config, stop before iteration loop
 - `--no-auto-commit` -- disable per-iteration auto-commits during convergence loop
@@ -65,15 +76,24 @@ Two modes: target convergence (match a reference) and criteria convergence (sati
 ### Criteria Convergence (TDD + reviews)
   --criteria                   Enable criteria mode
   --criteria --phase N         Scope to a specific plan phase
+  --criteria --feature F-NN    Scope to a feature boundary
   --criteria --reviewers X,Y   Choose reviewer types (security,code-review,performance,architecture)
   --criteria --no-soft         Tests only (skip agent reviews)
   --criteria --no-hard         Reviews only (skip test generation)
+
+### Tier Selection (criteria mode)
+  --tier <name>           Run only one tier: unit, integration, e2e, qa-review
+  --full                  Run all 4 tiers in order
+  --approve-qa            Bulk-approve non-blocking QA findings
+  --no-tests              Skip unit/integration tiers (stderr warning)
+  --no-e2e                Skip e2e tier (stderr warning)
+  --no-qa-review          Skip qa-review tier (stderr warning)
 
 ### Shared Options
   --config <path>         Existing converge.config (skip setup, either mode)
   --light                 Fewer questions in planner (one batch)
   --auto                  Accept all defaults, no interaction
-  --max-iterations N      Override max iterations (default: 10)
+  --max-iterations N      Override max iterations (default: 5)
   --dry-run               Run setup only, show config, stop before loop
   --no-auto-commit        Disable per-iteration auto-commits
   --resume                Resume from saved state
@@ -85,9 +105,15 @@ Examples:
   /loom converge --target golden/api.json   Target: direct reference file
   /loom converge --criteria                 Criteria: TDD + all reviewers from plan
   /loom converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
+  /loom converge --criteria --feature F-01  Criteria: feature F-01 boundary only
   /loom converge --criteria --no-soft       Criteria: pure TDD (tests only)
   /loom converge --criteria --reviewers security,code-review   Criteria: specific reviewers
   /loom converge --criteria --no-hard       Review-only: iterate code reviews on existing code
+  /loom converge --tier unit                Run only unit tier convergence
+  /loom converge --tier e2e                 Run only e2e tier convergence
+  /loom converge --full                     Run all 4 tiers in order
+  /loom converge --approve-qa               Bulk-approve non-blocking QA findings
+  /loom converge --criteria --no-tests      Skip unit/integration (warns on stderr)
   /loom converge --resume
   /loom converge --status
 ```
@@ -110,6 +136,14 @@ Examples:
    - If `status == stalled` or `status == regression`: "Review stuck deltas below. Manual intervention may be needed before `--resume`."
    - If `status == budget_exhausted`: "Increase agent budget in orchestration.toml and `--resume`."
    - **Criteria mode only:** If frozen conflicts exist: "The following criteria have conflicting reviewer findings and were frozen. Review manually: {list}."
+   - **Criteria mode:** Display per-tier gate status from `tierState` block:
+     ```
+     Tier Status:
+       unit:        {gateStatus} ({passing}/{total})
+       integration: {gateStatus} ({passing}/{total})
+       e2e:         {gateStatus} ({passing}/{total})
+       qa-review:   {gateStatus} ({passing}/{total})
+     ```
 6. Stop.
 
 **If `--resume`:**
@@ -128,6 +162,31 @@ Examples:
 **If `--criteria` and (`--target` or `--plan`) both provided:** "Error: `--criteria` and `--target`/`--plan` are mutually exclusive. Use `--criteria` for TDD + reviews, or `--target`/`--plan` for golden reference matching." Stop.
 
 **If `--no-soft` and `--no-hard` both provided:** "Error: `--no-soft` and `--no-hard` cannot be combined -- that would produce zero criteria." Stop.
+
+**If `--tier` without `--criteria`:** implicitly enable criteria mode. `--tier` is a criteria-mode flag.
+
+**If `--full` without `--criteria`:** implicitly enable criteria mode. `--full` is a criteria-mode flag.
+
+**If `--tier` and `--full` both provided:** "Error: `--tier <name>` and `--full` are mutually exclusive. Use `--tier` for a single tier or `--full` for all 4." Stop.
+
+**If `--approve-qa`:** this flag can be used standalone (reads existing convergence state and bulk-approves non-blocking QA findings) or combined with a convergence run. When standalone:
+1. Read `.plan-execution/convergence-state.toon`.
+2. If no state exists: "No convergence state found. Run convergence first." Stop.
+3. Read the latest qa-review delta report from `.plan-execution/convergence/qa-review/delta-report.toon`.
+4. Filter to non-blocking findings (severity below `blockingSeverities`).
+5. Write approvals to `.plan-execution/convergence/qa-approvals.toon`.
+6. Display: "Approved {N} non-blocking QA findings. {M} critical/blocking findings remain."
+7. Stop.
+
+**If `--feature F-NN`:** validate format matches `F-NN` pattern. If invalid: "Error: `--feature` must use format F-NN (e.g., F-01, F-12)." Stop.
+
+**If `--no-tests`:** print to stderr: `"Warning: --no-tests skips unit/integration convergence gates. Wave/feature gating disabled."` Continue with remaining tiers.
+
+**If `--no-e2e`:** print to stderr: `"Warning: --no-e2e skips end-to-end verification. Milestone gating disabled."` Continue with remaining tiers.
+
+**If `--no-qa-review`:** print to stderr: `"Warning: --no-qa-review skips QA review. Code quality findings will not be collected."` Continue with remaining tiers.
+
+**If `--no-tests` and `--no-e2e` and `--no-qa-review` all provided:** "Error: all tiers skipped -- nothing to converge." Stop.
 
 **If `--criteria` with `--config`:** skip criteria planner + harness builder. Set `configPath` to the provided config path and jump directly to Step 5 (Convergence Loop). The convergence-driver reads `convergenceMode: criteria` from the config.
 
@@ -182,6 +241,7 @@ This path replaces Steps 1.5 through 4 for criteria mode. It uses criteria-plann
     Mode: {--auto ? 'auto' : --light ? 'light' : 'interactive'}
     PLAN.md path: {planFile or 'PLAN.md'}
     {if --phase: 'Phase filter: ' + phaseNumber}
+    {if --feature: 'Feature filter: ' + featureId}
     {if --reviewers: 'Reviewer types: ' + reviewerTypes}
     {if --no-soft: 'Hard criteria only (no agent reviews)'}
     {if --no-hard: 'Soft criteria only (no test generation)'}
@@ -405,7 +465,7 @@ Wait for user response:
     Config: {configPath}
     Harness runner: {runnerPath}
     Target manifest: {specPath}
-    Max iterations: {--max-iterations or 10}
+    Max iterations: {--max-iterations or 5}
     Tolerance thresholds: {from converge.config}
     Agent budget: {from orchestration.toml or 30}
     Auto-commit: {--no-auto-commit ? false : true}
@@ -421,10 +481,18 @@ Wait for user response:
     Config: {configPath}
     Harness runner: {runnerPath}
     Criteria plan: {specPath}
-    Max iterations: {--max-iterations or 10}
+    Max iterations: {--max-iterations or 5}
     Agent budget: {from orchestration.toml or 30}
     Auto-commit: {--no-auto-commit ? false : true}
-    Resume at iteration: {iteration number, 1 if fresh start}"
+    Resume at iteration: {iteration number, 1 if fresh start}
+    {if --tier: 'Tier filter: ' + tierName}
+    {if --full: 'Run all tiers: unit, integration, e2e, qa-review'}
+    {if --phase: 'Phase scope: ' + phaseNumber}
+    {if --feature: 'Feature scope: ' + featureId}
+    {if --no-tests: 'Skip tiers: unit, integration'}
+    {if --no-e2e: 'Skip tiers: e2e'}
+    {if --no-qa-review: 'Skip tiers: qa-review'}
+    {if --approve-qa: 'Auto-approve non-blocking QA findings: true'}"
    ```
 
 4. The convergence-driver handles the full iteration loop internally, spawning delta-analyzer and fixer agents as needed.
@@ -433,7 +501,7 @@ Wait for user response:
 
    **Target mode:**
    ```
-   === Convergence Progress ===  [iteration {i}/{max}]
+   === Convergence Progress ===  [iteration {i}/{max} — {max - i} remaining]
 
      Passing: {n}/{total} targets  ({pct}%)
      Failing: {f}/{total} targets
@@ -448,7 +516,7 @@ Wait for user response:
 
    **Criteria mode:**
    ```
-   === Criteria Convergence Progress ===  [iteration {i}/{max}]
+   === Criteria Convergence Progress ===  [iteration {i}/{max} — {max - i} remaining]
 
      Criteria: {passing}/{total} passing  ({pct}%)
        Hard (tests):    {hardPassing}/{hardTotal}
@@ -457,6 +525,8 @@ Wait for user response:
      Frozen:    {frozenCriteria} conflicts
      Rate:      {rate}% improvement from last iteration
      Agents:    {used}/{budget} budget used
+     {if --tier: 'Tier: ' + tierName + ' only'}
+     {if --full: 'Tiers: unit → integration → e2e → qa-review'}
 
      History:
        Iter 1: {n1}/{total} passing  (blocking: {b1} failing, conflicts: {c1})

@@ -19,7 +19,7 @@ You receive via prompt:
 1. **converge.config path** — location of the harness configuration
 2. **Harness runner path** — entry point script for running comparisons (target mode) or tests+reviews (criteria mode)
 3. **Target manifest path** (target mode) or **criteria-plan.toon path** (criteria mode) — the verification spec
-4. **Max iterations** — from `orchestration.toml` or default 10
+4. **Max iterations** — from `orchestration.toml` or default 5
 5. **Tolerance thresholds** (target mode) or **pass conditions** (criteria mode) — per-target score thresholds or per-criterion pass rules
 6. **Agent budget** — max total fixer agents to spawn across all iterations
 7. **Auto-commit** — whether to create git commits per iteration (default: true, disabled by `--no-auto-commit`)
@@ -292,14 +292,14 @@ When operating in criteria mode, the driver supports 4 convergence tiers defined
 
 ### Tier Execution Order
 
-When `--full` is specified or all tiers are active, tiers execute in this order (narrowest scope first):
+When `--full` is specified or all tiers are active, tiers execute in level order (cheapest first):
 
-1. **Unit** (level 4, wave boundary) — `vitest-runner`
-2. **Integration** (level 3, feature boundary) — `integration-test-agent`
-3. **E2E** (level 1, milestone boundary) — `e2e-runner-agent`
-4. **QA Review** (level 2, phase boundary) — `qa-review-agent`
+1. **Unit** (level 1, wave boundary) — `vitest-runner`
+2. **Integration** (level 2, feature boundary) — `integration-test-agent`
+3. **E2E** (level 3, milestone boundary) — `e2e-runner-agent`
+4. **QA Review** (level 4, phase boundary) — `qa-review-agent`
 
-This order ensures fast feedback: unit tests catch low-level breakage before expensive e2e or review cycles run.
+This order ensures fast feedback: unit tests catch low-level breakage before expensive e2e or review cycles run. If any `block-*` tier fails, subsequent tiers still run (to collect full diagnostic data) but the overall result is `failure`.
 
 ### Tier Routing
 
@@ -345,10 +345,10 @@ The driver parses the test runner output to extract test names and file paths. I
 
 The driver determines which tiers to run based on the current execution boundary:
 
-- **Wave boundary** (after each wave completes): run unit tier. This is the most frequent gate.
+- **Wave boundary** (after each wave completes): run unit tier. This is the most frequent gate. Unit tests MUST pass before the next wave begins.
 - **Feature completion boundary** (all phases of a feature complete): run integration tier in addition to unit.
 - **Milestone completion boundary** (all features in a milestone complete): run e2e tier in addition to unit + integration.
-- **Phase boundary** (after each phase completes): run qa-review tier. QA review scope is configurable via `--phase N` or `--feature F-NN`.
+- **QA review** runs after each wave with configurable scope. By default, QA review covers the current wave's deliverables. Use `--phase N` to scope QA review to a specific phase, or `--feature F-NN` to scope to a feature boundary. QA review findings are advisory (do not block progression) unless `passCondition: zero-critical` surfaces critical findings.
 
 When `--full` is specified, all 4 tiers run regardless of the current boundary.
 
@@ -424,6 +424,44 @@ When `--full` is specified:
 3. If any tier with `block-*` gating fails, subsequent tiers still run (to collect full diagnostic data) but the overall result is `failure`
 4. The convergence report includes per-tier summaries
 
+### Iteration Countdown
+
+The driver displays a visible countdown at each iteration:
+
+```
+=== Convergence Iteration 3/5 ===
+```
+
+The default `maxIterations` is **5** (overridable via `--max-iterations N`). The countdown is always visible in both interactive and `--auto` modes so the user knows how many iterations remain.
+
+### QA Approval
+
+When `--approve-qa` is specified, the driver bulk-approves all non-blocking QA findings:
+
+1. Read all QA review findings from the latest delta report for the `qa-review` tier.
+2. Filter to non-blocking findings only (severity below `blockingSeverities` threshold from `reviewConfig`).
+3. Mark all non-blocking findings as `approved` in the convergence state.
+4. Approved findings are excluded from subsequent iterations — they no longer appear in delta reports.
+5. Critical/blocking QA findings are NOT auto-approved and continue to be reported.
+6. Write approval log to `.plan-execution/convergence/qa-approvals.toon`:
+
+```toon
+approvedAt: 2026-04-19T10:00:00Z
+approvedBy: user
+findings[N]{id,criterion,severity,description}:
+  F-12,C-06,medium,Extract auth logic to helper function
+  F-13,C-06,low,Consider renaming variable for clarity
+```
+
+### Feature Scoping
+
+When `--feature F-NN` is specified, the driver scopes convergence to a feature boundary:
+
+1. Filter `criteria-plan.toon` to criteria whose scope maps to the specified feature (determined by cross-referencing with `plan.schema.md` phase-to-feature mappings).
+2. Run only tiers relevant to the feature scope: unit + integration (since feature completion triggers integration tier).
+3. Update only the feature-scoped subset of convergence state.
+4. This flag is combinable with `--tier` to further narrow: e.g., `--feature F-01 --tier integration` runs only integration tests for feature F-01.
+
 ### Opt-Out Flags
 
 Opt-out flags skip tiers but print a stderr warning:
@@ -455,6 +493,12 @@ findings[2]{id,criterion,reviewer,severity,file,line,description,suggestion}:
 
 conflicts[0]:
 ```
+
+---
+
+### Context Budget Preflight
+
+Before starting the convergence loop, the driver runs a context-budget preflight check using `detectConvergenceTier()` and `getEffectiveBudgetCap()` from `hooks/context-budget-test.ts`. This ensures each tier's agent spawns fit within the budget cap, applying tier-specific multipliers (unit=0.6x, integration=0.8x, e2e=1.0x, qa-review=0.75x). If the estimated cost exceeds the budget cap, the driver logs a warning and suggests splitting the task or reducing `--max-iterations`.
 
 ---
 

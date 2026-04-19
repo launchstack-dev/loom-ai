@@ -125,6 +125,10 @@ criteria: Clean separation of concerns → testTier: qa-review
 criteria: No XSS vectors in error responses → testTier: qa-review
 ```
 
+### Feature Scoping
+
+When the orchestrator passes a `Feature filter: F-NN`, restrict target discovery to criteria that belong to the specified feature. Cross-reference with `plan.schema.md` to map phases to their parent feature. Only criteria within the feature's phases are included. This enables `--feature F-NN` scoped convergence.
+
 ### Auto Mode Tier Assignment
 
 In `--auto` mode, tier assignment uses the rules above with no interaction. If a criterion's scope is ambiguous (could be `unit` or `integration`), default to `unit` — narrower scope means faster feedback.
@@ -292,8 +296,8 @@ After all decisions are made, present a consolidated summary:
 ### Budget Estimate
 - Setup: 2 agents (target-parser + harness-builder)
 - Per iteration: 1 delta-analyzer + up to {N} fixer agents
-- Max iterations: 10
-- Worst case: ~{estimate} agent invocations
+- Max iterations: 5 (default, override with --max-iterations)
+- Worst case: ~{estimate} agent invocations (applying tier-specific budget multipliers)
 
 ### Planning Decisions
 | ID | Decision | Answer | Source |
@@ -342,6 +346,14 @@ In `--auto` mode:
 3. Use recommended method, tolerance, and capture for each
 4. Default golden source: `reference-run` if implementation exists, `spec-extracted` if spec exists
 5. Emit `convergence-plan.toon` immediately — no interaction
+
+---
+
+## Budget Compliance
+
+Before emitting the final plan, run a context-budget preflight check. Use tier-specific multipliers from `context-budget.md` (unit=0.6x, integration=0.8x, e2e=1.0x, qa-review=0.75x) to estimate the total convergence cost. If the estimated worst-case budget exceeds the agent budget cap from `orchestration.toml`, warn the user and suggest reducing scope or iterations.
+
+The `testTier` column in the criteria array is critical for budget estimation — it determines which multiplier applies to each criterion's verification cost.
 
 ---
 
