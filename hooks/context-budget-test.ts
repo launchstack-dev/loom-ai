@@ -37,8 +37,17 @@ interface BudgetConfig {
   agentBudgetCap: number;
 }
 
-/** Parse budget config from orchestration.toml. Falls back to defaults. */
-function readBudgetConfig(): BudgetConfig {
+/**
+ * Parse budget config from orchestration.toml. Falls back to defaults.
+ *
+ * NOTE: Uses regex to extract flat key=value pairs from the
+ * [settings.contextBudget] TOML section. This is intentionally simple —
+ * we only parse `contextWindow` and `agentBudgetCap` (both integers).
+ * A full TOML parser is not warranted for this narrow use case, but this
+ * approach will misparse quoted strings, multi-line values, or inline
+ * tables if they ever appear in this section.
+ */
+export function readBudgetConfig(): BudgetConfig {
   const defaults: BudgetConfig = { contextWindow: 200000, agentBudgetCap: 100000 };
 
   try {
@@ -63,7 +72,8 @@ function readBudgetConfig(): BudgetConfig {
       : Math.floor(contextWindow / 2);
 
     return { contextWindow, agentBudgetCap };
-  } catch {
+  } catch (err) {
+    process.stderr.write(`[context-budget] Failed to read config: ${err}\n`);
     return defaults;
   }
 }
@@ -73,7 +83,7 @@ function readBudgetConfig(): BudgetConfig {
  * Checks for agent names in the prompt text and common patterns
  * like "Read your instructions from ~/.claude/agents/{test-agent}.md".
  */
-function isTestAgentSpawn(prompt: string): boolean {
+export function isTestAgentSpawn(prompt: string): boolean {
   const lower = prompt.toLowerCase();
   for (const agent of TEST_AGENTS) {
     if (lower.includes(agent)) return true;
@@ -87,7 +97,7 @@ function isTestAgentSpawn(prompt: string): boolean {
  * Find the agent .md file path from a prompt string.
  * Looks for paths like ~/.claude/agents/*.md.
  */
-function findAgentMdPath(prompt: string): string | undefined {
+export function findAgentMdPath(prompt: string): string | undefined {
   const patterns = [
     /(?:~\/\.claude\/agents\/[\w./-]+\.md)/g,
     /(?:~\/\.loom-ai\/agents\/[\w./-]+\.md)/g,
@@ -99,10 +109,25 @@ function findAgentMdPath(prompt: string): string | undefined {
     if (match) {
       let mdPath = match[0];
       if (mdPath.startsWith("~")) {
-        const home = process.env.HOME ?? "/tmp";
+        const home = process.env.HOME ?? (() => {
+          process.stderr.write(`[context-budget] HOME is unset, falling back to /tmp\n`);
+          return "/tmp";
+        })();
         mdPath = mdPath.replace("~", home);
       }
       const resolved = path.resolve(mdPath);
+      // Validate resolved path stays within expected directories
+      const home = process.env.HOME ?? "/tmp";
+      const allowedPrefixes = [
+        path.resolve(home, ".claude", "agents"),
+        path.resolve(home, ".loom-ai", "agents"),
+        path.resolve("agents"),
+      ];
+      const isAllowed = allowedPrefixes.some((prefix) => resolved.startsWith(prefix + path.sep) || resolved === prefix);
+      if (!isAllowed) {
+        process.stderr.write(`[context-budget] Rejected agent path outside allowed directories: ${resolved}\n`);
+        return undefined;
+      }
       if (fs.existsSync(resolved)) return resolved;
     }
   }
@@ -126,7 +151,8 @@ function getTestStageContextPaths(planExecDir: string): string[] {
         paths.push(stagePath);
       }
     }
-  } catch {
+  } catch (err) {
+    process.stderr.write(`[context-budget] Failed to read stage context paths: ${err}\n`);
     // fail open
   }
   return paths;

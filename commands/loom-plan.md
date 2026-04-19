@@ -162,17 +162,21 @@ Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent t
  fully typed schema with indexes and cascades.
  {If v2: Include API Specification, State Machines, and Error Handling sections per spec.schema.md.}
 
- Roadmap content:
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
- Codebase context:
+ <file-content path="codebase-context">
  {context summary from Step 0}
+ </file-content>
 
- {If pending notes exist: Advisory notes from development:
- {filtered notes}}
+ {If pending notes exist: <file-content path="notes.toon">
+ {filtered notes}
+ </file-content>}
 
- {If merging existing plan: Existing plan to preserve where applicable:
- {existing PLAN.md text}}"
+ {If merging existing plan: <file-content path="PLAN.md">
+ {existing PLAN.md text}
+ </file-content>}"
 ```
 
 **Agent B: criteria-planner-agent** (general-purpose, `--auto` mode):
@@ -188,17 +192,21 @@ Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent t
  Extract acceptance criteria, infer testable conditions, and classify by convergence
  tier (unit, integration, e2e, qa-review) per taxonomy.md.
 
- Roadmap content:
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
- Codebase context:
+ <file-content path="codebase-context">
  {context summary from Step 0}
+ </file-content>
 
- {If scope-contract.toon exists: Scope contract:
- {scope-contract.toon content}}
+ {If scope-contract.toon exists: <file-content path="scope-contract.toon">
+ {scope-contract.toon content}
+ </file-content>}
 
- {If wiki quality history found: Quality history from wiki:
- {quality history entries}}"
+ {If wiki quality history found: <file-content path="wiki-quality-history">
+ {quality history entries}
+ </file-content>}"
 ```
 
 Both agents run independently. Collect both AgentResults before proceeding.
@@ -220,14 +228,17 @@ Spawn `interpretation-reviewer-agent` (general-purpose):
  - Coverage gaps (plan-only): behaviors in the plan with no corresponding criterion
  - Coverage gaps (test-only): criteria that don't trace to any plan requirement
 
- Plan content:
+ <file-content path="PLAN.md">
  {PLAN.md output from plan-builder-agent}
+ </file-content>
 
- Criteria plan content:
+ <file-content path="criteria-plan.toon">
  {criteria-plan.toon output from criteria-planner-agent}
+ </file-content>
 
- Roadmap content (original shared input):
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
  Return an AgentResult with conflicts and gaps in your integrationNotes."
 ```
@@ -264,7 +275,7 @@ Parse the interpretation-reviewer-agent's AgentResult. Extract the conflict repo
 
 - If only warnings/info → display summary, continue to Step 2.
 
-Save the conflict report to `.plan-execution/interpretation-conflicts.toon`.
+Save the conflict report to `.plan-execution/conflicts/interpretation-report.toon`.
 
 #### Step 2: Validation Loop (max 2 retries)
 
@@ -326,7 +337,7 @@ Continue looping until the user approves.
 
 1. Write the validated plan to `PLAN.md` (or `--output` path).
 
-1b. Write `criteria-plan.toon` to the project root (always generated during plan creation, not gated behind `--converge-criteria`). This is the output from criteria-planner-agent in Step 1, potentially updated by conflict resolutions from Step 1.5.
+1b. Write `criteria-plan.toon` to `.plan-execution/criteria-plan.toon` (always generated during plan creation, not gated behind `--converge-criteria`). This is the output from criteria-planner-agent in Step 1, potentially updated by conflict resolutions from Step 1.5.
 
 2. Append to `.plan-history/changelog.md`:
    ```markdown
@@ -349,8 +360,8 @@ Continue looping until the user approves.
 5. Display next steps:
    ```
    Plan written to {path}.
-   Criteria plan written to criteria-plan.toon.
-   {If conflicts: Interpretation conflicts saved to .plan-execution/interpretation-conflicts.toon.}
+   Criteria plan written to .plan-execution/criteria-plan.toon.
+   {If conflicts: Interpretation conflicts saved to .plan-execution/conflicts/interpretation-report.toon.}
 
    Next steps:
      /loom-plan review                    -- 6 agents analyze the plan in parallel
@@ -1162,8 +1173,9 @@ Read your instructions from `~/.claude/agents/acceptance-criteria-agent.md` firs
 
 Analyze the following plan and generate structured test specs.
 
-### Plan:
+<file-content path="{plan file path}">
 {contents of the plan file}
+</file-content>
 
 ### Existing Source Files:
 {glob results for src/**/*.ts or equivalent}
@@ -1201,8 +1213,9 @@ Read your instructions from `~/.claude/agents/unit-test-agent.md` first.
 
 Generate unit tests based on the following test spec.
 
-### Test Spec:
+<file-content path="test-spec.toon">
 {contents of test-spec.toon, filtered to contractTests and behaviorTests}
+</file-content>
 
 ### Contract Files:
 {list contract file paths from .plan-execution/contracts/manifest.toon, or "no contracts available"}
@@ -1241,8 +1254,9 @@ Read your instructions from `~/.claude/agents/e2e-test-agent.md` first.
 
 Generate E2E tests based on the following test spec.
 
-### Test Spec:
+<file-content path="test-spec.toon">
 {contents of test-spec.toon, filtered to e2eTests}
+</file-content>
 
 ### Source Files (routes/pages):
 {list route and page files from plan deliverables}

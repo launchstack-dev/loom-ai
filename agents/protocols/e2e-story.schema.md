@@ -19,7 +19,7 @@ An E2EStory describes a user workflow as a sequence of steps with expected outco
 | format | enum | yes | Story format: `imperative`, `bdd`, `checklist`. |
 | steps | StoryStep[] | yes | Ordered sequence of actions and expectations. At least 1 step required. |
 | milestoneRef | string | yes | Milestone this story belongs to. Format: `M-NN`. |
-| criteriaRefs | string[] | yes | Criterion IDs from criteria-plan.toon that this story verifies (e.g., `C-01`). |
+| criteriaRefs | string[] | yes | Criterion IDs from criteria-plan.toon that this story verifies (e.g., `C-01`). Intentional extension beyond original plan scope — added for traceability between E2E stories and convergence criteria. |
 | screenshots | string[] | no | File paths to reference screenshots for visual verification. |
 | consoleDumps | string[] | no | File paths to console output dumps for debugging. |
 
@@ -217,7 +217,7 @@ Examples:
 
 ### YAML Validation Rules
 
-1. **All required fields present.** `name`, `url`, `workflow`, `milestoneRef`, `format`, `preconditions`, `steps`, `criteriaRefs` must be present.
+1. **All required fields present.** `name`, `workflow`, `milestoneRef`, `format`, `preconditions`, `steps`, `criteriaRefs` must be present. `url` is optional.
 2. **Format enum.** `format` must be one of: `imperative`, `bdd`, `checklist`.
 3. **At least one step.** `steps` array must contain at least 1 entry.
 4. **Step completeness.** Every step must have non-empty `action` and `expected` fields.

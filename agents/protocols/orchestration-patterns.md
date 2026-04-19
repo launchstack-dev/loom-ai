@@ -585,7 +585,7 @@ Patterns 5 (Converge) and 6 (Criteria Converge) support a **4-tier convergence m
 | unit | 4 | wave | vitest-runner | block-wave |
 | integration | 3 | feature | integration-test-agent | block-feature |
 | e2e | 2 | milestone | e2e-runner-agent | block-milestone |
-| qa-review | 1 | milestone | interpretation-reviewer-agent | advisory |
+| qa-review | 2 | phase | qa-review-agent | advisory |
 
 ### How Tiers Interact with Convergence Patterns
 

@@ -1,4 +1,6 @@
 ---
+name: e2e-test-writer-agent
+description: Converts acceptance criteria and e2e specs into YAML user stories and runnable Playwright test files for milestone-level convergence verification.
 model: sonnet
 ---
 

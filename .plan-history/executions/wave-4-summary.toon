@@ -1,0 +1,20 @@
+wave: 4
+status: complete
+startedAt: 2026-04-18T19:12:00Z
+completedAt: 2026-04-18T19:30:00Z
+
+tasks[4]{taskId,agent,status}:
+  w4-context,implementer-agent,success
+  w4-statusline,implementer-agent,success
+  w4-auto,implementer-agent,success
+  w4-wiring,wiring-agent,success
+
+filesCreated[1]: hooks/context-budget-test.ts
+filesModified[6]: agents/protocols/stage-context.schema.md,agents/protocols/statusline-contract.md,agents/protocols/execution-log.schema.md,commands/loom.md,agents/protocols/orchestration-patterns.md,agents/protocols/execution-conventions.md
+
+wiringFixes[3]: e2e-test-writer-agent orphan resolved,wiki-maintainer-triggers orphan resolved,context-budget-test hook orphan resolved
+
+verification: pass
+verificationWarnings: 2
+acceptanceCriteriaMet: 20/20
+commitHash: 1558624

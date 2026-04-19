@@ -1,4 +1,6 @@
 ---
+name: interpretation-reviewer-agent
+description: Cross-references plan deliverables against test criteria to identify interpretation conflicts, semantic mismatches, and coverage gaps before convergence begins.
 model: opus
 ---
 
@@ -155,7 +157,7 @@ Write the report conforming to `interpretation-report.schema.md`:
 5. Write `wikiResolutions[N]` typed array with any prior resolutions applied
 6. Validate summary counts match array lengths
 
-Output path: `.plan-execution/convergence/interpretation-report.toon`
+Output path: `.plan-execution/conflicts/interpretation-report.toon`
 
 ## Step 8: Return AgentResult
 

@@ -84,7 +84,7 @@ Typed array. Every criterion to satisfy during convergence.
 | `passCondition` | enum | `all-pass` (tests), `zero-critical` (no critical/high findings), `zero-blocking` (no blocking findings), `zero-findings` (clean sweep), `max-N-minor` (N minor findings tolerated). |
 | `blocking` | boolean | If true, this criterion must pass for convergence. If false, advisory only. |
 | `priority` | enum | `P0` (must-pass), `P1` (should-pass), `P2` (nice-to-pass). Affects fix ordering. |
-| `source` | enum | `plan-acceptance` (explicit in plan), `plan-implied` (inferred from deliverables), `inferred` (discovered from codebase analysis), `user-added` (manually added). |
+| `source` | enum | `plan-acceptance` (explicit in plan), `plan-implied` (inferred from deliverables), `inferred` (discovered from codebase analysis), `user-added` (manually added), `roadmap-acceptance` (explicit in roadmap), `wiki-history` (derived from wiki knowledge base). |
 | `rationale` | string | Why this criterion exists. Traces back to plan requirement. |
 | `testTier` | enum | Convergence tier for this criterion: `unit`, `integration`, `e2e`, `qa-review`. Determines which convergence tier verifies this criterion. See `convergence-tier.schema.md`. |
 

@@ -1200,11 +1200,13 @@ Update `pipeline-state.toon`: `currentStage: plan-create`.
  Map features to phases, milestones to wave boundaries, conceptual data model to
  fully typed schema with indexes and cascades.
 
- Roadmap content:
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
- Codebase context:
+ <file-content path="codebase-context">
  {context summary from Step 0}
+ </file-content>
 
  {if scope-contract.toon exists: 'Read scope-contract.toon from the project root and use it as input context -- contract decisions constrain architecture, success criteria seed acceptance criteria, non-goals define explicit out-of-scope annotations.'}
 
@@ -1225,14 +1227,17 @@ Update `pipeline-state.toon`: `currentStage: plan-create`.
  Extract acceptance criteria, infer testable conditions, and classify by convergence
  tier (unit, integration, e2e, qa-review) per taxonomy.md and convergence-tier.schema.md.
 
- Roadmap content:
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
- Codebase context:
+ <file-content path="codebase-context">
  {context summary from Step 0}
+ </file-content>
 
- {if scope-contract.toon exists: Scope contract:
- {scope-contract.toon content}}
+ {if scope-contract.toon exists: <file-content path="scope-contract.toon">
+ {scope-contract.toon content}
+ </file-content>}
 
  Write criteria-plan.toon to the project root.
  Your AgentResult MUST include verificationStatus (verified, unverified, or skipped)."
@@ -1254,20 +1259,23 @@ Record agents spawned (2). Collect both AgentResults before proceeding.
  - Coverage gaps (plan-only): behaviors in the plan with no corresponding criterion
  - Coverage gaps (test-only): criteria that don't trace to any plan requirement
 
- Plan content:
+ <file-content path="PLAN.md">
  {PLAN.md output from plan-builder-agent}
+ </file-content>
 
- Criteria plan content:
+ <file-content path="criteria-plan.toon">
  {criteria-plan.toon output from criteria-planner-agent}
+ </file-content>
 
- Roadmap content (original shared input):
+ <file-content path="ROADMAP.md">
  {full ROADMAP.md text}
+ </file-content>
 
  Return an AgentResult with conflicts and gaps in your integrationNotes.
  Your AgentResult MUST include verificationStatus."
 ```
 
-Record agents spawned. Save the conflict report to `.plan-execution/interpretation-conflicts.toon`.
+Record agents spawned. Save the conflict report to `.plan-execution/conflicts/interpretation-report.toon`.
 
 **Conflict gating (auto mode):**
 - If any conflict has `severity: blocking` → **HALT**. Log all conflicts to stderr. Set `currentStage: escalated`. Exit 1 with message: `"Blocking interpretation conflicts detected between plan-builder and criteria-planner. Resolve before proceeding.\n{conflict list}"`. Write escalation report with the conflict details and recommended resolution actions.

@@ -24,6 +24,12 @@ You receive via prompt:
 
 ## Session Modes
 
+### Path Validation (mandatory)
+
+Before passing any file paths from criteria-plan.toon or story definitions to shell commands, validate each path against a safe pattern: `/^[a-zA-Z0-9._\-\/]+$/` (alphanumeric, dots, hyphens, underscores, and forward slashes only). Reject paths containing shell metacharacters (`$`, `` ` ``, `|`, `;`, `&`, `(`, `)`, `{`, `}`, `<`, `>`, `\n`, spaces in unexpected positions, or null bytes). If a path fails validation, skip that story with `status: failure` and `details: "unsafe path rejected"`.
+
+When invoking Playwright, prefer array-form spawn (e.g., `Bun.spawn(["bunx", "playwright", "test", ...paths])`) over shell string interpolation to prevent injection. If shell invocation is unavoidable, paths MUST be individually validated before interpolation.
+
 ### Headless Mode (default)
 
 Playwright runs in headless Chromium. This is the default when `/loom converge --e2e` is invoked without `--chrome`.
@@ -145,6 +151,8 @@ steps[N]:
 ```
 
 ## DeltaReport Integration
+
+**Ownership: the e2e-runner-agent is the sole WRITER of the e2e DeltaReport.** The convergence-driver READS this report but does not write it. Other agents (delta-analyzer, fixer-agent) also READ the DeltaReport downstream.
 
 After all stories in the run complete, the agent produces a DeltaReport for the e2e tier at `.plan-execution/convergence/e2e/delta-report.toon`:
 

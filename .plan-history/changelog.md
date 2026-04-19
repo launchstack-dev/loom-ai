@@ -1,3 +1,19 @@
+## 2026-04-18 -- Code fixes applied (info pass)
+- Source: .plan-execution/review-report.md (6-agent review)
+- Applied: 9 findings (info severity)
+- Unfixable: 3 (enum mismatch helpers not found, schema AJV tests need dedicated task, PLAN.md refactor)
+- Already resolved: 2 (.gitignore already covers console dumps + screenshots)
+- Verification: PASS (4 pre-existing timing flakes in statusline-e2e)
+- Key fixes: test coverage for budget hooks, readBudgetConfig dedup, stack trace preservation, state machine transition, WIKI_QUERY_FAILED error code, criteria-plan.toon path standardization
+
+## 2026-04-18 -- Code fixes applied
+- Source: .plan-execution/review-report.md (6-agent review)
+- Applied: 19 findings (5 critical, 14 warning)
+- Unfixable: 0
+- No fix needed: 1 (StageContext schema already aligned)
+- Verification: PASS (5 pre-existing timing flakes in statusline-e2e)
+- Key fixes: tier level corrections, 2 new agent definitions, path standardization, silent-error logging, path traversal guard, prompt injection delimiters
+
 ## 2026-04-18 -- Plan updated via review-integrate
 - Applied via /loom-plan create --review-integrate
 - Source: .plan-history/reviews/2026-04-18-review.toon (6-agent review)

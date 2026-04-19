@@ -13,6 +13,12 @@ import {
   estimateFileTokens,
   estimateContextBudget,
 } from "../../hooks/lib/token-estimator.js";
+import {
+  readBudgetConfig,
+  isTestAgentSpawn,
+  findAgentMdPath,
+  checkTestAgentBudget,
+} from "../../hooks/context-budget-test.js";
 
 // ---------------------------------------------------------------------------
 // 1. Token estimation accuracy (AC #1)
@@ -120,36 +126,6 @@ describe("budget cap enforcement via readBudgetConfig", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  /**
-   * Inline readBudgetConfig for isolated testing (mirrors context-budget.ts logic).
-   * We test the same algorithm without importing the hook's side-effecting main module.
-   */
-  function readBudgetConfig(): { contextWindow: number; agentBudgetCap: number } {
-    const defaults = { contextWindow: 200000, agentBudgetCap: 100000 };
-    try {
-      const tomlPath = path.resolve(".claude", "orchestration.toml");
-      if (!fs.existsSync(tomlPath)) return defaults;
-      const content = fs.readFileSync(tomlPath, "utf-8");
-      if (!content.includes("[settings.contextBudget]")) return defaults;
-      const sectionMatch = content.match(
-        /\[settings\.contextBudget\]([\s\S]*?)(?=\n\s*\[|\s*$)/
-      );
-      if (!sectionMatch) return defaults;
-      const section = sectionMatch[1];
-      const windowMatch = section.match(/contextWindow\s*=\s*(\d+)/);
-      const capMatch = section.match(/agentBudgetCap\s*=\s*(\d+)/);
-      const contextWindow = windowMatch
-        ? parseInt(windowMatch[1], 10)
-        : defaults.contextWindow;
-      const agentBudgetCap = capMatch
-        ? parseInt(capMatch[1], 10)
-        : Math.floor(contextWindow / 2);
-      return { contextWindow, agentBudgetCap };
-    } catch {
-      return defaults;
-    }
-  }
-
   it("defaults to 200k window and 100k cap when no orchestration.toml exists", () => {
     const config = readBudgetConfig();
     expect(config.contextWindow).toBe(200000);
@@ -225,12 +201,10 @@ describe("fail-open behavior", () => {
     const originalCwd = process.cwd();
     process.chdir(tmpDir);
     try {
-      // No .claude directory at all
-      const defaults = { contextWindow: 200000, agentBudgetCap: 100000 };
-      const tomlPath = path.resolve(".claude", "orchestration.toml");
-      const exists = fs.existsSync(tomlPath);
-      expect(exists).toBe(false);
-      // The config would use defaults — spawn is allowed
+      // No .claude directory at all — readBudgetConfig should return defaults
+      const config = readBudgetConfig();
+      expect(config.contextWindow).toBe(200000);
+      expect(config.agentBudgetCap).toBe(100000);
     } finally {
       process.chdir(originalCwd);
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -304,5 +278,129 @@ describe("estimateContextBudget — full pipeline", () => {
     expect(result.breakdown.taskPrompt).toBe(40);
     expect(result.breakdown.overhead).toBe(5000);
     expect(result.estimatedPromptTokens).toBe(200 + 100 + 80 + 40 + 5000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. isTestAgentSpawn detection (Finding 21)
+// ---------------------------------------------------------------------------
+
+describe("isTestAgentSpawn", () => {
+  it("returns true when prompt contains a test agent name", () => {
+    expect(isTestAgentSpawn("Read your instructions from e2e-runner-agent.md")).toBe(true);
+    expect(isTestAgentSpawn("Spawn qa-review-agent for this task")).toBe(true);
+    expect(isTestAgentSpawn("Use vitest-runner to execute tests")).toBe(true);
+    expect(isTestAgentSpawn("Run integration-test-agent")).toBe(true);
+    expect(isTestAgentSpawn("Launch e2e-test-writer-agent")).toBe(true);
+  });
+
+  it("returns true for stage references", () => {
+    expect(isTestAgentSpawn("stage: e2e — run all end-to-end tests")).toBe(true);
+    expect(isTestAgentSpawn("stage: qa-review — review quality")).toBe(true);
+  });
+
+  it("returns false for non-test prompts", () => {
+    expect(isTestAgentSpawn("Read the plan and execute contracts")).toBe(false);
+    expect(isTestAgentSpawn("Deploy the application to staging")).toBe(false);
+    expect(isTestAgentSpawn("")).toBe(false);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isTestAgentSpawn("E2E-RUNNER-AGENT")).toBe(true);
+    expect(isTestAgentSpawn("QA-Review-Agent")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. findAgentMdPath (Finding 21)
+// ---------------------------------------------------------------------------
+
+describe("findAgentMdPath", () => {
+  const tmpDir = path.join("/tmp", "loom-test-agentmd-" + process.pid);
+
+  beforeEach(() => {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns undefined when prompt has no agent path", () => {
+    expect(findAgentMdPath("just a plain prompt")).toBeUndefined();
+  });
+
+  it("returns undefined when prompt has an agent path but file does not exist", () => {
+    expect(findAgentMdPath("Read agents/nonexistent-agent.md")).toBeUndefined();
+  });
+
+  it("extracts and resolves a valid agents/*.md path", () => {
+    // Create a file in a local agents/ directory
+    const agentsDir = path.join(tmpDir, "agents");
+    fs.mkdirSync(agentsDir, { recursive: true });
+    const agentFile = path.join(agentsDir, "test-agent.md");
+    fs.writeFileSync(agentFile, "# Test Agent");
+
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      const result = findAgentMdPath("Read agents/test-agent.md for instructions");
+      // On macOS, /tmp is a symlink to /private/tmp, so use fs.realpathSync for comparison
+      expect(fs.realpathSync(result!)).toBe(fs.realpathSync(path.resolve(tmpDir, "agents", "test-agent.md")));
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. checkTestAgentBudget — block/warn/ok thresholds (Finding 21)
+// ---------------------------------------------------------------------------
+
+describe("checkTestAgentBudget", () => {
+  const tmpDir = path.join("/tmp", "loom-test-budget-check-" + process.pid);
+  let originalCwd: string;
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+    fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
+    process.chdir(tmpDir);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns withinBudget=true for a small prompt", async () => {
+    const result = await checkTestAgentBudget("Run e2e-runner-agent with small task");
+    expect(result.withinBudget).toBe(true);
+    expect(result.isTestAgent).toBe(true);
+    expect(result.budgetCap).toBe(100000);
+    expect(result.estimatedTokens).toBeLessThan(result.budgetCap);
+  });
+
+  it("returns isTestAgent=false for a non-test prompt", async () => {
+    const result = await checkTestAgentBudget("Deploy the app");
+    expect(result.isTestAgent).toBe(false);
+  });
+
+  it("returns withinBudget=false when prompt exceeds budget cap", async () => {
+    // Set a very low cap
+    fs.writeFileSync(
+      path.join(tmpDir, ".claude", "orchestration.toml"),
+      `[settings.contextBudget]\ncontextWindow = 200\nagentBudgetCap = 10\n`
+    );
+    // prompt + 5000 overhead will exceed 10 token cap
+    const result = await checkTestAgentBudget("e2e-runner-agent do something");
+    expect(result.withinBudget).toBe(false);
+    expect(result.estimatedTokens).toBeGreaterThan(result.budgetCap);
+  });
+
+  it("includes a breakdown with all components", async () => {
+    const result = await checkTestAgentBudget("Run vitest-runner for unit tests");
+    expect(result.breakdown).toBeDefined();
+    expect(result.breakdown.overhead).toBe(5000);
+    expect(result.breakdown.taskPrompt).toBeGreaterThan(0);
   });
 });

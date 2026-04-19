@@ -625,6 +625,7 @@ pending ──→ running ──→ evaluating ──→ passed
 | running | aborted | Fatal error or budget exceeded | Logs abort reason |
 | evaluating | passed | All criteria pass | Writes final DeltaReport, logs convergence-tier-complete |
 | evaluating | failed | Any blocking criterion fails | Writes DeltaReport with failures |
+| evaluating | aborted | Delta-analyzer agent crashes or times out | Logs abort reason, writes partial DeltaReport if available |
 | failed | fixing | Convergence-driver decides to retry | Fixer-agent spawned, diagnoseLog populated |
 | fixing | running | Fix applied, next iteration starts | Increments iteration counter |
 | fixing | aborted | Max iterations reached or unrecoverable | Logs abort with iteration count |
@@ -724,6 +725,7 @@ error:
 | DIAGNOSIS_SKIPPED | Fixer-agent | Fixer applied fix without diagnosing first | No — diagnose then fix |
 | TDD_RED_FAILED | TDD gate | Test stubs pass before implementation exists | No — fix the stubs |
 | WIKI_WRITE_FAILED | Wiki integration | Wiki page write failed (disk error, format error) | Yes — retry once |
+| WIKI_QUERY_FAILED | Wiki integration | Wiki query failed (disk error, missing page, parse error) | Yes — retry once |
 
 ### Field-Level Validation Errors
 
@@ -745,6 +747,7 @@ error:
 |-----------|----------|-------------|
 | AGENT_SPAWN_FAILED | Immediate retry once | 1 |
 | WIKI_WRITE_FAILED | Immediate retry once | 1 |
+| WIKI_QUERY_FAILED | Immediate retry once | 1 |
 | GATE_FAILED | Fix cycle then retry | Configured in budget.maxIterations |
 | E2E_SESSION_TIMEOUT | Increase timeout 2x, retry | 1 |
 | All other errors | Do not retry | 0 |

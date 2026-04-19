@@ -31,7 +31,8 @@ export async function estimateFileTokens(filePath: string): Promise<number> {
   try {
     const stat = await fs.promises.stat(filePath);
     return Math.ceil(stat.size / 4);
-  } catch {
+  } catch (err) {
+    process.stderr.write(`[token-estimator] Failed to stat file "${filePath}": ${err}\n`);
     return 0;
   }
 }
@@ -75,12 +76,13 @@ export async function estimateContextBudget(components: {
     overhead,
   };
 
-  // budgetUtilization and withinBudget are computed by the caller against the cap;
-  // here we return a neutral estimate (caller decides the cap).
+  // withinBudget and budgetUtilization cannot be computed here because the budget
+  // cap is not available in this scope — the caller (checkTestAgentBudget) computes
+  // these from config.agentBudgetCap and overrides them in its return value.
   return {
     estimatedPromptTokens,
     breakdown,
-    withinBudget: true, // placeholder — caller overrides
-    budgetUtilization: 0, // placeholder — caller overrides
+    withinBudget: true, // caller overrides with actual cap comparison
+    budgetUtilization: 0, // caller overrides with estimatedTokens / cap
   };
 }

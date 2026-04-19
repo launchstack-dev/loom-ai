@@ -55,7 +55,8 @@ export async function runHook(
     process.exit(0);
   } catch (err) {
     // CRITICAL: errors ALWAYS exit 0 — fail open, never accidentally block
-    process.stderr.write(`[loom-hook:${name}] ${err}\n`);
+    const errDetail = err instanceof Error ? err.stack || err.message : String(err);
+    process.stderr.write(`[loom-hook:${name}] ${errDetail}\n`);
     process.exit(0);
   }
 }

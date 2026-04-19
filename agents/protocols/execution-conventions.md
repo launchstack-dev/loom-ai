@@ -475,8 +475,8 @@ The convergence pipeline uses a 4-tier model defined in `convergence-tier.schema
 |------|-------|--------|-----------|
 | unit (4) | vitest-runner (CLI) | — | — |
 | integration (3) | integration-test-agent | — | — |
-| e2e (2) | `e2e-runner-agent.md`, `e2e-test-writer-agent.md` | `e2e-story.schema.md` | `.plan-execution/convergence/e2e/` |
-| qa-review (1) | `interpretation-reviewer-agent.md` | `interpretation-conflict.schema.md`, `interpretation-report.schema.md` | `.plan-execution/conflicts/` |
+| e2e (1) | `e2e-runner-agent.md`, `e2e-test-writer-agent.md` | `e2e-story.schema.md` | `.plan-execution/convergence/e2e/` |
+| qa-review (2) | `interpretation-reviewer-agent.md` | `interpretation-conflict.schema.md`, `interpretation-report.schema.md` | `.plan-execution/conflicts/` |
 
 ### Interpretation Conflict Detection
 

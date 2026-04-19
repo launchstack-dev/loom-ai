@@ -51,11 +51,11 @@ Parse arguments and flags:
 
 ### 1. Read Criteria Plan
 
-Read `criteria-plan.toon` from `.plan-execution/convergence/criteria-plan.toon` (or the path specified in `converge.config`).
+Read `criteria-plan.toon` from `.plan-execution/criteria-plan.toon` (or the path specified in `converge.config`).
 
 If the file does not exist, print to stderr:
 ```
-Error: No criteria-plan.toon found. Run `/loom-plan test` or `/loom converge` after plan creation to generate criteria.
+Error: No criteria-plan.toon found. Run `/loom-plan create` to generate a plan with criteria, or `/loom converge --criteria` to generate criteria from an existing plan.
 ```
 Exit 1.
 
@@ -117,6 +117,7 @@ Spawn the convergence-driver agent (read `~/.claude/agents/convergence-driver.md
 - Tier-specific runner from `convergence-tier.schema.md`
 
 For the **e2e** tier specifically:
+- Before running the e2e-runner-agent, ensure E2E test scripts exist. If `.plan-execution/convergence/e2e/tests/` is empty or missing, spawn `e2e-test-writer-agent` (read `~/.claude/agents/e2e-test-writer-agent.md`) to generate Playwright test files from the E2EStory definitions in `.plan-execution/convergence/e2e/stories/`. The test-writer must complete before the runner executes.
 - If `--chrome` is specified, configure the e2e runner to use Chrome MCP instead of headless Playwright
 - E2e tests are read from `.plan-execution/convergence/e2e/tests/`
 
@@ -166,7 +167,7 @@ After the convergence driver returns:
 
 #### 4d. Write DeltaReport
 
-Each tier writes its DeltaReport to `.plan-execution/convergence/{tier}/delta-report.toon`.
+Each tier's runner agent writes the DeltaReport to `.plan-execution/convergence/{tier}/delta-report.toon`. The convergence-driver reads (but does not write) these DeltaReports.
 
 #### 4e. Display Iteration Progress
 
