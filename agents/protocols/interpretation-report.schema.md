@@ -12,7 +12,9 @@ This schema references the `InterpretationConflict` and `CoverageGap` schemas de
 schemaVersion: 1
 createdAt: 2026-04-18T10:00:00Z
 updatedAt: 2026-04-18T10:15:00Z
+reviewedAt: 2026-04-18T10:00:00Z
 agent: interpretation-reviewer-agent
+agentModel: opus
 planSource: PLAN.md
 criteriaSource: criteria-plan.toon
 
@@ -51,8 +53,10 @@ wikiResolutions[N]{conflictPattern,resolution,wikiRef}:
 | `createdAt` | ISO 8601 | yes | When the report was generated. |
 | `updatedAt` | ISO 8601 | yes | Last modification time. |
 | `agent` | string | yes | Always `interpretation-reviewer-agent`. |
-| `planSource` | string | yes | Path or identifier of the plan document analyzed. |
-| `criteriaSource` | string | yes | Path or identifier of the criteria plan analyzed. |
+| `planSource` | string | yes | Path or identifier of the plan document analyzed. Alias: `planRef`. |
+| `criteriaSource` | string | yes | Path or identifier of the criteria plan analyzed. Alias: `criteriaRef`. |
+| `reviewedAt` | ISO 8601 | yes | Timestamp when the review was performed. Typically equals `createdAt` for initial reports. |
+| `agentModel` | string | yes | Model used by the interpretation-reviewer-agent (e.g., `opus`). |
 
 ### summary
 
@@ -115,7 +119,7 @@ Typed array. Records prior conflict resolutions found in the project wiki that w
 
 ## Validation Rules
 
-1. **All header fields present.** `schemaVersion`, `createdAt`, `updatedAt`, `agent`, `planSource`, `criteriaSource` must be non-empty.
+1. **All header fields present.** `schemaVersion`, `createdAt`, `updatedAt`, `reviewedAt`, `agent`, `agentModel`, `planSource`, `criteriaSource` must be non-empty.
 2. **Summary counts consistent.** `totalConflicts` must equal the length of `conflicts`. `totalGaps` must equal the length of `coverageGaps`. `blocking + warning + info` must equal `totalConflicts`. `planOnlyGaps + testOnlyGaps` must equal `totalGaps`.
 3. **Conflict entries valid.** Each conflict must conform to `InterpretationConflict` validation rules in `interpretation-conflict.schema.md`.
 4. **Coverage gap entries valid.** Each gap must conform to `CoverageGap` validation rules in `interpretation-conflict.schema.md`.

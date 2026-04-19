@@ -65,6 +65,7 @@ Examples:
   /loom-plan create --auto             Non-interactive plan creation
   /loom-plan create --v1               Simpler plan without API specs
   /loom-plan create --estimate         Print token cost estimate without spawning agents
+  /loom-plan create --skip-test-gen    Create plan only, skip criteria generation
   /loom-plan create --review-integrate Apply review findings to PLAN.md
   /loom-plan review                    6-agent parallel plan review
   /loom-plan execute                   Execute PLAN.md wave-by-wave
@@ -93,6 +94,7 @@ Parse remaining arguments:
 - `--output <path>`: write plan to a custom path (default: `PLAN.md`)
 - `--review-integrate`: apply plan review findings to PLAN.md (skips generation, goes directly to Step R)
 - `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
+- `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
 
 ### Instructions
 

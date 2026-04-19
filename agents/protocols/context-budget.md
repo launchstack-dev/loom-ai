@@ -209,6 +209,93 @@ recommendation: proceed
 
 The orchestrator logs a warning when fail-open is triggered, but never blocks the spawn. Budget enforcement exists to improve efficiency, not to prevent work.
 
+## Test Agent Budget Rules
+
+Test agents at different convergence tiers have different budget profiles. The budget hook (`hooks/context-budget-test.ts`) applies tier-specific multipliers to the base `agentBudgetCap` to enforce right-sized budgets.
+
+### Tier Budget Profiles
+
+| Tier | Multiplier | Effective Cap (200k window) | Rationale |
+|------|-----------|---------------------------|-----------|
+| `unit` | 0.6x | 60,000 | Small scope: test files + source under test. Minimal fixtures. |
+| `integration` | 0.8x | 80,000 | Cross-module wiring: moderate fixture size, multiple source files. |
+| `e2e` | 1.0x | 100,000 | Full budget: stories + page content + screenshots + expected outputs. |
+| `qa-review` | 0.75x | 75,000 | Findings + source context for review. No test fixtures needed. |
+
+### Tier Detection
+
+The budget hook detects the convergence tier from the agent spawn prompt:
+
+1. **Agent name match** (most specific): e.g., `vitest-runner` maps to `unit`, `e2e-runner-agent` maps to `e2e`.
+2. **Stage/tier reference** (fallback): e.g., `stage: e2e` or `tier: qa-review` in the task definition.
+3. **Unknown tier**: If no tier is detected, the full `agentBudgetCap` applies (no multiplier).
+
+### Test Fixture Budget Considerations
+
+Test agents may require extra context for:
+
+- **Test fixtures and factories**: Shared test data setup (counted under `fileReads`).
+- **Expected outputs**: Snapshot files, golden outputs for comparison.
+- **Screenshots/page content**: E2E agents loading page content for visual comparison.
+- **Prior iteration results**: HOT-tier rolling context from the most recent convergence iteration.
+
+The tier multipliers account for these differences. If a test agent still exceeds its effective cap, the hook suggests compressing rolling context or splitting the test task.
+
+## Rolling Context Compression
+
+Rolling context (`rolling-context.md`) is compressed using a three-tier system to keep within a 10k token budget. This applies to all execution agents and is especially important for test agents that accumulate results across convergence iterations.
+
+### Compression Tiers
+
+| Tier | Scope | Content | Token Target |
+|------|-------|---------|-------------|
+| **HOT** | Current iteration results | Full detail: complete findings list with file paths and line numbers, all pass/fail details, full tier and harnessResult. | Up to 5k tokens |
+| **WARM** | Prior iteration summaries (current-1 through current-3) | Finding count delta (resolved vs introduced), files modified by fixers, stall detection status, one-line summary per iteration. | Up to 3k tokens |
+| **COLD** | Archived iterations (older than current-3) | One line per iteration: `Iter N: {findingsFixed} fixed, {findingsNew} new, {harnessResult}`. No file paths, no finding details. | Up to 1k tokens |
+
+### Compression Triggers
+
+The orchestrator applies rolling context compression when:
+
+1. A new convergence iteration completes (shifts tiers forward).
+2. `rolling-context.md` exceeds 8k tokens (early compression to stay under 10k cap).
+3. A new test-related stage runs (resets HOT tier for that stage's results).
+
+### Compression Algorithm
+
+```
+function compressRollingContext(iterations, currentIteration):
+  hot = iterations[currentIteration]         // full detail
+  warm = iterations[currentIteration-3..currentIteration-1]  // summaries only
+  cold = iterations[0..currentIteration-4]   // one-line each
+
+  hotTokens = estimateTokens(renderFull(hot))
+  warmTokens = estimateTokens(renderSummaries(warm))
+  coldTokens = estimateTokens(renderOneLiners(cold))
+
+  // If over budget, compress warm tier further
+  if (hotTokens + warmTokens + coldTokens > 10000):
+    warm = warm.map(i => oneLiner(i))  // demote warm to cold-style
+```
+
+## Wiki Context Injection
+
+Rolling-context wiki injection is **default-on** for all execution agents, including test agents (`e2e-runner-agent`, `qa-review-agent`, `vitest-runner`, `integration-test-agent`). The orchestrator includes a `## Project Knowledge [WIKI]` section in `rolling-context.md` containing relevant wiki pages for the current wave's tasks.
+
+### Configuration
+
+- **Default**: Enabled for all execution agents.
+- **Opt-out**: Set `wikiInjection: false` in the agent's task definition within the wave plan. This is rarely needed and primarily exists for agents operating on isolated, context-free tasks.
+- **Budget accounting**: Wiki queries count against the agent's budget under the `rollingContext` component of the breakdown. The wiki section is kept under 1k tokens and refreshed at the start of each wave.
+
+### Example Task Definition (opt-out)
+
+```toon
+taskId: task-isolated-lint
+agent: lint-runner
+wikiInjection: false
+```
+
 ## Checkpoint Behavior
 
 When an agent approaches its budget cap during execution:

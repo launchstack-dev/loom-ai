@@ -18,6 +18,15 @@ Before generating the report, read:
 - `~/.claude/agents/protocols/taxonomy.md` -- planning hierarchy and ID formats
 - `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan format (note `testTier` column)
 - `~/.claude/agents/protocols/agent-result.schema.md` -- AgentResult format (note `verificationStatus`, `diagnoseLog`)
+- `~/.claude/agents/protocols/schema-upgrade.md` -- upgrade detection protocol
+
+### Schema Upgrade Detection
+
+When reading input files (PLAN.md, criteria-plan.toon), apply the detection rules from `schema-upgrade.md`. If an input artifact uses an old format:
+1. Emit a stderr warning: `[loom:schema-upgrade] Old format detected in {filePath}. Run '/loom upgrade' to migrate.`
+2. Continue processing with best-effort defaults in memory (do not block or refuse to process)
+3. Do NOT mutate the input file
+4. Note the detection in `integrationNotes` of the AgentResult
 
 ## Input Context
 
@@ -150,7 +159,7 @@ Review all conflicts and gaps together. Apply these rules:
 
 Write the report conforming to `interpretation-report.schema.md`:
 
-1. Set header fields (schemaVersion, timestamps, agent, sources)
+1. Set header fields (schemaVersion, createdAt, updatedAt, reviewedAt, agent, agentModel, planSource, criteriaSource)
 2. Compute summary counts
 3. Write `conflicts[N]` typed array with all InterpretationConflict entries
 4. Write `coverageGaps[N]` typed array with all CoverageGap entries

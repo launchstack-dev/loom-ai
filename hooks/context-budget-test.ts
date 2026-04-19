@@ -32,6 +32,36 @@ const TEST_AGENTS = [
 /** Test-related stage names for stage-context loading. */
 const TEST_STAGES = ["test", "e2e", "qa-review"];
 
+/**
+ * Convergence tier names mapped to agent names for tier detection.
+ * Used to determine which budget multiplier applies.
+ */
+const AGENT_TO_TIER: Record<string, ConvergenceTier> = {
+  "vitest-runner": "unit",
+  "integration-test-agent": "integration",
+  "e2e-runner-agent": "e2e",
+  "e2e-test-writer-agent": "e2e",
+  "qa-review-agent": "qa-review",
+};
+
+/**
+ * Convergence tier budget multipliers. Higher tiers need more budget
+ * for fixtures, expected outputs, screenshots, etc.
+ *
+ * - unit: 0.6x — small scope, test files + source under test
+ * - integration: 0.8x — cross-module wiring, moderate fixture size
+ * - e2e: 1.0x — full budget, stories + page content + screenshots
+ * - qa-review: 0.75x — findings + source context, no fixtures
+ */
+const TIER_BUDGET_MULTIPLIERS: Record<ConvergenceTier, number> = {
+  unit: 0.6,
+  integration: 0.8,
+  e2e: 1.0,
+  "qa-review": 0.75,
+};
+
+type ConvergenceTier = "unit" | "integration" | "e2e" | "qa-review";
+
 interface BudgetConfig {
   contextWindow: number;
   agentBudgetCap: number;
@@ -158,12 +188,49 @@ function getTestStageContextPaths(planExecDir: string): string[] {
   return paths;
 }
 
+/**
+ * Detect the convergence tier from the prompt text.
+ * Checks agent names first, then falls back to stage references.
+ */
+export function detectConvergenceTier(prompt: string): ConvergenceTier | undefined {
+  const lower = prompt.toLowerCase();
+
+  // Check agent names first (most specific)
+  for (const [agent, tier] of Object.entries(AGENT_TO_TIER)) {
+    if (lower.includes(agent)) return tier;
+  }
+
+  // Fall back to stage references in task definitions
+  if (lower.includes("stage: e2e") || lower.includes("tier: e2e")) return "e2e";
+  if (lower.includes("stage: qa-review") || lower.includes("tier: qa-review")) return "qa-review";
+  if (lower.includes("tier: integration")) return "integration";
+  if (lower.includes("tier: unit") || lower.includes("stage: test")) return "unit";
+
+  return undefined;
+}
+
+/**
+ * Compute the effective budget cap for a test agent based on its
+ * convergence tier. Agents at higher tiers (e2e) get the full cap,
+ * while lower tiers (unit) get a reduced cap since they need less context.
+ */
+export function getEffectiveBudgetCap(
+  baseCap: number,
+  tier: ConvergenceTier | undefined
+): number {
+  if (!tier) return baseCap;
+  const multiplier = TIER_BUDGET_MULTIPLIERS[tier];
+  return Math.floor(baseCap * multiplier);
+}
+
 export interface TestBudgetCheckResult {
   withinBudget: boolean;
   estimatedTokens: number;
   budgetCap: number;
+  effectiveBudgetCap: number;
   budgetUtilization: number;
   isTestAgent: boolean;
+  detectedTier: ConvergenceTier | undefined;
   breakdown: {
     agentInstructions: number;
     rollingContext: number;
@@ -183,6 +250,7 @@ export interface TestBudgetCheckResult {
 export async function checkTestAgentBudget(prompt: string): Promise<TestBudgetCheckResult> {
   const config = readBudgetConfig();
   const isTest = isTestAgentSpawn(prompt);
+  const detectedTier = isTest ? detectConvergenceTier(prompt) : undefined;
 
   const planExecDir = findPlanExecutionDir();
   const rollingContextPath = planExecDir
@@ -204,14 +272,18 @@ export async function checkTestAgentBudget(prompt: string): Promise<TestBudgetCh
   });
 
   const est = estimate.estimatedPromptTokens;
-  const utilization = est / config.agentBudgetCap;
+  // Apply tier-specific budget cap: lower tiers get a reduced cap
+  const effectiveCap = getEffectiveBudgetCap(config.agentBudgetCap, detectedTier);
+  const utilization = est / effectiveCap;
 
   return {
-    withinBudget: est <= config.agentBudgetCap,
+    withinBudget: est <= effectiveCap,
     estimatedTokens: est,
     budgetCap: config.agentBudgetCap,
+    effectiveBudgetCap: effectiveCap,
     budgetUtilization: Math.round(utilization * 100) / 100,
     isTestAgent: isTest,
+    detectedTier,
     breakdown: estimate.breakdown,
   };
 }
@@ -230,9 +302,14 @@ runHook("context-budget-test", async (input) => {
 
   const result = await checkTestAgentBudget(prompt);
 
+  const tierLabel = result.detectedTier ? ` [tier=${result.detectedTier}]` : "";
+  const capLabel = result.effectiveBudgetCap !== result.budgetCap
+    ? `${result.effectiveBudgetCap} effective cap (${result.budgetCap} base)`
+    : `${result.budgetCap} cap`;
+
   if (!result.withinBudget) {
     return block(
-      `Test agent budget exceeded: estimated ${result.estimatedTokens} tokens vs ${result.budgetCap} cap ` +
+      `Test agent budget exceeded${tierLabel}: estimated ${result.estimatedTokens} tokens vs ${capLabel} ` +
         `(${Math.round(result.budgetUtilization * 100)}% utilization). ` +
         `Breakdown: agent=${result.breakdown.agentInstructions}, ` +
         `rolling-ctx=${result.breakdown.rollingContext}, ` +
@@ -246,8 +323,8 @@ runHook("context-budget-test", async (input) => {
   // Warn at 80% utilization
   if (result.budgetUtilization >= 0.8) {
     return allow(
-      `Test agent budget at ${Math.round(result.budgetUtilization * 100)}%: ` +
-        `${result.estimatedTokens}/${result.budgetCap} tokens. ` +
+      `Test agent budget at ${Math.round(result.budgetUtilization * 100)}%${tierLabel}: ` +
+        `${result.estimatedTokens}/${result.effectiveBudgetCap} tokens. ` +
         `Consider compressing context before next iteration.`
     );
   }
