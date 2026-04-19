@@ -1,216 +1,1121 @@
 ---
-planVersion: 1
-name: "Loom Quick Command"
+planVersion: 2
+name: "Loom Convergence Testing & Planning Taxonomy"
 status: draft
-created: 2026-04-09
-lastReviewed: null
-roadmapRef: null
-totalPhases: 5
-totalWaves: 3
+created: 2026-04-18
+lastReviewed: 2026-04-18
+roadmapRef: ROADMAP.md
+totalPhases: 12
+totalWaves: 5 <!-- Review: Wave reorganization collapses 6 waves to 5 (Finding 8) -->
 ---
 
-# Plan: Loom Quick Command
+# Plan: Loom Convergence Testing & Planning Taxonomy
 
 ## Overview
 
-Add a `/loom-quick` command to loom-ai that provides zero-ceremony task execution in three modes: standalone (no plan context), plan-aware (PLAN.md exists but not executing), and mid-execution injection (plan actively running). The command accepts a single natural-language string, auto-detects the appropriate mode, executes the task with verification, and logs results to `.plan-history/quick-tasks/`.
+This plan implements a convergence-first testing architecture for Loom where test criteria are co-created in parallel with plans, an interpretation reviewer catches conflicts before execution begins, and a 4-tier convergence model (unit, integration, e2e, QA review) gates execution at phase, feature, and milestone boundaries. The work spans protocol formalization, dual-track parallel planning, a full convergence engine with behavioral hardening, an e2e pipeline backed by Playwright, and cross-system integration with wiki, context management, and logging.
 
 ## Tech Stack
 
-- Markdown: Claude Code command file format (`commands/loom-quick.md`)
-- TOON: Quick-task log format, mode detection state, plan injection records
-- Shell: `git`, verification commands executed via Bash tool
-- YAML: `skills/library.yaml` catalog registration
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Agent format | Markdown | Claude Code agent/command/skill definitions |
+| State format | TOON v1 | All pipeline state, criteria plans, delta reports, conflict reports |
+| Test runner (unit) | Vitest / Jest / Pytest | Framework-detected per project |
+| Test runner (e2e) | Playwright (latest) | Headless browser automation |
+| Browser (authenticated) | Chrome MCP | Real Chrome via `--chrome` flag |
+| E2E spec format | YAML | User stories for e2e test discovery |
+| Hooks | TypeScript | Context budget, checkpoint, statusline |
+| Package manager | Bun (latest) | Preferred; npm fallback |
+| Runtime | Node / Bun | TypeScript execution |
 
 ## Schema / Type Definitions
 
-### QuickTaskLog
+### Taxonomy
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| levels | string[] | Required, exactly 4 items | Must be ["milestone", "feature", "phase", "wave"] |
+| convergenceLevels | map<string, string[]> | Required | Each level key must exist in levels; values are valid tier names |
+| hierarchy | map<string, string> | Required | Maps child level to parent level |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_taxonomy_level | levels[*] | PRIMARY | Level lookup |
+
+#### Cascade Behavior
+
+Not applicable — Taxonomy is a singleton protocol definition, not a relational entity.
+
+---
+
+### CriteriaPlan
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| schemaVersion | integer | Required, >= 1 | Must be positive integer |
+| createdAt | string (ISO 8601) | Required | Valid ISO 8601 datetime |
+| updatedAt | string (ISO 8601) | Required | Valid ISO 8601 datetime, >= createdAt |
+| sourceContext | string | Required, non-empty | Reference to PLAN.md phase or ROADMAP.md feature |
+| mode | string | Required | One of: "interactive", "light", "auto" |
+| convergenceMode | string | Required | One of: "criteria", "target" |
+| intent | string | Required, non-empty | Max 500 chars |
+| criteria | CriteriaPlanEntry[] | Required, >= 1 item | Each entry must have unique id |
+| reviewers | ReviewerEntry[] | Required, >= 1 item | Each entry must have unique id |
+| testConfig | TestConfig | Required | runner must be a known runner name |
+| reviewConfig | ReviewConfig | Required | All severity levels valid |
+| budget | BudgetConfig | Required | maxIterations >= 1 |
+
+### CriteriaPlanEntry
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: C-NN |
+| name | string | Required, non-empty | Max 200 chars |
+| type | string | Required | One of: "hard", "soft" |
+| verifier | string | Required | One of: "test-runner", "security-review", "code-review", "performance-review", "e2e-runner" |
+| passCondition | string | Required | One of: "all-pass", "zero-critical", "zero-blocking" |
+| blocking | boolean | Required | — |
+| priority | string | Required | One of: "P0", "P1", "P2" |
+| source | string | Required | One of: "plan-acceptance", "inferred", "roadmap" |
+| rationale | string | Required, non-empty | Max 300 chars |
+| testTier | string | Required | One of: "unit", "integration", "e2e", "qa-review" |
+
+### ReviewerEntry
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: R-NN |
+| type | string | Required | One of: "test-runner", "security-review", "code-review", "performance-review", "e2e-runner" |
+| agent | string | Required, non-empty | Must reference a registered agent |
+| dimensions | string | Required | Comma-separated dimension names |
+| blocking | boolean | Required | — |
+| model | string | Optional | One of: "opus", "sonnet", "haiku", "" |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_criteria | criteria[*].id | PRIMARY | Criterion lookup |
+| pk_reviewers | reviewers[*].id | PRIMARY | Reviewer lookup |
+| idx_criteria_tier | criteria[*].testTier | INDEX | Filter criteria by convergence tier |
+| idx_criteria_priority | criteria[*].priority | INDEX | Filter criteria by priority |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| CriteriaPlan | CriteriaPlanEntry | CASCADE | CASCADE |
+| CriteriaPlan | ReviewerEntry | CASCADE | CASCADE |
+
+---
+
+### InterpretationConflict
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: IC-NNN |
+| source | string | Required | One of: "dual-track", "coverage-gap", "semantic-mismatch" |
+| planInterpretation | string | Required, non-empty | Max 1000 chars |
+| testInterpretation | string | Required, non-empty | Max 1000 chars |
+| severity | string | Required | One of: "blocking", "warning", "info" |
+| status | string | Required | One of: "open", "resolved", "accepted", "wont-fix" |
+| resolution | string | Optional | Non-empty when status is "resolved" |
+| resolvedAt | string (ISO 8601) | Optional | Required when status is "resolved" |
+| featureRef | string | Required | Format: F-NN, must reference a valid feature |
+| phaseRef | string | Optional | Format: Phase N, references a plan phase |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_conflict | id | PRIMARY | Conflict lookup |
+| idx_conflict_severity | severity | INDEX | Filter by severity |
+| idx_conflict_status | status | INDEX | Filter by resolution status |
+| idx_conflict_feature | featureRef | INDEX | Find conflicts per feature |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| CriteriaPlan | InterpretationConflict | CASCADE | CASCADE |
+
+---
+
+### CoverageGap
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: CG-NNN |
+| source | string | Required | One of: "plan-only", "test-only" |
+| description | string | Required, non-empty | Max 500 chars |
+| planRef | string | Optional | Reference to plan phase or deliverable |
+| testRef | string | Optional | Reference to criteria plan entry |
+| severity | string | Required | One of: "blocking", "warning", "info" |
+| resolvedAt | string (ISO 8601) | Optional | Required when gap is resolved | <!-- Review: Finding 3 — CoverageGap lacks resolution tracking -->
+| resolutionRef | string | Optional | Reference to the fix (commit, criteria entry, etc.) | <!-- Review: Finding 3 -->
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_gap | id | PRIMARY | Gap lookup |
+| idx_gap_source | source | INDEX | Filter by gap direction |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| InterpretationConflict | CoverageGap | SET NULL | CASCADE |
+
+---
+
+### ConvergenceTier
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| name | string | Required, unique | One of: "unit", "integration", "e2e", "qa-review" |
+| level | integer | Required | 1-4, ascending order of cost |
+| hierarchyLevel | string | Required | One of: "wave", "phase", "feature", "milestone" | <!-- Review: Finding 1 — fixed duplicate "phase" enum; added "wave" per 4-level taxonomy -->
+| runner | string | Required, non-empty | Agent or CLI tool name |
+| passCondition | string | Required | One of: "all-pass", "zero-critical", "zero-blocking" |
+| defaultEnabled | boolean | Required | — |
+| gatingBehavior | string | Required | One of: "block-wave", "block-feature", "block-milestone", "advisory" |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_tier | name | PRIMARY | Tier lookup |
+| uq_tier_level | level | UNIQUE | Ordering uniqueness |
+
+#### Cascade Behavior
+
+Not applicable — ConvergenceTier is a reference/config entity with no foreign keys.
+
+---
+
+### E2EStory
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| name | string | Required, unique per milestone | Non-empty, max 200 chars |
+| url | string | Optional | Valid URL when present |
+| workflow | string | Required, non-empty | Description of user flow |
+| preconditions | string[] | Required | May be empty array |
+| format | string | Required | One of: "imperative", "bdd", "checklist" |
+| steps | StoryStep[] | Required, >= 1 item | Each step has action and expected |
+| milestoneRef | string | Required | Format: M-NN |
+| screenshots | string[] | Optional | File paths to captured screenshots |
+| consoleDumps | string[] | Optional | File paths to console captures |
+
+### StoryStep
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| action | string | Required, non-empty | Max 500 chars |
+| expected | string | Required, non-empty | Max 500 chars |
+| status | string | Optional | One of: "pass", "fail", "skipped", null |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_story | name | PRIMARY | Story lookup |
+| idx_story_milestone | milestoneRef | INDEX | Stories per milestone |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| E2EStory | StoryStep | CASCADE | CASCADE |
+
+---
+
+### PlaywrightTest
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| storyRef | string | Required | Must reference an existing E2EStory.name |
+| testFile | string | Required | Valid file path ending in .spec.ts or .test.ts |
+| sessionName | string | Required, unique | Non-empty, kebab-case |
+| sessionMode | string | Required | One of: "headless", "chrome-mcp" |
+| isolated | boolean | Required | — |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_playwright | storyRef | PRIMARY | Test lookup by story |
+| uq_session | sessionName | UNIQUE | Session isolation |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| E2EStory | PlaywrightTest | CASCADE | CASCADE |
+
+---
+
+### DeltaReport
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: DR-NNN |
+| tier | string | Required | One of: "unit", "integration", "e2e", "qa-review" |
+| criteria | DeltaCriterion[] | Required | Each must reference a valid CriteriaPlanEntry.id |
+| findings | Finding[] | Optional | — |
+| conflicts | string[] | Optional | References to InterpretationConflict.id values |
+| criterionHistory | CriterionHistoryEntry[] | Optional | — |
+| screenshotPaths | string[] | Optional | Valid file paths for e2e tier |
+| consoleDumpPaths | string[] | Optional | Valid file paths for e2e tier |
+| createdAt | string (ISO 8601) | Required | Valid ISO 8601 datetime |
+| phaseRef | string | Optional | Format: Phase N, references the phase boundary that triggered this report | <!-- Review: Finding 2 — DeltaReport lacks boundary refs -->
+| featureRef | string | Optional | Format: F-NN, references the feature boundary | <!-- Review: Finding 2 -->
+| milestoneRef | string | Optional | Format: M-NN, references the milestone boundary | <!-- Review: Finding 2 -->
+| iterationRef | integer | Optional | Iteration number for historical comparison | <!-- Review: Finding 4 — DeltaReport needs iterationRef for multi-iteration tracking -->
+
+### DeltaCriterion
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| criterionId | string | Required | Must reference CriteriaPlanEntry.id |
+| status | string | Required | One of: "pass", "fail", "skipped", "error" |
+| evidence | string | Optional | Max 1000 chars |
+
+### Finding
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | string | Required, unique | Format: FD-NNN |
+| severity | string | Required | One of: "critical", "high", "medium", "low", "info" |
+| description | string | Required, non-empty | Max 1000 chars |
+| file | string | Optional | Valid file path |
+| line | integer | Optional | Positive integer when present |
+| tier | string | Required | One of: "unit", "integration", "e2e", "qa-review" |
+| bulkApprovable | boolean | Required | Default false; true for qa-review findings |
+
+### CriterionHistoryEntry
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| criterionId | string | Required | Must reference CriteriaPlanEntry.id |
+| iteration | integer | Required | Positive integer |
+| status | string | Required | One of: "pass", "fail", "skipped", "error" |
+| timestamp | string (ISO 8601) | Required | Valid ISO 8601 datetime |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_delta | id | PRIMARY | Report lookup |
+| idx_delta_tier | tier | INDEX | Filter by convergence tier |
+| idx_criterion_status | criteria[*].criterionId, criteria[*].status | COMPOUND | Criterion result lookup |
+| idx_delta_boundary | phaseRef, featureRef, milestoneRef | COMPOUND | Boundary lookup | <!-- Review: Finding 2 — index for boundary ref fields -->
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| DeltaReport | DeltaCriterion | CASCADE | CASCADE |
+| DeltaReport | Finding | CASCADE | CASCADE |
+| DeltaReport | CriterionHistoryEntry | CASCADE | CASCADE |
+| ConvergenceTier | DeltaReport | RESTRICT | CASCADE |
+
+---
+
+### AgentResult (extended)
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| agent | string | Required | Registered agent name |
+| wave | integer | Required | >= 0 |
+| taskId | string | Required | Non-empty |
+| status | string | Required | One of: "success", "partial", "failure" |
+| filesCreated | string[] | Optional | Valid file paths |
+| filesModified | string[] | Optional | Valid file paths |
+| filesDeleted | string[] | Optional | Valid file paths |
+| exportsAdded | ExportEntry[] | Optional | — |
+| dependenciesAdded | string[] | Optional | package@version format |
+| integrationNotes | string | Optional | Max 2000 chars |
+| issues | IssueEntry[] | Optional | — |
+| contractAmendments | AmendmentEntry[] | Optional | — |
+| crossBoundaryRequests | RequestEntry[] | Optional | — |
+| verificationStatus | string | Required (NEW) | One of: "verified", "unverified", "skipped" |
+| diagnoseLog | string | Optional (NEW) | Diagnosis narrative before fix application |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_result | taskId | PRIMARY | Result lookup |
+| idx_result_status | status | INDEX | Filter by outcome |
+| idx_result_verification | verificationStatus | INDEX | Filter unverified results |
+
+#### Cascade Behavior
+
+Not applicable — AgentResult is a standalone envelope, not a child of another entity.
+
+---
+
+### PlanPhase
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| id | integer | Required, unique | >= 0 |
+| name | string | Required, non-empty | Max 200 chars |
+| wave | integer | Required | >= 0 |
+| feature | string | Required | Format: F-NN, must reference a valid feature |
+| agent | string | Required | One of: "contracts-agent", "implementer-agent", "wiring-agent" |
+| objective | string | Required, non-empty | Max 500 chars |
+| dependencies | integer[] | Required | Each must reference a lower phase number |
+| fileOwnership | string[] | Required, >= 1 item | Glob patterns or file paths |
+| deliverables | Deliverable[] | Required, 2-8 items | — |
+| acceptanceCriteria | string[] | Required, >= 2 items | Each must be testable |
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_phase | id | PRIMARY | Phase lookup |
+| idx_phase_wave | wave | INDEX | Phases per wave |
+| idx_phase_feature | feature | INDEX | Phases per feature |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| PlanPhase | CriteriaPlanEntry (via testTier mapping) | SET NULL | CASCADE |
+
+---
+
+### StageContext (extended)
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| stage | string | Required | One of: "contracts", "execute", "review", "test", "converge", "fix", "e2e", "qa-review" |
+| summary | string | Required, non-empty | Max 5000 chars |
+| timing | TimingInfo | Required | — |
+| tokenUsage | TokenUsage | Required | — |
+| tier | string | Optional (NEW) | One of: "unit", "integration", "e2e", "qa-review" when stage is test-related |
+
+### TimingInfo
 
 | Field | Type | Constraints |
 |-------|------|-------------|
-| taskId | string | ISO-date + slug, e.g. `2026-04-09-add-rate-limiting` |
-| description | string | Original natural-language input from $ARGUMENTS |
-| mode | enum("standalone", "plan-aware", "injection") | Auto-detected or flag-forced |
-| startedAt | ISO-8601 datetime | When execution began |
-| completedAt | ISO-8601 datetime | When execution finished |
-| filesChanged | string[] | Paths of files created or modified |
-| verificationResult | enum("pass", "fail", "skipped") | Result of post-execution verification |
-| verificationOutput | string | Stdout/stderr from verification commands |
-| commitHash | string or null | Git commit SHA if committed; null if skipped |
-| planContext | string or null | Path to PLAN.md if plan-aware or injection mode; null for standalone |
-| injectedPhase | integer or null | Phase number if appended to plan; null otherwise |
-| injectedWave | integer or null | Wave number if injected into execution; null otherwise |
+| startedAt | string (ISO 8601) | Required |
+| completedAt | string (ISO 8601) | Required, >= startedAt |
+| durationMs | integer | Required, >= 0 |
 
-### ModeDetectionResult
+### TokenUsage
 
 | Field | Type | Constraints |
 |-------|------|-------------|
-| planExists | boolean | True if PLAN.md exists in project root |
-| executionRunning | boolean | True if `.plan-execution/state.toon` exists with status=running |
-| detectedMode | enum("standalone", "plan-aware", "injection") | Auto-detected from above signals |
-| forcedMode | enum("standalone", "plan-aware", "injection") or null | Non-null if --append or --inject flag was used |
-| effectiveMode | enum("standalone", "plan-aware", "injection") | forcedMode if set, else detectedMode |
+| inputTokens | integer | Required, >= 0 |
+| outputTokens | integer | Required, >= 0 |
+| totalTokens | integer | Required, = inputTokens + outputTokens |
 
-### PlanInjection
+#### Indexes
 
-| Field | Type | Constraints |
-|-------|------|-------------|
-| taskDescription | string | Natural-language task from user |
-| targetWave | integer | Wave to inject into (current or next) |
-| phaseNumber | integer | Auto-assigned next available phase number |
-| fileOwnership | string[] | Auto-detected from task description and codebase analysis |
-| acceptanceCriteria | string[] | Auto-generated testable criteria |
-| ownershipConflict | boolean | True if detected files overlap with in-progress agents |
-| conflictResolution | enum("queued-next-wave", "no-conflict") | How conflict was resolved |
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| pk_stage | stage | PRIMARY | Stage lookup |
+
+#### Cascade Behavior
+
+Not applicable — StageContext is a standalone file.
+
+---
+
+### ExecutionLog (extended)
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| events | LogEvent[] | Required | Ordered by timestamp |
+
+### LogEvent
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|------------------|
+| timestamp | string (ISO 8601) | Required | Valid ISO 8601 datetime |
+| type | string | Required | See extended event types below |
+| detail | string | Required, non-empty | Max 1000 chars |
+| tier | string | Optional | One of: "unit", "integration", "e2e", "qa-review" |
+| agentRef | string | Optional | Agent name when applicable |
+
+Extended event types (additions): `criteria-plan-created`, `interpretation-conflict-found`, `conflict-resolved`, `unit-gate-pass`, `unit-gate-fail`, `integration-test-complete`, `e2e-story-written`, `e2e-run-complete`, `e2e-step-failed`, `qa-review-complete`, `qa-finding-bulk-approved`, `convergence-tier-complete`, `tdd-red-confirmed`, `tdd-green-confirmed`, `diagnosis-logged`, `verification-status-set`.
+
+#### Indexes
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| idx_event_type | events[*].type | INDEX | Filter by event type |
+| idx_event_tier | events[*].tier | INDEX | Filter by convergence tier |
+
+#### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| ExecutionLog | LogEvent | CASCADE | CASCADE |
+
+---
+
+## CLI Command Specification
+
+This project does not expose HTTP APIs. The interface is CLI commands and their flags. The following specifies new and modified commands per the roadmap features.
+
+### `/loom-plan create`
+
+**Description:** Creates a plan from a roadmap, now with parallel dual-track planning (plan-builder + criteria-planner run simultaneously). Ref: C-01, C-02.
+**Auth:** None (local CLI)
+
+**Arguments/Flags:**
+| Flag | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| (positional) | string | no | ROADMAP.md | Path to roadmap file |
+| --auto | boolean | no | false | Auto mode: accept all defaults, no interaction |
+| --estimate | boolean | no | false | Show token cost estimate without executing |
+| --no-tests | boolean | no | false | Skip criteria generation (prints stderr warning) |
+
+**Behavior:**
+1. Reads ROADMAP.md
+2. Spawns plan-builder-agent and criteria-planner-agent in parallel (C-02: neither reads the other's output)
+3. Both write to disk: PLAN.md and `.plan-execution/convergence/criteria/criteria-plan.toon`
+4. Spawns interpretation-reviewer-agent to read both outputs
+5. Produces `.plan-execution/conflicts/interpretation-report.toon`
+6. In auto mode: blocking conflicts are fatal (exit 1). In manual mode: conflicts presented as numbered prompts.
+7. `--estimate` prints token estimate to stdout and exits without spawning agents
+
+**Success output:** PLAN.md written, criteria-plan.toon written, interpretation-report.toon written
+**Error output:** Blocking conflicts listed to stderr with conflict IDs and side-by-side comparison
+
+---
+
+### `/loom converge`
+
+**Description:** Run convergence testing at specified tier(s). Ref: C-03.
+**Auth:** None (local CLI)
+
+**Arguments/Flags:**
+| Flag | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| --tier | string | no | all | One of: "unit", "integration", "e2e", "qa-review", or "all" |
+| --e2e | boolean | no | false | Shorthand for --tier e2e |
+| --full | boolean | no | false | Run all 4 tiers in order |
+| --no-tests | boolean | no | false | Skip unit/integration tests (prints stderr warning) |
+| --no-e2e | boolean | no | false | Skip e2e tests (prints stderr warning) |
+| --no-qa-review | boolean | no | false | Skip QA review (prints stderr warning) |
+| --tests-only | boolean | no | false | Run only unit + integration, skip e2e + qa-review |
+| --chrome | boolean | no | false | Use Chrome MCP instead of headless Playwright for e2e |
+| --approve-qa | boolean | no | false | Bulk-approve all non-blocking QA findings in current review | <!-- Review: Finding 5 — missing --approve-qa flag per F-03 roadmap -->
+| --phase N | integer | no | (all) | Run convergence only for criteria belonging to phase N | <!-- Review: Finding 6 — missing scope filter flags -->
+| --feature F-NN | string | no | (all) | Run convergence only for criteria belonging to feature F-NN | <!-- Review: Finding 6 -->
+| --max-iterations N | integer | no | 5 | Maximum convergence iterations before aborting | <!-- Review: Finding 7 — missing iteration cap -->
+
+**Behavior:**
+1. Reads criteria-plan.toon for criteria with matching testTier
+2. For unit tier: runs test runner (vitest/jest/pytest auto-detected), gates wave progression on failure
+3. For integration tier: runs at feature completion boundary
+4. For e2e tier: runs Playwright tests from `.plan-execution/convergence/e2e/tests/`
+5. For qa-review tier: spawns QA reviewer agents (sonnet model per C-05)
+6. Produces DeltaReport per tier to `.plan-execution/convergence/`
+7. Unit gate failure: stderr shows failing test names + file paths, exit 1
+8. QA findings support bulk-approve in manual mode
+9. Opt-out flags print stderr warning: "Warning: --no-tests skips unit/integration convergence gates"
+10. Each iteration displays remaining attempts (e.g., "Iteration 3/5"). Controlled by `--max-iterations` (default 5). <!-- Review: Finding 7 — iteration cap UX -->
+
+**Success output:** DeltaReport written per tier, convergence summary to stdout
+**Error output:** Failing test names, file paths, and gate status to stderr
+
+---
+
+### `/loom auto`
+
+**Description:** Full autonomous pipeline. Modified to include dual-track planning and 4-tier convergence. Ref: C-01, C-02, C-03.
+**Auth:** None (local CLI)
+
+**Behavior changes:**
+1. Plan creation stage now spawns plan-builder + criteria-planner in parallel
+2. Blocking interpretation conflicts are fatal (pipeline halts)
+3. After each wave: unit tests gate progression; QA review runs with configurable scope
+4. After each feature completes: integration tests run
+5. After each milestone completes: e2e tests run
+6. AgentResult from all agents must include verificationStatus field (C-06)
+7. Fixer-agent diagnoses before fixing, logs diagnosis to diagnoseLog field (C-06)
+
+---
+
+## State Machines
+
+### InterpretationConflict Status
+
+```
+open ───→ resolved
+  │          │
+  │          └───→ (terminal)
+  │
+  ├───→ accepted
+  │        │
+  │        └───→ (terminal)
+  │
+  └───→ wont-fix
+           │
+           └───→ (terminal)
+```
+
+**States:**
+| State | Description | Entry condition |
+|-------|-------------|-----------------|
+| open | Conflict discovered, awaiting resolution | Default on creation by interpretation-reviewer |
+| resolved | Conflict resolved with a decision | User or auto-resolver provides resolution text |
+| accepted | Conflict acknowledged, plan proceeds as-is | User accepts the divergence |
+| wont-fix | Conflict is a false positive or not actionable | User marks as non-issue |
+
+**Valid transitions:**
+| From | To | Trigger | Side effects |
+|------|----|---------|--------------|
+| open | resolved | User provides resolution in manual mode | Sets resolvedAt, writes wiki decision page |
+| open | accepted | User accepts divergence | Sets resolvedAt |
+| open | wont-fix | User marks as non-issue | Sets resolvedAt |
+
+**Invalid transitions:**
+| From | To | Error code | Message |
+|------|----|-----------|---------|
+| resolved | open | INVALID_TRANSITION | Resolved conflicts cannot be reopened |
+| accepted | open | INVALID_TRANSITION | Accepted conflicts cannot be reopened |
+| wont-fix | open | INVALID_TRANSITION | Closed conflicts cannot be reopened |
+| resolved | accepted | INVALID_TRANSITION | Already resolved — cannot change disposition |
+| resolved | wont-fix | INVALID_TRANSITION | Already resolved — cannot change disposition |
+| accepted | resolved | INVALID_TRANSITION | Already accepted — cannot change disposition |
+| accepted | wont-fix | INVALID_TRANSITION | Already accepted — cannot change disposition |
+| wont-fix | resolved | INVALID_TRANSITION | Already closed — cannot change disposition |
+| wont-fix | accepted | INVALID_TRANSITION | Already closed — cannot change disposition |
+
+---
+
+### Convergence Iteration Lifecycle
+
+```
+pending ──→ running ──→ evaluating ──→ passed
+                │           │
+                │           └──→ failed ──→ fixing ──→ running
+                │                              │
+                │                              └──→ aborted
+                └──→ aborted
+```
+
+**States:**
+| State | Description | Entry condition |
+|-------|-------------|-----------------|
+| pending | Iteration scheduled but not started | Default on iteration creation |
+| running | Tests/reviews executing | Iteration starts |
+| evaluating | Results being analyzed by delta-analyzer | All tier runners complete |
+| passed | All criteria met | Delta analyzer confirms all-pass |
+| failed | One or more criteria not met | Delta analyzer finds failures |
+| fixing | Fixer-agent applying corrections | Failed iteration triggers fix cycle |
+| aborted | Iteration cancelled (budget exceeded or fatal error) | Max iterations reached or unrecoverable error |
+
+**Valid transitions:**
+| From | To | Trigger | Side effects |
+|------|----|---------|--------------|
+| pending | running | Convergence-driver starts iteration | Creates StageContext, logs event |
+| running | evaluating | All tier runners complete | Writes interim DeltaReport |
+| running | aborted | Fatal error or budget exceeded | Logs abort reason |
+| evaluating | passed | All criteria pass | Writes final DeltaReport, logs convergence-tier-complete |
+| evaluating | failed | Any blocking criterion fails | Writes DeltaReport with failures |
+| failed | fixing | Convergence-driver decides to retry | Fixer-agent spawned, diagnoseLog populated |
+| fixing | running | Fix applied, next iteration starts | Increments iteration counter |
+| fixing | aborted | Max iterations reached or unrecoverable | Logs abort with iteration count |
+
+**Invalid transitions:**
+| From | To | Error code | Message |
+|------|----|-----------|---------|
+| pending | evaluating | INVALID_TRANSITION | Must run before evaluating |
+| pending | passed | INVALID_TRANSITION | Must run and evaluate before passing |
+| pending | failed | INVALID_TRANSITION | Must run and evaluate before failing |
+| passed | running | INVALID_TRANSITION | Passed iterations are terminal |
+| passed | failed | INVALID_TRANSITION | Passed iterations are terminal |
+| aborted | running | INVALID_TRANSITION | Aborted iterations are terminal |
+| aborted | fixing | INVALID_TRANSITION | Aborted iterations are terminal |
+
+---
+
+### TDD Gate (Red-Green Cycle)
+
+<!-- Review: Finding 10 — added skipped state and skip/override transitions -->
+```
+stub-written ──→ red-confirmed ──→ implementing ──→ green-confirmed
+     │                │                                   │
+     │                └──→ red-failed                     └──→ (terminal)
+     │                       │    │
+     │                       │    └──→ skipped (override)
+     │                       └──→ (terminal: agent error)
+     │
+     └──→ skipped (env failure / --no-tdd)
+              │
+              └──→ (terminal)
+```
+
+**States:**
+| State | Description | Entry condition |
+|-------|-------------|-----------------|
+| stub-written | Test stubs exist, not yet run | Criteria-harness-builder completes |
+| red-confirmed | Tests run and fail as expected | Implementer-agent runs tests before implementing (C-06) |
+| red-failed | Tests unexpectedly pass before implementation | Stubs pass without implementation — indicates bad stubs |
+| implementing | Implementation in progress | Red confirmed, implementer proceeds |
+| green-confirmed | Tests pass after implementation | Implementer-agent runs tests after implementing (C-06) |
+| skipped | TDD gate bypassed due to environment issues or user override | `--no-tdd` flag, environment probe failure, or user override in manual mode | <!-- Review: Finding 10 -->
+
+**Valid transitions:**
+| From | To | Trigger | Side effects |
+|------|----|---------|--------------|
+| stub-written | red-confirmed | Test runner exits non-zero | Logs tdd-red-confirmed event |
+| stub-written | red-failed | Test runner exits zero | Logs warning — stubs may be trivial |
+| red-confirmed | implementing | Implementer-agent starts coding | — |
+| implementing | green-confirmed | Test runner exits zero after implementation | Logs tdd-green-confirmed, sets verificationStatus: verified |
+| stub-written | skipped | `--no-tdd` flag or environment probe failure | Logs tdd-skipped event, sets verificationStatus: "unverified" | <!-- Review: Finding 10 -->
+| red-failed | skipped | User override in manual mode | Logs tdd-override event with rationale | <!-- Review: Finding 10 -->
+
+**Invalid transitions:**
+| From | To | Error code | Message |
+|------|----|-----------|---------|
+| stub-written | implementing | INVALID_TRANSITION | Must confirm red (failing) tests before implementing |
+| stub-written | green-confirmed | INVALID_TRANSITION | Must go through red-confirmed and implementing |
+| red-confirmed | green-confirmed | INVALID_TRANSITION | Must implement before tests can pass |
+| skipped | red-confirmed | INVALID_TRANSITION | Skipped gates cannot be retroactively confirmed | <!-- Review: Finding 10 -->
+
+---
+
+## Error Handling Specification
+
+### Error Response Format
+
+All agent and pipeline errors use a consistent TOON structure:
+
+```toon
+error:
+  code: SCREAMING_SNAKE_CASE
+  message: Human-readable description
+  details: Additional context or null
+```
+
+### Error Categories
+
+| Code | Context | When Used | Retryable |
+|------|---------|-----------|-----------|
+| VALIDATION_ERROR | Agent input | Agent receives malformed input (bad TOON, missing fields) | No — fix the input |
+| SCHEMA_VIOLATION | Plan/criteria validation | TOON file fails schema validation | No — fix the file |
+| CONFLICT_BLOCKING | Interpretation reviewer | Blocking conflict found in auto mode | No — resolve conflict |
+| CONFLICT_UNRESOLVED | Pipeline | Pipeline proceeds with unresolved blocking conflicts | No — resolve conflicts |
+| GATE_FAILED | Convergence | Unit test gate or integration gate fails | Yes — fix and re-run |
+| BUDGET_EXCEEDED | Context management | Agent spawn would exceed 100k token budget | No — split the task |
+| MAX_ITERATIONS | Convergence | Convergence iteration limit reached without passing | No — manual intervention |
+| AGENT_SPAWN_FAILED | Orchestrator | Agent failed to spawn or crashed | Yes — retry once |
+| INVALID_TRANSITION | State machine | Attempted invalid state transition | No — fix the trigger |
+| FILE_OWNERSHIP_CONFLICT | Plan validation | Two phases in same wave claim same file | No — fix the plan |
+| CRITERIA_MISSING | Plan creation | Phase has no acceptance criteria | No — add criteria |
+| E2E_STEP_FAILED | E2E runner | Playwright step assertion fails | No — fix implementation or test |
+| E2E_SESSION_TIMEOUT | E2E runner | Playwright session exceeds timeout | Yes — increase timeout or fix |
+| PLAYWRIGHT_NOT_FOUND | E2E runner | Playwright not installed | No — install playwright |
+| QA_REVIEW_BLOCKED | QA review | QA reviewer finds blocking severity issue | No — fix the issue |
+| VERIFICATION_MISSING | Pipeline | AgentResult returned without verificationStatus | No — agent must verify |
+| DIAGNOSIS_SKIPPED | Fixer-agent | Fixer applied fix without diagnosing first | No — diagnose then fix |
+| TDD_RED_FAILED | TDD gate | Test stubs pass before implementation exists | No — fix the stubs |
+| WIKI_WRITE_FAILED | Wiki integration | Wiki page write failed (disk error, format error) | Yes — retry once |
+
+### Field-Level Validation Errors
+
+When `code` is `VALIDATION_ERROR` or `SCHEMA_VIOLATION`, the `details` field contains per-field errors:
+
+```toon
+error:
+  code: VALIDATION_ERROR
+  message: Criteria plan validation failed
+  details:
+    fields:
+      criteria[0].testTier: Must be one of: unit, integration, e2e, qa-review
+      reviewers[1].model: Must be one of: opus, sonnet, haiku, or empty
+```
+
+### Retry Behavior
+
+| Error type | Strategy | Max retries |
+|-----------|----------|-------------|
+| AGENT_SPAWN_FAILED | Immediate retry once | 1 |
+| WIKI_WRITE_FAILED | Immediate retry once | 1 |
+| GATE_FAILED | Fix cycle then retry | Configured in budget.maxIterations |
+| E2E_SESSION_TIMEOUT | Increase timeout 2x, retry | 1 |
+| All other errors | Do not retry | 0 |
+
+---
 
 ## Execution Phases
 
-### Phase 0 — Wave 0: Contracts
+### Phase 0 — Wave 0: Contracts & Protocol Foundations
 
 **Agent:** contracts-agent
-**Objective:** Define the quick-task TOON log format, mode detection logic, plan-injection schema, and the verification reuse protocol that the command file references.
+**Objective:** Define the planning taxonomy protocol, all new TOON schemas (interpretation-conflict, convergence-tier, e2e-story), and extend existing schemas (criteria-plan with testTier, agent-result with verificationStatus/diagnoseLog). Ref: F-01, C-01, C-03.
 **Dependencies:** None
-**File Ownership:** agents/protocols/quick-task-contract.md
+**File Ownership:** agents/protocols/taxonomy.md, agents/protocols/interpretation-conflict.schema.md, agents/protocols/convergence-tier.schema.md, agents/protocols/e2e-story.schema.md, agents/protocols/criteria-plan.schema.md, agents/protocols/agent-result.schema.md, agents/protocols/plan.schema.md, agents/protocols/roadmap.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/quick-task-contract.md | Create | contracts |
+| agents/protocols/taxonomy.md | Create | contracts-agent |
+| agents/protocols/interpretation-conflict.schema.md | Create | contracts-agent |
+| agents/protocols/convergence-tier.schema.md | Create | contracts-agent |
+| agents/protocols/e2e-story.schema.md | Create | contracts-agent |
+| agents/protocols/criteria-plan.schema.md | Modify | contracts-agent |
+| agents/protocols/agent-result.schema.md | Modify | contracts-agent |
+| agents/protocols/plan.schema.md | Modify | contracts-agent |
+| agents/protocols/roadmap.schema.md | Modify | contracts-agent |
 
 #### Acceptance Criteria
-- [ ] Contract defines the QuickTaskLog TOON format with all fields from the schema section, using TOON syntax (not JSON)
-- [ ] Contract defines the mode detection algorithm: check PLAN.md existence, check `.plan-execution/state.toon` existence and status field, derive mode
-- [ ] Contract defines flag override behavior: `--append` forces plan-aware mode, `--inject` forces injection mode, flags error if preconditions not met (e.g. --inject without running execution)
-- [ ] Contract defines the plan-injection protocol: read current state.toon, find next available phase number, detect file ownership conflicts against in-progress tasks, inject or queue
-- [ ] Contract defines the verification reuse protocol: if PLAN.md exists, extract verification commands from its `## Verification Commands` section; otherwise fall back to auto-detection (look for `package.json` scripts, `tsconfig.json`, `Makefile`, etc.)
-- [ ] Contract defines the log file naming convention: `.plan-history/quick-tasks/{YYYY-MM-DD}-{slug}.toon` where slug is derived from the first 5 words of the description, lowercased, hyphenated
-- [ ] File is valid markdown with clear section headers for each protocol
+- [ ] `agents/protocols/taxonomy.md` defines the 4-level hierarchy (Milestone > Feature > Phase > Wave) with convergence tier assignments at each level
+- [ ] `agents/protocols/criteria-plan.schema.md` includes `testTier` column in criteria array with valid values: unit, integration, e2e, qa-review
+- [ ] `agents/protocols/agent-result.schema.md` includes required `verificationStatus` field and optional `diagnoseLog` field
+- [ ] `agents/protocols/interpretation-conflict.schema.md` defines InterpretationConflict and CoverageGap TOON schemas with severity field
+- [ ] `agents/protocols/convergence-tier.schema.md` defines 4 tiers with runner, passCondition, gatingBehavior fields
+- [ ] `agents/protocols/e2e-story.schema.md` defines E2EStory and PlaywrightTest TOON schemas
+- [ ] All schema files parse as valid Markdown with embedded TOON code blocks
 
-### Phase 1 — Wave 1: Core Command File
+#### Convergence Targets
+- taxonomy.md contains exactly 4 hierarchy levels and 4 convergence tier assignments
+- criteria-plan.schema.md TOON example includes testTier column
+- agent-result.schema.md TOON example includes verificationStatus field
+
+---
+
+### Phase 1 — Wave 1: Interpretation Reviewer Agent
 
 **Agent:** implementer-agent
-**Objective:** Create `commands/loom-quick.md` implementing all three modes (standalone, plan-aware, injection) with zero-ceremony input, verification, logging, and commit offer.
+**Objective:** Create the interpretation-reviewer-agent that reads plan-builder output and criteria-planner output independently, identifies conflicts, coverage gaps, and produces interpretation-report.toon. Ref: F-06, C-02.
 **Dependencies:** Phase 0
-**File Ownership:** commands/loom-quick.md
+**File Ownership:** agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| commands/loom-quick.md | Create | implementer-1 |
+| agents/interpretation-reviewer-agent.md | Create | implementer-agent |
+| agents/protocols/interpretation-report.schema.md | Create | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] File begins with a title and description matching Claude Code command file conventions (reference `commands/loom-git.md` for format)
-- [ ] File accepts `$ARGUMENTS` as a single natural-language task description string
-- [ ] File shows usage help when `$ARGUMENTS` is empty or equals `--help`
-- [ ] **Mode detection**: reads PLAN.md and `.plan-execution/state.toon` to auto-detect mode per the contract
-- [ ] **Standalone mode**: reads CLAUDE.md and relevant source files, executes the described task, runs verification, logs result to `.plan-history/quick-tasks/`, offers `/loom-git commit`
-- [ ] **Plan-aware mode**: detects PLAN.md, offers user choice between "execute independently" and "append as new phase to PLAN.md"
-- [ ] **Plan-aware append**: when user chooses append, creates a new phase in PLAN.md with auto-generated file ownership, acceptance criteria, and `Dependencies:` set to the last existing phase number
-- [ ] **Plan-aware independent**: when user chooses independent, runs standalone mode but includes `planContext` in the log
-- [ ] **Injection mode**: reads `.plan-execution/state.toon`, checks file ownership of in-progress tasks for conflicts, injects task into current wave if no conflict or queues for next wave if conflict exists, updates state.toon
-- [ ] **Verification**: after task execution, runs verification commands — reuses PLAN.md verification commands if available, otherwise auto-detects from project config files (`package.json` test/typecheck scripts, `tsconfig.json`, `Makefile`)
-- [ ] **Logging**: writes a TOON log file to `.plan-history/quick-tasks/{YYYY-MM-DD}-{slug}.toon` with all QuickTaskLog fields
-- [ ] **Commit offer**: after successful execution, offers to run `/loom-git commit` unless `--no-commit` flag is present
-- [ ] **Flag handling**: supports `--no-verify` (skip verification), `--no-commit` (skip commit offer), `--append` (force plan-aware append), `--inject` (force injection mode)
-- [ ] Flags are parsed from `$ARGUMENTS` before the task description — flags start with `--`, everything else is the task description
-- [ ] Creates `.plan-history/quick-tasks/` directory if it does not exist before writing the log file
+- [ ] `agents/interpretation-reviewer-agent.md` has frontmatter with `model: opus` (per roadmap model assignment)
+- [ ] Agent reads PLAN.md summary and criteria-plan.toon summary (context-efficient, not full files)
+- [ ] Agent produces `interpretation-report.toon` with conflicts array (each having id, source, planInterpretation, testInterpretation, severity)
+- [ ] Agent produces coverage gaps (plan deliverables with no test coverage and test criteria with no plan deliverable)
+- [ ] Conflicts have severity values limited to: blocking, warning, info
+- [ ] Agent queries wiki for prior conflict resolutions before producing new conflicts
 
-### Phase 2 — Wave 1: Wiring and Registration
+#### Convergence Targets
+- interpretation-reviewer-agent.md exists and has model: opus in frontmatter
+- interpretation-report.schema.md defines valid TOON schema with conflicts and coverageGaps arrays
 
-**Agent:** wiring-agent
-**Objective:** Register `loom-quick` in the library catalog, add it to the `loom.md` reference, and register the contract as a skill.
-**Dependencies:** Phase 0
-**File Ownership:** skills/library.yaml, commands/loom.md
+---
 
-#### Deliverables
-| File | Action | Owner hint |
-|------|--------|------------|
-| skills/library.yaml | Modify | wiring |
-| commands/loom.md | Modify | wiring |
-
-#### Acceptance Criteria
-- [ ] `library.yaml` registers `loom-quick` under `prompts` with name, description, source `commands/loom-quick.md`, and `requires: [skill:quick-task-contract]`
-- [ ] `library.yaml` registers `quick-task-contract` under `skills` with source `agents/protocols/quick-task-contract.md`
-- [ ] `commands/loom.md` adds `/loom-quick` and its flag variants to the Commands table with descriptions
-- [ ] `commands/loom.md` adds `/loom-quick "description"` to the Typical Workflow section as a quick-task alternative to the full pipeline
-- [ ] `python3 -c "import yaml; yaml.safe_load(open('skills/library.yaml'))"` exits with code 0 (valid YAML)
-- [ ] No duplicate entries in `library.yaml` — `loom-quick` appears exactly once under `prompts`
-
-### Phase 3 — Wave 2: Quick-Task Routing Skill
+### Phase 2 — Wave 1: Dual-Track Planning Integration
 
 **Agent:** implementer-agent
-**Objective:** Create a routing skill so natural-language requests like "quickly fix this", "just do X", or "quick task: Y" automatically trigger `/loom-quick`.
+**Objective:** Modify plan creation flow so plan-builder-agent and criteria-planner-agent run in parallel from the same roadmap input, with interpretation-reviewer running after both complete. Ref: F-02, C-01, C-02.
+**Dependencies:** Phase 0
+**File Ownership:** commands/loom-plan.md, agents/criteria-planner-agent.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| commands/loom-plan.md | Modify | implementer-agent |
+| agents/criteria-planner-agent.md | Modify | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] `/loom-plan create` spawns plan-builder-agent and criteria-planner-agent in parallel (neither reads the other's output)
+- [ ] criteria-planner-agent.md updated to accept roadmap input directly (not plan output)
+- [ ] criteria-planner-agent.md queries wiki for quality history before generating criteria
+- [ ] After both agents complete, interpretation-reviewer-agent is spawned to produce conflict report
+- [ ] `--estimate` flag prints token cost estimate to stdout without spawning agents
+- [ ] In auto mode: blocking conflicts cause exit 1; warnings are logged to stderr
+- [ ] In manual mode: blocking conflicts presented as numbered prompts with side-by-side comparison
+- [ ] criteria-plan.toon is always generated during plan creation (C-01: not gated behind --converge-criteria)
+
+#### Convergence Targets
+- `/loom-plan create` with a test roadmap produces both PLAN.md and criteria-plan.toon
+- `/loom-plan create --estimate` exits 0 with token count on stdout without creating files
+
+---
+
+### Phase 3 — Wave 2: 4-Tier Convergence Engine
+
+**Agent:** implementer-agent
+**Objective:** Implement the 4-tier testing model with unit tests gating waves, integration tests at feature boundaries, e2e at milestone boundaries, and QA review at phase/feature level. Ref: F-03, C-03.
+**Dependencies:** Phase 0, Phase 2
+**File Ownership:** agents/convergence-driver.md, agents/convergence-planner-agent.md, commands/loom-converge.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/convergence-driver.md | Modify | implementer-agent |
+| agents/convergence-planner-agent.md | Modify | implementer-agent |
+| commands/loom-converge.md | Create | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] convergence-driver.md supports 4 tier types: unit, integration, e2e, qa-review
+- [ ] Unit tests gate each wave — wave does not proceed if unit tests fail
+- [ ] Integration tests run at feature completion boundary (all phases of a feature complete)
+- [ ] E2E tests run at milestone completion boundary
+- [ ] QA review runs after each wave with configurable scope
+- [ ] `/loom converge --tier unit` runs only unit tier; `--tier e2e` runs only e2e tier
+- [ ] `/loom converge --full` runs all 4 tiers in order
+- [ ] Opt-out flags (`--no-tests`, `--no-e2e`, `--no-qa-review`) print stderr warning
+- [ ] On unit gate failure: stderr shows failing test names and file paths
+- [ ] criteria-plan.toon targets array includes testTier column for tier routing
+
+#### Convergence Targets
+- convergence-driver.md references all 4 tier names and their gating levels
+- `/loom converge --tier unit` with failing tests exits non-zero with test names on stderr
+
+---
+
+### Phase 4 — Wave 1: Superpowers Behavioral Hardening <!-- Review: Finding 8 — moved from Wave 2 to Wave 1; depends only on Phase 0 -->
+
+**Agent:** implementer-agent
+**Objective:** Enforce strict TDD (red-green gate), diagnose-before-fix, and hard verification gate patterns across all execution agents. Ref: F-07, C-06.
+**Dependencies:** Phase 0
+**File Ownership:** agents/protocols/behavioral-guidelines.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/protocols/behavioral-guidelines.md | Modify | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] behavioral-guidelines.md documents TDD red-green gate: implementer runs test stubs, confirms failure, implements, confirms passage
+- [ ] behavioral-guidelines.md documents diagnose-before-fix: fixer reads finding, diagnoses root cause, documents diagnosis in diagnoseLog, then applies fix
+- [ ] behavioral-guidelines.md documents hard verification gate: AgentResult with verificationStatus "unverified" triggers warning in convergence-driver
+- [ ] behavioral-guidelines.md references fixer-agent querying wiki for architectural constraints before applying fixes
+
+#### Convergence Targets
+- behavioral-guidelines.md contains sections titled "TDD Red-Green Gate", "Diagnose Before Fix", and "Hard Verification Gate"
+
+---
+
+### Phase 5 — Wave 3: E2E Test Writer Agent
+
+**Agent:** implementer-agent
+**Objective:** Create the e2e-test-writer-agent that converts acceptance criteria e2e specs into YAML user stories and runnable Playwright test files. Ref: F-04, C-04, C-07.
+**Dependencies:** Phase 0, Phase 3
+**File Ownership:** agents/e2e-test-writer-agent.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/e2e-test-writer-agent.md | Create | implementer-agent |
+| agents/protocols/e2e-story.schema.md | Modify | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] `agents/e2e-test-writer-agent.md` has frontmatter with `model: sonnet` (per roadmap model assignment)
+- [ ] Agent reads e2e specs from criteria-plan.toon (entries with testTier: e2e)
+- [ ] Agent produces YAML user stories in `.plan-execution/convergence/e2e/stories/`
+- [ ] Agent produces Playwright test files in `.plan-execution/convergence/e2e/tests/`
+- [ ] Stories support 3 formats: imperative, bdd (Given/When/Then), checklist
+- [ ] Each story includes preconditions, steps, and expected outcomes
+- [ ] e2e-story.schema.md updated with full YAML story schema including format field and step structure
+
+#### Convergence Targets
+- e2e-test-writer-agent.md exists with model: sonnet in frontmatter
+- e2e-story.schema.md defines YAML story format with preconditions, steps[], format fields
+
+---
+
+### Phase 6 — Wave 3: E2E Runner with Playwright
+
+**Agent:** implementer-agent
+**Objective:** Add Playwright as an e2e test runner with headless mode and Chrome MCP mode, screenshot audit trails, and console capture on failure. Ref: F-05, C-04, C-07.
+**Dependencies:** Phase 0, Phase 3, Phase 5
+**File Ownership:** agents/e2e-runner-agent.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/e2e-runner-agent.md | Create | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] `agents/e2e-runner-agent.md` has frontmatter with `model: haiku` (per roadmap model assignment)
+- [ ] Playwright CLI runs headless by default; `--chrome` flag switches to Chrome MCP
+- [ ] Each e2e story gets a named Playwright session for parallel isolation (C-07)
+- [ ] Screenshots saved to `.plan-execution/convergence/e2e/screenshots/{run}/{story}/{NN_step}.png`
+- [ ] On step failure: JS console errors captured, remaining steps marked SKIPPED
+- [ ] DeltaReport includes screenshotPaths and consoleDumpPaths for e2e tier entries
+- [ ] `/loom converge --e2e` is valid at any point during or after execution
+
+#### Convergence Targets
+- e2e-runner-agent.md exists with model: haiku in frontmatter
+- e2e-runner-agent.md references screenshot path pattern and console capture behavior
+
+---
+
+### Phase 7 — Wave 2: Conflict Resolution & Wiki Integration <!-- Review: Finding 8 — moved from Wave 3 to Wave 2; depends only on Phases 1, 2 -->
+
+**Agent:** implementer-agent
+**Objective:** Wire resolved interpretation conflicts into wiki decision pages and formalize the conflict persistence directory and wiki triggers. Ref: F-02, F-06, F-08.
 **Dependencies:** Phase 1, Phase 2
-**File Ownership:** skills/loom-quick-routing.md
+**File Ownership:** agents/wiki-maintainer-triggers.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| skills/loom-quick-routing.md | Create | implementer-2 |
+| agents/wiki-maintainer-triggers.md | Create | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] Skill file defines trigger patterns: "quickly", "just do", "quick task", "quick fix", "real quick", "do this quickly", "fast task", "one-off task"
-- [ ] Skill maps each trigger to `/loom-quick` invocation, passing the remaining user text as the task description argument
-- [ ] Skill includes a description field: "Use when the user asks for a quick, one-off task execution without full plan ceremony"
-- [ ] Skill does NOT intercept requests that explicitly mention `/loom-execute-plan`, `/loom-auto`, or other pipeline commands
-- [ ] Skill does NOT intercept requests that are clearly asking about speed/performance (e.g. "how quickly does this run") — only requests that are delegating a task
-- [ ] Skill file follows the existing skills format in the project (reference `skills/loom-git-routing.md` for structure)
+- [ ] Document defines wiki-maintainer trigger conditions: criteria-plan created, convergence complete, conflicts resolved, e2e stories verified
+- [ ] Resolved conflicts produce wiki decision pages with conflict ID, resolution text, and source references
+- [ ] Wiki pages created for: test coverage maps, quality history, verified user flows, design constraints from QA
+- [ ] Conflicts persisted to `.plan-execution/conflicts/` directory
+- [ ] Wiki-query protocol formalized for agents to query prior decisions
 
-### Phase 4 — Wave 2: Routing Skill Registration
+#### Convergence Targets
+- wiki-maintainer-triggers.md lists at least 4 trigger conditions with corresponding wiki page types
+
+---
+
+<!-- MVP BOUNDARY: Waves 0-2 constitute the minimum viable product (Phases 0, 1, 2, 3, 4, 7).
+     Convergence engine + behavioral hardening + dual-track planning + interpretation review.
+     Waves 3-4 are post-MVP: E2E pipeline, context/statusline integration, wiring.
+     Review: Finding 9 — declare MVP boundary after Wave 2. -->
+
+### Phase 8 — Wave 4: Context Management & Budget Integration
+
+**Agent:** implementer-agent
+**Objective:** Add StageContext files for each test stage, implement rolling context compression with HOT/WARM/COLD tiers for test results, and ensure all test agents stay within 100k token budget. Ref: F-08.
+**Dependencies:** Phase 3, Phase 4
+**File Ownership:** agents/protocols/stage-context.schema.md, hooks/context-budget-test.ts
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/protocols/stage-context.schema.md | Modify | implementer-agent |
+| hooks/context-budget-test.ts | Create | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] stage-context.schema.md adds stage values for test-related stages: "e2e", "qa-review" (in addition to existing "test")
+- [ ] stage-context.schema.md adds optional `tier` field for convergence tier when stage is test-related
+- [ ] hooks/context-budget-test.ts implements preflight budget check for test agent spawns against 100k token cap
+- [ ] Rolling context compression documented: HOT = current iteration results, WARM = prior iteration summaries, COLD = archived
+- [ ] Rolling-context wiki injection default-on for all execution agents
+
+#### Convergence Targets
+- stage-context.schema.md includes "e2e" and "qa-review" as valid stage values
+- hooks/context-budget-test.ts exports a function that returns boolean for budget check
+
+---
+
+### Phase 9 — Wave 4: Statusline & Logging Integration
+
+**Agent:** implementer-agent
+**Objective:** Extend statusline with test counts, QA findings, convergence iteration/rate. Extend execution-log with all test event types. Ref: F-08.
+**Dependencies:** Phase 3, Phase 6
+**File Ownership:** agents/protocols/statusline-contract.md, agents/protocols/execution-log.schema.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| agents/protocols/statusline-contract.md | Modify | implementer-agent |
+| agents/protocols/execution-log.schema.md | Modify | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] statusline-contract.md adds fields: test pass/fail counts, QA finding count, convergence iteration number, convergence pass rate
+- [ ] statusline-contract.md documents truncation behavior for narrow terminal widths
+- [ ] execution-log.schema.md adds event types: criteria-plan-created, interpretation-conflict-found, conflict-resolved, unit-gate-pass, unit-gate-fail, integration-test-complete, e2e-story-written, e2e-run-complete, e2e-step-failed, qa-review-complete, qa-finding-bulk-approved, convergence-tier-complete, tdd-red-confirmed, tdd-green-confirmed, diagnosis-logged, verification-status-set
+- [ ] Each new event type has tier field (optional, for test-related events)
+
+#### Convergence Targets
+- statusline-contract.md contains test count and QA finding fields
+- execution-log.schema.md defines at least 16 new event types with tier field
+
+---
+
+### Phase 10 — Wave 4: /loom auto Pipeline Updates
+
+**Agent:** implementer-agent
+**Objective:** Update the /loom auto pipeline to integrate dual-track planning, 4-tier convergence gates, and behavioral hardening into the autonomous flow. Ref: F-02, F-03, F-07, F-08.
+**Dependencies:** Phase 2, Phase 3, Phase 4
+**File Ownership:** commands/loom.md
+
+#### Deliverables
+| File | Action | Owner hint |
+|------|--------|------------|
+| commands/loom.md | Modify | implementer-agent |
+
+#### Acceptance Criteria
+- [ ] `/loom auto` plan creation stage spawns plan-builder + criteria-planner in parallel
+- [ ] `/loom auto` halts on blocking interpretation conflicts (exit 1 with conflict report)
+- [ ] After each wave: unit test gate enforced; QA review runs
+- [ ] After each feature boundary: integration tests run
+- [ ] After each milestone boundary: e2e tests run
+- [ ] All agent spawns include verificationStatus in AgentResult
+- [ ] Fixer-agent invocations include diagnoseLog in AgentResult
+
+#### Convergence Targets
+- commands/loom.md auto subcommand references dual-track planning, 4-tier convergence, and verification gate
+
+---
+
+### Phase 11 — Wave 4: Wiring & Integration Verification <!-- Review: Finding 8 — moved from Wave 5 to Wave 4; collapses total waves from 6 to 5 -->
 
 **Agent:** wiring-agent
-**Objective:** Register the quick-task routing skill in library.yaml so it is discoverable and installable.
-**Dependencies:** Phase 2, Phase 3
-**File Ownership:** skills/library.yaml
+**Objective:** Connect all new agents, schemas, commands, and hooks into a cohesive system. Verify cross-references, update orchestration patterns, and ensure all protocols are internally consistent. Ref: F-08.
+**Dependencies:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7, Phase 8, Phase 9, Phase 10
+**File Ownership:** agents/protocols/orchestration-patterns.md, agents/protocols/execution-conventions.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| skills/library.yaml | Modify | wiring |
+| agents/protocols/orchestration-patterns.md | Modify | wiring-agent |
+| agents/protocols/execution-conventions.md | Modify | wiring-agent |
 
 #### Acceptance Criteria
-- [ ] `library.yaml` registers `loom-quick-routing` under `skills` with name, description, and source `skills/loom-quick-routing.md`
-- [ ] `python3 -c "import yaml; yaml.safe_load(open('skills/library.yaml'))"` exits with code 0 (valid YAML)
-- [ ] No duplicate skill entries — `loom-quick-routing` appears exactly once under `skills`
-- [ ] The `loom-quick` prompt entry's `requires` list includes `skill:loom-quick-routing` (or it is listed as an optional dependency)
+- [ ] orchestration-patterns.md includes convergence pattern with 4-tier model reference
+- [ ] execution-conventions.md directory structure includes new paths: `.plan-execution/conflicts/`, `.plan-execution/convergence/e2e/stories/`, `.plan-execution/convergence/e2e/tests/`, `.plan-execution/convergence/e2e/screenshots/`
+- [ ] All new agent .md files are referenced from at least one command or skill
+- [ ] All new schema .md files are referenced from at least one agent protocol section
+- [ ] No orphan schemas (every schema referenced by at least one agent)
+- [ ] No orphan agents (every agent invokable from at least one command/skill)
+
+#### Convergence Targets
+- execution-conventions.md directory tree includes conflicts/, e2e/stories/, e2e/tests/, e2e/screenshots/ paths
+- orchestration-patterns.md references "convergence" pattern with 4-tier model
+
+---
 
 ## Verification Commands
 
 ```bash
-# Command file exists
-test -f commands/loom-quick.md && echo "OK: command file exists" || echo "FAIL: missing"
+# Validate all protocol schemas parse as valid Markdown
+find agents/protocols/ -name "*.md" -exec sh -c 'head -1 "{}" | grep -q "^#" || echo "FAIL: {}"' \;
 
-# Contract file exists
-test -f agents/protocols/quick-task-contract.md && echo "OK: contract exists" || echo "FAIL: missing"
+# Check new agent files exist
+test -f agents/interpretation-reviewer-agent.md && echo "PASS" || echo "FAIL: interpretation-reviewer-agent.md missing"
+test -f agents/e2e-test-writer-agent.md && echo "PASS" || echo "FAIL: e2e-test-writer-agent.md missing"
+test -f agents/e2e-runner-agent.md && echo "PASS" || echo "FAIL: e2e-runner-agent.md missing"
 
-# Routing skill exists
-test -f skills/loom-quick-routing.md && echo "OK: routing skill exists" || echo "FAIL: missing"
+# Check new protocol files exist
+test -f agents/protocols/taxonomy.md && echo "PASS" || echo "FAIL: taxonomy.md missing"
+test -f agents/protocols/interpretation-conflict.schema.md && echo "PASS" || echo "FAIL: interpretation-conflict.schema.md missing"
+test -f agents/protocols/convergence-tier.schema.md && echo "PASS" || echo "FAIL: convergence-tier.schema.md missing"
 
-# Library catalog is valid YAML
-python3 -c "import yaml; yaml.safe_load(open('skills/library.yaml'))" && echo "OK: valid YAML" || echo "FAIL: invalid YAML"
+# Check agent frontmatter model assignments
+grep -q "model: opus" agents/interpretation-reviewer-agent.md && echo "PASS" || echo "FAIL: interpretation-reviewer model"
+grep -q "model: sonnet" agents/e2e-test-writer-agent.md && echo "PASS" || echo "FAIL: e2e-test-writer model"
+grep -q "model: haiku" agents/e2e-runner-agent.md && echo "PASS" || echo "FAIL: e2e-runner model"
 
-# loom-quick registered in library
-grep -q "name: loom-quick" skills/library.yaml && echo "OK: command registered" || echo "FAIL: not registered"
+# Check schema extensions
+grep -q "verificationStatus" agents/protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: verificationStatus missing"
+grep -q "testTier" agents/protocols/criteria-plan.schema.md && echo "PASS" || echo "FAIL: testTier missing"
+grep -q "diagnoseLog" agents/protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: diagnoseLog missing"
 
-# quick-task-contract registered in library
-grep -q "name: quick-task-contract" skills/library.yaml && echo "OK: contract registered" || echo "FAIL: not registered"
+# Run existing tests to ensure no regressions
+bun test || npm test
 
-# loom-quick-routing registered in library
-grep -q "name: loom-quick-routing" skills/library.yaml && echo "OK: routing skill registered" || echo "FAIL: not registered"
-
-# loom-quick referenced in loom.md
-grep -q "loom-quick" commands/loom.md && echo "OK: referenced in help" || echo "FAIL: not referenced"
-
-# All 3 modes mentioned in command file
-for mode in standalone plan-aware injection; do
-  grep -qi "$mode" commands/loom-quick.md && echo "OK: $mode mode found" || echo "FAIL: $mode mode missing"
-done
-
-# Flag support in command file
-for flag in no-verify no-commit append inject; do
-  grep -q "\-\-$flag" commands/loom-quick.md && echo "OK: --$flag found" || echo "FAIL: --$flag missing"
-done
-
-# Quick-tasks log directory convention referenced
-grep -q "quick-tasks" commands/loom-quick.md && echo "OK: log directory referenced" || echo "FAIL: log directory not referenced"
+# TypeScript compilation check
+bunx tsc --noEmit || npx tsc --noEmit
 ```
