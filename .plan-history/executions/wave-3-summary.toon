@@ -1,17 +1,22 @@
 wave: 3
-status: complete
-startedAt: 2026-04-18T19:00:00Z
-completedAt: 2026-04-18T19:10:00Z
+phases[N]: 5, 6, 8
+status: success
 
-tasks[2]{taskId,agent,status}:
-  w3-e2e-writer,implementer-agent,success
-  w3-e2e-runner,implementer-agent,success
+agentResults[N]{taskId,agent,status,filesModified,filesCreated}:
+  w3-phase5,implementer-agent,success,"agents/e2e-test-writer-agent.md agents/e2e-runner-agent.md agents/protocols/e2e-story.schema.md",""
+  w3-phase6,implementer-agent,partial,"commands/loom.md agents/protocols/statusline-contract.md","commands/loom-upgrade.md"
+  w3-phase8,wiring-agent,success,"agents/protocols/orchestration-patterns.md agents/protocols/execution-conventions.md commands/loom-auto.md",""
 
-filesCreated[2]: agents/e2e-test-writer-agent.md,agents/e2e-runner-agent.md
-filesModified[1]: agents/protocols/e2e-story.schema.md
+filesCreated[N]: commands/loom-upgrade.md
+filesModified[N]: agents/e2e-test-writer-agent.md, agents/e2e-runner-agent.md, agents/protocols/e2e-story.schema.md, commands/loom.md, agents/protocols/statusline-contract.md, agents/protocols/orchestration-patterns.md, agents/protocols/execution-conventions.md, commands/loom-auto.md
 
-wiringFixes[3]: e2e-runner TOON-to-YAML format reference,e2e-runner upstream agent reference,e2e-story.schema criteriaRefs field added to TOON schema
+exportsAdded[N]{name,file,kind}:
 
-verification: pass
-acceptanceCriteriaMet: 14/14
-commitHash: 64c8449
+unresolvedIssues[N]{id,severity,description}:
+  w3-p8-i1,warning,e2e passCondition mismatch: convergence-tier.schema.md says all-pass but e2e-runner-agent.md and loom-auto.md say zero-blocking
+  w3-p8-i2,info,loom-converge.md does not reference e2e agents directly — reachable via loom-auto.md
+
+verificationResult: pass
+kitGates[0]{agent,insertionPoint,gate,gateReason}:
+kitWarnings: 0
+kitHalts: 0

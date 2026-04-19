@@ -478,6 +478,14 @@ The convergence pipeline uses a 4-tier model defined in `convergence-tier.schema
 | e2e (1) | `e2e-runner-agent.md`, `e2e-test-writer-agent.md` | `e2e-story.schema.md` | `.plan-execution/convergence/e2e/` |
 | qa-review (2) | `interpretation-reviewer-agent.md` | `interpretation-conflict.schema.md`, `interpretation-report.schema.md` | `.plan-execution/conflicts/` |
 
+### Flaky Test Quarantine
+
+Tests that produce inconsistent results across convergence iterations are tracked in `.plan-execution/convergence/flaky-tests.toon` per `flaky-test.schema.md`. Quarantined tests are excluded from pass/fail gating but preserved for post-mortem. The convergence-driver reads this registry before evaluating circuit breaker conditions.
+
+### Convergence Rollback
+
+When a convergence loop regresses beyond recovery, the rollback protocol (`convergence-rollback.md`) archives the current state to `.plan-execution/convergence/rollback-archive/{timestamp}/` and resets to the last known-good checkpoint. Archives include iteration summaries, flaky-test registry, and harness config.
+
 ### Interpretation Conflict Detection
 
 The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
@@ -501,6 +509,10 @@ The planning hierarchy (milestone > feature > phase > wave) is defined in `taxon
 ### Execution Logging
 
 Execution events are logged to `.loom/wiki/execution-log.toon` following `execution-log.schema.md`. The schema includes 16 event types for convergence, testing, and QA tracking. The statusline contract (`statusline-contract.md`) defines 5 segments for surfacing convergence and test progress.
+
+### Schema Upgrades
+
+When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
 
 ### Behavioral Guidelines
 

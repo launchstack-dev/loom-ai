@@ -66,6 +66,8 @@ execute-plan implementing 1/4 agents(2/4) pass:18 iter:1 rate:100%
 
 When the terminal width is narrower than 120 characters, the statusline renderer receives the width from the prompt framework (e.g., Starship's `$COLUMNS`). Segments are dropped from the bottom of the priority list (lowest priority first) until the line fits within the available width. If the width is unknown or zero, the 120-character default is used.
 
+**Right-truncation with ellipsis:** If dropping all optional segments still produces a line wider than the available width, the remaining text is truncated from the right and a `...` suffix is appended. The `...` counts as 3 characters, so the visible content is at most `width - 3` characters followed by `...`. This ensures the statusline never overflows the terminal width, even at extremely narrow widths (e.g., 40 columns). The minimum displayable width is 10 characters; below that, the statusline outputs an empty line.
+
 ### Idle Mode
 
 Displayed when `status.toon` is missing, stale, or unreadable.

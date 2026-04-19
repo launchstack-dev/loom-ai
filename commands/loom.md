@@ -1,5 +1,5 @@
 ---
-description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage + kit:subcommands"
+description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage, upgrade + kit:subcommands"
 ---
 # Loom
 
@@ -28,6 +28,7 @@ Parse the first positional argument as the subcommand and dispatch to the matchi
 | `chain` | `loom-chain` |
 | `vote` | `loom-vote` |
 | `triage` | `loom-triage` |
+| `upgrade` | `loom-upgrade` |
 | `<word>:<word>` pattern | Kit dispatch (see below) |
 
 **Dispatch procedure:**

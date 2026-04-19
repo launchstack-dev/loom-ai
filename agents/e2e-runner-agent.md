@@ -194,7 +194,7 @@ Stories execute in parallel within the constraints of the session mode:
 ## Error Handling
 
 1. **Story-level failure**: If a step fails, remaining steps are marked `skipped`. The story result is `fail`. Console errors are captured. The agent continues to the next story.
-2. **Browser crash / timeout**: If the browser context crashes or a navigation times out (30s default), the step is marked `fail` with `details: "browser timeout"`. Console capture is attempted but may be empty. Remaining steps are `skipped`.
+2. **Browser crash / timeout**: If the browser context crashes or a navigation times out, the step is marked `fail` with `details: "browser timeout"`. Console capture is attempted but may be empty. Remaining steps are `skipped`. The timeout is determined by: `step.stepTimeout` (if set) > story-level `storyTimeout` (if set) > default 30000ms per step.
 3. **Missing story URL**: If `story.url` is not set, the step begins at `about:blank`. The first step's action should include navigation.
 4. **Playwright not installed**: If `bunx playwright test` fails because Playwright is not installed, the agent returns `status: failure` with `integrationNotes: "Playwright not installed. Run 'bunx playwright install chromium' to set up."` and `verificationStatus: unverified`.
 5. **Chrome MCP unavailable**: If `--chrome` is specified but Chrome MCP tools are not available, return `status: failure` with `integrationNotes: "Chrome MCP tools not available. Ensure claude-in-chrome MCP server is running."`.
@@ -238,6 +238,36 @@ durationMs: 0
 verificationStatus: verified | unverified
 diagnoseLog: "Executed N stories against milestone M-XX. Results: P pass, F fail. Failing stories: [names]. Console errors captured for failing stories."
 ```
+
+## Integration with `/loom converge --e2e`
+
+The `/loom converge --e2e` command is valid at any point during or after plan execution. It does not require all phases, waves, or features to be complete. The convergence driver invokes the e2e-runner-agent as part of this pipeline.
+
+### Mid-execution invocation
+
+When `/loom converge --e2e` is invoked during active plan execution:
+
+1. The convergence-driver gathers all `testTier: e2e` criteria from the current `criteria-plan.toon`
+2. The e2e-test-writer-agent generates or updates stories and Playwright tests for those criteria
+3. This agent executes the generated tests against the current state of the application
+4. Tests for features that are not yet implemented will fail -- this is expected
+5. The DeltaReport captures which stories pass and which fail, giving a live convergence snapshot
+6. Re-running `/loom converge --e2e` on subsequent iterations shows convergence progress as more features land
+
+### Post-execution invocation
+
+When all plan phases are complete:
+
+1. The full set of e2e criteria is present in `criteria-plan.toon`
+2. All generated tests should pass if the milestone deliverables are correct
+3. Failures at this point indicate genuine regressions or incomplete implementations
+4. The convergence loop iterates (via fixer-agent) until all blocking e2e criteria pass
+
+### Standalone invocation
+
+The runner can also be invoked directly by the orchestrator outside the convergence pipeline for ad-hoc e2e verification, diagnostics, or smoke testing.
+
+---
 
 ## Relationship to Other Agents
 

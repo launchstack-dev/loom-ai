@@ -539,7 +539,7 @@ Check circuit breakers before proceeding.
 
 #### Step 3.25: Wiki Update (non-blocking)
 
-If `.loom/wiki/` exists, spawn wiki-maintainer-agent to update the wiki with execution results:
+If `.loom/wiki/` exists, spawn wiki-maintainer-agent to update the wiki with execution results (trigger events defined in `wiki-maintainer-triggers.md`):
 
 ```
 subagent_type: "general-purpose"

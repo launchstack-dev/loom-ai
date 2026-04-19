@@ -22,6 +22,8 @@ An E2EStory describes a user workflow as a sequence of steps with expected outco
 | criteriaRefs | string[] | yes | Criterion IDs from criteria-plan.toon that this story verifies (e.g., `C-01`). Intentional extension beyond original plan scope — added for traceability between E2E stories and convergence criteria. |
 | screenshots | string[] | no | File paths to reference screenshots for visual verification. |
 | consoleDumps | string[] | no | File paths to console output dumps for debugging. |
+| tags | string[] | no | Freeform tags for filtering and grouping (e.g., `smoke`, `regression`, `auth`). Used by `/loom converge --e2e` to run subsets of stories. |
+| storyTimeout | integer | no | Overall timeout for the entire story in milliseconds. Default: 120000 (2 minutes). |
 
 ### StoryStep Fields
 
@@ -29,7 +31,8 @@ An E2EStory describes a user workflow as a sequence of steps with expected outco
 |-------|------|----------|-------------|
 | action | string | yes | What the user or system does. |
 | expected | string | yes | What should happen as a result. |
-| status | enum | no | Step result: `pass`, `fail`, `skipped`, or null (not yet run). |
+| status | enum | no | Step result: `pass`, `fail`, `skipped`, or null (not yet run). When a step `fail`s, all subsequent steps are set to `skipped` by the e2e-runner-agent. |
+| stepTimeout | integer | no | Per-step timeout in milliseconds. Overrides the default story-level or global timeout. If absent, the runner uses its default (30000ms). |
 
 ### Example
 
@@ -43,12 +46,15 @@ milestoneRef: M-01
 criteriaRefs[N]: C-01, C-02, C-03
 screenshots[N]:
 consoleDumps[N]:
+tags[N]: smoke, onboarding
+storyTimeout: 120000
 
 steps[N]:
   step:
     action: Navigate to /signup and fill in name, email, password
     expected: Redirect to /dashboard with welcome message
     status:
+    stepTimeout: 30000
   step:
     action: Click 'New Board' and enter board title 'My First Board'
     expected: Board appears in the board list with title 'My First Board'
@@ -120,6 +126,9 @@ playwrightTests[N]{storyRef,testFile,sessionName,sessionMode,isolated}:
 9. **Milestone ref format.** `milestoneRef` must match pattern `M-NN`.
 10. **Screenshot paths.** If present, each path in `screenshots` must be a valid file path.
 11. **Console dump paths.** If present, each path in `consoleDumps` must be a valid file path.
+12. **Tags format.** If present, each tag must be a non-empty kebab-case string.
+13. **Story timeout range.** If present, `storyTimeout` must be a positive integer.
+14. **Step timeout range.** If present, `stepTimeout` must be a positive integer.
 
 ### PlaywrightTest
 
@@ -153,6 +162,7 @@ preconditions:
 steps:
   - action: string            # What the user or system does.
     expected: string          # What should happen as a result.
+    stepTimeout: integer      # Optional per-step timeout in ms (default: 30000).
 
 # Criteria traceability (required)
 criteriaRefs:
@@ -161,6 +171,8 @@ criteriaRefs:
 # Optional fields
 screenshots: []               # File paths to reference screenshots.
 consoleDumps: []              # File paths to console output dumps.
+tags: []                      # Freeform tags for filtering (e.g., smoke, regression).
+storyTimeout: integer         # Overall story timeout in ms (default: 120000).
 ```
 
 ### Format Descriptions
@@ -225,6 +237,9 @@ Examples:
 6. **Criteria refs valid.** Each criterion ID in `criteriaRefs` must match a `C-NN` pattern and reference an existing criterion with `testTier: e2e` in `criteria-plan.toon`.
 7. **Milestone ref format.** `milestoneRef` must match pattern `M-NN`.
 8. **Name uniqueness.** `name` must be unique within the same `milestoneRef` across all story files.
+9. **Step timeout range.** If `stepTimeout` is present, it must be a positive integer (milliseconds). Recommended range: 1000-120000.
+10. **Story timeout range.** If `storyTimeout` is present, it must be a positive integer (milliseconds). Recommended range: 10000-600000.
+11. **Tags format.** If `tags` is present, each tag must be a non-empty string containing only lowercase letters, digits, and hyphens.
 
 ---
 

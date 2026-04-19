@@ -600,10 +600,18 @@ The tier to use is specified in `converge.config` or via the `--tier` flag on `/
 
 ### Related Agents and Schemas
 
-- **Agents:** `convergence-driver.md`, `convergence-planner-agent.md`, `e2e-runner-agent.md`, `e2e-test-writer-agent.md`, `interpretation-reviewer-agent.md`
-- **Schemas:** `convergence-tier.schema.md`, `e2e-story.schema.md`, `interpretation-conflict.schema.md`, `interpretation-report.schema.md`, `criteria-plan.schema.md`, `taxonomy.md`
-- **Commands:** `/loom converge` (`loom-converge.md`), `/loom auto` (`loom.md`)
+- **Agents:** `convergence-driver.md`, `convergence-planner-agent.md`, `e2e-runner-agent.md`, `e2e-test-writer-agent.md`, `interpretation-reviewer-agent.md`, `wiki-maintainer-triggers.md`
+- **Schemas:** `convergence-tier.schema.md`, `e2e-story.schema.md`, `interpretation-conflict.schema.md`, `interpretation-report.schema.md`, `criteria-plan.schema.md`, `taxonomy.md`, `flaky-test.schema.md`, `convergence-rollback.md`, `schema-upgrade.md`
+- **Commands:** `/loom converge` (`loom-converge.md`), `/loom auto` (`loom-auto.md`), `/loom upgrade` (`loom-upgrade.md`)
 - **Hooks:** `hooks/context-budget-test.ts` — preflight budget check (`checkTestAgentBudget`) enforcing 100k token cap before spawning test/convergence agents
+
+### Flaky Test Quarantine and Rollback
+
+The convergence loop integrates two additional protocols:
+
+- **Flaky test detection** (`flaky-test.schema.md`): Tests that produce inconsistent results across iterations are quarantined in `.plan-execution/convergence/flaky-tests.toon`. Quarantined tests are excluded from pass/fail gating but tracked for post-mortem analysis. The convergence-driver uses this registry to avoid false-negative circuit breaker trips.
+- **Convergence rollback** (`convergence-rollback.md`): When a convergence loop regresses beyond recovery (delta growing for 2+ iterations), the rollback protocol archives the current convergence state (iterations, flaky-tests registry, harness config) and resets to the last known-good checkpoint. The rollback archive is preserved in `.plan-execution/convergence/rollback-archive/`.
+- **Schema upgrade** (`schema-upgrade.md`): Defines migration procedures when protocol schemas evolve across versions. Referenced by `/loom upgrade` and the `interpretation-reviewer-agent` for backward-compatible schema transitions.
 
 ---
 

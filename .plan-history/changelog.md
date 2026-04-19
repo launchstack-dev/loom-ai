@@ -1,3 +1,44 @@
+## 2026-04-19 -- Wave 3 execution complete (all waves done)
+- Executed via /loom-plan execute --resume
+- Wave 3: Phases 5, 6, 8 (E2E pipeline, statusline/logging/auto, wiring)
+- Agents: 2 implementers (parallel) + 1 wiring agent
+- Files created: 1 (commands/loom-upgrade.md)
+- Files modified: 8 (e2e agents, e2e-story schema, statusline, loom.md, orchestration-patterns, execution-conventions, loom-auto)
+- Verification: PASS (all structural and ownership checks green)
+- Open issues: e2e passCondition mismatch (warning), loom-converge e2e agent refs (info)
+
+## 2026-04-19 -- Review findings applied (review-integrate)
+- Source: .plan-history/reviews/2026-04-19-review.toon (6-agent review)
+- Applied: 10 findings (3 critical, 7 important)
+- Unfixable: 0
+- Verification: PASS (0 structural errors, 1 warning: Phase 4→7 same-wave dependency in Wave 2)
+- Key changes:
+  - 3 deliverable actions changed Create→Modify (loom-converge.md, context-budget-test.ts, interpretation-report.schema.md)
+  - Phase 6 + Phase 8: grep-based selective reading mandated for budget compliance
+  - Wave Exit Verification Gates section added between Execution Phases and Milestones
+  - Phase 7 moved from Wave 3 to Wave 2, added to M-02a milestone
+  - MVP boundary updated to include Phase 7, ROADMAP M-01 vs plan MVP clarified
+  - e2e-story.schema.md cross-wave handoff contract added (append-only for Phase 5)
+  - --no-tests renamed to --skip-test-gen on /loom-plan create (collision with /loom converge)
+  - TDD Gate: fix-stubs state + implementing→aborted transition added
+  - Phase 2 dependency: Phase 1 added (interpretation-report format dependency)
+- Old version: .plan-history/snapshots/PLAN-pre-review-integrate-2026-04-19.md
+
+## 2026-04-19 -- Plan regenerated from roadmap (merge mode)
+- Generated via /loom-plan create (merge)
+- Source: ROADMAP.md (approved)
+- planVersion: 2
+- Phases: 9 (down from 12), Waves: 4 (down from 5), Deliverables: 23
+- Acceptance criteria: 84, State machines: 3, Error codes: 20
+- Validation: passed (0 errors, 3 warnings)
+- Key changes:
+  - Merged 4 undersized phases (old Phases 4, 6, 7, 10) into adjacent phases
+  - Moved context budget protocol from Wave 4 to Wave 1
+  - Added Phase 7: Flaky Test Detection & Convergence Rollback
+  - Collapsed 5 waves to 4 waves
+  - MVP boundary: end of Wave 2 (Phases 0-4)
+- Previous version: .plan-history/snapshots/PLAN-pre-merge-2026-04-19.md
+
 ## 2026-04-18 -- Code fixes applied (info pass)
 - Source: .plan-execution/review-report.md (6-agent review)
 - Applied: 9 findings (info severity)
