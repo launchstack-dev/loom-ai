@@ -50,6 +50,14 @@ Do NOT intercept any of the following:
    - "loom data:lineage"
    - "data:profile this project"
 
+5. **Bug reports and broken behavior**: Requests that describe **symptoms** (errors, crashes, broken behavior) rather than a known fix. These should route to `/loom bugfix` instead. Examples:
+   - "the login page throws a 500"
+   - "getting a null reference error"
+   - "this crashes when I filter by date"
+   - "hotfix — users can't check out" (symptom + urgency = bugfix, not quick)
+   
+   **Rule of thumb**: If the user describes *what's wrong*, route to bugfix. If the user describes *what to change*, route to quick.
+
 ## Instructions
 
 When triggered, invoke the Skill tool with `skill: 'loom-quick'` and the task description as args. Pass any detected flags before the task description.

@@ -1,10 +1,10 @@
 ---
-description: "Zero-ceremony task execution — auto-detects mode, implements, verifies"
+description: "Zero-ceremony task execution with wiki context, impact assessment, and archiving"
 ---
 
 # Loom Quick
 
-Zero-ceremony task execution. Describe what you need done and Loom Quick handles context gathering, implementation, verification, logging, and optional commit -- adapting its behavior based on whether a plan is active.
+Zero-ceremony task execution with Loom rigor. Describe what you need done and Loom Quick handles wiki context, implementation, verification, impact assessment, archiving, and optional commit -- adapting its behavior based on whether a plan is active.
 
 ## Requirements
 
@@ -19,11 +19,12 @@ If arguments are empty or equal `--help`, print the following help text and stop
 ```
 /loom quick [flags] <task description>
 
-Execute a task with automatic context, verification, and logging.
+Execute a task with wiki context, impact assessment, verification, and archiving.
 
 Flags:
   --no-verify   Skip verification commands after execution
   --no-commit   Skip the auto-commit offer after execution
+  --no-impact   Skip impact assessment (faster, less rigor)
   --append      Force plan-aware mode (requires PLAN.md)
   --inject      Force injection mode (requires active plan execution)
 
@@ -37,6 +38,7 @@ Examples:
   /loom quick --no-verify Fix the broken CSS on the dashboard
   /loom quick --append Add a caching layer to the API
   /loom quick --inject --no-commit Add retry logic to the webhook handler
+  /loom quick --no-impact Rename the logger variable
 ```
 
 ### Instructions
@@ -48,7 +50,7 @@ Parse arguments by iterating tokens left to right:
 1. Any token starting with `--` is a flag. Consume it and continue.
 2. The first token that does NOT start with `--` marks the beginning of the task description. All remaining tokens (including any that look like flags) become the task description.
 
-Supported flags: `--no-verify`, `--no-commit`, `--append`, `--inject`.
+Supported flags: `--no-verify`, `--no-commit`, `--no-impact`, `--append`, `--inject`.
 
 If a token starts with `--` but is not in the supported list, print a warning and continue:
 
@@ -97,9 +99,17 @@ Route to the appropriate mode section below.
 
 Read `CLAUDE.md` if it exists. Scan the project structure and relevant source files to understand the codebase context needed for the task.
 
+**Wiki context.** If `.loom/wiki/` exists:
+1. Read `.loom/wiki/index.toon`
+2. Find pages relevant to the task (match module names, component names, keywords from description)
+3. Read up to 3 most relevant pages for context — understand architecture decisions, conventions, and dependencies before making changes
+4. Record consulted page IDs as `wikiContext` for the log
+
+**Prior task/fix check.** If `.loom/fix-archive/index.toon` exists, scan for prior fixes in the same area. If `.plan-history/quick-tasks/` has recent entries touching the same files, note them. This prevents repeating past mistakes or duplicating recent work.
+
 **3b. Execute the task.**
 
-Implement the described task. Write or modify code as needed. Stay focused on exactly what the user described -- no scope creep.
+Implement the described task. Write or modify code as needed. Stay focused on exactly what the user described -- no scope creep. Respect any conventions or architectural decisions found in wiki context.
 
 **3c. Continue to Step 4 (Post-Execution).**
 
@@ -133,12 +143,13 @@ Wait for user selection.
    - Dependencies: the last existing phase.
 4. Record `planContext` as the path to PLAN.md.
 5. Read CLAUDE.md if it exists. Scan relevant source files.
-6. Execute the task.
-7. Continue to Step 4.
+6. **Wiki context.** If `.loom/wiki/` exists, read index and find relevant pages (same as standalone 3a). Record `wikiContext`.
+7. Execute the task.
+8. Continue to Step 4.
 
 **3c. If user chose "Independent" (option 2):**
 
-Record `planContext` as the path to PLAN.md (for the log) but execute in standalone mode. Read CLAUDE.md, scan relevant files, execute the task, continue to Step 4.
+Record `planContext` as the path to PLAN.md (for the log) but execute in standalone mode. Read CLAUDE.md, scan relevant files, gather wiki context (same as standalone 3a), execute the task, continue to Step 4.
 
 ---
 
@@ -174,7 +185,7 @@ Write the updated state atomically: write to `.plan-execution/state.toon.tmp`, t
 
 **3f. Execute (if injected, not queued).**
 
-Read CLAUDE.md if it exists. Scan relevant files. Execute the task respecting ownership boundaries -- do NOT modify files owned by other in-progress tasks.
+Read CLAUDE.md if it exists. Scan relevant files. Gather wiki context (same as standalone 3a). Execute the task respecting ownership boundaries -- do NOT modify files owned by other in-progress tasks.
 
 **3g. Post-execution state update.**
 
@@ -219,12 +230,40 @@ Overall result:
 - All commands exit 0: `verificationResult: pass`
 - Any command exits non-zero: `verificationResult: fail`
 
-##### 4b. Write Log File
+##### 4b. Impact Assessment
+
+If `--no-impact` was set, set `impactAssessment: skipped` and skip to 4c.
+
+Otherwise, perform a lightweight impact assessment on the files changed:
+
+1. **Trace dependents.** For each changed file, use Grep to find importers/callers across the codebase. This does not need to be exhaustive — focus on direct dependents (one level up).
+
+2. **Classify scope:**
+   - `isolated` — change is self-contained, no external dependents found
+   - `module` — other files in the same directory/module import the changed code
+   - `cross-module` — files in other modules depend on the changed code
+   - `system-wide` — shared utilities, types, config, or barrel files were changed
+
+3. **Identify regression areas.** List 1-3 user-facing features or flows that exercise the changed code. If the scope is `isolated`, this can be empty.
+
+4. **Cross-reference wiki.** If wiki pages describe affected components, note them.
+
+5. **Record** the assessment as `impactAssessment` for the log:
+   ```
+   risk: low | medium | high
+   scope: isolated | module | cross-module | system-wide
+   regressionAreas[N]: feature1, feature2
+   relatedWikiPages[N]: page-id-1, page-id-2
+   ```
+
+This step should be fast — spend no more than 30 seconds on it. The goal is a quick sanity check, not a deep analysis.
+
+##### 4c. Write Log File
 
 Generate the log file path and taskId:
 
 1. Take the task description, lowercase it.
-2. Split on whitespace, take the first 5 words.
+2. Split on whitespace, take the first 5 words. (Note: loom-bugfix uses 6 words for bug titles which tend to be longer.)
 3. Join with hyphens.
 4. Replace any character not `[a-z0-9-]` with a hyphen.
 5. Collapse consecutive hyphens into one, trim leading/trailing hyphens.
@@ -248,9 +287,19 @@ completedAt: {ISO-8601 timestamp from when post-execution finished}
 
 filesChanged[N]: {list of files created, modified, or deleted}
 
+wikiContext[N]: {page IDs consulted during context gathering, or empty}
+
 verificationResult: {pass|fail|skipped}
 verificationOutput:
   {commandName}: exit {N}
+
+impactAssessment:
+  risk: {low|medium|high|skipped}
+  scope: {isolated|module|cross-module|system-wide|skipped}
+  regressionAreas[N]: {features/flows to watch}
+  relatedWikiPages[N]: {wiki page IDs of affected components}
+
+priorRelatedTasks[N]: {task/fix IDs of related prior work, or empty}
 
 commitHash: {short SHA or null}
 planContext: {path to PLAN.md or null}
@@ -258,7 +307,7 @@ injectedPhase: {phase identifier or null}
 injectedWave: {wave number or null}
 ```
 
-##### 4c. Offer Commit
+##### 4d. Offer Commit
 
 If `--no-commit` was NOT set:
 
@@ -272,7 +321,20 @@ If the user confirms, invoke `/loom-git commit`. Record the resulting commit has
 
 If `--no-commit` was set, skip this step and set `commitHash: null`.
 
-##### 4d. Print Summary
+##### 4e. Wiki Update Prompt
+
+If wiki context was gathered and changed files overlap with wiki page `sourceRefs`, suggest updating the wiki:
+
+```
+Wiki pages may need updating after this change:
+  - {page title} ({page ID})
+
+Update wiki with /loom-wiki ingest --diff? (y/n)
+```
+
+If confirmed, invoke `/loom-wiki ingest --diff`. If wiki is not available or no overlap, skip silently.
+
+##### 4f. Print Summary
 
 Print a summary in this format:
 
@@ -281,6 +343,8 @@ Print a summary in this format:
 Mode:         {mode}
 Task:         {description}
 Files:        {comma-separated list of changed files, or "none"}
+Impact:       {risk} risk, {scope} scope {or "skipped"}
+Regression:   {comma-separated regression areas, or "none"}
 Verification: {pass|fail|skipped}
 Log:          {path to log file}
 Commit:       {short SHA or "none"}

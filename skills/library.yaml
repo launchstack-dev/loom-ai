@@ -82,6 +82,14 @@ library:
       description: "Natural-language routing skill for /loom-quick — triggers on \"quickly fix\", \"just do\", \"quick task\" patterns"
       source: skills/loom-quick-routing.md
 
+    - name: fix-archive-schema
+      description: Schema for fix archive entries — TOON format for bug fix summaries with impact assessment
+      source: agents/protocols/fix-archive.schema.md
+
+    - name: loom-bugfix-routing
+      description: "Natural-language routing skill for /loom bugfix — triggers on bug reports, error descriptions, broken behavior"
+      source: skills/loom-bugfix-routing.md
+
     # Wiki protocols
     - name: wiki-page-schema
       description: Schema for individual wiki pages — TOON frontmatter format, categories, cross-references, staleness model
@@ -374,6 +382,10 @@ library:
       description: Applies code review findings as targeted fixes within file ownership boundaries
       source: agents/fixer-agent.md
 
+    - name: bugfix-analyst-agent
+      description: Rapid bug diagnosis with wiki context, targeted fix, impact assessment, and fix archive entry
+      source: agents/bugfix-analyst-agent.md
+
     # Data engineering agents
     - name: data-schema-reviewer
       description: Reviews data pipeline schemas for normalization, indexing, migration safety, and idempotency
@@ -397,6 +409,11 @@ library:
       description: "Code quality — review with 9+ agents, auto-apply fixes via subcommands"
       source: commands/loom-code.md
       requires: [agent:security-reviewer, agent:architecture-reviewer, agent:plan-compliance-reviewer, agent:fixer-agent]
+
+    - name: loom-bugfix
+      description: "Rapid bug fixing — wiki context, impact assessment, fix archiving without full plan ceremony"
+      source: commands/loom-bugfix.md
+      requires: [agent:bugfix-analyst-agent, skill:fix-archive-schema]
 
     - name: loom-wiki
       description: "Wiki management — ingest, lint, query, status via subcommands"

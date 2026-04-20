@@ -1,5 +1,5 @@
 ---
-description: "init, auto, converge, quick, pause, resume, do, next, status, debate, chain, vote, triage, upgrade + kit:subcommands"
+description: "init, auto, converge, quick, bugfix, pause, resume, do, next, status, debate, chain, vote, triage, upgrade + kit:subcommands"
 ---
 # Loom
 
@@ -18,6 +18,7 @@ Parse the first positional argument as the subcommand and dispatch to the matchi
 | `auto` | `loom-auto` |
 | `converge` | `loom-converge` |
 | `quick` | `loom-quick` |
+| `bugfix` | `loom-bugfix` |
 | `pause` | `loom-pause` |
 | `resume` | `loom-resume` |
 | `do` | `loom-do` |
