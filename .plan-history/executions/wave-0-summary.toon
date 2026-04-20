@@ -1,23 +1,16 @@
 wave: 0
+agent: contracts-agent
+taskId: w0-contracts
 status: success
-agentCount: 1
 
-agentResults[1]{agent,taskId,status,filesCreated,filesModified}:
-  contracts-agent,w0-contracts,success,"agents/protocols/taxonomy.md agents/protocols/interpretation-conflict.schema.md agents/protocols/convergence-tier.schema.md agents/protocols/e2e-story.schema.md","agents/protocols/criteria-plan.schema.md agents/protocols/agent-result.schema.md agents/protocols/plan.schema.md agents/protocols/roadmap.schema.md"
+filesCreated[N]:
+filesModified[N]: agents/protocols/convergence-tier.schema.md, agents/protocols/plan.schema.md, .plan-execution/contracts/manifest.toon
+filesDeleted[N]:
 
-filesChanged[8]: agents/protocols/taxonomy.md,agents/protocols/interpretation-conflict.schema.md,agents/protocols/convergence-tier.schema.md,agents/protocols/e2e-story.schema.md,agents/protocols/criteria-plan.schema.md,agents/protocols/agent-result.schema.md,agents/protocols/plan.schema.md,agents/protocols/roadmap.schema.md
+exportsAdded[N]{file,name,kind}:
 
-exportsAdded[11]{name,file,kind}:
-  PlanningTaxonomy,agents/protocols/taxonomy.md,schema
-  ConvergenceLevelMap,agents/protocols/taxonomy.md,schema
-  InterpretationConflict,agents/protocols/interpretation-conflict.schema.md,schema
-  CoverageGap,agents/protocols/interpretation-conflict.schema.md,schema
-  ConvergenceTier,agents/protocols/convergence-tier.schema.md,schema
-  E2EStory,agents/protocols/e2e-story.schema.md,schema
-  StoryStep,agents/protocols/e2e-story.schema.md,schema
-  PlaywrightTest,agents/protocols/e2e-story.schema.md,schema
-  testTier-column,agents/protocols/criteria-plan.schema.md,extension
-  verificationStatus-field,agents/protocols/agent-result.schema.md,extension
-  diagnoseLog-field,agents/protocols/agent-result.schema.md,extension
+unresolvedIssues[N]:
 
-unresolvedIssues[0]:
+integrationNotes: "All 9 protocol files verified against PLAN.md acceptance criteria. convergence-tier.schema.md had inverted level ordering corrected (unit=1 ascending by cost). plan.schema.md got cross-references to InterpretationConflict and DeltaReport. All other files were already complete from prior waves."
+
+verificationStatus: verified

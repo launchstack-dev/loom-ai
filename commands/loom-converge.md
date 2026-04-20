@@ -37,6 +37,7 @@ Parse arguments after `converge`:
 **Opt-out flags (criteria mode):**
 - `--no-tests` -- skip unit and integration tiers (prints stderr warning)
 - `--no-e2e` -- skip e2e tier (prints stderr warning)
+- `--e2e` -- shorthand for `--tier e2e` (runs `e2e-test-writer-agent` for story generation then `e2e-runner-agent` for execution)
 - `--no-qa-review` -- skip qa-review tier (prints stderr warning)
 
 **Shared options:**
@@ -495,7 +496,7 @@ Wait for user response:
     {if --approve-qa: 'Auto-approve non-blocking QA findings: true'}"
    ```
 
-4. The convergence-driver handles the full iteration loop internally, spawning delta-analyzer and fixer agents as needed.
+4. The convergence-driver handles the full iteration loop internally, spawning delta-analyzer and fixer agents as needed. For the e2e tier specifically, it spawns `e2e-test-writer-agent` (model: sonnet, see `agents/e2e-test-writer-agent.md`) to generate YAML stories and Playwright tests, then `e2e-runner-agent` (model: haiku, see `agents/e2e-runner-agent.md`) to execute them.
 
 5. Monitor progress by reading `.plan-execution/convergence-state.toon` periodically. Display progress updates based on mode:
 

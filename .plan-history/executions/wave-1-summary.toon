@@ -1,15 +1,15 @@
 wave: 1
+phases[N]: 1, 2, 3
 status: success
-agentCount: 3
 
-agentResults[3]{agent,taskId,status,filesCreated,filesModified}:
-  implementer-agent,w1-interp-reviewer,success,"agents/interpretation-reviewer-agent.md agents/protocols/interpretation-report.schema.md",""
-  implementer-agent,w1-dual-track,success,"","commands/loom-plan.md agents/criteria-planner-agent.md"
-  implementer-agent,w1-behavioral,success,"","agents/protocols/behavioral-guidelines.md"
+agentResults[N]{taskId,agent,status,filesModified}:
+  w1-phase1,implementer-agent,success,"agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md"
+  w1-phase2,implementer-agent,success,"commands/loom-plan.md, agents/criteria-planner-agent.md"
+  w1-phase3,implementer-agent,success,"hooks/context-budget-test.ts, agents/protocols/context-budget.md"
 
-filesChanged[5]: agents/interpretation-reviewer-agent.md,agents/protocols/interpretation-report.schema.md,commands/loom-plan.md,agents/criteria-planner-agent.md,agents/protocols/behavioral-guidelines.md
-
-exportsAdded[0]{name,file,kind}:
-
-unresolvedIssues[1]{severity,description}:
-  info,interpretation-reviewer-agent.md referenced by loom-plan.md create flow — dependency satisfied within this wave
+filesChanged[N]: agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md, commands/loom-plan.md, agents/criteria-planner-agent.md, hooks/context-budget-test.ts, agents/protocols/context-budget.md
+exportsAdded[N]{file,name,kind}:
+  hooks/context-budget-test.ts,detectConvergenceTier,function
+  hooks/context-budget-test.ts,getEffectiveBudgetCap,function
+unresolvedIssues[N]:
+verificationResult: pass

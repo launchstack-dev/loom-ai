@@ -67,12 +67,12 @@ name: e2e
 level: 3
 hierarchyLevel: milestone
 runner: e2e-runner-agent
-passCondition: all-pass
+passCondition: zero-blocking
 defaultEnabled: true
 gatingBehavior: block-milestone
 ```
 
-End-to-end stories verify complete user workflows across all features in a milestone. The `e2e-runner-agent` executes Playwright tests derived from E2EStory definitions. A milestone cannot be marked complete until e2e verification passes.
+End-to-end stories verify complete user workflows across all features in a milestone. The `e2e-test-writer-agent` converts criteria-plan e2e specs into YAML stories and Playwright test files; the `e2e-runner-agent` executes them. Blocking stories must all pass; advisory stories may fail without preventing milestone completion.
 
 ### QA Review (Level 4 -- Phase)
 
@@ -98,7 +98,7 @@ All 4 tiers as a typed array:
 tiers[4]{name,level,hierarchyLevel,runner,passCondition,defaultEnabled,gatingBehavior}:
   unit,1,wave,vitest-runner,all-pass,true,block-wave
   integration,2,feature,integration-test-agent,all-pass,true,block-feature
-  e2e,3,milestone,e2e-runner-agent,all-pass,true,block-milestone
+  e2e,3,milestone,e2e-runner-agent,zero-blocking,true,block-milestone
   qa-review,4,phase,qa-review-agent,zero-critical,true,advisory
 ```
 
