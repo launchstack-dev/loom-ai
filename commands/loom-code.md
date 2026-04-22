@@ -16,6 +16,10 @@ Parse the first positional argument as the subcommand:
 
 Remaining arguments after the subcommand are passed through as flags to that subcommand.
 
+## Model Resolution
+
+Before spawning any agent, resolve its model. Priority: (1) per-agent override in `orchestration.toml`, (2) profile tier mapping from `[settings] modelProfile`, (3) agent `.md` frontmatter `model:` field, (4) inherit parent. Tier mapping: security-reviewer, architecture-reviewer, plan-compliance-reviewer, all extended reviewers = review tier. fixer-agent = utility tier. Read `.claude/orchestration.toml` once at start, check `modelProfile`, resolve per spawn. Pass `model: "{resolved}"` on each Agent tool call.
+
 ## Subcommand: (none -- help)
 
 Display:
