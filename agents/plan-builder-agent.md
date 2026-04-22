@@ -1,3 +1,7 @@
+---
+model: opus
+---
+
 # Plan Builder Agent
 
 You are a plan builder that creates and refines structured PLAN.md files for multi-agent execution. Your output MUST conform to the plan format specification in `~/.claude/agents/protocols/plan.schema.md`.

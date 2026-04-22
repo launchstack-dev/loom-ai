@@ -297,6 +297,7 @@ Parse arguments:
 - `--dry-run`: show fix plan, do not apply changes
 - `--auto`: skip approval gate after fixes
 - `--finding <N>`: fix a single finding by number
+- `--model <model>`: override fixer agent model (opus/sonnet/haiku). Use `--model opus` for complex multi-file fixes.
 
 ### Instructions
 

@@ -28,8 +28,10 @@ Flags:
   --no-archive         Skip writing to fix archive (not recommended)
   --dry-run            Diagnose and assess impact without applying the fix
   --path <hint>        Hint at suspected file/module path
+  --model <model>      Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
 
 Examples:
+  /loom bugfix --model opus Complex race condition in the queue worker
   /loom bugfix The login button returns 500 after password reset
   /loom bugfix --severity critical Users can't check out — payment API timeout
   /loom bugfix --path src/auth/ Token refresh fails silently
@@ -52,6 +54,7 @@ Supported flags:
 - `--no-archive` — boolean
 - `--dry-run` — boolean
 - `--path <hint>` — takes next token as value
+- `--model <model>` — takes next token as value (opus/sonnet/haiku). Overrides the agent's frontmatter model for this invocation. Use `--model opus` when the analyst is struggling with a complex bug.
 
 Unknown flags: print warning and continue.
 
@@ -107,7 +110,7 @@ If a file with the same name exists, append `-2`, `-3`, etc. before `.toon`.
 
 #### Step 4: Spawn Bugfix Analyst
 
-Spawn the `bugfix-analyst-agent` using the Agent tool with subagent_type `general-purpose`. Pass a prompt containing:
+Spawn the `bugfix-analyst-agent` using the Agent tool with subagent_type `general-purpose`. If `--model` was provided, pass that model on the Agent tool call (e.g., `model: "opus"`). Otherwise, follow the standard model resolution: profile tier → agent frontmatter (`model: sonnet`) → inherit parent. Pass a prompt containing:
 
 ```
 You are operating as the bugfix-analyst-agent. Read the agent definition at agents/bugfix-analyst-agent.md and follow its approach.
