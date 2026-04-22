@@ -47,12 +47,11 @@ Before doing anything, read these protocol files:
 Before spawning any agent via the Agent tool, resolve which model it should use. Pass the resolved model as the `model` parameter on the Agent tool call.
 
 **Resolution priority (highest wins):**
-1. Per-agent override in `.claude/orchestration.toml`
-2. Profile tier mapping from `orchestration.toml` `[settings] modelProfile`
-3. Agent `.md` frontmatter `model:` field
-4. Default: omit `model` parameter (inherits parent)
+1. Profile tier mapping from `orchestration.toml` `[settings] modelProfile`
+2. Agent `.md` frontmatter `model:` field
+3. Default: omit `model` parameter (inherits parent)
 
-**How to resolve:** Read `.claude/orchestration.toml` once at initialization (Step 0). Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, determine the agent's tier (planning/execution/review/verification/utility), use the profile's model for that tier. Per-agent overrides take precedence. If no profile and no override, read the agent's `.md` frontmatter. Pass `model: "{resolved}"` on the Agent tool call.
+**How to resolve:** Read `.claude/orchestration.toml` once at initialization (Step 0). Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, determine the agent's tier (planning/execution/review/verification/utility), use the profile's model for that tier. If no profile, read the agent's `.md` frontmatter. Pass `model: "{resolved}"` on the Agent tool call.
 
 **Tier mapping:** planning = roadmap-builder, plan-builder, questioner, criteria-planner, interpretation-reviewer, prompt-refiner. execution = contracts, implementer, wiring, data-pipeline. review = all reviewers + scope-feasibility. verification = verification-agent. utility = meta-agent, wiki agents, fixer, delta-analyzer, convergence-planner, acceptance-criteria, target-parser, harness-builder, convergence-driver.
 

@@ -56,7 +56,7 @@ Parse arguments after `converge`:
 
 #### Step 0: Read Protocols and Resolve Models
 
-**Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) per-agent override in `orchestration.toml`, (2) profile tier mapping, (3) agent `.md` frontmatter `model:` field, (4) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
+**Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
 
 Read convergence-related protocols:
 - `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)

@@ -26,10 +26,9 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 
 **Resolution priority (highest wins):**
 
-1. **Per-agent override** in `.claude/orchestration.toml` (e.g., `[planning.agents.my-agent] model = "opus"`)
-2. **Profile tier mapping** from `.claude/orchestration.toml` `[settings] modelProfile` → look up the agent's tier → use that tier's model
-3. **Agent `.md` frontmatter** — read the `model:` field from the agent's instruction file (e.g., `model: sonnet`)
-4. **Default** — omit the `model` parameter (inherits parent session's model)
+1. **Profile tier mapping** from `.claude/orchestration.toml` `[settings] modelProfile` → look up the agent's tier → use that tier's model
+2. **Agent `.md` frontmatter** — read the `model:` field from the agent's instruction file (e.g., `model: sonnet`)
+3. **Default** — omit the `model` parameter (inherits parent session's model)
 
 **Tier mapping for this command's agents:**
 
@@ -39,7 +38,7 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 | scope-feasibility-agent, feature-coverage-agent, strategy-agent, ux-agent | review |
 | wiki-maintainer-agent, wiki-ingest-agent | utility |
 
-**How to resolve:** Read `.claude/orchestration.toml` once at the start. Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, look up the agent's tier, use the profile's model. Per-agent overrides take precedence. If no profile and no override, read the agent's `.md` frontmatter for `model:`. Pass the resolved model on the Agent tool call.
+**How to resolve:** Read `.claude/orchestration.toml` once at the start. Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, look up the agent's tier, use the profile's model for that tier. If no profile, read the agent's `.md` frontmatter for `model:`. Pass the resolved model on the Agent tool call.
 
 ## Requirements
 

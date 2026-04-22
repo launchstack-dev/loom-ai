@@ -51,10 +51,9 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 
 **Resolution priority (highest wins):**
 
-1. **Per-agent override** in `.claude/orchestration.toml` (e.g., `[execution.agents.my-agent] model = "opus"`)
-2. **Profile tier mapping** from `.claude/orchestration.toml` `[settings] modelProfile` → look up the agent's tier → use that tier's model
-3. **Agent `.md` frontmatter** — read the `model:` field from the agent's instruction file (e.g., `model: sonnet`)
-4. **Default** — omit the `model` parameter (inherits parent session's model)
+1. **Profile tier mapping** from `.claude/orchestration.toml` `[settings] modelProfile` → look up the agent's tier → use that tier's model
+2. **Agent `.md` frontmatter** — read the `model:` field from the agent's instruction file (e.g., `model: sonnet`)
+3. **Default** — omit the `model` parameter (inherits parent session's model)
 
 **Tier mapping for this command's agents:**
 
@@ -71,9 +70,8 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 1. If `.claude/orchestration.toml` exists, read it once at the start of the subcommand.
 2. Check for `modelProfile` under `[settings]`. If set (e.g., `balanced`), read the profile definition under `[settings.profiles.balanced]` to get per-tier model assignments.
 3. For each agent spawn, look up the agent's tier in the table above, then use the profile's model for that tier.
-4. If the agent has a per-agent override in orchestration.toml, use that instead.
-5. If no profile is set and no override exists, read the agent's `.md` frontmatter for `model:`.
-6. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
+4. If no profile is set, read the agent's `.md` frontmatter for `model:`.
+5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
 
 ---
 
