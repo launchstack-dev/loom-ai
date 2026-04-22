@@ -22,12 +22,54 @@ declare -a INFRA_FILES=(
   "hooks/statusline-renderer.cjs:${CLAUDE_DIR}/statusline-renderer.cjs"
   "hooks/statusline-command.sh:${CLAUDE_DIR}/statusline-command.sh"
   "hooks/loom-update-checker.cjs:${CLAUDE_DIR}/loom-update-checker.cjs"
+  "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
 declare -a COMMAND_FILES=(
+  # Core bootstrap commands
   "commands/loom-library.md:${CLAUDE_DIR}/commands/loom-library.md"
   "commands/loom.md:${CLAUDE_DIR}/commands/loom.md"
   "commands/loom-statusline-setup.md:${CLAUDE_DIR}/commands/loom-statusline-setup.md"
+  "commands/loom-reference.md:${CLAUDE_DIR}/commands/loom-reference.md"
+  # Subcommand files that /loom dispatches to via Read tool
+  "commands/loom-init.md:${CLAUDE_DIR}/commands/loom-init.md"
+  "commands/loom-auto.md:${CLAUDE_DIR}/commands/loom-auto.md"
+  "commands/loom-converge.md:${CLAUDE_DIR}/commands/loom-converge.md"
+  "commands/loom-quick.md:${CLAUDE_DIR}/commands/loom-quick.md"
+  "commands/loom-pause.md:${CLAUDE_DIR}/commands/loom-pause.md"
+  "commands/loom-resume.md:${CLAUDE_DIR}/commands/loom-resume.md"
+  "commands/loom-do.md:${CLAUDE_DIR}/commands/loom-do.md"
+  "commands/loom-next.md:${CLAUDE_DIR}/commands/loom-next.md"
+  "commands/loom-profile.md:${CLAUDE_DIR}/commands/loom-profile.md"
+  "commands/loom-status.md:${CLAUDE_DIR}/commands/loom-status.md"
+  "commands/loom-debate.md:${CLAUDE_DIR}/commands/loom-debate.md"
+  "commands/loom-chain.md:${CLAUDE_DIR}/commands/loom-chain.md"
+  "commands/loom-vote.md:${CLAUDE_DIR}/commands/loom-vote.md"
+  "commands/loom-triage.md:${CLAUDE_DIR}/commands/loom-triage.md"
+  "commands/loom-upgrade.md:${CLAUDE_DIR}/commands/loom-upgrade.md"
+  # Noun commands (registered as skills in library.yaml)
+  "commands/loom-plan.md:${CLAUDE_DIR}/commands/loom-plan.md"
+  "commands/loom-roadmap.md:${CLAUDE_DIR}/commands/loom-roadmap.md"
+  "commands/loom-code.md:${CLAUDE_DIR}/commands/loom-code.md"
+  "commands/loom-bugfix.md:${CLAUDE_DIR}/commands/loom-bugfix.md"
+  "commands/loom-note.md:${CLAUDE_DIR}/commands/loom-note.md"
+  "commands/loom-wiki.md:${CLAUDE_DIR}/commands/loom-wiki.md"
+  "commands/loom-agent.md:${CLAUDE_DIR}/commands/loom-agent.md"
+  "commands/loom-git.md:${CLAUDE_DIR}/commands/loom-git.md"
+  "commands/loom-data.md:${CLAUDE_DIR}/commands/loom-data.md"
+  # Progressive disclosure sub-files for loom-plan
+  "commands/loom-plan/create.md:${CLAUDE_DIR}/commands/loom-plan/create.md"
+  "commands/loom-plan/review.md:${CLAUDE_DIR}/commands/loom-plan/review.md"
+  "commands/loom-plan/execute.md:${CLAUDE_DIR}/commands/loom-plan/execute.md"
+  "commands/loom-plan/test.md:${CLAUDE_DIR}/commands/loom-plan/test.md"
+  "commands/loom-plan/status.md:${CLAUDE_DIR}/commands/loom-plan/status.md"
+  # Progressive disclosure sub-files for loom-roadmap
+  "commands/loom-roadmap/init.md:${CLAUDE_DIR}/commands/loom-roadmap/init.md"
+  "commands/loom-roadmap/review.md:${CLAUDE_DIR}/commands/loom-roadmap/review.md"
+  "commands/loom-roadmap/mutate.md:${CLAUDE_DIR}/commands/loom-roadmap/mutate.md"
+  "commands/loom-roadmap/explore.md:${CLAUDE_DIR}/commands/loom-roadmap/explore.md"
+  "commands/loom-roadmap/analyze.md:${CLAUDE_DIR}/commands/loom-roadmap/analyze.md"
+  "commands/loom-roadmap/util.md:${CLAUDE_DIR}/commands/loom-roadmap/util.md"
 )
 
 echo "Installing Loom (minimal bootstrap)..."
@@ -40,6 +82,7 @@ mkdir -p "${CLAUDE_DIR}/agents/protocols"
 mkdir -p "${CLAUDE_DIR}/commands"
 mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
 mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
+mkdir -p "${CLAUDE_DIR}/config"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CACHE_DIR}"
 

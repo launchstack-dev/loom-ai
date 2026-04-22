@@ -28,7 +28,7 @@
 # The statusline script outputs a single plain-text line (max 120 chars).
 # It exits 0 always and produces empty output when there is nothing to show,
 # which causes Starship to hide the module automatically.
-command = "~/.loom-ai/hooks/statusline-command.sh"
+command = "~/.claude/statusline-command.sh"
 
 # Show this module when a Loom project is detected in the current directory tree.
 when = "test -d .plan-execution -o -f PLAN.md"

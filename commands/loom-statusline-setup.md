@@ -75,7 +75,7 @@ Read the Loom Starship segment definition from `~/.claude/config/starship-loom.t
 If that file does not exist, report a warning and skip Starship integration:
 
 ```
-Warning: config/starship-loom.toml not found. Skipping Starship integration.
+Warning: ~/.claude/config/starship-loom.toml not found. Skipping Starship integration.
 ```
 
 If it exists, check `~/.config/starship.toml` for an existing `[custom.loom]` section:
@@ -97,7 +97,7 @@ grep -q '\[custom\.loom\]' ~/.config/starship.toml 2>/dev/null
   This adds a [custom.loom] section that displays Loom pipeline status in your prompt.
   ```
 
-  If the user confirms, append the contents of `config/starship-loom.toml` to `~/.config/starship.toml`. If `~/.config/starship.toml` does not exist, create `~/.config/` if needed and create the file with just the Loom segment.
+  If the user confirms, append the contents of `~/.claude/config/starship-loom.toml` to `~/.config/starship.toml`. If `~/.config/starship.toml` does not exist, create `~/.config/` if needed and create the file with just the Loom segment.
 
   **Important:** Append only. Never overwrite or rewrite existing Starship configuration.
 
