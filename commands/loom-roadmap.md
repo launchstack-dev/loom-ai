@@ -114,11 +114,11 @@ Based on the detected subcommand, read the corresponding instruction file and fo
 
 | Subcommand(s) | Instruction File |
 |---------------|-----------------|
-| `init`, `init --plan`, `init --full`, `approve` | Read `~/.loom-ai/commands/loom-roadmap/init.md` |
-| `review`, `review-integrate` | Read `~/.loom-ai/commands/loom-roadmap/review.md` |
-| `add`, `insert`, `remove`, `reorder` | Read `~/.loom-ai/commands/loom-roadmap/mutate.md` |
-| `explore` | Read `~/.loom-ai/commands/loom-roadmap/explore.md` |
-| `status`, `validate`, `refine`, `deps` | Read `~/.loom-ai/commands/loom-roadmap/analyze.md` |
-| `diff`, `history`, `milestone`, `snapshot`, `split` | Read `~/.loom-ai/commands/loom-roadmap/util.md` |
+| `init`, `init --plan`, `init --full`, `approve` | Read `~/.claude/commands/loom-roadmap/init.md` |
+| `review`, `review-integrate` | Read `~/.claude/commands/loom-roadmap/review.md` |
+| `add`, `insert`, `remove`, `reorder` | Read `~/.claude/commands/loom-roadmap/mutate.md` |
+| `explore` | Read `~/.claude/commands/loom-roadmap/explore.md` |
+| `status`, `validate`, `refine`, `deps` | Read `~/.claude/commands/loom-roadmap/analyze.md` |
+| `diff`, `history`, `milestone`, `snapshot`, `split` | Read `~/.claude/commands/loom-roadmap/util.md` |
 
 Read the file for the matched subcommand group, then follow its instructions. Pass all remaining arguments to the subcommand handler.

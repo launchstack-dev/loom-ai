@@ -9,35 +9,41 @@ Loom is a multi-agent pipeline for planning, executing, testing, and reviewing s
 
 $ARGUMENTS
 
-Parse the first positional argument as the subcommand and dispatch to the matching skill.
+Parse the first positional argument as the subcommand and dispatch.
 
-| Subcommand | Skill to invoke |
-|------------|-----------------|
-| (none) / `help` / `reference` | Read and display `commands/loom-reference.md` |
-| `init` | `loom-init` |
-| `auto` | `loom-auto` |
-| `converge` | `loom-converge` |
-| `quick` | `loom-quick` |
-| `bugfix` | `loom-bugfix` |
-| `pause` | `loom-pause` |
-| `resume` | `loom-resume` |
-| `do` | `loom-do` |
-| `next` | `loom-next` |
-| `profile` | `loom-profile` |
-| `status` | `loom-status` |
-| `debate` | `loom-debate` |
-| `chain` | `loom-chain` |
-| `vote` | `loom-vote` |
-| `triage` | `loom-triage` |
-| `upgrade` | `loom-upgrade` |
+**Dispatch uses two mechanisms depending on whether the target is a registered skill or a standalone command file:**
+
+- **Registered skills** (in `library.yaml` `prompts:` section): invoke via the Skill tool
+- **Standalone command files** (not in library.yaml): load via the Read tool
+
+| Subcommand | Dispatch |
+|------------|----------|
+| (none) / `help` / `reference` | Read `~/.claude/commands/loom-reference.md` and display verbatim |
+| `init` | Read `~/.claude/commands/loom-init.md` and follow |
+| `auto` | Read `~/.claude/commands/loom-auto.md` and follow |
+| `converge` | Read `~/.claude/commands/loom-converge.md` and follow |
+| `quick` | Read `~/.claude/commands/loom-quick.md` and follow |
+| `bugfix` | Skill tool: `loom-bugfix` |
+| `pause` | Read `~/.claude/commands/loom-pause.md` and follow |
+| `resume` | Read `~/.claude/commands/loom-resume.md` and follow |
+| `do` | Read `~/.claude/commands/loom-do.md` and follow |
+| `next` | Read `~/.claude/commands/loom-next.md` and follow |
+| `profile` | Read `~/.claude/commands/loom-profile.md` and follow |
+| `status` | Read `~/.claude/commands/loom-status.md` and follow |
+| `debate` | Read `~/.claude/commands/loom-debate.md` and follow |
+| `chain` | Read `~/.claude/commands/loom-chain.md` and follow |
+| `vote` | Read `~/.claude/commands/loom-vote.md` and follow |
+| `triage` | Read `~/.claude/commands/loom-triage.md` and follow |
+| `upgrade` | Read `~/.claude/commands/loom-upgrade.md` and follow |
 | `<word>:<word>` pattern | Kit dispatch (see below) |
 
 **Dispatch procedure:**
 1. Extract the first token as the subcommand
 2. Collect remaining tokens as the arguments string
-3. If the subcommand matches a row in the table: invoke the Skill tool with `skill: "{skill name}"` and `args: "{remaining arguments}"`
-4. For no args / `help` / `reference`: read `commands/loom-reference.md` from the project's commands directory (`~/.claude/commands/loom-reference.md` or `~/.loom-ai/commands/loom-reference.md`) and display its contents verbatim
-5. If the subcommand is not recognized and doesn't match kit dispatch: print "Unknown subcommand: {subcommand}. Run `/loom` for available commands."
+3. If the subcommand maps to a Skill tool dispatch: invoke the Skill tool with `skill: "{skill name}"` and `args: "{remaining arguments}"`
+4. If the subcommand maps to a Read dispatch: use the Read tool to load the command file, then follow its instructions with the remaining arguments as context
+5. For no args / `help` / `reference`: read `~/.claude/commands/loom-reference.md` and display its contents verbatim
+6. If the subcommand is not recognized and doesn't match kit dispatch: print "Unknown subcommand: {subcommand}. Run `/loom` for available commands."
 
 ---
 

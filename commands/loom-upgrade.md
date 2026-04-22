@@ -30,6 +30,8 @@ Scan the project for artifacts that may need migration. Search these paths:
 ```
 .plan-execution/state.toon          → state artifact
 .plan-execution/contracts/*.md      → contract artifacts (agent-result)
+.plan-execution/**/*.agent-result.toon → AgentResult artifacts
+.plan-execution/criteria-plan.toon  → criteria plan artifact
 PLAN.md                             → plan artifact
 agents/protocols/*.md               → protocol artifacts
 ```

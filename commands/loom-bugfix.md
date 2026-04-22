@@ -118,12 +118,13 @@ Path hints: {--path value or "none"}
 Wiki available: {true/false}
 Wiki hints: {list of relevant page IDs or "none"}
 Prior fix hints: {list of related fix IDs or "none"}
-Fix archive path: {generated path}
+Fix archive path: {if --no-archive: "DISABLED — do not write any archive entry", else: generated path}
 Active file ownership: {ownership map or "none — no active execution"}
 Dry run: {true/false}
 TaskId: {fixId}
 
-Read the fix-archive schema at agents/protocols/fix-archive.schema.md before writing the archive entry.
+{If --no-archive is NOT set: "Read the fix-archive schema at agents/protocols/fix-archive.schema.md before writing the archive entry."}
+{If --no-archive: "Archive is disabled. Do NOT write any fix archive entry or touch .loom/fix-archive/. Skip all archive-related steps."}
 {If --no-verify: "Skip verification — do not run test/typecheck/lint commands."}
 {If --dry-run: "DIAGNOSTIC ONLY — do NOT apply any code changes. Complete phases 1-2 and 4 (context, diagnosis, impact assessment) then return. Write the archive entry with fix field set to 'DRY RUN — fix not applied' and status partial."}
 ```
@@ -140,7 +141,7 @@ Read the AgentResult from the bugfix-analyst-agent.
 |--------|--------|
 | `success` | Continue to Step 6 |
 | `partial` | Print warnings from `issues`, continue to Step 6 |
-| `failure` | Print error details. If `--no-archive` was NOT set and no archive entry exists, write a minimal entry with `fix: "Agent failed — see diagnoseLog"`, `verificationResult: skipped`, and `status: failure`. Continue to Step 5c (index update), then skip to Step 7 summary. |
+| `failure` | Print error details. If `--no-archive` was NOT set and no archive entry exists, write a minimal entry with `fix: "Agent failed — see diagnoseLog"`, `verificationResult: skipped`, and `notes: "Agent failure — fix not applied"`. Continue to Step 5c (index update), then skip to Step 7 summary. |
 
 **5b. Validate archive entry.**
 

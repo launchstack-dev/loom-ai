@@ -110,10 +110,10 @@ Otherwise, read the corresponding instruction file and follow it:
 
 | Subcommand | Instruction File |
 |------------|-----------------|
-| `create` | Read `~/.loom-ai/commands/loom-plan/create.md` |
-| `review` | Read `~/.loom-ai/commands/loom-plan/review.md` |
-| `execute` | Read `~/.loom-ai/commands/loom-plan/execute.md` |
-| `test` | Read `~/.loom-ai/commands/loom-plan/test.md` |
-| `status` | Read `~/.loom-ai/commands/loom-plan/status.md` |
+| `create` | Read `~/.claude/commands/loom-plan/create.md` |
+| `review` | Read `~/.claude/commands/loom-plan/review.md` |
+| `execute` | Read `~/.claude/commands/loom-plan/execute.md` |
+| `test` | Read `~/.claude/commands/loom-plan/test.md` |
+| `status` | Read `~/.claude/commands/loom-plan/status.md` |
 
 Read the file for the matched subcommand, then follow its instructions. Pass all remaining arguments (after the subcommand name) to the subcommand handler.

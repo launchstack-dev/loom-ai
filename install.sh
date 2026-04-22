@@ -38,6 +38,8 @@ echo ""
 # ── Create directories ──
 mkdir -p "${CLAUDE_DIR}/agents/protocols"
 mkdir -p "${CLAUDE_DIR}/commands"
+mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
+mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CACHE_DIR}"
 
