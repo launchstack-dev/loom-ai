@@ -54,9 +54,14 @@ Parse arguments after `converge`:
 
 ### Instructions
 
-#### Step 0: Read Protocols and Resolve Models
+#### Step 0: Read Protocols, Resolve Models, and Gather Wiki Context
 
 **Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
+
+**Wiki Context:** If `.loom/wiki/` exists, read `index.toon` and gather relevant pages:
+- **Target mode (`--plan` or `--target`):** collect `api-surface-*` pages (convergence target seeds), `decision-*` pages (method constraints), `convention-*` pages (naming/routing patterns), `pattern-*` pages (additional target signals). Cap at 8 pages.
+- **Criteria mode (`--criteria`):** collect `decision-*` pages (architectural constraints for criteria), `convention-*` pages (reviewer dimensions), `pattern-*` pages (test generation guidance), `structure-*` pages (file ownership validation). Also collect quality history entries (tagged `quality`, `bug`, `regression`). Cap at 8 pages.
+- Record as `wikiContext` for injection into convergence-planner-agent or criteria-planner-agent prompts.
 
 Read convergence-related protocols:
 - `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
@@ -208,6 +213,9 @@ Examples:
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary from project scanning}
     {if --target provided: 'Seed target: ' + targetPath}
+    {if wikiContext gathered: <file-content path="wiki-context">
+    {concatenated wiki page contents, each prefixed with its pageId}
+    </file-content>}
     Write plan to: .plan-execution/convergence-plan.toon"
    ```
 
@@ -250,6 +258,9 @@ This path replaces Steps 1.5 through 4 for criteria mode. It uses criteria-plann
     {if --no-hard: 'Soft criteria only (no test generation)'}
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary}
+    {if wikiContext gathered: <file-content path="wiki-context">
+    {concatenated wiki page contents, each prefixed with its pageId}
+    </file-content>}
     Write plan to: .plan-execution/criteria-plan.toon
     Write tests to: .plan-execution/convergence/criteria/tests/"
    ```

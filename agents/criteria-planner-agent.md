@@ -49,23 +49,29 @@ Additional context (provided in both modes):
 
 ---
 
-## Step 0: Wiki Quality History Query
+## Step 0: Wiki Context Query
 
-Before generating criteria, query the project wiki for quality history to inform criteria priorities and known problem areas.
+Before generating criteria, query the project wiki for quality history and architectural context to inform criteria priorities, constraints, and known problem areas.
 
 1. **Check for wiki.** If `.loom/wiki/` exists:
    - Search for entries tagged with `quality`, `bug`, `regression`, `test-failure`, `security`, `performance`, or `incident`.
    - Extract recurring problem patterns (e.g., "auth bypasses found in 3 reviews", "N+1 queries in user listing").
    - Extract previously established quality baselines (e.g., "test coverage at 85%", "zero critical security findings since M-02").
 
-2. **Integrate quality history into criteria discovery:**
+2. **Read architectural context pages:**
+   - **`decision-*` pages** — Locked architectural decisions constrain what criteria are valid. If a decision specifies "repository pattern with raw SQL", criteria should verify parameterized queries, not ORM usage. If a decision locks a specific auth strategy, don't generate criteria that test alternative approaches.
+   - **`convention-*` pages** — Coding conventions define reviewer dimensions. If a convention mandates "no default exports", add that as a code-review dimension. If a convention specifies error handling patterns, generate criteria that verify adherence.
+   - **`pattern-*` pages** — Established patterns inform test generation. If a pattern documents the middleware chain approach, generate tests that verify middleware ordering, not alternative architectures.
+   - **`structure-*` pages** — Directory layout blueprints inform file ownership validation. Use them to verify that plan phase boundaries align with documented directory structure.
+
+3. **Integrate quality history into criteria discovery:**
    - Recurring problems → elevate related criteria to `P0` and `blocking: true` (e.g., if auth bypasses recur, security review criteria become P0).
    - Known regressions → add explicit regression-prevention criteria with `source: wiki-history`.
    - Quality baselines → use as pass conditions for soft criteria (e.g., if coverage was 85%, set that as the floor).
 
-3. **If `.loom/wiki/` does not exist:** skip this step. No quality history available. Proceed with standard criteria discovery.
+4. **If `.loom/wiki/` does not exist:** skip this step. No wiki context available. Proceed with standard criteria discovery.
 
-Quality history is advisory — it informs priority and blocking decisions but does not override explicit plan acceptance criteria.
+Wiki is context, not authority — it informs priority, blocking decisions, and reviewer dimensions but does not override explicit plan acceptance criteria or user instructions.
 
 ---
 

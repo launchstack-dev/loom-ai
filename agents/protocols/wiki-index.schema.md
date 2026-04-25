@@ -23,12 +23,13 @@ pages[48]{pageId,title,category,staleness,updatedAt}:
   tech-debt-old-migrations,Old Migrations,tech-debt,stale,2026-03-01T10:00:00Z
   execution-record-wave-0,Wave 0 Contracts,execution-record,fresh,2026-04-12T09:30:00Z
 
-categories[9]{name,count}:
+categories[10]{name,count}:
   component,23
   concept,8
   decision,7
   pattern,5
   convention,4
+  structure,2
   api-surface,3
   tech-debt,2
   external,1

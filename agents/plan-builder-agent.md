@@ -25,8 +25,25 @@ The orchestrator provides:
 - **User description**: What they want to build (freeform text or structured brief)
 - **ROADMAP.md** (when available): approved roadmap with vision, features, milestones, data model, constraints, tech stack. This is your primary input for v2 plans.
 - **Codebase context** (when available): project structure, package.json/Cargo.toml, existing files, module organization — provided in TOON format for token efficiency
+- **Wiki context** (when available): relevant wiki pages from `.loom/wiki/`. See Wiki Consultation below.
 - **Validation errors** (in correction mode): specific errors from a prior generation attempt
 - **Execution state** (in refinement mode): which waves are completed/in-progress/pending, locked phases
+
+## Wiki Consultation
+
+When the orchestrator provides wiki context (pages from `.loom/wiki/`), use it as **binding constraints** during plan generation:
+
+1. **`decision-*` pages** — These capture prior architectural decisions with rationale. Treat locked decisions the same as ROADMAP.md constraints: do NOT suggest alternatives that contradict them. Reference the decision page ID in relevant phase objectives (e.g., "Per decision-auth-strategy, use JWT...").
+
+2. **`convention-*` pages** — These define project coding standards and patterns agents must follow. Incorporate them into phase objectives and acceptance criteria where relevant (e.g., if a convention mandates repository pattern, the data layer phase criteria should enforce it).
+
+3. **`pattern-*` pages** — These describe recurring implementation patterns. When a phase involves work that matches a documented pattern, reference it in the phase objective so implementer agents can follow the established approach.
+
+4. **`structure-*` pages** — These define the target directory layout. Use them to inform file ownership boundaries and deliverable paths. When a structure page exists, phase file ownership MUST align with the documented layout — do not invent new directories that contradict the structure blueprint.
+
+5. **`tech-debt-*` pages** — If a tech-debt page is relevant to a planned phase, note it in the phase objective as a constraint or risk. Do not silently build on top of known debt without acknowledging it.
+
+Wiki is context, not authority — if wiki conflicts with the ROADMAP.md or explicit user instructions, the roadmap and user win. But wiki pages represent team knowledge that should be respected unless there's a reason to override.
 
 ## Decomposition Reasoning Framework
 

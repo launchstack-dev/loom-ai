@@ -16,6 +16,7 @@ Shared rules that all wiki agents and wiki-aware orchestrators follow. Reference
       decision-*.md                     # Architectural/design decisions with rationale
       pattern-*.md                      # Recurring patterns and best practices
       convention-*.md                   # Project conventions and coding standards
+      structure-*.md                    # Directory layout blueprints and file organization
       api-surface-*.md                  # API endpoint groups and integration surfaces
       tech-debt-*.md                    # Known tech debt and improvement opportunities
       external-*.md                     # External integrations, services, dependencies

@@ -86,6 +86,7 @@ confidence: high
 | `pattern` | `pattern-` | A recurring pattern or best practice in the project | `pattern-middleware-chain`, `pattern-repository` |
 | `convention` | `convention-` | A project convention or coding standard | `convention-naming`, `convention-error-handling` |
 | `api-surface` | `api-surface-` | An API endpoint group or external integration surface | `api-surface-users`, `api-surface-stripe` |
+| `structure` | `structure-` | A project directory layout blueprint or file organization convention | `structure-project-root`, `structure-feature-modules` |
 | `tech-debt` | `tech-debt-` | A known technical debt item or improvement opportunity | `tech-debt-old-migrations`, `tech-debt-missing-tests` |
 | `external` | `external-` | An external integration, service, or dependency | `external-stripe-webhooks`, `external-sendgrid` |
 | `execution-record` | `execution-record-` | A record of a specific execution event or outcome | `execution-record-wave-2-auth` |

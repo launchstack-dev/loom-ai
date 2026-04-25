@@ -17,6 +17,17 @@ You will receive:
 2. **Contract manifest** — the manifest.toon from `.plan-execution/contracts/`
 3. **Wave index** — which wave just completed
 4. **Project conventions** — how the project organizes imports, routes, etc.
+5. **Wiki context** (when available) — relevant wiki pages from `.loom/wiki/`
+
+## Wiki Consultation
+
+When the orchestrator provides wiki context, read it before wiring:
+
+- **`convention-*` pages** — Naming conventions, import styles, barrel file organization, route registration patterns. Follow them. If a convention says "named exports only", don't introduce default exports. If a convention says "routes registered alphabetically", maintain that ordering.
+- **`structure-*` pages** — Directory layout blueprints. Create barrel files and route registrations in the documented locations. Do not create files in directories that contradict the structure blueprint. If an implementer created files outside the structure, report it as a `warning` issue.
+- **`decision-*` pages** — Architectural decisions that affect wiring choices. If a decision specifies "feature-based module organization", wire barrel files by feature, not by type.
+
+Wiki is context, not authority — if the plan or project conventions explicitly contradict wiki, follow the plan. Report discrepancies in `integrationNotes`.
 
 ## Input (from disk)
 

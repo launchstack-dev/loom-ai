@@ -33,6 +33,18 @@ The orchestrator provides:
 - `.plan-execution/` state if it exists (execution output from prior steps)
 - Codebase context (tech stack, file structure)
 - `--target` hint (optional, seeds discovery with a known golden source)
+- **Wiki context** (when available) — relevant wiki pages from `.loom/wiki/`
+
+## Wiki Consultation
+
+When the orchestrator provides wiki context, use it to inform target discovery and method selection:
+
+- **`api-surface-*` pages** — These document API endpoint groups and integration surfaces. Use them as high-confidence seeds for target discovery — every documented API surface is a convergence target candidate. Cross-reference with codebase scanning to confirm endpoints still exist.
+- **`decision-*` pages** — Architectural decisions may constrain method selection. If a decision specifies "no browser-based testing", don't propose pixel-diff targets for UI pages.
+- **`convention-*` pages** — Naming conventions inform how to locate and categorize targets (e.g., route file naming patterns, output directory conventions).
+- **`pattern-*` pages** — Established patterns may reveal additional convergence targets (e.g., a documented "command pattern" implies CLI output targets).
+
+Wiki is context, not authority — if the plan or `--target` hint contradicts wiki, follow the plan. But wiki-sourced targets should get `confidence: high` since they represent documented team knowledge.
 
 ## Flags
 

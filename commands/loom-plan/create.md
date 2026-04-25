@@ -36,7 +36,18 @@ Parse remaining arguments:
 
 4. **Check for pending notes.** Read `.plan-execution/notes.toon` if it exists. Filter for pending notes tagged `architecture`, `decision`, `security`, `perf`. Include them as advisory context for the plan builder.
 
-5. **Read scope contract** if `scope-contract.toon` exists:
+5. **Gather wiki context** if `.loom/wiki/` exists:
+   - Read `.loom/wiki/index.toon`
+   - Collect pages in these categories that are relevant to the project being planned:
+     - `decision-*` — architectural decisions (ALL decision pages, these are binding constraints)
+     - `convention-*` — coding conventions (ALL convention pages)
+     - `pattern-*` — established patterns (filter to patterns relevant to the tech stack and features)
+     - `structure-*` — directory layout blueprints (ALL structure pages)
+     - `tech-debt-*` — known debt in areas the plan will touch (filter by keyword match)
+   - Read the selected pages (cap at 10 pages to stay within context budget)
+   - Record as `wikiContext` for injection into agent prompts
+
+6. **Read scope contract** if `scope-contract.toon` exists:
    - Contract decisions → architecture constraints for the plan builder
    - Contract success criteria → acceptance criteria seeds
    - Contract tech context → file ownership hints and tech stack confirmation
@@ -48,7 +59,7 @@ Parse remaining arguments:
 If `--estimate` is set:
 
 1. Compute the token estimate for the dual-track plan creation pipeline using the `characters / 4` heuristic (see `agents/protocols/context-budget.md`):
-   - **plan-builder-agent prompt:** roadmap text + codebase context + agent instructions overhead → `Math.ceil(totalChars / 4)`
+   - **plan-builder-agent prompt:** roadmap text + codebase context + wiki context (estimate 3000 tokens if `.loom/wiki/` has decision/convention/pattern/structure pages, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **criteria-planner-agent prompt:** roadmap text + wiki quality history (estimate 2000 tokens if `.loom/wiki/` exists, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **interpretation-reviewer-agent prompt:** estimated plan output (use 8000 tokens as a conservative default) + estimated criteria-plan output (use 4000 tokens as a conservative default) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **Fixed overhead per agent:** 5000 tokens (system prompt, tool definitions, formatting)
@@ -96,6 +107,10 @@ Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent t
 
  {If merging existing plan: <file-content path="PLAN.md">
  {existing PLAN.md text}
+ </file-content>}
+
+ {If wikiContext gathered in Step 0: <file-content path="wiki-context">
+ {concatenated wiki page contents, each prefixed with its pageId}
  </file-content>}"
 ```
 

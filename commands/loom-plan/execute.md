@@ -199,10 +199,12 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
 
 1. Update state.toon: wave 0 = in_progress
 2. Create a git tag `plan-exec-wave-0-pre`
-3. Spawn a single Agent (general-purpose) with:
+3. **Gather wiki context for contracts.** If `.loom/wiki/` exists, read `index.toon` and collect `decision-*`, `convention-*`, and `structure-*` pages (cap at 5 pages). These inform type naming, schema design, and file placement.
+4. Spawn a single Agent (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/contracts-agent.md` first."
    - The schema/type specifications extracted from the plan
    - The output directory: `.plan-execution/contracts/`
+   - If wiki pages gathered: include them as `<file-content path="wiki-context">{concatenated pages}</file-content>`
    - Instruction to return an AgentResult as the last block of output
 
 5. Parse the AgentResult from the agent's return value
@@ -287,7 +289,13 @@ For each implementation wave (1, 2, ...):
 2. Create git tag `plan-exec-wave-N-pre`
 3. Read `rolling-context.md`
 4. **Pattern check:** If `.claude/orchestration.toml` exists and has `[patterns.*]` entries, check each task's description against pattern triggers. If a task matches a pattern trigger (per `~/.claude/agents/protocols/pattern-executor.md`), execute the pattern instead of spawning a single implementer. The pattern's output replaces the implementer's AgentResult.
-5. For each task in this wave, prepare the implementer prompt:
+5. **Gather wiki context for this wave.** If `.loom/wiki/` exists, read `index.toon` and collect wiki pages relevant to this wave's tasks:
+   - `decision-*` pages relevant to the wave's domain (e.g., auth decisions for auth tasks)
+   - `convention-*` pages (all — these apply globally)
+   - `pattern-*` pages matching the task's implementation area
+   - `structure-*` pages (all — file placement guidance applies globally)
+   - Cap at 5 pages per task to stay within context budget. If multiple tasks share the same pages, each task still gets its own copy in its prompt.
+6. For each task in this wave, prepare the implementer prompt:
    - Instruction: "Read your instructions from `~/.claude/agents/implementer-agent.md` first."
    - Task objective and acceptance criteria
    - File ownership list for this specific task
@@ -295,7 +303,8 @@ For each implementation wave (1, 2, ...):
    - Rolling context content
    - Technology stack and conventions
    - If `scope-contract.toon` exists, include relevant contract decisions in the prompt (filter to decisions that affect this task's domain — e.g., data access decisions for data layer tasks, auth decisions for auth tasks)
-6. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
+   - If wiki pages gathered: include them as `<file-content path="wiki-context">{concatenated pages relevant to this task}</file-content>`
+7. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
 
 7. **Launch all implementer agents in parallel** using the Agent tool -- send ALL agent calls in a SINGLE message:
    - Each agent is `general-purpose` -- it reads its own instructions from disk
@@ -355,6 +364,7 @@ If not `--auto` and blocking conflicts found, report to user and ask how to proc
    - Contract manifest path
    - Wave index
    - Project conventions
+   - If wiki pages gathered for this wave: include `convention-*` and `structure-*` pages as `<file-content path="wiki-context">{concatenated pages}</file-content>`
 3. Parse wiring AgentResult
 4. Write `wave-N-summary.toon` and `wave-N-summary.md` to `.plan-execution/`. Also copy `wave-N-summary.toon` to `.plan-history/executions/wave-N-summary.toon` for persistence.
 
