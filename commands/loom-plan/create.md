@@ -226,6 +226,12 @@ Save the conflict report to `.plan-execution/conflicts/interpretation-report.too
    - Error code consistency: error codes referenced in API specs exist in error catalog
    - Index coverage: foreign keys and query patterns have corresponding indexes
 
+3. **Always run Stage 8** (convergence target coverage):
+   - Every deterministic acceptance criterion has a corresponding convergence target
+   - Every convergence target has capture method (SOURCE), golden source (TARGET), and comparison method
+   - Target blocks are valid TOON with all required columns
+   - No duplicate target IDs across phases
+
 3. **If validation passes** (0 blocking errors): proceed to Step 3.
 
 4. **If validation fails**:
@@ -332,7 +338,7 @@ Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
    - Current PLAN.md contents
    - Filtered review findings
    - Instruction: "Apply these approved review recommendations. Do not change unrelated sections. Annotate each change with the finding that motivated it."
-5. Run validation on the result (stages 1-4, plus Stage 7 for v2 plans)
+5. Run validation on the result (stages 1-4, Stage 7 for v2 plans, and Stage 8 convergence coverage)
 6. Show proposed changes for user approval (or auto-apply if `--auto`)
 7. On approval: write plan, snapshot old version to `.plan-history/snapshots/`, update changelog
 

@@ -118,19 +118,39 @@ For every entity with a status/state/lifecycle field:
 - Define invalid transitions with error codes and messages
 - Mark terminal states explicitly
 
-### Step 2.8: Convergence Target Extraction
+### Step 2.8: Convergence Target Definition
 
-For each phase's deliverables and acceptance criteria, identify outputs that can be verified deterministically:
+Convergence requires two things: a **SOURCE** (current code output) and a **TARGET** (expected output). The loop iterates until they match within tolerance. Your job is to define both sides for every phase that produces deterministic output.
 
-1. **API endpoints** — every endpoint with a defined response shape → `json-deep-equal` target (ignore timestamps, request IDs)
-2. **Generated files** — every build output or config file → `text-diff` or `json-deep-equal` target
-3. **CLI commands** — every command with deterministic stdout/exit code → `cli-exit-code` target
-4. **State machines** — every state transition → `json-deep-equal` on entity state
-5. **UI pages** — critical user flows → `pixel-diff` target (flag as fragile)
+For each phase's deliverables and acceptance criteria, identify every output that can be captured and compared deterministically. For each one, define a structured convergence target with all required fields:
 
-Add an `#### Convergence Targets` subsection to phases that have verifiable outputs. Not every phase needs one — skip phases that only do refactoring, wiring, or subjective work.
+**Category → method mapping (default, override when justified):**
 
-If ROADMAP.md features have `**Convergence targets:**` bullets, use those as seeds — map them to the specific phases that implement those features.
+| Category | Default Method | Default Capture | Ignore Fields |
+|----------|---------------|-----------------|---------------|
+| API endpoint with response shape | `json-deep-equal` | `http-get` or `http-post` | `timestamp,requestId,createdAt,updatedAt` |
+| Generated/build file | `text-diff` or `json-deep-equal` | `file-read` | |
+| CLI command with stdout/exit code | `text-diff` | `script-exec` | |
+| State machine transition | `json-deep-equal` | `http-post` or `script-exec` | `timestamp,updatedAt` |
+| UI page/flow | `pixel-diff` (flag as fragile) | `playwright-screenshot` | |
+| Data pipeline output | `row-diff` | `query-exec` | |
+
+**Golden source selection:**
+- If the plan defines the expected response shape (API spec, schema) → `spec-extracted`
+- If working code already exists and you're verifying parity → `reference-run`
+- If the user provides golden files → `user-provided`
+- If the expected value is a simple literal → `inline`
+
+**Emit the structured block per plan.schema.md:**
+```toon
+convergenceTargets[N]{id,name,category,method,tolerance,capture,goldenSource,ignoreFields}:
+  P3-T01,GET /api/users,api,json-deep-equal,1.0,http-get,spec-extracted,"timestamp,requestId"
+  P3-T02,POST /api/users validation error,api,json-deep-equal,1.0,http-post,spec-extracted,""
+```
+
+**Every phase with deterministic outputs MUST have convergence targets.** Skip only phases that do refactoring, wiring, or subjective work. If a phase has acceptance criteria that describe deterministic outputs but no convergence targets, the plan is invalid.
+
+If ROADMAP.md features have `**Convergence targets:**` bullets, use those as seeds — map them to the specific phases that implement those features, and expand them into the full structured format.
 
 ### Step 3: Isolation Boundaries
 Group implementation work by file ownership:
@@ -163,13 +183,18 @@ For each proposed phase:
 - Count files-in (files the agent must read from prior phases): >15 → context overflow risk, split.
 - Ensure each phase has a clear, single responsibility.
 
-### Step 6: Criteria Quality + Convergence Flagging
+### Step 6: Criteria Quality + Convergence Validation
 For every phase, write acceptance criteria as:
 - `[command] exits with [code]` (e.g., "npx tsc --noEmit exits with code 0")
 - `[API call] returns [response]` (e.g., "GET /api/users returns 200 with JSON array")
 - `[assertion about code]` (e.g., "All repository functions use parameterized queries")
 
-For each criterion, also ask: "Can this be verified automatically and deterministically?" If yes, ensure it appears in the phase's `#### Convergence Targets` section (from Step 2.8). Convergence-suitable criteria describe deterministic outputs (API responses, file contents, exit codes). Non-convergence criteria describe code quality, style, or manual review items.
+**Convergence cross-check (mandatory):** For each acceptance criterion, classify it:
+- **Deterministic output** (API response, file content, CLI exit code, rendered page) → MUST have a corresponding convergence target in the phase's `#### Convergence Targets` block. If missing, add one.
+- **Code property** (uses parameterized queries, follows naming convention) → criteria-mode convergence (reviewer/test). No convergence target needed.
+- **Subjective** → reject and rewrite as one of the above.
+
+If a phase has deterministic acceptance criteria but zero convergence targets, the plan is **invalid**. Every deterministic criterion needs a source (how to capture current output), a target (what to compare against), and a method (how to compare). This is the fundamental convergence contract.
 
 NEVER use:
 - Subjective language ("should work well", "good error handling", "clean code")

@@ -54,30 +54,37 @@ Wiki is context, not authority — if the plan or `--target` hint contradicts wi
 
 ---
 
-## Step 1: Target Discovery
+## Step 1: Target Loading and Validation
 
-Scan these sources in priority order to build a candidate target list:
+Convergence requires a SOURCE (current code output) and a TARGET (expected output). Every convergence target must define both sides explicitly: how to capture the source, where the target comes from, how to compare them, and what tolerance to apply. Your job is to load, validate, and refine these — not to guess at them.
 
-### 1a. PLAN.md Analysis
+### 1a. Load Plan Targets (primary input)
 
-Look for (in priority order):
-- **`#### Convergence Targets` sections** in plan phases — these are high-confidence seeds, pre-identified by the plan-builder-agent. Use them directly.
-- Phases with output descriptions (API endpoints, generated files, UI pages)
-- Convergence metadata: `convergenceTarget:`, `goldenFiles:`, `pattern: converge`
-- Acceptance criteria that imply verifiable outputs ("returns JSON array", "renders dashboard", "generates report")
+Read PLAN.md and extract all `#### Convergence Targets` blocks from every phase. These are **structured TOON** with fields: `id`, `name`, `category`, `method`, `tolerance`, `capture`, `goldenSource`, `ignoreFields`.
 
-Also check ROADMAP.md for **`**Convergence targets:**` bullets** in feature definitions — these are roadmap-level seeds that map to plan phases.
+**Parse each target and validate:**
+- Does it have a capture method (SOURCE side)? If not → flag as incomplete.
+- Does it have a golden source (TARGET side)? If not → flag as incomplete.
+- Does the comparison method match the category? (e.g., `json-deep-equal` for `api`, not `pixel-diff`)
+- Is the tolerance reasonable for the method? (`1.0` for JSON APIs, `0.90-0.99` for pixel-diff)
+- Are the ignore fields appropriate? (timestamps yes, user IDs probably not)
+
+**If a plan has zero convergence targets across all phases:** warn that the plan was generated without convergence definitions. Fall back to discovery mode (1c/1d below), but flag this as a plan quality issue.
+
+**If targets are present but malformed** (free-text instead of structured TOON): parse best-effort, infer missing fields, and present corrections for user confirmation.
+
+Plan targets enter the candidate list as `confidence: high, source: plan-defined`.
 
 ### 1b. Scope Contract Cross-Reference
 
 If `scope-contract.toon` exists, check `successCriteria`:
-- Criteria with `convergenceMethod` set (not empty) → direct convergence targets with pre-specified method and tolerance
+- Criteria with `convergenceMethod` set (not empty) → direct convergence targets with pre-specified method and tolerance. Cross-reference with plan targets — if the plan already defines this target, merge scope contract fields (they're additive). If not, add as a new candidate.
 - Criteria with `verificationMethod` containing "integration test", "API response", "screenshot" but no `convergenceMethod` → convergence target candidates (infer method)
 - Non-goals → explicitly exclude from convergence
 
-### 1c. Codebase Scanning
+### 1c. Codebase Scanning (gap detection, not primary discovery)
 
-Scan by category:
+Scan the codebase to find outputs that the plan SHOULD have defined as convergence targets but didn't. This is a **coverage check**, not the primary discovery mechanism.
 
 | Category | Detection Signals | File Patterns |
 |----------|------------------|---------------|
@@ -87,21 +94,25 @@ Scan by category:
 | **UI pages** | Page/route components, router configs | `pages/**`, `app/**/page.*`, `src/views/**`, router files |
 | **Data pipeline output** | DAG definitions, transforms, ETL configs | `dags/`, `transforms/`, `models/`, `*.sql`, pipeline configs |
 
+For each codebase-discovered output, check if the plan already defines a convergence target for it. If not, add it as a candidate with `confidence: medium, source: codebase-discovered`. Present these gaps to the user explicitly: "The plan doesn't define convergence targets for these outputs. Add them?"
+
 ### 1d. Execution Output
 
-If `.plan-execution/` has results from prior execution waves, inspect what was actually built. Wave summaries list `filesCreated` — these are concrete outputs to verify.
+If `.plan-execution/` has results from prior execution waves, inspect what was actually built. Wave summaries list `filesCreated` — cross-reference against plan targets to verify coverage.
 
 ### Discovery Output
 
-Build an internal candidate list. For each candidate:
-- Name and description
-- Category (api, ui, generated-file, cli-output, data-pipeline, custom)
-- Recommended comparison method with rationale
-- Recommended tolerance with justification
-- Recommended capture method
-- Confidence level (high: found in plan + codebase, medium: inferred from codebase, low: speculative)
+Build the candidate list with clear provenance:
 
-Skip candidates with low confidence unless no high/medium candidates exist.
+| Source | Confidence | Action |
+|--------|-----------|--------|
+| Plan-defined (structured TOON) | high | Validate and include. Ask user to confirm method/tolerance. |
+| Plan-defined (malformed/free-text) | high | Parse best-effort, present corrections. |
+| Scope contract | high | Merge with plan targets or add new. |
+| Codebase-discovered (not in plan) | medium | Present as coverage gap. User decides. |
+| Wiki api-surface-* pages | medium | Cross-reference with plan. Present gaps. |
+
+Never include `confidence: low` (speculative) targets. If a target can't be captured deterministically, it's not a convergence target — list it in `nonTargets` with a rationale.
 
 ---
 
@@ -262,21 +273,31 @@ Recommendation: {value} because {rationale tied to this target type}.
 
 ---
 
-## Step 5: Golden Source Resolution
+## Step 5: Golden Source Validation
 
-For each included target, confirm where the baseline comes from:
+Plan-defined targets already specify their `goldenSource`. Validate that each golden source is resolvable:
 
-| Golden Source | When to Use | How It Works |
-|---------------|-------------|--------------|
-| `reference-run` | Implementation exists, can execute | target-parser runs capture command to snapshot current output as golden |
-| `user-provided` | User has golden files on disk | target-parser reads from the provided path |
-| `spec-extracted` | PLAN.md or OpenAPI spec has expected shapes | target-parser generates fixtures from spec |
-| `inline` | Simple, known-good values | target-parser uses literal value from plan metadata |
+| Golden Source | Validation Check | If Invalid |
+|---------------|-----------------|------------|
+| `reference-run` | Implementation exists and is executable | Downgrade to `spec-extracted` if spec available, else flag |
+| `user-provided` | File exists at the expected path | Ask user for correct path |
+| `spec-extracted` | PLAN.md or OpenAPI spec contains the expected shape | Downgrade to `reference-run` if code exists, else flag |
+| `inline` | Value is defined in plan metadata | Flag as incomplete |
 
-If the golden source is unclear, ask:
-
+**For plan-defined targets:** confirm the golden source is valid. If it's not, present the issue with a suggested alternative:
 ```
-## Golden Source: {Target Name}
+## Golden Source Issue: {Target Name}
+
+Plan specifies: {goldenSource}
+Problem: {why it's invalid — e.g., "no implementation exists yet for reference-run"}
+
+Suggested fix: {alternative goldenSource}
+-> Accept fix? (yes / choose different: 1=reference-run, 2=user-provided, 3=spec-extracted, 4=inline)
+```
+
+**For codebase-discovered targets (not in plan):** ask the user, since these have no pre-defined golden source:
+```
+## Golden Source: {Target Name} (discovered, not in plan)
 
 How should we establish the "correct" output for this target?
 
@@ -289,7 +310,7 @@ How should we establish the "correct" output for this target?
 {If 2: What's the path?}
 ```
 
-In `--auto` mode: default to `reference-run` if the implementation exists, `spec-extracted` if a spec exists, otherwise flag for manual resolution.
+In `--auto` mode: trust plan-defined golden sources without validation prompts (still check resolvability — if invalid, use the suggested fix silently). For codebase-discovered targets: default to `reference-run` if implementation exists, `spec-extracted` if spec exists, otherwise exclude the target with a warning.
 
 ---
 

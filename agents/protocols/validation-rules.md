@@ -298,6 +298,22 @@ For `planVersion: 2` plans, these additional checks run after the standard Stage
 | Unreachable state | warning | A state with no inbound transition (other than initial) in a state machine |
 | Dead-end state without terminal marking | warning | A non-terminal state with no outbound transitions |
 
+### Stage 8: Convergence Target Coverage — BLOCKING / WARNING
+
+Validates that phases with deterministic outputs define structured convergence targets, and that those targets have both SOURCE and TARGET sides defined.
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Deterministic criterion without target | blocking | An acceptance criterion that describes a deterministic output (API response, file content, CLI exit code) must have a corresponding entry in the phase's `convergenceTargets` block |
+| Target missing capture method | blocking | Every convergence target must specify a `capture` method (the SOURCE side — how to obtain current output) |
+| Target missing golden source | blocking | Every convergence target must specify a `goldenSource` (the TARGET side — where expected output comes from) |
+| Target missing comparison method | blocking | Every convergence target must specify a `method` (how to compare source vs target) |
+| Malformed target block | blocking | The `convergenceTargets` block must be valid TOON with all required columns: `id`, `name`, `category`, `method`, `tolerance`, `capture`, `goldenSource`, `ignoreFields` |
+| Tolerance out of range | warning | Tolerance must be between 0.0 and 1.0 inclusive |
+| Method/category mismatch | warning | Comparison method should match category (e.g., `json-deep-equal` for `api`, not `pixel-diff`) |
+| Phase with deliverables but no targets | warning | A phase that creates files or endpoints but has no convergence targets section — may be intentional (wiring, refactoring) but flag for review |
+| Duplicate target IDs | blocking | All target IDs across all phases must be unique |
+
 ## 9. Scope Coverage Validation
 
 ### Pre-Execution Coverage Check
