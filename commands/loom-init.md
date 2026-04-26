@@ -40,7 +40,36 @@ Read these files for context on Loom conventions:
    - `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `Gemfile` -- manifest files
    - `README.md` -- existing docs
 
-2. Display what was found:
+2. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use these glob patterns:
+
+   ```
+   # Dedicated docs directories
+   docs/**/*.md, doc/**/*.md, documentation/**/*.md
+   wiki/**/*.md, .wiki/**/*.md
+   specs/**/*.md, design/**/*.md, rfcs/**/*.md, proposals/**/*.md
+
+   # ADR directories
+   docs/adr/**/*.md, docs/adrs/**/*.md, docs/decisions/**/*.md
+   docs/architecture/**/*.md, adr/**/*.md, adrs/**/*.md
+
+   # Root-level planning docs
+   PRD.md, REQUIREMENTS.md, SPEC.md, DESIGN.md, ARCHITECTURE.md
+   VISION.md, STRATEGY.md, GOALS.md, MILESTONES.md, DECISIONS.md
+   CHANGELOG.md, CONTRIBUTING.md, TODO.md, BACKLOG.md, SCOPE.md
+
+   # API specs
+   openapi.yaml, openapi.yml, openapi.json
+   swagger.yaml, swagger.yml, swagger.json
+
+   # GitHub-specific
+   .github/*.md, .github/**/*.md
+   ```
+
+   Also look for files with "spec", "design", "prd", "rfc", "proposal", "adr" in their names.
+
+   Skip: auto-generated docs (TypeDoc/Javadoc output), node_modules, vendor, dist, build directories.
+
+3. Display what was found:
    ```
    ## Project Scan
 
@@ -56,6 +85,20 @@ Read these files for context on Loom conventions:
      README.md       -- found (42 lines)
      src/            -- 23 files
      tests/          -- 8 files
+
+   Planning documents found:
+     docs/PRD.md             -- 142 lines (product requirements)
+     docs/adr/001-db.md      -- 67 lines (architecture decision)
+     VISION.md               -- 23 lines (strategy)
+     docs/api/openapi.yaml   -- 450 lines (API spec)
+     CONTRIBUTING.md         -- 89 lines (process)
+   ```
+
+   If NO planning documents are found, display:
+   ```
+   Planning documents:  none found
+     (No PRDs, ADRs, design docs, or specs detected.
+      The discussion phase will surface these decisions interactively.)
    ```
 
 3. **Gitignore protection check.** First verify we're in a git repo:
@@ -106,7 +149,7 @@ Read these files for context on Loom conventions:
 
 #### Step 2: Discover (parallel)
 
-Launch 3 agents in parallel using the Agent tool. All in a SINGLE message.
+Launch 4 agents in parallel using the Agent tool. All in a SINGLE message.
 
 ##### 2a. Project Guidance Agent
 ```
@@ -134,9 +177,22 @@ Prompt: "Read your instructions from `~/.claude/agents/docs-auditor.md` first." 
 - Instruction: Audit existing documentation. Check for staleness, gaps, contradictions. Assess Loom readiness.
 - List of existing docs found in Step 1
 
+##### 2d. Planning Documents Agent
+```
+subagent_type: "general-purpose"
+model: "haiku"
+```
+Prompt: "Read your instructions from `~/.claude/agents/planning-docs-agent.md` first." Then provide:
+- Instruction: Discover and analyze all existing planning, design, requirements, and strategy documents in this codebase. Extract decisions, requirements, constraints, vision, and milestones. Identify gaps that the discussion phase needs to fill.
+- Planning documents found in Step 1 pre-flight: `{list of planning docs discovered}`
+- Codebase root: `{project root path}`
+- Tech stack: `{from manifest files}`
+
+**If NO planning documents were found in pre-flight:** still spawn this agent — it does its own deep search with broader patterns and may find documents the pre-flight glob missed (e.g., nested directories, non-standard names).
+
 #### Step 3: Present Discovery Results
 
-After all 3 agents return, display a unified analysis:
+After all 4 agents return, display a unified analysis:
 
 ```
 ## Discovery Report
@@ -159,6 +215,21 @@ External integrations:
   Stripe API              -- src/services/stripe.ts
   SendGrid                -- src/services/email.ts
   ...
+
+### Existing Planning Documents ({N} found)
+{from planning-docs-agent: discovered documents by category}
+
+  Requirements:
+    docs/PRD.md             -- 142 lines: product requirements for v2 launch
+  Architecture decisions:
+    docs/adr/001-db.md      -- 67 lines: chose PostgreSQL over MongoDB
+  Strategy:
+    VISION.md               -- 23 lines: company vision and product goals
+  API specs:
+    docs/api/openapi.yaml   -- 450 lines: OpenAPI 3.0 spec
+
+  Extracted: {N} decisions, {M} requirements, {K} constraints
+  Gaps: {list areas marked missing or partial}
 
 ### Documentation Status
 {from docs-auditor: existing docs, staleness, gaps}
@@ -218,7 +289,7 @@ Write the CLAUDE.md content produced by project-guidance-agent. If the user chos
 
 ##### 4b. CONTEXT.md
 
-Synthesize a CONTEXT.md from all 3 agents' output:
+Synthesize a CONTEXT.md from all 4 agents' output:
 
 ```markdown
 # Project Context
@@ -232,14 +303,28 @@ Synthesize a CONTEXT.md from all 3 agents' output:
 ## API Surface
 {summary of internal endpoints and external integrations -- from api-explorer}
 
+## Vision & Strategy
+{vision statement, target users, goals -- from planning-docs-agent extractedVision + extractedMilestones}
+{omit this section if planning-docs-agent found nothing}
+
+## Existing Requirements
+{features, user stories, priorities extracted from planning docs -- from planning-docs-agent extractedRequirements}
+{omit this section if no requirements were extracted}
+
 ## Locked Decisions
-{any decisions detected from existing docs, ADRs, or code comments -- from docs-auditor}
+{decisions from BOTH sources, deduplicated:
+ - from planning-docs-agent extractedDecisions (ADRs, PRD decisions, design docs)
+ - from docs-auditor (decisions detected in code comments or other docs)}
 
 ## Known Constraints
-{performance requirements, compliance needs, deployment targets -- inferred from codebase}
+{merge constraints from both sources:
+ - from planning-docs-agent extractedConstraints (explicit constraints in planning docs)
+ - inferred from codebase (performance requirements, compliance needs, deployment targets)}
 
 ## Documentation Gaps
-{what's missing -- from docs-auditor}
+{merge gaps from both sources:
+ - from planning-docs-agent gaps (what's missing for roadmap: vision, features, data model, etc.)
+ - from docs-auditor (missing API docs, stale references, etc.)}
 ```
 
 ##### 4c. Additional Formats (if --format includes them)
@@ -324,6 +409,8 @@ Discovery:
   API endpoints:  14 internal, 3 external integrations
   Doc status:     README current, API docs missing, 0 ADRs
   Conventions:    8 detected, 8 included in CLAUDE.md
+  Planning docs:  {N} found → {M} decisions, {K} requirements, {J} constraints extracted
+  Gaps:           {list of areas needing discussion}
 
 Wiki:
   Pages created:    {N}
@@ -371,10 +458,18 @@ Next steps:
    filesCreated[N]: CLAUDE.md, CONTEXT.md
    filesSkipped[N]: {any skipped due to user choice}
 
-   agents[3]{name,status,findingCount}:
+   agents[4]{name,status,findingCount}:
      project-guidance-agent,{status},{N}
      api-explorer,{status},{N}
      docs-auditor,{status},{N}
+     planning-docs-agent,{status},{N}
+
+   planningDocs:
+     documentsFound: {N}
+     decisionsExtracted: {N}
+     requirementsExtracted: {N}
+     constraintsExtracted: {N}
+     gaps[N]: {list of missing/partial areas}
 
    wikiGenerated: true
    wikiPageCount: {N}
@@ -386,7 +481,7 @@ Next steps:
 
 ### Error Handling
 
-- **Agent fails**: Log which agent failed, continue with others. Note the gap in the report. If project-guidance-agent fails, CLAUDE.md cannot be generated -- warn and offer to retry.
+- **Agent fails**: Log which agent failed, continue with others. Note the gap in the report. If project-guidance-agent fails, CLAUDE.md cannot be generated -- warn and offer to retry. If planning-docs-agent fails, the discussion phase will surface decisions interactively instead -- this is graceful degradation, not a blocker.
 - **No manifest files found**: Warn that tech stack detection may be incomplete. Continue -- the agents can still analyze code directly.
 - **Empty codebase**: If no source files are found, suggest using greenfield mode: `/loom-roadmap init --from "description"` instead.
 - **Write permission denied**: Report the target path and error. Do not update init-report for that file.
@@ -401,7 +496,7 @@ wave: 0
 totalWaves: 1
 agentsRunning: {N}
 agentsDone: {N}
-agentsTotal: 3
+agentsTotal: 4
 agentsFailed: 0
 findings: 0
 updatedAt: {ISO timestamp}
