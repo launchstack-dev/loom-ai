@@ -1,16 +1,20 @@
 /**
- * Hook: context-monitor (PostToolUse)
+ * Hook: context-monitor (PostToolUse + Stop)
  * Monitors remaining context percentage and injects warnings into tool output.
  * Writes contextRemaining to .plan-execution/status.toon for statusline display.
  * Thresholds read from orchestration.toml [settings.contextBudget].
  * Debounced: warns every 5 tool uses; severity escalation bypasses debounce.
+ * On Stop: fires unconditionally (no debounce) if context is below warning threshold.
  * Fail-open: any error allows the operation silently.
+ *
+ * Merged from former context-monitor + checkpoint-trigger hooks to avoid
+ * duplicate filesystem walks on every tool use.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { runHook, allow } from "./lib/run-hook.js";
-import { estimateTokens, estimateFileTokens } from "./lib/token-estimator.js";
+import { estimateFileTokens } from "./lib/token-estimator.js";
 import { findPlanExecutionDir } from "./lib/context.js";
 
 interface MonitorConfig {
@@ -19,13 +23,12 @@ interface MonitorConfig {
   checkpointCritical: number;
 }
 
-/** Persistent state across hook invocations (scoped per project). */
 const MONITOR_STATE_FILE = path.join(process.cwd(), ".plan-execution", "context-monitor-state.json");
 
 interface MonitorState {
   toolUseCount: number;
-  lastWarnAt: number;         // toolUseCount when last warning was emitted
-  lastSeverity: string;       // "none" | "warning" | "critical"
+  lastWarnAt: number;
+  lastSeverity: string;
 }
 
 function readMonitorState(): MonitorState {
@@ -45,7 +48,6 @@ function writeMonitorState(state: MonitorState): void {
   }
 }
 
-/** Parse monitor config from orchestration.toml. */
 function readMonitorConfig(): MonitorConfig {
   const defaults: MonitorConfig = {
     contextWindow: 200000,
@@ -58,7 +60,6 @@ function readMonitorConfig(): MonitorConfig {
     if (!fs.existsSync(tomlPath)) return defaults;
 
     const content = fs.readFileSync(tomlPath, "utf-8");
-
     if (!content.includes("[settings.contextBudget]")) return defaults;
 
     const sectionMatch = content.match(
@@ -67,7 +68,6 @@ function readMonitorConfig(): MonitorConfig {
     if (!sectionMatch) return defaults;
 
     const section = sectionMatch[1];
-
     const windowMatch = section.match(/contextWindow\s*=\s*(\d+)/);
     const warningMatch = section.match(/checkpointWarning\s*=\s*([\d.]+)/);
     const criticalMatch = section.match(/checkpointCritical\s*=\s*([\d.]+)/);
@@ -82,25 +82,17 @@ function readMonitorConfig(): MonitorConfig {
   }
 }
 
-/**
- * Estimate context consumption. Combines on-disk artifact sizes with
- * a conversation-length heuristic based on tool use count.
- */
 async function estimateContextUsed(
   planExecDir: string | null,
   toolUseCount: number
 ): Promise<number> {
   let total = 5000; // system prompt + overhead
-
-  // Conversation estimate: ~200 tokens per tool interaction on average
-  total += toolUseCount * 200;
+  total += toolUseCount * 200; // ~200 tokens per tool interaction
 
   if (!planExecDir) return total;
 
-  // rolling-context.md
   total += await estimateFileTokens(path.join(planExecDir, "rolling-context.md"));
 
-  // stage-context files
   try {
     const stageDir = path.join(planExecDir, "stage-context");
     if (fs.existsSync(stageDir)) {
@@ -108,27 +100,20 @@ async function estimateContextUsed(
         total += await estimateFileTokens(path.join(stageDir, f));
       }
     }
-  } catch {
-    // fail open
-  }
+  } catch { /* fail open */ }
 
-  // Wave summaries
   try {
     for (const f of fs.readdirSync(planExecDir).filter((f: string) => /^wave-\d+-summary\.toon$/.test(f))) {
       total += await estimateFileTokens(path.join(planExecDir, f));
     }
-  } catch {
-    // fail open
-  }
+  } catch { /* fail open */ }
 
-  // Core state files
   total += await estimateFileTokens(path.join(planExecDir, "state.toon"));
   total += await estimateFileTokens(path.join(planExecDir, "pipeline-state.toon"));
 
   return total;
 }
 
-/** Determine the appropriate resume command based on active state files. */
 function detectResumeCommand(planExecDir: string | null): string {
   if (!planExecDir) return "/loom resume";
 
@@ -142,18 +127,11 @@ function detectResumeCommand(planExecDir: string | null): string {
     if (fs.existsSync(path.join(planExecDir, "state.toon"))) {
       return "/loom-plan execute --resume";
     }
-  } catch {
-    // fail open
-  }
+  } catch { /* fail open */ }
 
   return "/loom resume";
 }
 
-/**
- * Write contextRemaining to status.toon so the statusline renderer
- * can display context pressure (e.g., ctx:65% or ctx:25% !).
- * Uses atomic write: write .tmp then rename.
- */
 function writeContextRemainingToStatus(
   planExecDir: string,
   remainingPct: number,
@@ -161,42 +139,31 @@ function writeContextRemainingToStatus(
 ): void {
   try {
     const statusPath = path.join(planExecDir, "status.toon");
-
-    // Read existing status.toon content if present, and append/update contextRemaining
     let content = "";
     try {
       content = fs.readFileSync(statusPath, "utf-8");
     } catch {
-      // no existing status file -- nothing to update
-      // Only append if status.toon already exists (owned by orchestrator)
-      return;
+      return; // Only update if status.toon already exists
     }
 
-    // Remove any existing contextRemaining line
     const lines = content.split("\n").filter(
       (l) => !l.startsWith("contextRemaining:") && !l.startsWith("contextCritical:")
     );
-
-    // Append contextRemaining fields
     lines.push(`contextRemaining: ${remainingPct}`);
     if (isCritical) {
       lines.push(`contextCritical: true`);
     }
 
-    const updated = lines.join("\n");
     const tmpPath = statusPath + ".tmp";
-    fs.writeFileSync(tmpPath, updated);
+    fs.writeFileSync(tmpPath, lines.join("\n"));
     fs.renameSync(tmpPath, statusPath);
-  } catch {
-    // fail open -- status line is additive, never gating
-  }
+  } catch { /* fail open */ }
 }
 
 runHook("context-monitor", async (input) => {
   const config = readMonitorConfig();
   const planExecDir = findPlanExecutionDir();
 
-  // Track state
   const state = readMonitorState();
   state.toolUseCount++;
 
@@ -205,13 +172,10 @@ runHook("context-monitor", async (input) => {
   const remainingFraction = Math.max(0, remaining / config.contextWindow);
   const remainingPct = Math.round(remainingFraction * 100);
 
-  // Write context remaining to status.toon for statusline display
   if (planExecDir) {
-    const isCritical = remainingFraction <= config.checkpointCritical;
-    writeContextRemainingToStatus(planExecDir, remainingPct, isCritical);
+    writeContextRemainingToStatus(planExecDir, remainingPct, remainingFraction <= config.checkpointCritical);
   }
 
-  // Determine current severity
   let currentSeverity = "none";
   if (remainingFraction <= config.checkpointCritical) {
     currentSeverity = "critical";
@@ -219,23 +183,24 @@ runHook("context-monitor", async (input) => {
     currentSeverity = "warning";
   }
 
-  // No warning needed if above threshold
   if (currentSeverity === "none") {
     writeMonitorState(state);
     return allow();
   }
 
-  // Debounce logic: warn every 5 tool uses, but severity escalation bypasses debounce
+  // On Stop events, always emit the warning (no debounce)
+  const isStopEvent = input.tool_name === undefined;
+
+  // Debounce: warn every 5 tool uses, but severity escalation and Stop bypass
   const sinceLastWarn = state.toolUseCount - state.lastWarnAt;
   const severityEscalated = currentSeverity === "critical" && state.lastSeverity !== "critical";
-  const shouldWarn = sinceLastWarn >= 5 || severityEscalated;
+  const shouldWarn = isStopEvent || sinceLastWarn >= 5 || severityEscalated;
 
   if (!shouldWarn) {
     writeMonitorState(state);
     return allow();
   }
 
-  // Update state
   state.lastWarnAt = state.toolUseCount;
   state.lastSeverity = currentSeverity;
   writeMonitorState(state);
@@ -246,9 +211,15 @@ runHook("context-monitor", async (input) => {
   if (currentSeverity === "critical") {
     message = [
       "",
-      `[CONTEXT CRITICAL] ~${remainingPct}% remaining (~${remaining} of ${config.contextWindow} tokens)`,
-      `Recommended: Run \`/loom pause --compact\` then \`/clear\``,
-      `Resume with: \`${resumeCmd}\``,
+      `--- CONTEXT CHECKPOINT (CRITICAL) ---`,
+      `Estimated context: ${100 - remainingPct}% used (~${estimated} tokens of ${config.contextWindow})`,
+      `Remaining: ~${remaining} tokens (${remainingPct}%)`,
+      "",
+      "Recommended action:",
+      `  1. Run \`/loom pause --compact\` to save all state`,
+      `  2. Run \`/clear\` for fresh context`,
+      `  3. Then: \`${resumeCmd}\``,
+      "---",
       "",
     ].join("\n");
   } else {

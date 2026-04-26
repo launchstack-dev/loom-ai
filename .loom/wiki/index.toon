@@ -1,0 +1,35 @@
+schemaVersion: 1
+projectName: loom-ai
+domain: code
+wikiVersion: 1
+pageCount: 19
+lastUpdated: 2026-04-25T22:00:00Z
+
+pages[19]{pageId,title,category,staleness,updatedAt}:
+  component-command-dispatch,Command Dispatch System,component,fresh,2026-04-25T22:00:00Z
+  component-context-budget,Context Budget Hook,component,fresh,2026-04-25T22:00:00Z
+  component-context-monitor,Context Monitor Hook,component,fresh,2026-04-25T22:00:00Z
+  component-deploy-guard,Deploy Guard Hook,component,fresh,2026-04-25T22:00:00Z
+  component-hooks-system,Hooks System,component,fresh,2026-04-25T22:00:00Z
+  component-install-pipeline,Library Install Pipeline,component,fresh,2026-04-25T22:00:00Z
+  component-library-catalog,Library Catalog,component,fresh,2026-04-25T22:00:00Z
+  component-orchestration-patterns,Orchestration Patterns,component,fresh,2026-04-25T22:00:00Z
+  concept-convergence,Convergence,concept,fresh,2026-04-25T22:00:00Z
+  concept-execution-pipeline,Execution Pipeline,concept,fresh,2026-04-25T22:00:00Z
+  convention-agent-result,AgentResult Envelope,convention,fresh,2026-04-25T22:00:00Z
+  convention-command-creation,Command Creation Conventions,convention,fresh,2026-04-25T22:00:00Z
+  convention-settings-json,Hook Registration Convention,convention,fresh,2026-04-25T22:00:00Z
+  convention-toon-format,TOON Format,convention,fresh,2026-04-25T22:00:00Z
+  decision-hook-merges,Hook Merge Decision,decision,fresh,2026-04-25T22:00:00Z
+  pattern-model-resolution,Model Resolution,pattern,fresh,2026-04-25T22:00:00Z
+  pattern-subcommand-dispatch,Subcommand Dispatch Pattern,pattern,fresh,2026-04-25T22:00:00Z
+  structure-agent-taxonomy,Agent Taxonomy,structure,fresh,2026-04-25T22:00:00Z
+  structure-command-layout,Command File Layout,structure,fresh,2026-04-25T22:00:00Z
+
+categories[6]{name,count}:
+  component,8
+  concept,2
+  convention,4
+  decision,1
+  pattern,2
+  structure,2

@@ -1,0 +1,6 @@
+schemaVersion: 1
+entryCount: 1
+lastEntry: 2026-04-25T22:00:00Z
+
+entries[1]{timestamp,operation,pageId,agent,summary}:
+  2026-04-25T22:00:00Z,bootstrap,*,human,Initial wiki bootstrap: 19 pages across 6 categories covering hooks/infrastructure + command dispatch + agents/protocols

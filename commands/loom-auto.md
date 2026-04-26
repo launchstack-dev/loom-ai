@@ -51,7 +51,13 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 2. Agent `.md` frontmatter `model:` field
 3. Default: omit `model` parameter (inherits parent)
 
-**How to resolve:** Read `.claude/orchestration.toml` once at initialization (Step 0). Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, determine the agent's tier (planning/execution/review/verification/utility), use the profile's model for that tier. If no profile, read the agent's `.md` frontmatter. Pass `model: "{resolved}"` on the Agent tool call.
+**How to resolve (for each agent spawn):**
+
+1. Read `.claude/orchestration.toml` once at initialization (Step 0). Cache the result.
+2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
+3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
+4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
+5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
 
 **Tier mapping:** planning = roadmap-builder, plan-builder, questioner, criteria-planner, interpretation-reviewer, prompt-refiner. execution = contracts, implementer, wiring, data-pipeline. review = all reviewers + scope-feasibility. verification = verification-agent. utility = meta-agent, wiki agents, fixer, delta-analyzer, convergence-planner, acceptance-criteria, target-parser, harness-builder, convergence-driver.
 

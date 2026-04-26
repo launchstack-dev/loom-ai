@@ -69,16 +69,28 @@ Read PLAN.md and extract all `#### Convergence Targets` blocks from every phase.
 - Is the tolerance reasonable for the method? (`1.0` for JSON APIs, `0.90-0.99` for pixel-diff)
 - Are the ignore fields appropriate? (timestamps yes, user IDs probably not)
 
-**If a plan has zero convergence targets across all phases:** warn that the plan was generated without convergence definitions. Fall back to discovery mode (1c/1d below), but flag this as a plan quality issue.
+**If a plan has zero convergence targets across all phases:**
+- Warn that the plan was generated without convergence definitions
+- Fall back to discovery mode (1c/1d below), flag as a plan quality issue
+- **`--auto` mode:** blocking warning — emit to stderr and exit 1: "Plan has no convergence targets. Re-run plan-builder-agent with convergence target generation, or use interactive mode to proceed with codebase-discovered targets."
+- **Interactive mode:** display warning, ask user to confirm proceeding with discovery-mode targets
+- **Both modes:** persist in convergence plan summary (Step 6) header: "WARNING: Using codebase-discovered targets (medium confidence). Plan has no structured convergence targets."
 
-**If targets are present but malformed** (free-text instead of structured TOON): parse best-effort, infer missing fields, and present corrections for user confirmation.
+**If targets are present but malformed** (free-text instead of structured TOON):
+- Parse best-effort, infer missing fields, present corrections for user confirmation
+- **Failure boundary:** if best-effort parsing cannot extract at least `id`, `name`, `category`, and `method`, reject the target with error: "Target in phase N is too malformed to parse. Expected structured TOON with columns: id,name,category,method,tolerance,capture,goldenSource,ignoreFields. Got: {first 100 chars of raw text}. Re-run plan-builder-agent to generate structured targets."
+- Partial parses that lack the 4 minimum fields are excluded, not silently patched
 
 Plan targets enter the candidate list as `confidence: high, source: plan-defined`.
 
 ### 1b. Scope Contract Cross-Reference
 
 If `scope-contract.toon` exists, check `successCriteria`:
-- Criteria with `convergenceMethod` set (not empty) → direct convergence targets with pre-specified method and tolerance. Cross-reference with plan targets — if the plan already defines this target, merge scope contract fields (they're additive). If not, add as a new candidate.
+- Criteria with `convergenceMethod` set (not empty) → direct convergence targets with pre-specified method and tolerance. Cross-reference with plan targets:
+  - If the plan already defines this target, merge scope contract fields using these precedence rules:
+    - **Scalar fields** (`method`, `tolerance`, `capture`, `goldenSource`): plan-defined values win. If scope contract differs, emit WARNING: "Scope contract specifies {field}: {value} for target {id}, but plan defines {field}: {plan_value}. Using plan value."
+    - **List fields** (`ignoreFields`): merge as union
+  - If not already in plan, add as a new candidate
 - Criteria with `verificationMethod` containing "integration test", "API response", "screenshot" but no `convergenceMethod` → convergence target candidates (infer method)
 - Non-goals → explicitly exclude from convergence
 
@@ -310,7 +322,12 @@ How should we establish the "correct" output for this target?
 {If 2: What's the path?}
 ```
 
-In `--auto` mode: trust plan-defined golden sources without validation prompts (still check resolvability — if invalid, use the suggested fix silently). For codebase-discovered targets: default to `reference-run` if implementation exists, `spec-extracted` if spec exists, otherwise exclude the target with a warning.
+**`--auto` mode behavior:**
+- Trust plan-defined golden sources without validation prompts (still check resolvability)
+- If invalid, apply the suggested fix from the table above
+- **Golden source changes MUST be logged** in the convergence plan summary (Step 6): "GOLDEN SOURCE CHANGED: {target name} from {original} to {replacement} because {reason}."
+- If no valid golden source can be resolved (all alternatives exhausted), exclude the target with an explicit error — do not silently drop it
+- For codebase-discovered targets: default to `reference-run` if implementation exists, `spec-extracted` if spec exists, otherwise exclude with a warning logged in the summary's "Excluded Targets" section
 
 ---
 

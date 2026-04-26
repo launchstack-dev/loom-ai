@@ -215,7 +215,7 @@ Each target defines: what to capture (SOURCE), what to compare against (TARGET v
 | `id` | `P{phase}-T{NN}` | Unique target ID scoped to the phase |
 | `name` | string | Human-readable name for the output being verified |
 | `category` | `api`, `generated-file`, `cli-output`, `ui`, `data-pipeline`, `custom` | What kind of output |
-| `method` | `json-deep-equal`, `text-diff`, `pixel-diff`, `semantic-html`, `row-diff`, `custom` | Comparison method |
+| `method` | `json-deep-equal`, `text-diff`, `pixel-diff`, `semantic-html`, `row-diff`, `cli-exit-code`, `custom` | Comparison method |
 | `tolerance` | `0.0`–`1.0` | Match threshold. `1.0` = exact match after ignoring excluded fields |
 | `capture` | `http-get`, `http-post`, `file-read`, `script-exec`, `playwright-screenshot`, `query-exec`, `custom` | How to obtain the current output (SOURCE) |
 | `goldenSource` | `spec-extracted`, `reference-run`, `user-provided`, `inline` | Where the expected output (TARGET) comes from |
@@ -383,7 +383,7 @@ See `test-fixtures/broken-plan/PLAN.md` — demonstrates common errors:
 
 ## Relationship to Convergence Schemas
 
-- **convergence-plan.schema.md** -- The `convergenceTargets` blocks in plan phases are the primary input for convergence-planner-agent. Plan target IDs (`P{phase}-T{NN}`) map to convergence-plan.toon target IDs (`T-NN`). The convergence-planner validates, refines, and supplements plan targets — it does not re-discover them from scratch.
+- **convergence-plan.schema.md** -- The `convergenceTargets` blocks in plan phases are the primary input for convergence-planner-agent. Plan target IDs (`P{phase}-T{NN}`) map to convergence-plan.toon target IDs (`T-NN`). The convergence-planner validates, refines, and supplements plan targets — it does not re-discover them from scratch. **Field mapping:** plan targets use `method` and `capture`; convergence-plan.toon uses `comparisonMethod` and `captureMethod`. The convergence-planner performs this renaming during target loading. Additionally, convergence-plan.toon requires a `goldenPath` field — the convergence-planner synthesizes this from `goldenSource` during Step 5 (golden source validation). The convergence-plan also adds `metadata` and `rationale` columns not present in plan targets — these are enrichments, not renames.
 - **convergence-tier.schema.md** -- Defines the 4 convergence tiers (unit, integration, e2e, qa-review) that map to plan hierarchy levels. Phases may optionally specify convergence tier overrides in their Convergence Tiers section.
 - **taxonomy.md** -- Defines the planning hierarchy (milestone > feature > phase > wave) and the default convergence tier assignment for each level.
 - **criteria-plan.schema.md** -- Criteria entries derived from plan acceptance criteria include a `testTier` column referencing convergence tier names.

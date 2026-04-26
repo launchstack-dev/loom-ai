@@ -1,3 +1,10 @@
+## 2026-04-25 -- Code fixes applied
+- Source: review-report.md (commits 26083c1 + 5701dd6)
+- Applied: 11 findings (2 critical, 9 warning)
+- Unfixable: 0 findings
+- Verification: SKIP (markdown-only changes, no typecheck/test applicable)
+- Key fixes: step numbering, best-effort parse boundary, cli-exit-code enum, Stage 8 all-versions note, field mapping docs, merge precedence, deterministic heuristic
+
 ## 2026-04-19 -- Wave 3 execution complete (all waves done)
 - Executed via /loom-plan execute --resume
 - Wave 3: Phases 5, 6, 8 (E2E pipeline, statusline/logging/auto, wiring)

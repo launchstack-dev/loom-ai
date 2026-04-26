@@ -6,8 +6,13 @@
  * This hook only prevents the orchestrator from stopping before a stage completes.
  */
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { runHook, allow, block } from "./lib/run-hook.js";
 import { findPlanExecutionDir, readPipelineState } from "./lib/context.js";
+
+/** Minutes of inactivity before pipeline state is considered stale. */
+const STALE_THRESHOLD_MS = 30 * 60 * 1000;
 
 const TERMINAL_STAGES = new Set(["complete", "escalated"]);
 const KNOWN_STAGES = new Set([
@@ -42,6 +47,23 @@ runHook("quality-gate", async (_input) => {
 
   if (TERMINAL_STAGES.has(pipeline.currentStage)) {
     return allow(); // Legitimate stop
+  }
+
+  // Stale pipeline detection: if pipeline-state.toon hasn't been written
+  // in 30 minutes, this is leftover state from an abandoned session.
+  try {
+    const pipelinePath = path.join(planExecDir, "pipeline-state.toon");
+    const stat = fs.statSync(pipelinePath);
+    const ageMs = Date.now() - stat.mtimeMs;
+    if (ageMs > STALE_THRESHOLD_MS) {
+      return allow(
+        `[quality-gate] Pipeline state is stale (last modified ${Math.round(ageMs / 60000)}m ago). ` +
+          `Allowing stop. Run \`/loom resume\` to continue the abandoned pipeline, ` +
+          `or delete .plan-execution/pipeline-state.toon to clear it.`
+      );
+    }
+  } catch {
+    // Can't stat — fail open
   }
 
   // Unknown stage — fail open rather than blocking on corrupted state

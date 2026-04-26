@@ -142,7 +142,48 @@ Languages, frameworks, databases, and key dependencies. This is a strategic choi
 - Version can be "latest" or a specific version constraint
 - Purpose column helps reviewers understand why each choice was made
 
-### 6. Features
+### 6. Architecture *(optional)*
+
+```markdown
+## Architecture
+```
+
+Structural documentation of how constraints, tech stack choices, and domain models compose into a system design. This section is for projects with complex domain models or multi-component architectures where the shape of the system matters for planning.
+
+**When to include:** Projects with 3+ interacting components, complex data pipelines, multi-layer architectures, or non-trivial integration patterns. Simple CRUD apps and single-service projects can skip this.
+
+**Distinction from Constraints & Decisions:** C-XX entries are locked choices ("we use PostgreSQL", "JWT for auth"). Architecture documents how those choices compose structurally ("the auth middleware sits between the API gateway and service layer, validating JWTs before routing to handlers").
+
+Supports these subsections (all optional, use `###` headings):
+
+```markdown
+### Pipelines
+Data flow pipelines — ingest → transform → store → serve. Describe stages, handoff points, and failure boundaries.
+
+### Domain Models
+Domain-driven design concepts: aggregates, bounded contexts, value objects. Goes beyond the Data Model section (which lists entities) to document how entities compose into domain concepts.
+
+### Component Mapping
+How logical components map to physical code organization. Service boundaries, module ownership, deployment units.
+
+### Integration Patterns
+How components communicate: sync (HTTP, gRPC), async (queues, events), shared state (database, cache). Include failure modes and retry strategies.
+
+### UX Contracts
+User-facing interaction contracts: page flows, state transitions, error surfaces. What the user sees at each step and what guarantees the system makes.
+```
+
+**Rules:**
+- At least one subsection required if the Architecture section is present (empty Architecture section is a structural error)
+- Subsections use `###` level headings
+- Content is prose + diagrams (ASCII/Mermaid) — not tables or TOON
+
+**Consumption:**
+- `plan-builder-agent` reads Architecture to constrain phase design (component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring-agent instructions)
+- Architecture review agent evaluates this section during `/loom-roadmap review`
+- Wiki `decision-*` and `structure-*` pages may reference Architecture subsections as their source
+
+### 7. Features
 
 ```markdown
 ## Features
@@ -182,7 +223,7 @@ The core of the roadmap. Each feature is a subsection with a unique ID.
 - At least 2 features required (a single feature is likely too coarse-grained)
 - Description should focus on user value, not implementation details
 
-### 7. Data Model (Conceptual)
+### 8. Data Model (Conceptual)
 
 ```markdown
 ## Data Model (Conceptual)
@@ -214,7 +255,7 @@ Entity names, their relationships, and key fields at the **conceptual** level. T
 - Relationships must use standard cardinality notation: 1:1, 1:N, M:N
 - During plan generation, this conceptual model is expanded into fully typed schemas with constraints, indexes, and cascade behavior
 
-### 8. Milestones
+### 9. Milestones
 
 ```markdown
 ## Milestones
@@ -250,7 +291,7 @@ Milestones form a DAG (Directed Acyclic Graph), just like plan phases:
 
 ---
 
-### 9. Risks & Mitigations
+### 10. Risks & Mitigations
 
 ```markdown
 ## Risks & Mitigations
@@ -270,7 +311,7 @@ Known risks with planned mitigations.
 - At least 1 risk required (every project has risks; claiming zero risks suggests insufficient analysis)
 - Mitigation must be actionable (not "we'll deal with it later")
 
-### 10. Out of Scope
+### 11. Out of Scope
 
 ```markdown
 ## Out of Scope
@@ -315,7 +356,8 @@ Orchestrators validate roadmaps through these stages. All stages are run by `/lo
 | Required frontmatter fields | blocking | `roadmapVersion`, `name`, `status`, `created`, `totalFeatures`, `totalMilestones` must all be present and non-null |
 | Title matches name | blocking | `# Roadmap: {name}` must match `frontmatter.name` |
 | Required sections present | blocking | Vision, Success Metrics, Constraints & Decisions, Tech Stack, Features, Data Model (Conceptual), Milestones, Risks & Mitigations, Out of Scope must all exist |
-| Section order | blocking | Required sections must appear in the order specified above |
+| Section order | blocking | Required sections must appear in the order specified above. The optional Architecture section, if present, must appear between Tech Stack and Features. |
+| Architecture non-empty | blocking | If an Architecture section is present, it must contain at least one `###` subsection. An empty Architecture section is a structural error. |
 | Feature count matches | warning | `totalFeatures` in frontmatter should match actual feature count |
 | Milestone count matches | warning | `totalMilestones` in frontmatter should match actual milestone count |
 
@@ -375,6 +417,7 @@ The ROADMAP.md is the **strategy** document. The PLAN.md is the **execution spec
 | Milestones → | Delivery boundaries | Wave boundaries |
 | Constraints → | Architectural decisions | Honored as invariants in every phase |
 | Tech Stack → | Strategic choices | Referenced by contracts-agent and verification-agent |
+| Architecture → | System structure (optional) | Component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring instructions |
 | Success Metrics → | Project-level outcomes | Feed into acceptance criteria at phase level |
 | API detail | None (features describe behaviors) | Full endpoint specs with request/response/errors |
 | Status lifecycle | draft → reviewed → approved | draft → reviewed → approved → in-progress → completed |
@@ -390,6 +433,7 @@ The ROADMAP.md is the **strategy** document. The PLAN.md is the **execution spec
    - Milestones → wave boundaries
    - Data Model → fully typed schema
    - Constraints → invariants
+   - Architecture → component boundaries, pipeline stages, integration patterns (when present)
    - Tech Stack → contracts and verification config
    - Success Metrics → final acceptance criteria
 

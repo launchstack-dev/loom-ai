@@ -40,6 +40,7 @@ blockName:                                    # nested block
 - All agents return a standard AgentResult envelope in TOON (see `agents/protocols/agent-result.schema.md`)
 - Execution agents write progress heartbeats to `.plan-execution/progress/{taskId}.toon`
 - File writes must be atomic: write to `.tmp`, then rename
+- **Model resolution is mandatory.** Before every Agent tool call, read the target agent's `.md` frontmatter `model:` field and pass `model: "{value}"` on the call. Resolution priority: (1) `orchestration.toml` profile tier, (2) frontmatter, (3) inherit parent. Never spawn an agent without resolving its model first.
 - See `agents/protocols/execution-conventions.md` for directory structure and file naming
 
 ## Context Management

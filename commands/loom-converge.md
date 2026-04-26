@@ -56,7 +56,15 @@ Parse arguments after `converge`:
 
 #### Step 0: Read Protocols, Resolve Models, and Gather Wiki Context
 
-**Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
+**Model Resolution (for each agent spawn):**
+
+Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility.
+
+1. Read `.claude/orchestration.toml` once (cache the result).
+2. If orchestration.toml exists AND has a `modelProfile`, look up the agent's tier → use that tier's model. Done.
+3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:`. Use that value. This step is NOT optional.
+4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
+5. Pass `model: "{resolved}"` on each Agent tool call.
 
 **Wiki Context:** If `.loom/wiki/` exists, read `index.toon` and gather relevant pages:
 - **Target mode (`--plan` or `--target`):** collect `api-surface-*` pages (convergence target seeds), `decision-*` pages (method constraints), `convention-*` pages (naming/routing patterns), `pattern-*` pages (additional target signals). Cap at 8 pages.

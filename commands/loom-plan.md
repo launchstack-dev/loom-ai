@@ -65,12 +65,12 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 | verification-agent | verification |
 | acceptance-criteria-agent, unit-test-agent, e2e-test-agent | utility |
 
-**How to resolve:**
+**How to resolve (for each agent spawn):**
 
-1. If `.claude/orchestration.toml` exists, read it once at the start of the subcommand.
-2. Check for `modelProfile` under `[settings]`. If set (e.g., `balanced`), read the profile definition under `[settings.profiles.balanced]` to get per-tier model assignments.
-3. For each agent spawn, look up the agent's tier in the table above, then use the profile's model for that tier.
-4. If no profile is set, read the agent's `.md` frontmatter for `model:`.
+1. Read `.claude/orchestration.toml` once at the start (cache the result).
+2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
+3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
+4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
 5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
 
 ---

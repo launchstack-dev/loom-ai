@@ -196,6 +196,17 @@ library:
       source: agents/verification-agent.md
       requires: [skill:execution-protocols]
 
+    # Upgrade agents
+    - name: roadmap-upgrade-agent
+      description: Migrates old-format ROADMAP.md to current roadmap.schema.md structure
+      source: agents/roadmap-upgrade-agent.md
+      requires: [skill:roadmap-schema]
+
+    - name: plan-upgrade-agent
+      description: Migrates old-format PLAN.md to current plan.schema.md structure
+      source: agents/plan-upgrade-agent.md
+      requires: [skill:plan-schema]
+
     # Testing agents
     - name: acceptance-criteria-agent
       description: Extracts testable acceptance criteria from plan phases, outputs structured test specs
@@ -377,6 +388,48 @@ library:
       description: Data migration planning - schema transforms, rollback strategies, zero-downtime migration
       source: agents/migration-architect.md
 
+    # Test/convergence pipeline agents (referenced by pipeline stages)
+    - name: e2e-runner-agent
+      description: Runs E2E test suites against built artifacts, reports pass/fail with screenshots
+      source: agents/e2e-runner-agent.md
+
+    - name: e2e-test-writer-agent
+      description: Generates E2E test cases from convergence targets and acceptance criteria
+      source: agents/e2e-test-writer-agent.md
+
+    - name: integration-test-agent
+      description: Runs integration tests across service boundaries with real dependencies
+      source: agents/integration-test-agent.md
+
+    - name: qa-review-agent
+      description: Quality assurance review — final human-readable assessment before merge
+      source: agents/qa-review-agent.md
+
+    - name: interpretation-reviewer-agent
+      description: Reviews plan interpretation conflicts — ambiguous specs, competing implementations
+      source: agents/interpretation-reviewer-agent.md
+
+    # Pipeline support agents
+    - name: auto-dispatcher
+      description: Dispatches pipeline stages to appropriate agents based on plan structure and state
+      source: agents/auto-dispatcher.md
+
+    - name: context-budget-reviewer
+      description: Reviews agent context budget usage and suggests compression strategies
+      source: agents/context-budget-reviewer.md
+
+    - name: criteria-harness-builder
+      description: Builds test harnesses from acceptance criteria — structured verification infrastructure
+      source: agents/criteria-harness-builder.md
+
+    - name: criteria-planner-agent
+      description: Plans acceptance criteria verification strategy — maps criteria to test methods
+      source: agents/criteria-planner-agent.md
+
+    - name: wiki-maintainer-triggers
+      description: Trigger definitions for wiki-maintainer-agent — maps execution events to wiki update actions
+      source: agents/wiki-maintainer-triggers.md
+
     # Code fix agents
     - name: fixer-agent
       description: Applies code review findings as targeted fixes within file ownership boundaries
@@ -434,6 +487,74 @@ library:
       description: "Root command — init, auto, converge, quick, pause, resume, do, next, profile, status, debate, chain, vote, triage"
       source: commands/loom.md
       requires: [agent:project-guidance-agent, agent:api-explorer, agent:docs-auditor, agent:wiki-ingest-agent, agent:wiki-lint-agent, agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:convergence-driver]
+
+    # ── Subcommands dispatched by loom.md ────────────────────────
+    # These are Read-dispatched by loom.md and MUST be installed to ~/.claude/commands/
+
+    - name: loom-auto
+      description: "Full autonomous pipeline — plan, execute, test, review, converge in a single session"
+      source: commands/loom-auto.md
+
+    - name: loom-init
+      description: "Project initialization — generates CLAUDE.md, orchestration.toml, and project guidance"
+      source: commands/loom-init.md
+
+    - name: loom-quick
+      description: "Quick task execution — single-shot tasks without full plan ceremony"
+      source: commands/loom-quick.md
+
+    - name: loom-converge
+      description: "Convergence pipeline — iterative comparison against deterministic targets until match"
+      source: commands/loom-converge.md
+
+    - name: loom-debate
+      description: "Adversarial multi-round debate between agents for well-reasoned decisions"
+      source: commands/loom-debate.md
+
+    - name: loom-chain
+      description: "Sequential agent pipeline — each agent refines the prior output"
+      source: commands/loom-chain.md
+
+    - name: loom-vote
+      description: "Parallel isolated execution with comparative evaluation — multiple agents solve independently, then vote"
+      source: commands/loom-vote.md
+
+    - name: loom-triage
+      description: "Task complexity classification and routing to appropriate agent topology"
+      source: commands/loom-triage.md
+
+    - name: loom-do
+      description: "Execute a single named task from the current plan with full agent orchestration"
+      source: commands/loom-do.md
+
+    - name: loom-next
+      description: "Execute the next pending task from the current plan"
+      source: commands/loom-next.md
+
+    - name: loom-pause
+      description: "Checkpoint and pause execution — saves rolling context, state, and resume instructions"
+      source: commands/loom-pause.md
+
+    - name: loom-resume
+      description: "Resume paused execution — reloads state and continues from last checkpoint"
+      source: commands/loom-resume.md
+
+    - name: loom-status
+      description: "Pipeline status dashboard — progress, agent health, context budget, blockers"
+      source: commands/loom-status.md
+
+    - name: loom-profile
+      description: "Model profile management — configure agent-to-model tier mappings"
+      source: commands/loom-profile.md
+
+    - name: loom-reference
+      description: "Loom command reference — displays all available commands and usage"
+      source: commands/loom-reference.md
+
+    - name: loom-upgrade
+      description: "Upgrade Loom artifacts and project infrastructure to current schema versions"
+      source: commands/loom-upgrade.md
+      requires: [agent:roadmap-upgrade-agent, agent:plan-upgrade-agent]
 
     # ── Standalone commands (unchanged) ───────────────────────────
 

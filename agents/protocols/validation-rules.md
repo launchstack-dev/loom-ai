@@ -230,7 +230,8 @@ If any **blocking** error is found, the pipeline halts. **Warning**-level issues
 | Required frontmatter fields | blocking | `roadmapVersion`, `name`, `status`, `created`, `totalFeatures`, `totalMilestones` must all be present and non-null |
 | Title matches name | blocking | `# Roadmap: {name}` must match `frontmatter.name` |
 | Required sections present | blocking | Vision, Success Metrics, Constraints & Decisions, Tech Stack, Features, Data Model (Conceptual), Milestones, Risks & Mitigations, Out of Scope must all exist |
-| Section order | blocking | Required sections must appear in the order specified by roadmap.schema.md |
+| Section order | blocking | Required sections must appear in the order specified by roadmap.schema.md. The optional Architecture section, if present, must appear between Tech Stack and Features. |
+| Architecture non-empty | blocking | If an Architecture section is present, it must contain at least one `###` subsection (Pipelines, Domain Models, Component Mapping, Integration Patterns, or UX Contracts). An empty Architecture section is a structural error. |
 | Feature count matches | warning | `totalFeatures` in frontmatter should match actual feature count |
 | Milestone count matches | warning | `totalMilestones` in frontmatter should match actual milestone count |
 
@@ -300,7 +301,11 @@ For `planVersion: 2` plans, these additional checks run after the standard Stage
 
 ### Stage 8: Convergence Target Coverage — BLOCKING / WARNING
 
+**Applies to all plan versions** (not only v2). This stage is placed in the v2 section for organizational proximity to Stage 7, but `create.md` runs Stage 8 unconditionally.
+
 Validates that phases with deterministic outputs define structured convergence targets, and that those targets have both SOURCE and TARGET sides defined.
+
+**Deterministic criterion classification heuristic:** A criterion is deterministic if it contains any of: an HTTP method + path (e.g., "GET /api/users returns 200"), a file path or output path, a CLI exit code, a specific response shape or JSON structure, a rendered page reference, or a database query result. A criterion is NOT deterministic if it describes code quality, naming conventions, architecture decisions, or uses subjective language ("good", "clean", "proper"). If classification is ambiguous, emit a **warning** (not blocking) asking the user to classify it.
 
 | Check | Severity | Description |
 |-------|----------|-------------|

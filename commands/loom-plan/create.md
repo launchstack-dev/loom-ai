@@ -232,9 +232,9 @@ Save the conflict report to `.plan-execution/conflicts/interpretation-report.too
    - Target blocks are valid TOON with all required columns
    - No duplicate target IDs across phases
 
-3. **If validation passes** (0 blocking errors): proceed to Step 3.
+4. **If validation passes** (0 blocking errors): proceed to Step 3.
 
-4. **If validation fails**:
+5. **If validation fails**:
    - Compile errors into a structured report
    - Re-spawn plan-builder-agent with: the plan + the validation report + "Fix these validation errors. Do not change unrelated sections."
    - Re-validate. If still fails after 2 retries: present plan + errors to user for manual decision.

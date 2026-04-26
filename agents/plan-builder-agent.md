@@ -71,6 +71,7 @@ When a ROADMAP.md is provided, use it as the primary input. Map roadmap elements
 | Tech Stack | Referenced by contracts-agent and verification commands |
 | Success Metrics | Feed into final acceptance criteria and verification commands |
 | Key Behaviors (per feature) | Feed into per-phase acceptance criteria |
+| Architecture (optional) | Component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring-agent instructions. When absent, derive structural constraints from Constraints & Decisions and Tech Stack only. |
 
 **Feature-to-phase decomposition rules:**
 - A feature with 1-3 key behaviors → 1 phase
