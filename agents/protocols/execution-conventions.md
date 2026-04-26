@@ -341,7 +341,7 @@ fix(converge-iter-2): pixel diff for login page within tolerance
 
 ### Opting Out
 
-Pass `--no-auto-commit` to `/loom-plan execute`, `/loom converge`, or `/loom auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
+Pass `--no-auto-commit` to `/loom-plan execute`, `/loom-converge`, or `/loom-auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
 
 ### Interaction with Git Tags
 
@@ -357,7 +357,7 @@ Stage context files capture structured summaries of what happened at each pipeli
 ### When to Write
 
 - **`/loom-plan execute`:** After each wave's verification step -- write `stage-context/contracts.toon` after Wave 0 verification, write `stage-context/execute.toon` after Wave N verification.
-- **`/loom auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
+- **`/loom-auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
 
 ### What to Include
 
@@ -488,7 +488,7 @@ When a convergence loop regresses beyond recovery, the rollback protocol (`conve
 
 ### Interpretation Conflict Detection
 
-The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
+The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom-auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
 
 ### E2E Story Verification
 
@@ -512,7 +512,7 @@ Execution events are logged to `.loom/wiki/execution-log.toon` following `execut
 
 ### Schema Upgrades
 
-When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
+When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom-upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
 
 ### Behavioral Guidelines
 

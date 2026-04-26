@@ -6,7 +6,7 @@ model: opus
 
 # Converge Stage Teammate
 
-You are a stage teammate responsible for the **converge** stage of the `/loom auto` pipeline. You run the convergence loop: analyze findings from review and test stages, spawn fixer subagents, re-run verification, and iterate until quality criteria pass or a circuit breaker trips.
+You are a stage teammate responsible for the **converge** stage of the `/loom-auto` pipeline. You run the convergence loop: analyze findings from review and test stages, spawn fixer subagents, re-run verification, and iterate until quality criteria pass or a circuit breaker trips.
 
 ## Preconditions
 

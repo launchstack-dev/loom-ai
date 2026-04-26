@@ -54,9 +54,9 @@ curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/uninst
 ```
 Commands (noun-grouped)             Agents (spawned by subcommands)
 ───────────────────────             ────────────────────────────────
-/loom init ──────────────────────→ project-guidance + api-explorer + docs-auditor
-/loom auto ──────────────────────→ prompt-refiner → scope-interrogator → roadmap → plan → execute → test → review → fix
-/loom debate/chain/vote/triage ──→ multi-agent orchestration patterns
+/loom-init ──────────────────────→ project-guidance + api-explorer + docs-auditor
+/loom-auto ──────────────────────→ prompt-refiner → scope-interrogator → roadmap → plan → execute → test → review → fix
+/loom-debate/chain/vote/triage ──→ multi-agent orchestration patterns
 /loom-roadmap init ──────────────→ questioner → roadmap-builder
 /loom-roadmap review ────────────→ 4 review agents (parallel)
 /loom-roadmap explore ───────────→ 3-6 persona agents (multi-round brainstorming)
@@ -66,7 +66,7 @@ Commands (noun-grouped)             Agents (spawned by subcommands)
 /loom-plan test ─────────────────→ criteria → unit-test → e2e-test
 /loom-code review ───────────────→ 6 built-in + 3 bespoke reviewers + contract checking
 /loom-code fix ──────────────────→ parallel fixer-agents
-/loom converge ──────────────────→ target-parser → harness → delta-analyzer → driver
+/loom-converge ──────────────────→ target-parser → harness → delta-analyzer → driver
 /loom-wiki ingest ───────────────→ wiki-ingest-agent → wiki-maintainer-agent
 /loom-wiki lint ─────────────────→ wiki-lint-agent + contract/plan validators
 
@@ -102,7 +102,7 @@ behavioral-guidelines.md      ← Karpathy-inspired agent guardrails
 ### Full pipeline (maximum control)
 
 ```
-/loom init                              Brownfield onboarding → CLAUDE.md + wiki
+/loom-init                              Brownfield onboarding → CLAUDE.md + wiki
 /loom-roadmap init --brownfield         Create roadmap informed by existing code
 /loom-roadmap explore "feature idea"    Multi-persona brainstorming (optional)
 /loom-roadmap review                    4 agents review in parallel
@@ -121,7 +121,7 @@ behavioral-guidelines.md      ← Karpathy-inspired agent guardrails
 Pre-flight scope contract → hands-off execution through full roadmap.
 
 ```
-/loom auto --from "add user auth with RBAC and team management"
+/loom-auto --from "add user auth with RBAC and team management"
 ```
 
 Flow: prompt refiner → scope interrogation (5-15 decisions with code examples) → roadmap → plan → execute → converge → test → review → fix. Circuit breakers stop the loop if stuck. Contract drift detection per wave.
@@ -131,7 +131,7 @@ Flags: `--skip-preflight`, `--light-preflight`, `--auto` (accept all defaults).
 ### Quick task
 
 ```
-/loom quick "add rate limiting to the API endpoints"
+/loom-quick "add rate limiting to the API endpoints"
 ```
 
 ### Multi-persona brainstorming
@@ -148,10 +148,10 @@ Spawns 3-6 persona agents (engineer, designer, PM, security, ops, user, skeptic,
 Invoke directly or as flags on any command:
 
 ```
-/loom debate "Redis vs Postgres for sessions"
-/loom chain "draft auth API spec"
-/loom vote "best caching strategy" --candidates 3
-/loom triage "fix this production error"
+/loom-debate "Redis vs Postgres for sessions"
+/loom-chain "draft auth API spec"
+/loom-vote "best caching strategy" --candidates 3
+/loom-triage "fix this production error"
 
 /loom-plan create --debate "monolith vs microservices"
 /loom-roadmap init --debate "build vs buy for auth"
@@ -160,11 +160,11 @@ Invoke directly or as flags on any command:
 ### Session management
 
 ```
-/loom pause                     Snapshot state, WIP commit
-/loom resume                    Restore context, continue where you left off
-/loom next                      State-aware suggestion for next step
-/loom do "review my code"       Natural language routing to the right command
-/loom status                    Project overview
+/loom-pause                     Snapshot state, WIP commit
+/loom-resume                    Restore context, continue where you left off
+/loom-next                      State-aware suggestion for next step
+/loom-do "review my code"       Natural language routing to the right command
+/loom-status                    Project overview
 ```
 
 ## Pre-flight Scope Contract
@@ -188,8 +188,8 @@ Supports brownfield context: reads wiki pages, init-report, CLAUDE.md to make pr
 
 | Group | Agents | Used by |
 |-------|--------|---------|
-| **Pre-flight** | prompt-refiner, questioner (scope interrogator) | `/loom auto`, `/loom-roadmap init` |
-| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom init` |
+| **Pre-flight** | prompt-refiner, questioner (scope interrogator) | `/loom-auto`, `/loom-roadmap init` |
+| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom-init` |
 | **Strategy & UX** | strategy-agent, ux-agent | `/loom-plan review`, `/loom-roadmap review`, `/loom-code review` |
 | **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap init` |
 | **Planning** | feature-coverage, phasing, parallelization, agentic-workflow, plan-builder | `/loom-plan review`, `/loom-plan create` |
@@ -197,10 +197,10 @@ Supports brownfield context: reads wiki pages, init-report, CLAUDE.md to make pr
 | **Testing** | acceptance-criteria, unit-test, e2e-test | `/loom-plan test` |
 | **Code Review** | security, architecture, plan-compliance + 6 built-in reviewers | `/loom-code review` |
 | **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-code review --full` |
-| **Convergence** | target-parser, harness-builder, delta-analyzer, convergence-driver | `/loom converge` |
+| **Convergence** | target-parser, harness-builder, delta-analyzer, convergence-driver | `/loom-converge` |
 | **Architecture** | tech-stack-debater, migration-architect | debate/chain patterns |
 | **Wiki** | wiki-maintainer, wiki-ingest, wiki-lint, wiki-query | `/loom-wiki`, execution events |
-| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom init`, docs workflows |
+| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom-init`, docs workflows |
 | **Utility** | meta-agent, tdd-coach, fixer-agent | `/loom-agent create`, `/loom-code fix` |
 
 ## Per-Project Extensibility
@@ -228,7 +228,7 @@ Or use `/loom-agent create` to interactively create and register an agent.
 
 ## Orchestration Patterns
 
-Available as direct commands (`/loom debate`) or flags on any command (`--debate`):
+Available as direct commands (`/loom-debate`) or flags on any command (`--debate`):
 
 | Pattern | Best for | How it works |
 |---------|----------|-------------|

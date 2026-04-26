@@ -223,7 +223,7 @@ This phase owns ALL loom.md edits for the entire plan. No other phase touches lo
 
 **Wave:** 3
 **Agent:** implementer-agent
-**Description:** Create the `/loom data:` command and register the complete kit in library.yaml. Agent names and paths are known from Phase 0 contracts — no dependency on Phase 4 output.
+**Description:** Create the `/loom-data:` command and register the complete kit in library.yaml. Agent names and paths are known from Phase 0 contracts — no dependency on Phase 4 output.
 
 **Deliverables:**
 - `commands/loom-data.md` — data engineering command with subcommands: profile, validate, lineage, test

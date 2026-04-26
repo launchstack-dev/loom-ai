@@ -1,19 +1,19 @@
 # Schema Upgrade Protocol
 
-Defines migration rules for upgrading old-format Loom project artifacts to current schema versions. The governing principle is **automatic detection with explicit migration**: agents detect old formats at read-time and warn on stderr, but only `/loom upgrade` performs the actual transformation.
+Defines migration rules for upgrading old-format Loom project artifacts to current schema versions. The governing principle is **automatic detection with explicit migration**: agents detect old formats at read-time and warn on stderr, but only `/loom-upgrade` performs the actual transformation.
 
 ## Overview
 
 As Loom schemas evolve, existing project artifacts may fall behind the current version. Rather than silently breaking or silently patching, Loom uses a two-phase approach:
 
 1. **Detection phase** — any agent reading an artifact checks for version markers and required fields. If the artifact is outdated, the agent emits a stderr warning and continues with best-effort reading.
-2. **Migration phase** — the user explicitly runs `/loom upgrade`, which scans, backs up, transforms, and validates all outdated artifacts in one pass.
+2. **Migration phase** — the user explicitly runs `/loom-upgrade`, which scans, backs up, transforms, and validates all outdated artifacts in one pass.
 
 This separation ensures agents never silently mutate files the user has not asked to change, while still surfacing staleness early.
 
 ## Upgrade Scopes
 
-The protocol defines two scopes, selected by the `/loom upgrade` command:
+The protocol defines two scopes, selected by the `/loom-upgrade` command:
 
 | Scope | Flag | What it covers |
 |-------|------|----------------|
@@ -228,7 +228,7 @@ Append stubs for missing sections:
 
 #### Tier C: Structural migration (agent-driven, inline)
 
-These transformations require semantic understanding of the plan's prose content and CANNOT be done with grep-and-patch. `/loom upgrade --project` spawns a `plan-upgrade-agent` to handle them inline — no separate follow-up command needed.
+These transformations require semantic understanding of the plan's prose content and CANNOT be done with grep-and-patch. `/loom-upgrade --project` spawns a `plan-upgrade-agent` to handle them inline — no separate follow-up command needed.
 
 After applying Tier A and B patches, the upgrade spawns the agent with:
 - The patched PLAN.md content
@@ -284,7 +284,7 @@ This is a new schema file introduced in the current version. No existing artifac
 
 ## Project Infrastructure Migration Rules (Rules 6-11)
 
-These rules run only when `/loom upgrade --project` is invoked. They bring a project's Loom infrastructure up to the current version.
+These rules run only when `/loom-upgrade --project` is invoked. They bring a project's Loom infrastructure up to the current version.
 
 ### Rule 6: orchestration.toml — add missing sections and fields
 
@@ -360,7 +360,7 @@ Required sections: `## Vision`, `## Success Metrics`, `## Constraints & Decision
 
 #### Tier C: Structural migration (agent-driven, inline)
 
-These transformations require semantic understanding and CANNOT be done with grep-and-patch. `/loom upgrade --project` spawns a `roadmap-upgrade-agent` to handle them inline.
+These transformations require semantic understanding and CANNOT be done with grep-and-patch. `/loom-upgrade --project` spawns a `roadmap-upgrade-agent` to handle them inline.
 
 After applying Tier A and B patches, the upgrade spawns the agent with:
 - The patched ROADMAP.md content
@@ -392,7 +392,7 @@ The agent writes the migrated ROADMAP.md atomically. If the agent fails or produ
 **Migration (file missing)**:
 - Do NOT generate a full CLAUDE.md — that requires codebase analysis. Instead, report `status: manual-required` with guidance:
   ```
-  CLAUDE.md is missing. Run `/loom init` to generate it from codebase analysis.
+  CLAUDE.md is missing. Run `/loom-init` to generate it from codebase analysis.
   ```
 
 **Migration (file exists, missing conventions)**:
@@ -480,7 +480,7 @@ requiredHooks[N]{matcher,hookCommand,timeout}:
 
 - Report `status: scaffolded` with guidance:
   ```
-  Wiki directory created with empty state files. Run `/loom wiki ingest` to populate pages from codebase analysis.
+  Wiki directory created with empty state files. Run `/loom-wiki ingest` to populate pages from codebase analysis.
   ```
 
 **Migration (directory exists, index.toon missing)**:
@@ -493,7 +493,7 @@ requiredHooks[N]{matcher,hookCommand,timeout}:
 
 **Migration (directory missing)**:
 - Create `agents/protocols/`.
-- Copy all required protocol files from the Loom source (the repo where `/loom upgrade` is defined).
+- Copy all required protocol files from the Loom source (the repo where `/loom-upgrade` is defined).
 
 **Migration (directory exists, files missing)**:
 - For each missing protocol file, copy it from the Loom source.
@@ -520,7 +520,7 @@ requiredProtocols[N]{file,purpose}:
 
 - Files are copied, not generated. The source is the Loom installation directory (`~/.claude/agents/protocols/` or the repo's `agents/protocols/`).
 - If the source file cannot be found, report `status: failed` with `details: "Source protocol file not found: {file}"`.
-- Existing protocol files are NEVER overwritten — only missing files are added. To update existing protocols to newer versions, use `/loom library sync`.
+- Existing protocol files are NEVER overwritten — only missing files are added. To update existing protocols to newer versions, use `/loom-library sync`.
 
 ---
 
@@ -530,10 +530,10 @@ When any agent reads a Loom artifact, it MUST apply the detection logic above. I
 
 1. **Emit a stderr warning** in this exact format:
    ```
-   [loom:schema-upgrade] Old format detected in {filePath}. Run `/loom upgrade` to migrate.
+   [loom:schema-upgrade] Old format detected in {filePath}. Run `/loom-upgrade` to migrate.
    ```
 2. **Continue reading** — do NOT block, abort, or refuse to process the file. Apply best-effort defaults in memory so the agent can proceed.
-3. **Do NOT mutate the file** — agents never write migration changes. Only `/loom upgrade` does that.
+3. **Do NOT mutate the file** — agents never write migration changes. Only `/loom-upgrade` does that.
 4. **Log the detection** — if a progress heartbeat is active, include a note in the heartbeat:
    ```toon
    warnings[N]: Old format detected in criteria-plan.toon (missing testTier)
@@ -543,7 +543,7 @@ This ensures the user is informed without disrupting agent execution.
 
 ## Explicit Migration Protocol
 
-The `/loom upgrade` command performs the full migration pass.
+The `/loom-upgrade` command performs the full migration pass.
 
 ### Execution Steps
 
@@ -600,8 +600,8 @@ The `/loom upgrade` command performs the full migration pass.
        .claude/orchestration.toml,orchestration-config,migrated,added contextBudget + wiki + domain sections
        ROADMAP.md,roadmap,agent-migrated,Tier A+B patches + structural migration via roadmap-upgrade-agent
        .claude/settings.json,hooks,migrated,added contract-lock + file-ownership + budget-tracker hooks
-       .loom/wiki/,wiki,scaffolded,empty structure created; run /loom wiki ingest
-       CLAUDE.md,claude-md,manual-required,run /loom init
+       .loom/wiki/,wiki,scaffolded,empty structure created; run /loom-wiki ingest
+       CLAUDE.md,claude-md,manual-required,run /loom-init
    ```
 
    Status values: `migrated` (auto, fully done), `agent-migrated` (structural migration via upgrade agent), `scaffolded` (empty structure created), `manual-required` (needs user action), `failed` (migration error), `skipped` (up to date or unparseable).
@@ -631,8 +631,8 @@ Each agent migration pauses for user confirmation before writing (unless `--forc
 ### Fallback
 
 If the user skips agent migration or the agent fails, the Tier A+B patches remain applied. The upgrade report includes guidance:
-- `/loom plan create` — re-create from approved roadmap
-- `/loom roadmap init` — re-create interactively
+- `/loom-plan create` — re-create from approved roadmap
+- `/loom-roadmap init` — re-create interactively
 
 These are not version-specific commands — they always produce output matching the current schema.
 
@@ -666,7 +666,7 @@ cp .plan-execution/backups/2026-04-19T14-30-00Z/criteria-plan.toon ./criteria-pl
 
 ### Retention
 
-Backup directories are never automatically deleted. The user is responsible for cleanup. The `/loom upgrade` command prints the backup path so the user can verify and remove old backups at their discretion.
+Backup directories are never automatically deleted. The user is responsible for cleanup. The `/loom-upgrade` command prints the backup path so the user can verify and remove old backups at their discretion.
 
 ## Error Handling
 
@@ -675,7 +675,7 @@ Backup directories are never automatically deleted. The user is responsible for 
 When detection finds an outdated artifact, agents MAY attach the error code `SCHEMA_VERSION_MISMATCH` to their internal diagnostics. This code is used for:
 
 - Filtering warnings in agent output
-- Triggering upgrade suggestions in `/loom status`
+- Triggering upgrade suggestions in `/loom-status`
 - Tracking migration debt across the project
 
 ```toon
@@ -685,7 +685,7 @@ error:
   schema: criteria-plan
   expected: 1
   detected: 0
-  message: "Missing testTier column in criteria array. Run `/loom upgrade` to migrate."
+  message: "Missing testTier column in criteria array. Run `/loom-upgrade` to migrate."
   severity: warning
   action: continue
 ```

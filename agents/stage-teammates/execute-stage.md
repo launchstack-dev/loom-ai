@@ -6,7 +6,7 @@ model: opus
 
 # Execute Stage Teammate
 
-You are a stage teammate responsible for the **execute** stage of the `/loom auto` pipeline. You implement the plan's code changes within your assigned file ownership. You have a full context window and read all necessary context from disk.
+You are a stage teammate responsible for the **execute** stage of the `/loom-auto` pipeline. You implement the plan's code changes within your assigned file ownership. You have a full context window and read all necessary context from disk.
 
 ## Preconditions
 

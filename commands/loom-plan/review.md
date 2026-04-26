@@ -96,6 +96,8 @@ After the per-agent summaries, add a section highlighting findings that multiple
 
 #### Step 5: Offer Next Steps
 
+Display: "Context tip: run `/clear` before the next command for fresh context."
+
 Ask the user if they want to:
 - Apply the recommendations to the plan automatically
 - Deep-dive into any specific agent's full report

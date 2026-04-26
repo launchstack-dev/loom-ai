@@ -1,0 +1,49 @@
+type: roadmap-review
+roadmapFile: ROADMAP.md
+reviewedAt: 2026-04-18T12:00:00Z
+agentCount: 4
+structuralErrors: 1
+structuralWarnings: 0
+
+agents[4]{name,findingCount,blockingCount,warningCount,infoCount}:
+  scope-feasibility-agent,7,2,4,1
+  feature-coverage-agent,8,2,3,3
+  strategy-agent,7,1,4,2
+  ux-agent,8,2,4,1
+
+findings[29]{id,agent,severity,dimension,title,description,recommendation}:
+  SF-01,scope-feasibility,blocking,milestone-sizing,M-02 is over-packed,M-02 bundles 3 P0 features into XL. Convergence model alone is XL-grade.,Split into M-02a (F-03 convergence) and M-02b (F-04+F-05 E2E)
+  SF-02,scope-feasibility,blocking,prioritization,6-of-8 features at P0,75% P0 provides no trade-off guidance mid-execution,Demote F-05 and F-06 to P1
+  SF-03,scope-feasibility,warning,scope-containment,F-03 has unbounded surface area,Retrofitting 4-tier across 59 agents is integration work disguised as single feature,Constrain to convergence-driver + contracts-agent initially
+  SF-04,scope-feasibility,warning,effort-estimate,F-08 undersized at L,Touches wiki + context + logging — 3 independent subsystems,Re-estimate as XL or split logging separately
+  SF-05,scope-feasibility,warning,data-model,16 entities is over-modeled,Artifacts are Markdown/TOON not relational DB,Reduce to 8-10 core entities
+  SF-06,scope-feasibility,warning,risk,F-02 lacks fallback,No degradation path if parallel planning proves unreliable,Add decision gate after M-01 with threshold
+  SF-07,scope-feasibility,info,dependencies,M-04 should depend on M-03,System integration includes superpowers patterns from M-03,Add M-04 depends-on M-03
+  FC-01,feature-coverage,blocking,schema-gap,No interpretationConflict schema,Key innovation has no persistent record or audit trail,Define schema and .plan-execution/conflicts/ directory
+  FC-02,feature-coverage,blocking,schema-gap,No testTier field in convergence-plan,4-tier model not machine-readable in any schema,Add testTier column to targets array
+  FC-03,feature-coverage,warning,api-surface,No --tier filter for test runs,Users cannot run specific tiers independently,Add --tier flag to loom-plan test in F-03 scope
+  FC-04,feature-coverage,warning,api-surface,No --estimate for dual-track planning,No cost preview before committing to parallel agents,Add --estimate flag for F-02
+  FC-05,feature-coverage,warning,api-surface,No bulk-approve for QA findings,Only manual gate has no batch review surface,Specify bulk-approve UX before M-02 ships
+  FC-06,feature-coverage,info,schema-gap,Milestone taxonomy disconnected from roadmap.toon,Wave mapping lost on round-trip serialization,Add wave reference column to roadmap.toon
+  FC-07,feature-coverage,info,schema-gap,No diagnoseLog field in AgentResult,Diagnose-before-fix is advisory not enforceable,Add diagnoseLog field for F-07
+  FC-08,feature-coverage,info,competitive,No story-level replay schema,YAML story audit trail adopted but no schema defined,Define story replay schema
+  ST-01,strategy,blocking,sequencing,M-03 should be threaded into M-02,Shipping convergence without TDD enforcement contradicts differentiator,Thread behavioral patterns into M-02 waves
+  ST-02,strategy,warning,vision,Vision leads with mechanism not outcome,Users need to know benefit not process,Rewrite to lead with user outcome
+  ST-03,strategy,warning,mvp-boundary,MVP boundary implicit,No statement of what M-01 alone delivers,Add explicit MVP boundary statement
+  ST-04,strategy,warning,scope,Playwright dependency unjustified,Reads as scope drift toward web product,Add one-sentence justification in roadmap
+  ST-05,strategy,warning,conflict-resolution,F-06 not explicitly placed in milestone,Interpretation reviewer placement ambiguous,Confirm F-06 is in M-01 scope
+  ST-06,strategy,info,competitive,No competitor acknowledgment,CrewAI/AutoGen/LangGraph not mentioned,Add positioning paragraph
+  ST-07,strategy,info,metrics,No cost metric for model tiering,C-05 cost implications invisible without metric,Add cost-per-convergence-cycle metric
+  UX-01,ux,blocking,interaction-model,Conflict resolution flow undefined,No interaction model for how users resolve interpretation conflicts,Define prompt format for auto and manual modes
+  UX-02,ux,blocking,recovery-path,E2E mode asymmetry has no recovery,User cannot trigger e2e mid-execution,Define whether /loom converge --e2e is valid mid-execution
+  UX-03,ux,warning,progress,Plan creation has no progress indicator,Parallel agents + interpretation review adds latency with no feedback,Specify progress model for plan creation
+  UX-04,ux,warning,failure-states,Wave-level test failure states missing,What user sees when unit gate fails is undefined,Define output + halt behavior per tier
+  UX-05,ux,warning,failure-states,QA review failure state undefined,Unclear if QA findings block or are advisory,Specify blocking behavior per mode
+  UX-06,ux,warning,safety,Opt-out flags have no confirmation guard,--no-tests silently disables safety gates,Add stderr warning line per opt-out flag
+  UX-07,ux,info,rendering,Statusline overflow not specified,Test counts + QA findings may exceed terminal width,Define truncation strategy
+
+crossCuttingThemes[4]{theme,findingIds,confidence}:
+  M-02 overload + behavioral hardening sequencing,"SF-01,ST-01",high
+  P0 inflation + missing MVP boundary,"SF-02,ST-03",high
+  Missing schemas for core innovations,"FC-01,FC-02,UX-01",high
+  Failure states under-specified,"UX-04,UX-05,FC-03",high

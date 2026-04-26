@@ -658,7 +658,7 @@ Spawn a general-purpose agent:
  {if not convergeConfig: '--config .plan-execution/converge.config'}
  Max iterations: 10
  {if noAutoCommit: '--no-auto-commit'}
- This is running as part of /loom auto -- write convergence-summary.toon when done.
+ This is running as part of /loom-auto -- write convergence-summary.toon when done.
  Your AgentResult MUST include verificationStatus."
 ```
 
@@ -682,7 +682,7 @@ If convergence-summary.toon is missing: warn and continue to Step 4 (convergence
 
 ##### 3.5e: Criteria Convergence (if `convergeCriteria == true`)
 
-Run criteria convergence as an auto-mode `/loom converge --criteria`:
+Run criteria convergence as an auto-mode `/loom-converge --criteria`:
 
 1. **Plan criteria.** Spawn criteria-planner-agent:
    ```
@@ -724,7 +724,7 @@ Run criteria convergence as an auto-mode `/loom converge --criteria`:
     Max iterations: 10
     Agent budget: {from orchestration.toml or 30}
     {if noAutoCommit: '--no-auto-commit'}
-    This is running as part of /loom auto -- write convergence-summary.toon when done.
+    This is running as part of /loom-auto -- write convergence-summary.toon when done.
     All fixer-agent invocations within the convergence loop MUST include diagnoseLog
     per behavioral-guidelines.md section 6 (Diagnose Before Fix).
     Your AgentResult MUST include verificationStatus."
@@ -968,7 +968,7 @@ Write `.plan-execution/escalation-report.md`:
 {contextual suggestion: manual fix, plan redesign, scope reduction}
 
 ### Resume Command
-Run `/loom auto --resume` after addressing the above.
+Run `/loom-auto --resume` after addressing the above.
 ```
 
 Display the escalation report to the user.

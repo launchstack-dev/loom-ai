@@ -85,6 +85,8 @@ If the roadmap's frontmatter has `status: draft`, update it to `status: reviewed
 
 ### Step R6: Offer next steps
 
+Display: "Context tip: run `/clear` before the next command for fresh context."
+
 Ask the user if they want to:
 - Apply the recommendations to the roadmap automatically (via `/loom-roadmap review-integrate`)
 - Deep-dive into any specific agent's full report

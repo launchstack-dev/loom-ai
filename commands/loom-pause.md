@@ -26,9 +26,9 @@ Parse arguments after `pause`:
 
 Scan for active workflow state by checking these files in order:
 
-1. `.plan-execution/pipeline-state.toon` -- `/loom auto` pipeline state
+1. `.plan-execution/pipeline-state.toon` -- `/loom-auto` pipeline state
 2. `.plan-execution/state.toon` -- `/loom-plan execute` execution state
-3. `.plan-execution/convergence-state.toon` -- `/loom converge` convergence state
+3. `.plan-execution/convergence-state.toon` -- `/loom-converge` convergence state
 4. `.plan-execution/status.toon` -- general status (any command)
 
 For each file found, read its contents and extract:
@@ -110,12 +110,12 @@ Snapshot:   .plan-execution/continue-here.toon
 Note: {message}
 
 To resume in a new session:
-  /loom resume
+  /loom-resume
 
 To resume a specific workflow directly:
-  /loom auto --resume      (if command was auto)
+  /loom-auto --resume      (if command was auto)
   /loom-plan execute --resume   (if command was execute-plan)
-  /loom converge --resume  (if command was converge)
+  /loom-converge --resume  (if command was converge)
 ```
 
 #### Compact Pause (--compact)
@@ -167,14 +167,14 @@ Use atomic write (`.tmp` then rename).
 **Step C5: Print resume instructions.**
 
 Determine the appropriate resume command:
-- If `pipeline-state.toon` exists: `/loom auto --resume`
+- If `pipeline-state.toon` exists: `/loom-auto --resume`
 - If `state.toon` exists (without pipeline-state): `/loom-plan execute --resume`
-- If `convergence-state.toon` exists: `/loom converge --resume`
-- Fallback: `/loom resume`
+- If `convergence-state.toon` exists: `/loom-converge --resume`
+- Fallback: `/loom-resume`
 
 Print:
 ```
-State saved. Run `/clear` then `/loom resume`
+State saved. Run `/clear` then `/loom-resume`
 ```
 
 That single line is the entire output. No headers, no details. The user is under context pressure -- minimize output.

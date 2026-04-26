@@ -477,7 +477,7 @@ This project does not expose HTTP APIs. The interface is CLI commands and their 
 | (positional) | string | no | ROADMAP.md | Path to roadmap file |
 | --auto | boolean | no | false | Auto mode: accept all defaults, no interaction |
 | --estimate | boolean | no | false | Show token cost estimate without executing |
-| --skip-test-gen | boolean | no | false | Skip criteria generation (prints stderr warning) | <!-- Review: Finding 7 — renamed from --no-tests to avoid collision with /loom-converge --no-tests -->
+| --no-tests | boolean | no | false | Skip criteria generation (prints stderr warning) |
 
 **Behavior:**
 1. Reads ROADMAP.md
@@ -493,7 +493,7 @@ This project does not expose HTTP APIs. The interface is CLI commands and their 
 
 ---
 
-### `/loom-converge`
+### `/loom converge`
 
 **Description:** Run convergence testing at specified tier(s). Ref: C-03.
 **Auth:** None (local CLI)
@@ -531,7 +531,7 @@ This project does not expose HTTP APIs. The interface is CLI commands and their 
 
 ---
 
-### `/loom-auto`
+### `/loom auto`
 
 **Description:** Full autonomous pipeline. Modified to include dual-track planning and 4-tier convergence. Ref: C-01, C-02, C-03.
 **Auth:** None (local CLI)
@@ -544,37 +544,6 @@ This project does not expose HTTP APIs. The interface is CLI commands and their 
 5. After each milestone completes: e2e tests run
 6. AgentResult from all agents must include verificationStatus field (C-06)
 7. Fixer-agent diagnoses before fixing, logs diagnosis to diagnoseLog field (C-06)
-
----
-
-### `/loom-upgrade`
-
-**Description:** Migrate old-format project artifacts (v1 plans, pre-convergence schemas) to current format. Uses automatic detection with explicit migration. Ref: schema-upgrade.md.
-**Auth:** None (local CLI)
-
-**Arguments/Flags:**
-| Flag | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| --dry-run | boolean | no | false | Show what would be migrated without modifying files |
-| --force | boolean | no | false | Skip confirmation prompt |
-| --backup-dir | string | no | .plan-execution/backups/{timestamp} | Custom backup directory |
-
-**Behavior:**
-1. Scans project for old-format artifacts: PLAN.md (v1), criteria-plan.toon (missing testTier), AgentResult files (missing verificationStatus), state.toon (old schema)
-2. For each detected old-format file, reads migration rules from `agents/protocols/schema-upgrade.md`
-3. Shows migration summary: files to upgrade, fields to add, default values to apply
-4. Creates backup of all affected files to `--backup-dir`
-5. Applies migrations in-place: adds missing required fields with defaults, converts v1→v2 structure where applicable
-6. Validates migrated files against current schemas
-7. Reports: files migrated, fields added, validation results
-
-**Automatic detection (no CLI needed):**
-- Any agent or orchestrator reading a TOON file checks for schema version markers
-- If old format detected: emits stderr warning `"Old format detected in {file}. Run /loom-upgrade to migrate."`
-- Old-format files are still readable (backward compatible) — warning only, no blocking
-
-**Success output:** Migration summary with file count and field additions
-**Error output:** Validation failures after migration, with rollback instructions
 
 ---
 
@@ -677,16 +646,12 @@ pending ──→ running ──→ evaluating ──→ passed
 ### TDD Gate (Red-Green Cycle)
 
 <!-- Review: Finding 10 — added skipped state and skip/override transitions -->
-<!-- Review: Finding 8 — added fix-stubs state and implementing→aborted transition -->
 ```
 stub-written ──→ red-confirmed ──→ implementing ──→ green-confirmed
-     │                │                  │                │
-     │                └──→ red-failed    └──→ aborted     └──→ (terminal)
+     │                │                                   │
+     │                └──→ red-failed                     └──→ (terminal)
      │                       │    │
-     │                       │    ├──→ skipped (override)
-     │                       │    │
-     │                       │    └──→ fix-stubs ──→ stub-written (re-verify)
-     │                       │
+     │                       │    └──→ skipped (override)
      │                       └──→ (terminal: agent error)
      │
      └──→ skipped (env failure / --no-tdd)
@@ -700,10 +665,8 @@ stub-written ──→ red-confirmed ──→ implementing ──→ green-conf
 | stub-written | Test stubs exist, not yet run | Criteria-harness-builder completes |
 | red-confirmed | Tests run and fail as expected | Implementer-agent runs tests before implementing (C-06) |
 | red-failed | Tests unexpectedly pass before implementation | Stubs pass without implementation — indicates bad stubs |
-| fix-stubs | Stubs are being corrected after unexpected pass | red-failed triggers stub correction | <!-- Review: Finding 8 — fix-stubs state -->
 | implementing | Implementation in progress | Red confirmed, implementer proceeds |
 | green-confirmed | Tests pass after implementation | Implementer-agent runs tests after implementing (C-06) |
-| aborted | Implementation failed fatally, TDD cycle abandoned | Unrecoverable error during implementation | <!-- Review: Finding 8 — aborted state -->
 | skipped | TDD gate bypassed due to environment issues or user override | `--no-tdd` flag, environment probe failure, or user override in manual mode | <!-- Review: Finding 10 -->
 
 **Valid transitions:**
@@ -713,9 +676,6 @@ stub-written ──→ red-confirmed ──→ implementing ──→ green-conf
 | stub-written | red-failed | Test runner exits zero | Logs warning — stubs may be trivial |
 | red-confirmed | implementing | Implementer-agent starts coding | — |
 | implementing | green-confirmed | Test runner exits zero after implementation | Logs tdd-green-confirmed, sets verificationStatus: verified |
-| implementing | aborted | Unrecoverable implementation error | Logs tdd-aborted event, sets verificationStatus: "unverified" | <!-- Review: Finding 8 — implementing→aborted -->
-| red-failed | fix-stubs | Stubs need correction after unexpected pass | Logs tdd-fix-stubs event | <!-- Review: Finding 8 — fix-stubs loop -->
-| fix-stubs | stub-written | Corrected stubs ready for re-verification | Logs tdd-stubs-corrected event, re-enters stub-written for red check | <!-- Review: Finding 8 — fix-stubs→stub-written -->
 | stub-written | skipped | `--no-tdd` flag or environment probe failure | Logs tdd-skipped event, sets verificationStatus: "unverified" | <!-- Review: Finding 10 -->
 | red-failed | skipped | User override in manual mode | Logs tdd-override event with rationale | <!-- Review: Finding 10 -->
 
@@ -726,10 +686,6 @@ stub-written ──→ red-confirmed ──→ implementing ──→ green-conf
 | stub-written | green-confirmed | INVALID_TRANSITION | Must go through red-confirmed and implementing |
 | red-confirmed | green-confirmed | INVALID_TRANSITION | Must implement before tests can pass |
 | skipped | red-confirmed | INVALID_TRANSITION | Skipped gates cannot be retroactively confirmed | <!-- Review: Finding 10 -->
-| aborted | implementing | INVALID_TRANSITION | Aborted TDD cycles are terminal | <!-- Review: Finding 8 -->
-| aborted | green-confirmed | INVALID_TRANSITION | Aborted TDD cycles are terminal | <!-- Review: Finding 8 -->
-| fix-stubs | implementing | INVALID_TRANSITION | Must re-verify red after fixing stubs | <!-- Review: Finding 8 -->
-| green-confirmed | fix-stubs | INVALID_TRANSITION | Passed TDD cycles are terminal | <!-- Review: Finding 8 -->
 
 ---
 
@@ -771,7 +727,6 @@ error:
 | WIKI_WRITE_FAILED | Wiki integration | Wiki page write failed (disk error, format error) | Yes — retry once |
 | WIKI_QUERY_FAILED | Wiki integration | Wiki query failed (disk error, missing page, parse error) | Yes — retry once |
 | CONVERGENCE_ROLLBACK | Convergence | Failed convergence requires rollback to last known good state | No — review rollback and restart | <!-- Review: no rollback story — added error code -->
-| SCHEMA_VERSION_MISMATCH | Schema upgrade | Old-format artifact detected during read | No — run `/loom-upgrade` to migrate |
 
 ### Field-Level Validation Errors
 
@@ -816,7 +771,7 @@ error:
 **Agent:** contracts-agent
 **Objective:** Define the planning taxonomy protocol, all new TOON schemas (interpretation-conflict, convergence-tier, e2e-story), extend existing schemas (criteria-plan with testTier, agent-result with verificationStatus/diagnoseLog), and codify behavioral guidelines for TDD enforcement, diagnose-before-fix, and hard verification gate. Ref: F-01, F-07, C-01, C-03, C-06.
 **Dependencies:** None
-**File Ownership:** agents/protocols/taxonomy.md, agents/protocols/interpretation-conflict.schema.md, agents/protocols/convergence-tier.schema.md, agents/protocols/e2e-story.schema.md, agents/protocols/criteria-plan.schema.md, agents/protocols/agent-result.schema.md, agents/protocols/plan.schema.md, agents/protocols/roadmap.schema.md, agents/protocols/behavioral-guidelines.md, agents/protocols/schema-upgrade.md
+**File Ownership:** agents/protocols/taxonomy.md, agents/protocols/interpretation-conflict.schema.md, agents/protocols/convergence-tier.schema.md, agents/protocols/e2e-story.schema.md, agents/protocols/criteria-plan.schema.md, agents/protocols/agent-result.schema.md, agents/protocols/plan.schema.md, agents/protocols/roadmap.schema.md, agents/protocols/behavioral-guidelines.md
 
 <!-- Review: Finding 8 — merged old Phase 4 (behavioral-guidelines) into Phase 0 to eliminate undersized phase -->
 
@@ -832,7 +787,6 @@ error:
 | agents/protocols/plan.schema.md | Modify | contracts-agent |
 | agents/protocols/roadmap.schema.md | Modify | contracts-agent |
 | agents/protocols/behavioral-guidelines.md | Modify | contracts-agent |
-| agents/protocols/schema-upgrade.md | Create | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `agents/protocols/taxonomy.md` defines the 4-level hierarchy (Milestone > Feature > Phase > Wave) with convergence tier assignments at each level
@@ -845,17 +799,12 @@ error:
 - [ ] `behavioral-guidelines.md` documents diagnose-before-fix: fixer reads finding, diagnoses root cause, documents diagnosis in diagnoseLog, then applies fix
 - [ ] `behavioral-guidelines.md` documents hard verification gate: AgentResult with verificationStatus "unverified" triggers warning in convergence-driver
 - [ ] All schema files parse as valid Markdown with embedded TOON code blocks
-- [ ] `agents/protocols/schema-upgrade.md` defines migration rules for each modified schema with version detection, default values for new required fields, and backup-before-migrate protocol
-- [ ] schema-upgrade.md covers: criteria-plan (add testTier default "unit"), agent-result (add verificationStatus default "unverified", diagnoseLog default null), plan.schema (v1→v2 field mapping), convergence-tier (new file — no migration)
-- [ ] schema-upgrade.md specifies automatic detection: agents reading old-format files emit stderr warning "Old format detected in {file}. Run `/loom-upgrade` to migrate."
-- [ ] schema-upgrade.md specifies explicit migration: `/loom-upgrade` transforms files in-place after creating `.plan-execution/backups/{timestamp}/` backup
 
 #### Convergence Targets
 - taxonomy.md contains exactly 4 hierarchy levels and 4 convergence tier assignments
 - criteria-plan.schema.md TOON example includes testTier column
 - agent-result.schema.md TOON example includes verificationStatus field
 - behavioral-guidelines.md contains sections titled "TDD Red-Green Gate", "Diagnose Before Fix", and "Hard Verification Gate"
-- schema-upgrade.md defines at least 3 schema migration rules with version detection and default values
 
 ---
 
@@ -870,7 +819,7 @@ error:
 | File | Action | Owner hint |
 |------|--------|------------|
 | agents/interpretation-reviewer-agent.md | Create | implementer-agent |
-| agents/protocols/interpretation-report.schema.md | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
+| agents/protocols/interpretation-report.schema.md | Create | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] `agents/interpretation-reviewer-agent.md` has frontmatter with `model: opus` (per roadmap model assignment)
@@ -890,7 +839,7 @@ error:
 
 **Agent:** implementer-agent
 **Objective:** Modify plan creation flow so plan-builder-agent and criteria-planner-agent run in parallel from the same roadmap input, with interpretation-reviewer running after both complete. Wire resolved conflicts into wiki decision pages and formalize conflict persistence and wiki triggers. Ref: F-02, F-06, F-08, C-01, C-02.
-**Dependencies:** Phase 0, Phase 1 <!-- Review: Finding 10 — implicit dependency on Phase 1's interpretation-report format -->
+**Dependencies:** Phase 0
 **File Ownership:** commands/loom-plan.md, agents/criteria-planner-agent.md, agents/wiki-maintainer-triggers.md
 
 <!-- Review: Merged old Phase 7 (wiki-maintainer-triggers, 1 deliverable) into this phase — both concern dual-track planning integration -->
@@ -935,7 +884,7 @@ error:
 | File | Action | Owner hint |
 |------|--------|------------|
 | agents/protocols/stage-context.schema.md | Modify | implementer-agent |
-| hooks/context-budget-test.ts | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
+| hooks/context-budget-test.ts | Create | implementer-agent |
 | agents/protocols/context-budget.md | Modify | implementer-agent |
 
 #### Acceptance Criteria
@@ -964,7 +913,7 @@ error:
 |------|--------|------------|
 | agents/convergence-driver.md | Modify | implementer-agent |
 | agents/convergence-planner-agent.md | Modify | implementer-agent |
-| commands/loom-converge.md | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
+| commands/loom-converge.md | Create | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] convergence-driver.md supports 4 tier types: unit, integration, e2e, qa-review
@@ -972,11 +921,11 @@ error:
 - [ ] Integration tests run at feature completion boundary (all phases of a feature complete)
 - [ ] E2E tests run at milestone completion boundary
 - [ ] QA review runs after each wave with configurable scope
-- [ ] `/loom-converge --tier unit` runs only unit tier; `--tier e2e` runs only e2e tier
-- [ ] `/loom-converge --full` runs all 4 tiers in order
-- [ ] `/loom-converge --approve-qa` bulk-approves non-blocking QA findings <!-- Review: Finding 5 -->
-- [ ] `/loom-converge --phase N` and `--feature F-NN` scope convergence to boundary <!-- Review: Finding 6 -->
-- [ ] `/loom-converge --max-iterations N` caps iterations with visible countdown (default 5) <!-- Review: Finding 7 -->
+- [ ] `/loom converge --tier unit` runs only unit tier; `--tier e2e` runs only e2e tier
+- [ ] `/loom converge --full` runs all 4 tiers in order
+- [ ] `/loom converge --approve-qa` bulk-approves non-blocking QA findings <!-- Review: Finding 5 -->
+- [ ] `/loom converge --phase N` and `--feature F-NN` scope convergence to boundary <!-- Review: Finding 6 -->
+- [ ] `/loom converge --max-iterations N` caps iterations with visible countdown (default 5) <!-- Review: Finding 7 -->
 - [ ] Opt-out flags (`--no-tests`, `--no-e2e`, `--no-qa-review`) print stderr warning
 - [ ] On unit gate failure: stderr shows failing test names and file paths
 - [ ] criteria-plan.toon targets array includes testTier column for tier routing
@@ -984,16 +933,14 @@ error:
 
 #### Convergence Targets
 - convergence-driver.md references all 4 tier names and their gating levels
-- `/loom-converge --tier unit` with failing tests exits non-zero with test names on stderr
+- `/loom converge --tier unit` with failing tests exits non-zero with test names on stderr
 
 ---
 
-<!-- MVP BOUNDARY: Waves 0-2 constitute the minimum viable product (Phases 0-4 + 7).
-     Convergence engine + behavioral hardening + dual-track planning + interpretation review + context budget + flaky test detection + rollback.
+<!-- MVP BOUNDARY: Waves 0-2 constitute the minimum viable product (Phases 0-4).
+     Convergence engine + behavioral hardening + dual-track planning + interpretation review + context budget.
      Waves 3+ are post-MVP: E2E pipeline, statusline/logging integration, wiring.
-     Note: ROADMAP M-01 covers Phases 0-3 (planning foundation). The plan's MVP extends through M-02a (Phases 0-4 + 7) which includes the convergence engine.
-     Review: Finding 9 — declare MVP boundary after Wave 2.
-     Review: Finding 5 — MVP boundary updated to include Phase 7 (now Wave 2); clarified ROADMAP M-01 vs plan MVP scope. -->
+     Review: Finding 9 — declare MVP boundary after Wave 2. -->
 
 ### Phase 5 — Wave 3: E2E Pipeline (Writer + Runner)
 
@@ -1009,7 +956,7 @@ error:
 |------|--------|------------|
 | agents/e2e-test-writer-agent.md | Create | implementer-agent |
 | agents/e2e-runner-agent.md | Create | implementer-agent |
-| agents/protocols/e2e-story.schema.md | Modify | implementer-agent | <!-- Review: Finding 6 — Append-only modification rights; must maintain backward compatibility with Phase 0 schema -->
+| agents/protocols/e2e-story.schema.md | Modify | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] `agents/e2e-test-writer-agent.md` has frontmatter with `model: sonnet` (per roadmap model assignment)
@@ -1025,8 +972,7 @@ error:
 - [ ] Screenshots saved to `.plan-execution/convergence/e2e/screenshots/{run}/{story}/{NN_step}.png`
 - [ ] On step failure: JS console errors captured, remaining steps marked SKIPPED
 - [ ] DeltaReport includes screenshotPaths and consoleDumpPaths for e2e tier entries
-- [ ] `/loom-converge --e2e` is valid at any point during or after execution
-- [ ] e2e-story.schema.md modifications are additive only (no breaking changes to Phase 0 fields) <!-- Review: Finding 6 — cross-wave ownership guard -->
+- [ ] `/loom converge --e2e` is valid at any point during or after execution
 
 #### Convergence Targets
 - e2e-test-writer-agent.md exists with model: sonnet in frontmatter
@@ -1035,12 +981,12 @@ error:
 
 ---
 
-### Phase 6 — Wave 3: Statusline, Logging & /loom-auto Integration
+### Phase 6 — Wave 3: Statusline, Logging & /loom auto Integration
 
 **Agent:** implementer-agent
-**Objective:** Extend statusline with test counts and QA findings, extend execution-log with all test event types, and update the /loom-auto pipeline to integrate dual-track planning, 4-tier convergence gates, and behavioral hardening. Agent MUST use grep-based selective reading of dependency files, not linear reads. Ref: F-02, F-03, F-07, F-08. <!-- Review: Finding 2 — ~89k token budget pressure; grep-based reading required -->
+**Objective:** Extend statusline with test counts and QA findings, extend execution-log with all test event types, and update the /loom auto pipeline to integrate dual-track planning, 4-tier convergence gates, and behavioral hardening. Ref: F-02, F-03, F-07, F-08.
 **Dependencies:** Phase 2, Phase 4, Phase 5
-**File Ownership:** agents/protocols/statusline-contract.md, agents/protocols/execution-log.schema.md, commands/loom.md, commands/loom-upgrade.md
+**File Ownership:** agents/protocols/statusline-contract.md, agents/protocols/execution-log.schema.md, commands/loom.md
 
 <!-- Review: Merged old Phase 10 (loom.md, 1 deliverable) into this phase to eliminate undersized phase -->
 
@@ -1050,24 +996,19 @@ error:
 | agents/protocols/statusline-contract.md | Modify | implementer-agent |
 | agents/protocols/execution-log.schema.md | Modify | implementer-agent |
 | commands/loom.md | Modify | implementer-agent |
-| commands/loom-upgrade.md | Create | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] statusline-contract.md adds fields: test pass/fail counts, QA finding count, convergence iteration number, convergence pass rate
 - [ ] statusline-contract.md documents truncation behavior for narrow terminal widths (truncate right with '...' suffix)
 - [ ] execution-log.schema.md adds event types: criteria-plan-created, interpretation-conflict-found, conflict-resolved, unit-gate-pass, unit-gate-fail, integration-test-complete, e2e-story-written, e2e-run-complete, e2e-step-failed, qa-review-complete, qa-finding-bulk-approved, convergence-tier-complete, tdd-red-confirmed, tdd-green-confirmed, diagnosis-logged, verification-status-set
 - [ ] Each new event type has tier field (optional, for test-related events)
-- [ ] `/loom-auto` plan creation stage spawns plan-builder + criteria-planner in parallel
-- [ ] `/loom-auto` halts on blocking interpretation conflicts (exit 1 with conflict report)
+- [ ] `/loom auto` plan creation stage spawns plan-builder + criteria-planner in parallel
+- [ ] `/loom auto` halts on blocking interpretation conflicts (exit 1 with conflict report)
 - [ ] After each wave: unit test gate enforced; QA review runs
 - [ ] After each feature boundary: integration tests run
 - [ ] After each milestone boundary: e2e tests run
 - [ ] All agent spawns include verificationStatus in AgentResult
 - [ ] Fixer-agent invocations include diagnoseLog in AgentResult
-- [ ] `/loom-upgrade` scans for old-format artifacts and migrates with backup
-- [ ] `/loom-upgrade --dry-run` shows migration plan without modifying files
-- [ ] Automatic detection: agents reading old-format TOON files emit stderr warning with upgrade instructions
-- [ ] Agent spawn stays within 100k token budget by using grep-based selective file reading for all dependency phase outputs <!-- Review: Finding 2 — budget compliance gate -->
 
 #### Convergence Targets
 - statusline-contract.md contains test count and QA finding fields
@@ -1076,8 +1017,7 @@ error:
 
 ---
 
-### Phase 7 — Wave 2: Flaky Test Detection & Convergence Rollback
-<!-- Review: Finding 4 — moved from Wave 3 to Wave 2; dependency on Phase 4 only -->
+### Phase 7 — Wave 3: Flaky Test Detection & Convergence Rollback
 
 **Agent:** implementer-agent
 **Objective:** Add flaky test quarantine to the convergence engine and define rollback behavior for failed convergence iterations, addressing review gaps. Ref: F-03, F-08.
@@ -1109,7 +1049,7 @@ error:
 ### Phase 8 — Wave 3: Wiring & Integration Verification
 
 **Agent:** wiring-agent
-**Objective:** Connect all new agents, schemas, commands, and hooks into a cohesive system. Verify cross-references, update orchestration patterns, and ensure all protocols are internally consistent. Wiring agent MUST use grep-based insertion point discovery to stay within 100k token budget — do not linearly read all dependency files. Ref: F-08. <!-- Review: Finding 9 — wiring agent budget risk -->
+**Objective:** Connect all new agents, schemas, commands, and hooks into a cohesive system. Verify cross-references, update orchestration patterns, and ensure all protocols are internally consistent. Ref: F-08.
 **Dependencies:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7
 **File Ownership:** agents/protocols/orchestration-patterns.md, agents/protocols/execution-conventions.md
 
@@ -1126,28 +1066,10 @@ error:
 - [ ] All new schema .md files are referenced from at least one agent protocol section
 - [ ] No orphan schemas (every schema referenced by at least one agent)
 - [ ] No orphan agents (every agent invokable from at least one command/skill)
-- [ ] Wiring agent prompt uses grep to find insertion points rather than reading full file contents of all 7 dependency phases <!-- Review: Finding 9 — budget compliance gate -->
 
 #### Convergence Targets
 - execution-conventions.md directory tree includes conflicts/, e2e/stories/, e2e/tests/, e2e/screenshots/ paths
 - orchestration-patterns.md references "convergence" pattern with 4-tier model
-
----
-
-## Wave Exit Verification Gates
-
-<!-- Review: Finding 3 — missing wave-exit verification gates between each wave -->
-
-Each wave boundary triggers a verification gate before the next wave begins. These gates are cumulative — later waves include all prior gate checks.
-
-| Transition | Gate | Details |
-|-----------|------|---------|
-| Wave 0 → Wave 1 | Typecheck all contract files | `bunx tsc --noEmit` on all Phase 0 deliverables; all protocol schemas parse as valid Markdown |
-| Wave 1 → Wave 2 | Typecheck + unit tests on Wave 1 deliverables | `bunx tsc --noEmit` full project + `bun test` on Wave 1 phase outputs (Phases 1, 2, 3) |
-| Wave 2 → Wave 3 | Typecheck + unit tests + integration tests | Full typecheck + unit tests + integration test suite covering cross-phase interactions (Phases 4, 7); flaky test quarantine operational |
-| Wave 3 → done | Full suite | Typecheck + unit tests + integration tests + e2e tests (all phases); wiring verification confirms no orphan agents/schemas |
-
-**Gate failure behavior:** If any gate fails, the next wave does not start. Failures are reported to stderr with specific file paths and test names. The convergence engine's fix cycle may be invoked to resolve gate failures before re-running the gate.
 
 ---
 
@@ -1165,17 +1087,17 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 
 ### M-02a: 4-Tier Convergence Engine (Wave 2)
 
-**Phases:** 4, 7 <!-- Review: Finding 4 — Phase 7 moved to Wave 2 -->
+**Phases:** 4
 **Features:** F-03, F-07
 **Depends on:** M-01
-**Acceptance:** All 4 tiers execute at their correct hierarchy levels, unit tests gate waves, red-green TDD gate enforced by implementer, fixer diagnoses before fixing, AgentResult requires verification status, --approve-qa and --max-iterations flags operational, flaky test quarantine operational, rollback protocol defined. <!-- Review: Finding 4 — Phase 7 acceptance merged here -->
+**Acceptance:** All 4 tiers execute at their correct hierarchy levels, unit tests gate waves, red-green TDD gate enforced by implementer, fixer diagnoses before fixing, AgentResult requires verification status, --approve-qa and --max-iterations flags operational.
 
 ### M-02b: E2E Pipeline + Cross-System Integration (Wave 3)
 
-**Phases:** 5, 6, 8 <!-- Review: Finding 4 — Phase 7 moved to M-02a/Wave 2 -->
+**Phases:** 5, 6, 7, 8
 **Features:** F-04, F-05, F-08
 **Depends on:** M-02a
-**Acceptance:** E2E test writer produces Playwright tests from YAML stories, e2e runner executes with screenshot audit trail, `/loom-converge --e2e` works in manual mode and mid-execution, statusline shows test metrics, execution-log records all test events, `/loom-auto` integrates full convergence pipeline, all wiring verified. <!-- Review: Finding 4 — flaky test/rollback moved to M-02a -->
+**Acceptance:** E2E test writer produces Playwright tests from YAML stories, e2e runner executes with screenshot audit trail, `/loom converge --e2e` works in manual mode and mid-execution, statusline shows test metrics, execution-log records all test events, `/loom auto` integrates full convergence pipeline, flaky test quarantine operational, rollback protocol defined, all wiring verified.
 
 ---
 

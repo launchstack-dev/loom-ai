@@ -334,6 +334,8 @@ Wiki:
   Cross-references: {K}
   Lint result:      {blocking} blocking, {warning} warnings, {info} info
 
+Context tip: run /clear before the next command for fresh context.
+
 Next steps:
   /loom-roadmap init --brownfield       Create a roadmap informed by this analysis
   /loom-roadmap init --brownfield --from "description"   Create with a specific goal

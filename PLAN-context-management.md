@@ -13,7 +13,7 @@ totalWaves: 4
 
 ## Overview
 
-Builds the preemptive context management infrastructure for Loom's multi-agent orchestration pipeline. The system uses a two-path architecture: agent teams as the primary mode for `/loom auto` (thin lead dispatcher with stage teammates, each a full 200k-window agent), and checkpoint+clear as the fallback for non-auto commands or when agent teams are unavailable. Both paths share a common foundation of stage summaries written to disk at every stage boundary, enforced by a 100k hard-cap context budget per agent.
+Builds the preemptive context management infrastructure for Loom's multi-agent orchestration pipeline. The system uses a two-path architecture: agent teams as the primary mode for `/loom-auto` (thin lead dispatcher with stage teammates, each a full 200k-window agent), and checkpoint+clear as the fallback for non-auto commands or when agent teams are unavailable. Both paths share a common foundation of stage summaries written to disk at every stage boundary, enforced by a 100k hard-cap context budget per agent.
 
 ## Tech Stack
 
@@ -281,11 +281,11 @@ Inter-teammate coordination message format for agent team mode.
 - [ ] `checkpoint-trigger.ts` is a PostToolUse or Stop hook that monitors context accumulation and suggests checkpoint+clear when estimated context exceeds 80k tokens
 - [ ] `context-monitor.ts` is a PostToolUse hook that reads remaining context percentage (from session metrics or token estimation) and injects warnings into `additionalContext`. Thresholds read from `orchestration.toml` `[settings.contextBudget]`: `checkpointWarning` (default 0.35) and `checkpointCritical` (default 0.25). Debounced (warns every 5 tool uses, severity escalation bypasses debounce)
 - [ ] `context-monitor.ts` writes `contextRemaining` percentage to `.plan-execution/status.toon` so the statusline renderer can display context pressure passively (e.g., `ctx:65%` or `ctx:25% !` when critical)
-- [ ] `context-monitor.ts` warning message references the appropriate resume command: `/loom-plan execute --resume`, `/loom converge --resume`, or `/loom auto --resume` depending on which state files exist. At critical level, recommends `/loom pause --compact` then `/clear`
+- [ ] `context-monitor.ts` warning message references the appropriate resume command: `/loom-plan execute --resume`, `/loom-converge --resume`, or `/loom-auto --resume` depending on which state files exist. At critical level, recommends `/loom-pause --compact` then `/clear`
 - [ ] `loom-plan.md` includes checkpoint logic: after every 2 waves, write all state to disk and present a checkpoint prompt recommending `/clear` then `--resume` with fresh context
 - [ ] `loom.md` converge includes checkpoint logic: after every 3 convergence iterations, recommend `/clear` then `--resume`
 - [ ] Checkpoint prompt format: display what was saved, the exact resume command to copy-paste, and a `/clear` recommendation — e.g. "Run `/clear` for fresh context, then: `/loom-plan execute --resume`"
-- [ ] `/loom pause --compact` flag added: writes stage summaries for all completed work, updates rolling-context.md, writes continue-here.toon — optimized for context pressure (no git commit, just disk persistence + clear guidance). Prints: "State saved. Run `/clear` then `/loom resume`"
+- [ ] `/loom-pause --compact` flag added: writes stage summaries for all completed work, updates rolling-context.md, writes continue-here.toon — optimized for context pressure (no git commit, just disk persistence + clear guidance). Prints: "State saved. Run `/clear` then `/loom-resume`"
 - [ ] `loom.md` pause subcommand updated with `--compact` flag documentation and implementation
 - [ ] `loom.md` auto pipeline detects whether `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set; if not, falls back to checkpoint+clear mode
 - [ ] Resume path (`--resume`) reads stage summaries from `.plan-execution/stage-context/` to reconstruct pipeline position

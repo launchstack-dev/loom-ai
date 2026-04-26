@@ -35,7 +35,7 @@ In addition to project-specific agents (which use the `phase` field), check `orc
 
 **6 insertion points** (kit agents fire at these pipeline boundaries):
 
-- `pre-scope` -- before scope contract generation (only in `/loom auto`)
+- `pre-scope` -- before scope contract generation (only in `/loom-auto`)
 - `post-scope` -- after scope contract locked, before roadmap
 - `pre-execute` -- before each execution wave starts (before contracts-agent or implementers)
 - `post-execute` -- after each execution wave completes (after wiring-agent finishes)
@@ -570,7 +570,7 @@ On retry:
 On escalate:
 1. Set wave status to "failed" in state.toon
 2. Set run status to "paused"
-3. The calling orchestrator (`/loom auto`) reads state.toon and decides: revise plan or give up
+3. The calling orchestrator (`/loom-auto`) reads state.toon and decides: revise plan or give up
 
 **GATE-WARN** (proceed with logged warnings) if:
 - Kit gates returned `gate: warn` (or `gate: fail` with `failAction: warn`)

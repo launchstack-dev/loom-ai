@@ -17,7 +17,7 @@ You are the runner for the `e2e` convergence tier (level 1, milestone scope). Th
 You receive via prompt:
 
 1. **E2EStory definitions** -- one or more stories from `.plan-execution/convergence/e2e/stories/` in YAML format (see `agents/protocols/e2e-story.schema.md § YAML Story Format`)
-2. **Session mode** -- `headless` (default) or `chrome-mcp` (when `--chrome` flag is passed to `/loom converge --e2e --chrome`)
+2. **Session mode** -- `headless` (default) or `chrome-mcp` (when `--chrome` flag is passed to `/loom-converge --e2e --chrome`)
 3. **Run ID** -- unique identifier for this convergence run (timestamp-based, e.g., `run-20260418-103000`)
 4. **Milestone ref** -- the milestone being verified (e.g., `M-01`)
 5. **Criteria subset** -- which criteria from `criteria-plan.toon` map to e2e stories (provided by convergence-driver)
@@ -32,7 +32,7 @@ When invoking Playwright, prefer array-form spawn (e.g., `Bun.spawn(["bunx", "pl
 
 ### Headless Mode (default)
 
-Playwright runs in headless Chromium. This is the default when `/loom converge --e2e` is invoked without `--chrome`.
+Playwright runs in headless Chromium. This is the default when `/loom-converge --e2e` is invoked without `--chrome`.
 
 1. Launch Playwright with `bunx playwright test` or programmatically via the Playwright API
 2. Each E2EStory gets a **named browser context** using the story's `sessionName` from its linked PlaywrightTest entry
@@ -239,20 +239,20 @@ verificationStatus: verified | unverified
 diagnoseLog: "Executed N stories against milestone M-XX. Results: P pass, F fail. Failing stories: [names]. Console errors captured for failing stories."
 ```
 
-## Integration with `/loom converge --e2e`
+## Integration with `/loom-converge --e2e`
 
-The `/loom converge --e2e` command is valid at any point during or after plan execution. It does not require all phases, waves, or features to be complete. The convergence driver invokes the e2e-runner-agent as part of this pipeline.
+The `/loom-converge --e2e` command is valid at any point during or after plan execution. It does not require all phases, waves, or features to be complete. The convergence driver invokes the e2e-runner-agent as part of this pipeline.
 
 ### Mid-execution invocation
 
-When `/loom converge --e2e` is invoked during active plan execution:
+When `/loom-converge --e2e` is invoked during active plan execution:
 
 1. The convergence-driver gathers all `testTier: e2e` criteria from the current `criteria-plan.toon`
 2. The e2e-test-writer-agent generates or updates stories and Playwright tests for those criteria
 3. This agent executes the generated tests against the current state of the application
 4. Tests for features that are not yet implemented will fail -- this is expected
 5. The DeltaReport captures which stories pass and which fail, giving a live convergence snapshot
-6. Re-running `/loom converge --e2e` on subsequent iterations shows convergence progress as more features land
+6. Re-running `/loom-converge --e2e` on subsequent iterations shows convergence progress as more features land
 
 ### Post-execution invocation
 

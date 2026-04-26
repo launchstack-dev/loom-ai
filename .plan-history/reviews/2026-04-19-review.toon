@@ -1,0 +1,35 @@
+reviewDate: 2026-04-19
+planName: Loom Convergence Testing & Planning Taxonomy
+planVersion: 2
+agentCount: 6
+structuralValidation: pass (0 errors, 3 warnings)
+
+structuralWarnings[N]:
+  Phase 6 token budget near 100k cap (~89k estimated)
+  3 deliverables marked "Create" but already exist on disk
+  e2e-story.schema.md has cross-wave ownership (Phase 0 creates, Phase 5 modifies)
+
+agents[N]{name,specialization,keyFindings}:
+  Feature Coverage,Schema/API/competitive audit,"Critical: 3 'Create' deliverables already exist (loom-converge.md, context-budget-test.ts, interpretation-report.schema.md) — change to 'Modify'; DeltaReport missing milestoneRef/iterationRef fields from roadmap F-03; no competitive differentiation statement vs LangGraph/CrewAI"
+  Strategy,Positioning/differentiation/prioritization,"Critical: MVP boundary contradiction — PLAN says end of Wave 2 (Phases 0-4) but ROADMAP M-01 only requires Phases 0-2; Phase 6 token budget pressure at ~89k risks 100k cap; Phase 7 (flaky test) should be Wave 2 not Wave 3"
+  UX,User flows/state coverage/interaction patterns,"Critical: --no-tests flag naming collision between /loom-plan create and /loom converge (different semantics); TDD Gate missing fix-stubs loop and implementing abort path; convergence iteration countdown not visible in status line; QA bulk-approve has no partial range selection"
+  Phasing,Phase boundaries/dependencies/sequencing,"Important: Hidden Phase 1→2 dependency (convergence engine needs criteria-planner output format); Phase 7 has no deps on Wave 2 — can move earlier; e2e-story.schema.md cross-wave ownership needs handoff contract; missing wave-exit verification gates"
+  Parallelization,Execution waves/merge strategy/conflict prevention,"Critical: Phase 6 ~89k tokens should be split or use selective read strategies; missing wave-exit verification gates between waves; e2e-story.schema.md cross-wave merge contract needed; 3 'Create' deliverables that exist will cause agent failures"
+  Agentic Workflow,Context-bounded task decomposition,"Critical: Phase 8 wiring agent risks blowing budget reading all Wave 1-3 outputs — needs grep strategy; Phase 6 at upper limit needs selective reads; 3 'Create' deliverables cause write conflicts; missing wave-exit verification gates; Wave 0 contracts agent should batch 23 deliverables into 2 sub-agents"
+
+crossCuttingThemes[N]{theme,agentCount,agents,recommendation}:
+  3 Create deliverables already exist on disk,3,"Feature Coverage, Parallelization, Agentic Workflow","Change action from 'Create' to 'Modify' for loom-converge.md, context-budget-test.ts, interpretation-report.schema.md"
+  Phase 6 token budget pressure (~89k tokens),3,"Strategy, Parallelization, Agentic Workflow","Split Phase 6 or mandate grep-based selective file reading; do not allow linear read of all inputs"
+  Phase 7 (flaky test) should move to Wave 2,3,"Strategy, Phasing, Parallelization","Move Phase 7 to Wave 2 — no dependencies on Wave 2 phases and needed before e2e pipeline runs"
+  MVP boundary contradiction,1,"Strategy","Align PLAN.md MVP boundary with ROADMAP M-01 (Phases 0-2) or document why PLAN extends to Phases 0-4"
+  Missing wave-exit verification gates,3,"Phasing, Parallelization, Agentic Workflow","Add explicit verification gates between waves — typecheck, test, lint, ownership drift detection"
+  e2e-story.schema.md cross-wave ownership,2,"Phasing, Parallelization","Add explicit handoff contract: Phase 0 owns creation, Phase 5 gets append-only modification rights with schema compatibility check"
+  --no-tests naming collision,1,"UX","Rename one flag — suggest --skip-test-gen for /loom-plan create and keep --no-tests for /loom converge"
+  TDD Gate missing fix-stubs loop,1,"UX","Add fix-stubs and implementing states to TDD Gate state machine with abort transition"
+  Phase 8 wiring agent budget risk,1,"Agentic Workflow","Wiring agent must use grep-based insertion point discovery, not linear file reads"
+  Hidden Phase 1→2 dependency,1,"Phasing","Document criteria-planner output format as a contract in Phase 0 or add explicit dependency annotation"
+
+severity:
+  critical: 16
+  important: 32
+  nicetohave: 18

@@ -1,7 +1,7 @@
 ---
 description: "Scan for old-format Loom artifacts and migrate them to current schema versions"
 ---
-# /loom upgrade
+# /loom-upgrade
 
 Scans the project for outdated Loom artifacts and migrates them to the current schema version, with backup.
 
@@ -96,7 +96,7 @@ dryRunReport:
 The `action` column indicates the migration type:
 - `auto` — fully automatic, no follow-up needed
 - `agent` — mechanical fixes applied first, then an upgrade agent spawns inline to handle structural migration (with confirmation gate)
-- `scaffold` — creates empty directory structure, content population needs a separate command (`/loom wiki ingest`)
+- `scaffold` — creates empty directory structure, content population needs a separate command (`/loom-wiki ingest`)
 - `manual` — cannot be auto-migrated, prints guidance for the user
 
 Print a human-readable summary to stdout:
@@ -116,9 +116,9 @@ Print a human-readable summary to stdout:
     .loom/wiki/ — wiki directory missing (Rule 10)
 
   Manual action required:
-    CLAUDE.md — missing entirely; run `/loom init` (Rule 8)
+    CLAUDE.md — missing entirely; run `/loom-init` (Rule 8)
 
-No files were modified. Run `/loom upgrade --project` (without --dry-run) to apply migrations.
+No files were modified. Run `/loom-upgrade --project` (without --dry-run) to apply migrations.
 ```
 
 Exit 0.
@@ -138,7 +138,7 @@ If `--force` is NOT set and there are files needing migration, print the migrati
     .loom/wiki/ — create empty wiki structure
 
   Manual (will be skipped, guidance printed after):
-    CLAUDE.md — run `/loom init`
+    CLAUDE.md — run `/loom-init`
 
 Backup will be created at: {backup-dir}
 Proceed? (y/N)
@@ -194,9 +194,9 @@ Apply migration rules from `schema-upgrade.md` in-place. Each file is written at
   - *Tier A (auto)*: Add YAML frontmatter (`roadmapVersion: 1`, `name`, `status`, `totalFeatures`, `totalMilestones`)
   - *Tier B (auto)*: Add missing required section stubs
   - *Tier C (agent-driven)*: Spawns `roadmap-upgrade-agent` inline to restructure: feature IDs (F-XX), milestone IDs (M-XX), constraint IDs (C-XX), data model tables, cross-references, convergence targets. Confirmation gate before writing (unless `--force`). Runs before plan migration (plan depends on roadmap for cross-refs).
-- **Rule 8 (claude-md)**: Append missing Loom convention sections to `CLAUDE.md`. If CLAUDE.md is missing entirely, report `manual-required` and print guidance to run `/loom init`.
+- **Rule 8 (claude-md)**: Append missing Loom convention sections to `CLAUDE.md`. If CLAUDE.md is missing entirely, report `manual-required` and print guidance to run `/loom-init`.
 - **Rule 9 (hooks)**: Add missing hook entries to `.claude/settings.json`. If settings.json is missing entirely, report `manual-required`. Verify hook source files exist after adding entries.
-- **Rule 10 (wiki)**: Create `.loom/wiki/` directory with empty `index.toon`, `log.toon`, `execution-log.toon`, and `pages/` directory. Report `scaffolded` with guidance to run `/loom wiki ingest`.
+- **Rule 10 (wiki)**: Create `.loom/wiki/` directory with empty `index.toon`, `log.toon`, `execution-log.toon`, and `pages/` directory. Report `scaffolded` with guidance to run `/loom-wiki ingest`.
 - **Rule 11 (protocols)**: Copy missing protocol files from the Loom source directory. Never overwrite existing protocols.
 
 **Migration order**: Rules are applied in numeric order (1-11). Within each rule, files are processed alphabetically.
@@ -258,8 +258,8 @@ upgradeReport:
     .claude/orchestration.toml,Rule 6,success,Added wiki and domain sections
     ROADMAP.md,Rule 7,agent-migrated,Frontmatter + stubs + structural migration via roadmap-upgrade-agent
     .claude/settings.json,Rule 9,success,Added contract-lock and file-ownership hooks
-    .loom/wiki/,Rule 10,scaffolded,Created empty wiki structure; run /loom wiki ingest
-    CLAUDE.md,Rule 8,manual-required,Run /loom init to generate from codebase analysis
+    .loom/wiki/,Rule 10,scaffolded,Created empty wiki structure; run /loom-wiki ingest
+    CLAUDE.md,Rule 8,manual-required,Run /loom-init to generate from codebase analysis
 ```
 
 Print a human-readable summary:
@@ -279,13 +279,13 @@ If there are `manual-required` or `partial` items, print a follow-up section:
 
 ```
   Manual steps required:
-    1. CLAUDE.md is missing — run `/loom init` to generate it
+    1. CLAUDE.md is missing — run `/loom-init` to generate it
     2. .claude/settings.json is missing — create it or copy from Loom template
 
   Recommended follow-ups:
-    /loom wiki ingest         — populate wiki pages from codebase
-    /loom library sync        — ensure installed commands/agents are current
-    /loom status              — verify project health after upgrade
+    /loom-wiki ingest         — populate wiki pages from codebase
+    /loom-library sync        — ensure installed commands/agents are current
+    /loom-status              — verify project health after upgrade
 ```
 
 Exit 0 if all auto-migrations succeeded. Exit 1 if any auto-migration failed.
@@ -295,18 +295,18 @@ Exit 0 if all auto-migrations succeeded. Exit 1 if any auto-migration failed.
 Agents reading old-format TOON files emit a stderr warning per the schema-upgrade.md protocol:
 
 ```
-[loom:schema-upgrade] Old format detected in {filePath}. Run `/loom upgrade` to migrate.
+[loom:schema-upgrade] Old format detected in {filePath}. Run `/loom-upgrade` to migrate.
 ```
 
 For project infrastructure issues, agents emit a broader warning:
 
 ```
-[loom:schema-upgrade] Project infrastructure outdated. Run `/loom upgrade --project` for full audit.
+[loom:schema-upgrade] Project infrastructure outdated. Run `/loom-upgrade --project` for full audit.
 ```
 
-This warning is informational only. Agents continue processing with best-effort defaults. They never mutate files -- only `/loom upgrade` performs transformations.
+This warning is informational only. Agents continue processing with best-effort defaults. They never mutate files -- only `/loom-upgrade` performs transformations.
 
-The `/loom status` command surfaces upgrade warnings when old-format artifacts are detected, providing a persistent reminder until the user runs `/loom upgrade`.
+The `/loom-status` command surfaces upgrade warnings when old-format artifacts are detected, providing a persistent reminder until the user runs `/loom-upgrade`.
 
 ## Token Budget Compliance
 
@@ -329,7 +329,7 @@ This command uses grep-based selective file reading to stay within the 100k toke
 | Permission denied on source file | Skip file, record failure, continue. |
 | Hook source file missing | Record as `partial` — entry added but file absent. |
 | Protocol source file not found | Record as `failed` — cannot copy what doesn't exist. |
-| CLAUDE.md missing (--project) | Record as `manual-required` — needs `/loom init`. |
+| CLAUDE.md missing (--project) | Record as `manual-required` — needs `/loom-init`. |
 | settings.json missing (--project) | Record as `manual-required` — needs manual creation. |
 
 ## Cross-References

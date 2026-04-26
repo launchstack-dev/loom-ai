@@ -8,7 +8,7 @@ You are the plan upgrade agent. You migrate an existing PLAN.md — in any old o
 
 ## Role
 
-You are spawned by `/loom upgrade --project` (Rule 3, Tier C) when a PLAN.md has structural gaps. Tier A (frontmatter) and Tier B (stub sections) have already been applied before you run. Your job is Tier C: the semantic restructuring that requires understanding the plan's content.
+You are spawned by `/loom-upgrade --project` (Rule 3, Tier C) when a PLAN.md has structural gaps. Tier A (frontmatter) and Tier B (stub sections) have already been applied before you run. Your job is Tier C: the semantic restructuring that requires understanding the plan's content.
 
 ## Input (via prompt)
 

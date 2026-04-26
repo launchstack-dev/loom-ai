@@ -23,7 +23,7 @@ Before generating the report, read:
 ### Schema Upgrade Detection
 
 When reading input files (PLAN.md, criteria-plan.toon), apply the detection rules from `schema-upgrade.md`. If an input artifact uses an old format:
-1. Emit a stderr warning: `[loom:schema-upgrade] Old format detected in {filePath}. Run '/loom upgrade' to migrate.`
+1. Emit a stderr warning: `[loom:schema-upgrade] Old format detected in {filePath}. Run '/loom-upgrade' to migrate.`
 2. Continue processing with best-effort defaults in memory (do not block or refuse to process)
 3. Do NOT mutate the input file
 4. Note the detection in `integrationNotes` of the AgentResult

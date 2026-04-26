@@ -8,7 +8,7 @@ You are the roadmap upgrade agent. You migrate an existing ROADMAP.md — in any
 
 ## Role
 
-You are spawned by `/loom upgrade --project` (Rule 7, Tier C) when a ROADMAP.md has structural gaps. Tier A (frontmatter) and Tier B (stub sections) have already been applied before you run. Your job is Tier C: the semantic restructuring that requires understanding the roadmap's content.
+You are spawned by `/loom-upgrade --project` (Rule 7, Tier C) when a ROADMAP.md has structural gaps. Tier A (frontmatter) and Tier B (stub sections) have already been applied before you run. Your job is Tier C: the semantic restructuring that requires understanding the roadmap's content.
 
 ## Input (via prompt)
 

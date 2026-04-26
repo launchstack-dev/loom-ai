@@ -30,7 +30,7 @@ These flags invoke a multi-agent pattern before or during the subcommand's main 
 
 When a pattern flag is present:
 1. Read `~/.claude/agents/protocols/orchestration-patterns.md` and `~/.claude/agents/protocols/pattern-executor.md`
-2. Execute the pattern first using the same logic as `/loom debate`, `/loom chain`, `/loom vote`, or `/loom triage`
+2. Execute the pattern first using the same logic as `/loom-debate`, `/loom-chain`, `/loom-vote`, or `/loom-triage`
 3. Inject the pattern's result into the subcommand's context (e.g., debate recommendation becomes a locked decision for plan creation, vote winner replaces the single-agent implementation for a task)
 4. Continue with the subcommand's normal flow
 

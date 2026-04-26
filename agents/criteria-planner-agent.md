@@ -397,7 +397,7 @@ Return a standard AgentResult with:
 
 ## Per-Plan Auto-Wrapping
 
-When invoked by `/loom auto` or `/loom execute` with convergence enabled, the criteria planner can auto-wrap any plan phase:
+When invoked by `/loom-auto` or `/loom-plan execute` with convergence enabled, the criteria planner can auto-wrap any plan phase:
 
 1. Read the phase's acceptance criteria
 2. Run discovery in `--auto` mode

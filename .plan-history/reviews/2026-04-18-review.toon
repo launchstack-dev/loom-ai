@@ -1,0 +1,34 @@
+reviewDate: 2026-04-18
+planName: Loom Convergence Testing & Planning Taxonomy
+planVersion: 2
+agentCount: 6
+structuralValidation: pass (0 errors, 6 warnings)
+
+structuralWarnings[N]:
+  Phase 6 (Wave 3) depends on Phase 5 (Wave 3) — same-wave dependency
+  agents/protocols/e2e-story.schema.md cross-wave ownership (Phase 0 creates, Phase 5 modifies)
+  Phase 4 has <2 deliverables (1 deliverable)
+  Phase 6 has <2 deliverables (1 deliverable)
+  Phase 7 has <2 deliverables (1 deliverable)
+  Phase 10 has <2 deliverables (1 deliverable)
+
+agents[N]{name,specialization,keyFindings}:
+  Feature Coverage,Schema/API/competitive audit,"Critical: testTier missing from live criteria-plan.schema.md; verificationStatus/diagnoseLog missing from live agent-result.schema.md; DeltaReport lacks phaseRef/featureRef; ConvergenceTier.hierarchyLevel has duplicate 'phase' enum value; /loom converge missing --approve-qa flag from roadmap F-03; no --phase/--feature scope filter on /loom converge; no flaky test detection"
+  Strategy,Positioning/differentiation/prioritization,"No explicit differentiator statement vs LangGraph/CrewAI/AutoGen; Phase 8 (context budget) should be Wave 0-1 not Wave 4; no explicit MVP boundary; Phase 7 (wiki) is scope creep on critical path; Phase 4 behavioral hardening premature before e2e infra exists; no rollback story for failed convergence"
+  UX,User flows/state coverage/interaction patterns,"Convergence loop has no visible iteration cap or countdown; opt-out flag stderr warnings underspecified; InterpretationConflict has no reopen path; TDD Gate has no skip/override escape hatch; status line density undefined for narrow terminals; QA bulk-approve has no partial range selection"
+  Phasing,Phase boundaries/dependencies/sequencing,"Phase 6→5 same-wave dep eliminates parallel execution; Phase 4 and 7 can move to earlier waves; Phase 0 at 8 deliverables is upper boundary; critical path is 0→2→3→5→6→11; e2e capability delayed to Wave 3 is a rework risk"
+  Parallelization,Execution waves/merge strategy/conflict prevention,"Revised wave structure: move Phase 4 to Wave 1 and Phase 7 to Wave 2 to collapse 6 waves to 5; Phase 5→6 must serialize within wave; peak concurrency is 3 agents; all files have exclusive ownership except e2e-story.schema.md cross-wave"
+  Agentic Workflow,Context-bounded task decomposition,"All phases fit 100k budget; Phase 10 is tightest at ~52k tokens (loom.md is 39k alone); merge Phase 4 into Phase 3; Phase 0 correctly unsplit despite 8 deliverables; Phase 10 agent should grep for insertion points not read linearly"
+
+crossCuttingThemes[N]{theme,agentCount,agents,recommendation}:
+  Phase 4 and 7 are misplaced in the wave structure,4,"Phasing, Parallelization, Strategy, Agentic Workflow","Move Phase 4 to Wave 1 and Phase 7 to Wave 2 — both have looser dependencies than their current wave placement requires"
+  Phase 5→6 same-wave sequential bottleneck,3,"Phasing, Parallelization, Agentic Workflow","Accept the serialization but move unrelated Phase 7 out of Wave 3; alternatively merge Phase 4 into Phase 3 and promote Phase 6 to Wave 4"
+  Missing schema fields block downstream phases,2,"Feature Coverage, Strategy","Add testTier to criteria-plan.schema.md and verificationStatus/diagnoseLog to agent-result.schema.md in Phase 0; add phaseRef/featureRef to DeltaReport"
+  No explicit MVP boundary,2,"Strategy, Phasing","Declare end of Wave 2 as MVP — convergence engine + behavioral stubs are shippable; label Waves 3-5 as post-MVP"
+  Convergence loop UX gaps,2,"UX, Feature Coverage","Add --max-iterations flag with visible countdown; add --phase/--feature scope filter; add flaky test quarantine"
+  Context budget protocol deferred too late,2,"Strategy, Agentic Workflow","Phase 8 context budget should be Wave 0-1; agents in Waves 1-3 cannot comply with budget protocol that doesn't exist yet"
+
+severity:
+  critical: 5
+  important: 8
+  nicetohave: 6

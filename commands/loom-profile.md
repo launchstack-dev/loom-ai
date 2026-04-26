@@ -52,8 +52,8 @@ Current assignments:
   Verification:  {model}    (verification-agent)
   Utility:       {model}    (meta-agent, wiki agents, fixer)
 
-Switch profile: /loom profile <name>
-Override a tier: /loom profile --set <tier> <model>
+Switch profile: /loom-profile <name>
+Override a tier: /loom-profile --set <tier> <model>
 ```
 
 Stop.
@@ -127,7 +127,7 @@ If `--set <tier> <model>` is provided:
    If not recognized: print "Unknown model: {model}. Available models: opus, sonnet, haiku" and stop.
 
 3. Read the current profile name from orchestration.toml.
-   - If no profile is set: warn "No active profile. Set a base profile first with `/loom profile <name>`, or this override will only apply if a profile is activated later."
+   - If no profile is set: warn "No active profile. Set a base profile first with `/loom-profile <name>`, or this override will only apply if a profile is activated later."
 
 4. If a profile is active, modify that profile's tier in orchestration.toml:
    ```toml

@@ -57,10 +57,10 @@ If no `ROADMAP.md` exists, display a basic project overview:
   Active:              {profile name or "inherit"}
 
 ### Suggested Next Step
-  {Run the /loom next logic to determine suggestion, display one-line version}
+  {Run the /loom-next logic to determine suggestion, display one-line version}
 ```
 
 ### Error Handling
 
 - **File read errors:** Skip any file that cannot be read. Display "error reading" in its status slot.
-- **No state at all:** If no Loom artifacts exist whatsoever, display: "No Loom artifacts found. Get started with `/loom init` (brownfield) or `/loom-roadmap init --from 'description'` (greenfield)."
+- **No state at all:** If no Loom artifacts exist whatsoever, display: "No Loom artifacts found. Get started with `/loom-init` (brownfield) or `/loom-roadmap init --from 'description'` (greenfield)."

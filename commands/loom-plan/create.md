@@ -304,6 +304,8 @@ Continue looping until the user approves.
    Criteria plan written to .plan-execution/criteria-plan.toon.
    {If conflicts: Interpretation conflicts saved to .plan-execution/conflicts/interpretation-report.toon.}
 
+   Context tip: run /clear before the next command for fresh context.
+
    Next steps:
      /loom-plan review                    -- 6 agents analyze the plan in parallel
      /loom-plan create --review-integrate -- apply review findings to PLAN.md
