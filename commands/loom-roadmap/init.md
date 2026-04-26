@@ -78,9 +78,35 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
      SendGrid,src/services/email.ts,transactional email
    ```
 
+   **Additionally, extract planning docs data** from the cached init-report (field `planningDocs`) or from direct planning-docs-agent output:
+
+   ```toon
+   existingPlanningDocs:
+     extractedDecisions[N]{id,title,status,source,summary}:
+       ED-01,"Use PostgreSQL",accepted,docs/adr/001-db.md,"Chose PostgreSQL for ACID compliance"
+     extractedRequirements[N]{id,title,priority,source,summary}:
+       ER-01,"User registration",must-have,docs/PRD.md,"Email + password signup"
+     extractedConstraints[N]{id,title,source,summary}:
+       EC-01,"GDPR compliance",docs/PRD.md,"All user data must be deletable"
+     extractedVision:
+       statement: "{vision if found}"
+       targetUsers: "{target users if found}"
+     extractedMilestones[N]{id,title,target,source}:
+       EM-01,"MVP launch","2024-Q2",docs/PRD.md
+     gaps[N]{area,status,detail}:
+       dataModel,missing,"No entity-relationship docs found"
+   ```
+
+   If no planning docs data exists in the init-report AND no cached analysis is available, spawn `planning-docs-agent` alongside the api-explorer and docs-auditor in step 2:
+   ```
+   subagent_type: "general-purpose"
+   model: "haiku"
+   ```
+   Prompt: "Read your instructions from `~/.claude/agents/planning-docs-agent.md` first. Discover and analyze all planning, design, requirements, and strategy documents. Codebase root: {path}. Tech stack: {stack}."
+
    This context is passed to:
-   - The questioner-agent in Step 1.6 (so discussion questions account for existing infrastructure)
-   - The roadmap-builder-agent in Step 2 (so the roadmap builds on what exists, not from scratch)
+   - The questioner-agent in Step 1.6 — extracted decisions become pre-locked (skip generating questions for them), gaps become targeted discussion questions, requirements inform scope
+   - The roadmap-builder-agent in Step 2 — extracted requirements seed features, decisions seed constraints, milestones seed the milestone structure, vision seeds the vision statement
 
 4. **Display brownfield summary** before proceeding to discussion:
 
@@ -93,8 +119,13 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
    Documentation: {gaps summary}
    Loom Readiness: {score}/10
 
+   Planning Documents: {N} found, {M} decisions extracted, {K} requirements extracted
+     Pre-locked decisions: {list of extracted decisions that won't be re-asked}
+     Gaps to discuss: {list of areas marked missing/partial}
+
    This analysis will inform the roadmap — features won't duplicate existing endpoints,
-   and the plan will account for current architecture and tech debt.
+   the plan will account for current architecture and tech debt,
+   and existing decisions/requirements from planning docs will be preserved.
    ```
 
 ### Step 1.6: Discussion Phase
@@ -107,6 +138,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
    - Instruction: "Read your instructions from `~/.claude/agents/questioner-agent.md` first."
    - The codebase context summary from Step 1
    - The brownfield analysis from Step 1.5 (if `--brownfield` was used)
+   - The planning docs extracted data from Step 1.5 (if available) — include `extractedDecisions` as pre-locked decisions (the questioner should skip asking about these), `extractedRequirements` as known scope items, and `gaps` as areas needing targeted questions
    - The user's project description (from `--from` or interview answers)
 
 2. Parse the agent's decision points from its TOON output.
@@ -182,8 +214,15 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
    - The user's answers/description
    - The discussion phase decisions (from Step 1.6) to embed as Constraints & Decisions
    - The brownfield analysis (from Step 1.5) if `--brownfield` was used — include as "Existing Codebase" context so the roadmap builds on what exists
+   - The planning docs extracted data (from Step 1.5) if available — include as "Existing Planning Context" with instructions:
+     - `extractedRequirements` → seed the Features section (convert each requirement to a candidate feature, preserving priority)
+     - `extractedDecisions` → seed the Constraints & Decisions section (merge with discussion phase decisions, planning doc decisions take precedence for conflicts)
+     - `extractedConstraints` → include in Constraints & Decisions
+     - `extractedVision` → use as the starting point for the Vision section (refine, don't discard)
+     - `extractedMilestones` → seed the Milestones section (respect existing timeline targets unless the user overrides)
+     - `gaps` → areas where the roadmap builder must generate content from scratch (flag these in output for user review)
    - If `scope-contract.toon` exists, include it as context: contract decisions become Constraints & Decisions, non-goals become Out of Scope, success criteria seed acceptance criteria.
-   - Instruction: "Follow the Reasoning Framework. Output must conform to roadmap.schema.md."
+   - Instruction: "Follow the Reasoning Framework. Output must conform to roadmap.schema.md. Where existing planning documents provided requirements, decisions, or milestones, preserve them — don't reinvent what was already decided. Flag any conflicts between planning doc content and codebase analysis."
 
 ### Step 3: Validation Loop (max 2 retries)
 
