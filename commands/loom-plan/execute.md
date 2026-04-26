@@ -274,10 +274,14 @@ Next wave: Wave 1 -- [description]
 Tasks: [count] parallel implementers
 Files affected: [count]
 
-Proceed? (yes / re-run wave 0 / abort)
+Run /clear for fresh context, then:
+  /loom-plan execute --resume
+
+Or type 'continue' to proceed without clearing.
+(re-run wave 0 / abort also available)
 ```
 
-Wait for user approval before continuing.
+Wait for user input before continuing.
 
 #### Step 5: Wave N -- Implementation (repeat for each wave)
 
@@ -420,20 +424,38 @@ If verification passed (Step 8):
      - Mark a criterion as `orphaned` ONLY if its `coveringTasks` becomes empty AND its status is not already `covered` or `dropped`
    - If new orphans detected, display SCOPE DRIFT warning before the human gate
 
-4. **Human approval gate** -- If `--auto`: run the Automated Quality Gate instead of asking the user. Otherwise, same format as Step 4:
-   - Show files changed, verification results
-   - Show next wave preview
-   - Ask: proceed / re-run wave / abort
+4. **Human approval gate** -- If `--auto`: run the Automated Quality Gate instead of asking the user. Otherwise, display:
+   ```
+   ## Wave {N} Complete: {description}
 
-#### Step 9.1: Context Checkpoint (every 2 waves)
+   Files changed: [count]
+   [list of files]
 
-After updating context and before the contract drift check, evaluate whether a context checkpoint is appropriate:
+   Verification: [pass/fail]
+   {scope drift warnings if any}
 
-1. **Check wave count.** If `N % 2 == 0` and `N > 0` (i.e., after waves 2, 4, 6, ...):
+   Next wave: Wave {N+1} -- {description}
+   Tasks: [count] parallel implementers
+   Files affected: [count]
+
+   Run /clear for fresh context, then:
+     /loom-plan execute --resume
+
+   Or type 'continue' to proceed without clearing.
+   (re-run wave {N} / abort also available)
+   ```
+
+   Wait for user input before continuing.
+
+#### Step 9.1: Context Checkpoint (every wave)
+
+**Before** presenting the human approval gate (Step 9 item 4), write checkpoint state to disk so the user can safely `/clear`:
+
+1. **Always checkpoint.** Every wave completion triggers a checkpoint. Context accumulation degrades quality across waves — the user needs the option to `/clear` and resume fresh.
 
 2. **Write all state to disk atomically:**
    - Ensure `state.toon` is current (already done in Step 9.2)
-   - Ensure `rolling-context.md` is current (already done in Step 9.1)
+   - Ensure `rolling-context.md` is current
    - Ensure all `stage-context/*.toon` files are current
    - Write a checkpoint marker to `.plan-execution/checkpoint.toon`:
      ```toon
@@ -446,28 +468,9 @@ After updating context and before the contract drift check, evaluate whether a c
      ```
      Use atomic write (`.tmp` then rename).
 
-3. **Present checkpoint prompt:**
-   ```
-   ## Context Checkpoint (Wave {N}/{total})
+3. **The human gate prompt (Step 9 item 4) serves as the checkpoint prompt.** Do NOT display a separate checkpoint message — the `/clear` + resume guidance is already embedded in the human gate. This avoids double-prompting the user.
 
-   State saved to disk:
-   - Execution state: .plan-execution/state.toon (wave {N} complete)
-   - Rolling context: .plan-execution/rolling-context.md
-   - Stage summaries: .plan-execution/stage-context/
-   - Scope coverage: .plan-execution/scope-coverage.toon
-
-   Waves completed: {N}/{total}
-   Next wave: Wave {N+1} -- {description}
-
-   Run `/clear` for fresh context, then:
-     /loom-plan execute --resume
-   ```
-
-4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue to the next step. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
-
-5. **If not `--auto`:** display the checkpoint prompt and wait for user input:
-   - `continue` -- proceed without clearing (default)
-   - `clear` -- user will manually run `/clear` then `--resume`
+4. **If `--auto`:** the checkpoint data is on disk if the context monitor hook triggers a forced clear later. Continue without pausing.
 
 #### Step 9.3: Contract Drift Check
 
