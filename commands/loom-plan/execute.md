@@ -266,6 +266,13 @@ Display to the user:
 ```
 ## Wave 0 Complete: Contracts
 
+### Phase Status Summary
+| Phase | Feature | Status | Notes |
+|-------|---------|--------|-------|
+| 0     | Contracts | COMPLETE | {entity list, shared types created} |
+| 1     | {name}    | PENDING  | |
+| ...   | ...       | PENDING  | |
+
 Files created: [count]
 [list of files]
 
@@ -273,8 +280,8 @@ Verification: [pass/fail]
 [details if failed]
 
 Next wave: Wave 1 -- [description]
-Tasks: [count] parallel implementers
-Files affected: [count]
+- {task 1 description}
+- {task 2 description}
 
 Run /clear for fresh context, then:
   /loom-plan execute --resume
@@ -438,15 +445,28 @@ If verification passed (Step 8):
    ```
    ## Wave {N} Complete: {description}
 
-   Files changed: [count]
-   [list of files]
+   ### Phase Status Summary
+   | Phase | Feature | Status | Notes |
+   |-------|---------|--------|-------|
+   | {N}   | {name}  | COMPLETE | {key outcomes, files created, patterns applied} |
+   | {N-1} | {name}  | COMPLETE | {summary from prior wave} |
+   | ...   | ...     | ...    | ... |
+
+   (Show ALL phases from the plan with current status: COMPLETE, IN PROGRESS, or PENDING.
+    For completed phases, include a brief note summarizing what was done.
+    For the just-completed wave, include more detail: key files, verification result, any warnings.)
+
+   Files created this wave: [count]
+   Files verified existing: [count] (from prior execution)
+   {any notes about deviations, missing files, or verification issues}
 
    Verification: [pass/fail]
    {scope drift warnings if any}
 
    Next wave: Wave {N+1} -- {description}
-   Tasks: [count] parallel implementers
-   Files affected: [count]
+   - {task 1 description}
+   - {task 2 description}
+   - ...
 
    Run /clear for fresh context, then:
      /loom-plan execute --resume
