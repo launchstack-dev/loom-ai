@@ -97,7 +97,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
        dataModel,missing,"No entity-relationship docs found"
    ```
 
-   If no planning docs data exists in the init-report AND no cached analysis is available, spawn `planning-docs-agent` alongside the api-explorer and docs-auditor in step 2:
+   If the cached init-report at `.plan-execution/init-report.toon` is missing, stale, or lacks a `planningDocs` field, include `planning-docs-agent` in the fresh analysis spawn (step 2 above) — all agents in a SINGLE message for parallel execution:
    ```
    subagent_type: "general-purpose"
    model: "haiku"

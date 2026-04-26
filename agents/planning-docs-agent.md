@@ -24,63 +24,9 @@ You receive via prompt:
 
 Search systematically for planning documents. Cast a wide net — false positives are cheap, missed documents are expensive.
 
-**Search patterns (all case-insensitive):**
+**Read `~/.claude/agents/protocols/planning-doc-patterns.md`** for the canonical search patterns, supplementary checks, and directory exclusions.
 
-```
-# Dedicated docs directories
-docs/**/*.md
-doc/**/*.md
-documentation/**/*.md
-wiki/**/*.md
-.wiki/**/*.md
-specs/**/*.md
-design/**/*.md
-rfcs/**/*.md
-proposals/**/*.md
-
-# ADR directories (multiple conventions)
-docs/adr/**/*.md
-docs/adrs/**/*.md
-docs/decisions/**/*.md
-docs/architecture/**/*.md
-adr/**/*.md
-adrs/**/*.md
-
-# Root-level planning docs (common names)
-PRD.md, prd.md
-REQUIREMENTS.md, requirements.md
-SPEC.md, spec.md, SPECIFICATION.md
-DESIGN.md, design.md
-ARCHITECTURE.md, architecture.md
-VISION.md, vision.md
-STRATEGY.md, strategy.md
-GOALS.md, goals.md
-MILESTONES.md, milestones.md
-DECISIONS.md, decisions.md
-CHANGELOG.md, changelog.md
-CONTRIBUTING.md, contributing.md
-TODO.md, todo.md
-BACKLOG.md, backlog.md
-SCOPE.md, scope.md
-
-# OpenAPI / Swagger specs
-openapi.yaml, openapi.yml, openapi.json
-swagger.yaml, swagger.yml, swagger.json
-**/openapi.*, **/swagger.*
-
-# Project board exports
-*.project.md, project-*.md
-
-# GitHub-specific
-.github/*.md
-.github/**/*.md
-```
-
-**Also check for:**
-- Files with "spec", "design", "prd", "rfc", "proposal", "adr" in their filename
-- Directories named `planning`, `plans`, `requirements`, `specifications`
-- Non-markdown formats: `*.txt`, `*.rst`, `*.adoc` planning docs
-- `JIRA-*.md` or ticket export files
+**If the orchestrator provided a pre-flight planning docs list**, use it as your starting point — these files are already discovered. Run supplementary checks from the patterns file to find anything the pre-flight glob missed (non-standard names, nested directories, non-markdown formats). Do NOT re-scan patterns the pre-flight already covered.
 
 ### Phase 2: Triage
 
@@ -213,6 +159,6 @@ summary:
 2. **Preserve source attribution.** Every extracted item must reference the file it came from.
 3. **Don't over-classify.** A generic README is not a "strategy doc" just because it has a sentence about goals. Use judgment.
 4. **Report duplicates.** If multiple docs describe the same decision differently, flag the contradiction.
-5. **Respect .gitignore patterns.** Don't search in ignored directories (node_modules, vendor, dist, build, .git).
+5. **Respect directory exclusions.** Follow the exclusion list in `planning-doc-patterns.md` and `.gitignore` patterns.
 6. **Read files efficiently.** For large files (>500 lines), read the first 100 lines to classify, then read relevant sections. Don't read entire 2000-line changelogs.
 7. **Handle non-markdown gracefully.** If you find `.rst` or `.adoc` files, note them but focus extraction effort on markdown and YAML/JSON specs.

@@ -31,7 +31,7 @@ Read these files for context on Loom conventions:
 
 #### Step 1: Pre-flight Check
 
-1. Check what already exists:
+1a. Check what already exists:
    - `CLAUDE.md` -- project guidance
    - `CONTEXT.md` -- locked decisions and context
    - `ROADMAP.md` -- existing roadmap
@@ -40,36 +40,9 @@ Read these files for context on Loom conventions:
    - `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `Gemfile` -- manifest files
    - `README.md` -- existing docs
 
-2. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use these glob patterns:
+1b. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use the search patterns and directory exclusions defined in `~/.claude/agents/protocols/planning-doc-patterns.md`.
 
-   ```
-   # Dedicated docs directories
-   docs/**/*.md, doc/**/*.md, documentation/**/*.md
-   wiki/**/*.md, .wiki/**/*.md
-   specs/**/*.md, design/**/*.md, rfcs/**/*.md, proposals/**/*.md
-
-   # ADR directories
-   docs/adr/**/*.md, docs/adrs/**/*.md, docs/decisions/**/*.md
-   docs/architecture/**/*.md, adr/**/*.md, adrs/**/*.md
-
-   # Root-level planning docs
-   PRD.md, REQUIREMENTS.md, SPEC.md, DESIGN.md, ARCHITECTURE.md
-   VISION.md, STRATEGY.md, GOALS.md, MILESTONES.md, DECISIONS.md
-   CHANGELOG.md, CONTRIBUTING.md, TODO.md, BACKLOG.md, SCOPE.md
-
-   # API specs
-   openapi.yaml, openapi.yml, openapi.json
-   swagger.yaml, swagger.yml, swagger.json
-
-   # GitHub-specific
-   .github/*.md, .github/**/*.md
-   ```
-
-   Also look for files with "spec", "design", "prd", "rfc", "proposal", "adr" in their names.
-
-   Skip: auto-generated docs (TypeDoc/Javadoc output), node_modules, vendor, dist, build directories.
-
-3. Display what was found:
+1c. Display what was found:
    ```
    ## Project Scan
 

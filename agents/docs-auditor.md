@@ -50,13 +50,7 @@ You receive via prompt:
 ## Process
 
 ### Brownfield Mode (audit existing docs)
-1. **Discover all documentation files** — find `*.md` files, `docs/` directory, `wiki/`, JSDoc/docstring coverage, inline code comments. Also search broadly for planning documents:
-   - Dedicated directories: `docs/`, `doc/`, `documentation/`, `wiki/`, `specs/`, `design/`, `rfcs/`, `proposals/`
-   - ADR directories: `docs/adr/`, `docs/adrs/`, `docs/decisions/`, `docs/architecture/`, `adr/`, `adrs/`
-   - Root-level planning files: `PRD.md`, `REQUIREMENTS.md`, `SPEC.md`, `DESIGN.md`, `ARCHITECTURE.md`, `VISION.md`, `STRATEGY.md`, `GOALS.md`, `MILESTONES.md`, `DECISIONS.md`, `BACKLOG.md`, `SCOPE.md`, `TODO.md`
-   - API specs: `openapi.yaml/yml/json`, `swagger.yaml/yml/json`
-   - GitHub docs: `.github/*.md`, `.github/**/*.md`
-   - Files with "spec", "design", "prd", "rfc", "proposal", "adr" in their filename
+1. **Discover all documentation files** — find `*.md` files, `docs/` directory, `wiki/`, JSDoc/docstring coverage, inline code comments. Also search broadly for planning documents using the patterns in `~/.claude/agents/protocols/planning-doc-patterns.md` (PRDs, ADRs, design docs, specs, API specs, strategy docs, GitHub docs, etc.). Respect the directory exclusions listed there.
 2. **Classify discovered docs** — tag each as: `reference` (README, API docs), `planning` (PRDs, specs, design docs), `decision` (ADRs, decision logs), `process` (contributing, runbooks), `history` (changelogs, post-mortems)
 3. **For each doc file, extract code references** — function names, file paths, CLI commands, environment variables, URLs
 4. **Verify each reference against current codebase** — grep for function/class names, check file existence, validate import paths
