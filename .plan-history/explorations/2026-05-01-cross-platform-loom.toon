@@ -1,0 +1,68 @@
+type: exploration
+topic: What would it take to make Loom work with OpenCode, Pi, or Goose beyond just Claude Code?
+slug: cross-platform-loom
+exploredAt: 2026-05-01T08:00:00Z
+depth: standard
+rounds: 2
+status: complete
+
+personas[4]{name,rounds,keyContribution}:
+  engineer,1-2,Hooks are the easy win (compatible protocols); agent spawning is the real architecture question; TOON state enables cross-platform session resume
+  pm,1-2,Personal use changes calculus; works-best-on-CC degrades-elsewhere is the right open-source story; finish convergence first
+  ops,1-2,OpenCode plugin is ~2 days work; concrete file-by-file migration plan; test strategy without matrix explosion
+  skeptic,1-2,Data is already portable (TOON); if switching premise is flawed don't build the hedge; GSD went wide and shallow as warning
+
+recommendation: Start with OpenCode as second platform (strongest compatibility — native Task tool, full hook lifecycle, TypeScript plugins, 153K stars). Pi as third platform (richer extension API but extension-based subagents). Goose/Codex CLI as degraded-mode targets (commands only). Ship convergence first — cross-platform is a parallel lightweight track.
+
+platformPriority[4]{platform,priority,effort,compatibility}:
+  OpenCode,1,medium,native subagents + full hooks + TypeScript plugins + npm distribution + 153K stars
+  Pi,2,medium,25 events + registerTool() + TypeScript in-process + npm packages + multi-model orchestration
+  Goose,3,high,subagents but no hooks + YAML config + MCP-only extensions
+  Codex CLI,4,low-medium,limited hooks + no subagents + commands work + degraded mode
+
+platformCapabilities[4]{platform,blockingHooks,postToolHooks,stopHook,subagents,skills,readsCLAUDEmd,pluginLang,configFormat,distribution}:
+  Claude Code,PreToolUse,PostToolUse,Stop,Agent tool (7 parallel),SKILL.md,yes,Shell/any,JSON settings.json,Plugin marketplace
+  OpenCode,tool.execute.before (throw),tool.execute.after,stop hook (can block),Task tool (child sessions),Agent Skills + commands/,yes,TypeScript,JSON opencode.json,npm packages
+  Pi,tool_call (return),tool_result,session_shutdown + agent_end,Extension-based (processes),SKILL.md + registerCommand(),yes,TypeScript in-process,JSON settings.json,pi install npm:
+  Goose,none,none,none,subagent_handler (TaskConfig),Recipes (YAML),no (.goosehints),MCP extensions,YAML config.yaml,config.yaml extensions
+
+keyInsights[5]:
+  OpenCode has native Task tool with child sessions — closest to Claude Code's Agent tool and the strongest path for Loom's convergence loop
+  Pi has 25 extension events (more than Claude Code's 14) and registerTool() — Loom could register orchestration tools as first-class Pi tools
+  All three platforms support Agent Skills standard (SKILL.md) — Loom skills are already portable
+  TOON artifacts on disk enable cross-platform session resume without any code changes
+  OpenCode's plugin hooks don't intercept subagent tool calls (issue #5894) — budget tracking won't protect subagent actions
+
+requirementsSurfaced[9]{requirement,source,round}:
+  Parameterize install paths — replace hardcoded ~/.claude/ with config-driven base path,engineer,1
+  Add --platform opencode to install.sh — write to ~/.config/opencode/ and register plugin,ops,2
+  Replace hardcoded .claude in loom-update-checker.cjs with env var probe,ops,2
+  Add LOOM_RUNTIME env var or filesystem probe for runtime detection,engineer,2
+  Document sequential degradation for platforms without native subagents,engineer,2
+  Map Loom's subagent_type spawning to OpenCode's Task tool child sessions,engineer,2
+  Create OpenCode plugin wrapper for Loom hooks (tool.execute.before/after/stop),ops,2
+  Package Loom as npm module for OpenCode plugin consumption,ops,2
+  Create Pi extension wrapper with registerTool() for Loom orchestration commands,engineer,2
+
+risks[5]{risk,severity,mitigation,source}:
+  OpenCode plugin hooks don't intercept subagent tool calls — budget and ownership enforcement bypassed,H,Wait for issue #5894 resolution or accept risk for personal use,engineer
+  Maintenance tax — every new hook needs testing on multiple platforms,M,Core logic in vitest (platform-agnostic) + smoke tests per platform,skeptic
+  OpenCode and Pi may change plugin APIs (fast-moving projects),M,Pin to specific versions + thin adapter layer isolates changes,ops
+  Sequential convergence on Pi is slower and has higher context pressure,L,Acceptable for personal use — convergence is functionally complete in sequential mode,engineer
+  Abstraction layer becomes onboarding wall for open-source contributors,L,Keep platform adapters in separate directories — contributors only need to understand one platform,skeptic
+
+openQuestions[3]:
+  How compatible is OpenCode's Task tool (child sessions) with Loom's parallel agent spawning pattern?
+  Should cross-platform support ship with the open-source launch or as a fast-follow?
+  Should Loom distribute as a single npm package with platform detection or separate packages per platform?
+
+suggestedScope:
+  mvp: OpenCode plugin — Loom hooks mapped to tool.execute.before/after/stop, commands installed to .opencode/commands/, skills discoverable via Agent Skills standard. Convergence loop uses Task tool for subagents. Install via npm package in opencode.json.
+  full: OpenCode plugin (full parity) + Pi extension (registerTool for orchestration) + platform detection shim + multi-platform CI smoke tests + Goose recipe adapter for commands
+  skipIf: OpenCode's Task tool is fundamentally incompatible with Loom's orchestration patterns, or user never actually switches off Claude Code
+
+gsdComparison:
+  approach: deploy-everywhere degrade-gracefully — same markdown files to all platforms with runtime detection
+  strengths: supports 4 platforms (claude, opencode, gemini, codex), npm distribution, env var sniffing
+  weaknesses: agent orchestration degrades to sequential on all non-CC platforms, no platform-specific optimizations
+  loomDifference: Loom can go deeper on OpenCode (native Task tool) and Pi (registerTool) instead of lowest-common-denominator

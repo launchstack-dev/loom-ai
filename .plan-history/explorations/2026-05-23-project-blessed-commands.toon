@@ -1,0 +1,53 @@
+type: exploration
+topic: Per-project blessed-command framework to reduce Loom AI bash surface and protect code
+slug: project-blessed-commands
+exploredAt: 2026-05-23T00:00:00Z
+depth: standard
+rounds: 2
+status: complete
+
+personas[5]{name,rounds,keyContribution}:
+  engineer,1-2,Identified compiler-vs-linter fork; reframed Loom as thin-adapter over Claude Code natives (settings.json permissions + slash commands + Skills)
+  pm,1-2,Surfaced standalone-product pull; recommended "Loom guards your codebase" as OSS-launch headline reframe ahead of convergence story
+  ops,1-2,Read-only vs mutating allowlist split; argv-parsing requirement for composed bash; kill-switch design (LOOM_REGISTRY_OFF env var)
+  skeptic,1-2,Anchored 2-year TCO and C-08 narrow-deep concerns; surfaced documentation-win-without-framework as the simpler alternative
+  security,2,Trust-boundary-vs-ergonomics fork; settings.json self-mutability target; tool-diversity escape (Edit/WebFetch/Agent bypass Bash deny)
+
+recommendation: Build the MVP as ergonomics-mode linter+template first (1 week), graduate to compiler+hook with strict-mode enforcement only if adoption proves the schema lifecycle is worth the C-08 TCO. Resolve two forks before writing schema -- (a) trust-boundary vs ergonomics hint, recommend ergonomics-first with --strict flag; (b) compiler vs linter, recommend linter-first.
+
+keyInsights[5]: Claude Code already has 80% of the primitives (permissions.allow/deny + commands + Skills + PreToolUse hooks) so Loom value is curation + cross-platform translation + agent context injection not reinventing, "Loom guards your codebase" is a stronger OSS launch story than "Loom does convergence" -- broader audience + more concrete fear addressed + faster to demo, Soft steering and hard enforcement are different products -- combining them ships a control that looks like a sandbox but isn't, Cross-platform enforcement is honest only on Claude Code + OpenCode -- Codex has no PreToolUse equivalent so on Codex/Pi this degrades to advisory-only and must be documented, Under-appreciated value is forcing projects to articulate their command surface -- declaration is documentation/onboarding/audit material projects don't have today even with zero enforcement
+
+requirementsSurfaced[10]{requirement,source,round}:
+  TOON manifest declaring commands with name/pattern/args-schema/read-only flag/owner/description/when-to-use,engineer,2
+  Generator/compiler emits .claude/settings.json permissions + .claude/commands/*.md slash commands + agent-prompt context block,engineer,2
+  PreToolUse hook matches Bash against registry and emits blocked-unregistered events to execution-log,ops,2
+  Read-only allowlist (broad: ls/rg/git log/jq) split from mutating allowlist (strict: deploy/migrate/rm),ops,2
+  Day-1 escape hatch: "Claude wants to run X -- approve once / add to manifest / deny" prompt UX,pm+ops+security,2
+  Documented degraded mode for Codex/Pi: registry becomes advisory-only via prompt injection,engineer+ops,2
+  Settings.json self-modification lock -- Loom hook denies Edit/Write on .claude/** and registry file when enforcement on,security,2
+  Argv parser (not regex) for shell composition -- at minimum flag pipe/&&/;/$()/backticks as composition events,ops+security,2
+  Kill-switch: LOOM_REGISTRY_OFF=1 env var disables enforcement without editing files,ops,2
+  bun run * patterns match against package.json scripts (not glob-string) to prevent argv-injection via permissive globs,skeptic+security,2
+
+risks[10]{risk,severity,mitigation,source}:
+  Default-deny strangles ad-hoc work and users rage-uninstall,H,Day-1 approve-once UX + broad read-only allowlist + ergonomics-mode default with strict-mode opt-in,pm+ops
+  Security theater -- composed bash bypasses regex matching,H,Ship argv parser OR explicitly label as ergonomics-not-sandbox -- do not market as security without parser,security+ops
+  .claude/settings.json becomes self-mutable attack target,H,Loom hook locks .claude/** edits when enforcement is on,security
+  Tool-diversity escape -- Claude uses Edit/WebFetch/Agent to bypass Bash deny,H,Strict mode must gate Edit/WebFetch/Agent too -- incomplete control is worse than none,security
+  Eclipses M-04/M-05 attention and becomes launch wedge unintentionally,M,Explicit roadmap decision before building -- headline or utility,pm
+  Schema-lifecycle TCO competes with M-04 unblock + OSS launch,M,Start as linter + template -- graduate to schema only if adoption justifies,skeptic
+  Codex/Pi can't enforce -- control is Claude-Code+OpenCode-only,M,Document degraded mode -- market enforcement as platform-conditional,ops+engineer
+  Drift between manifest and package.json scripts,M,Lint rule on commit + CI check that manifest entries exist as scripts,engineer
+  Positional-arg commands defeat allowlist (60/40 problem -- bun test path/to/file),M,Accept the gap as documented or require per-arg validation specs in manifest,engineer
+  C-08 violation -- framework becomes broad-and-shallow LCD abstraction,L,Linter-first approach contains scope + ergonomics-mode-default avoids deepest commitments,skeptic
+
+openQuestions[4]:
+  Trust boundary or ergonomics hint -- ergonomics is multi-day MVP, trust-boundary is multi-week security project gating Edit/WebFetch/Agent
+  Headline or utility for OSS launch -- headline means reorder PLAN-oss-launch.md ahead of M-04, utility means ship behind convergence story
+  Should this precede or follow M-04 unblock -- argument for before: standalone product pull + simpler to demo; argument for after: convergence is the differentiator we've already built
+  Project-side declaration surface -- new TOON file vs annotate package.json/CLAUDE.md -- reusing existing files is lower-friction but new file is cleaner
+
+suggestedScope:
+  mvp: One-page convention doc + starter .claude/settings.json template (deny Bash by default + allow bun run */npm run */read-only verbs) + loom-blessed slash command that reads package.json scripts + tiny project-commands.toon and renders ## Blessed Commands section into agent prompts + lint rule that fails CI if package.json script not in manifest or command file inlines bun run not in manifest. No new hooks. No settings.json mutation. No claim of security enforcement. (1 week)
+  full: project-commands.schema.toon + compiler emits .claude/settings.json + .claude/commands/*.md + prompt block. Loom PreToolUse hook with argv parsing (composed-bash detection) + read-only/mutating split + approve-once UX + LOOM_REGISTRY_OFF kill-switch. .claude/** self-mod lock when strict-mode on + Edit/WebFetch/Agent gating in strict-mode. Codex/Pi advisory-only adapter + documented platform matrix. OSS launch positioning: Loom guards your codebase. (3-4 weeks)
+  skipIf: User research shows projects won't maintain a manifest (drift kills it within 4 weeks) OR Anthropic ships native "blessed commands" in Claude Code settings before MVP lands (most value evaporates) OR M-04 stays blocked >2 months making Codex no-enforcement story a marketing liability for "Loom guards"
