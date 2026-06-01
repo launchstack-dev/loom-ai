@@ -320,29 +320,31 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - Convergence loop completes (sequentially) on OpenCode
 - Cross-platform session resume: start on Claude Code, continue on OpenCode via TOON state files
 
-### F-10: Context-Mode Integration (Tool-Layer Context Optimization)
+### F-10: Repo Map (Aider-Style Proactive Context Pack)
 
 **Priority:** P2
 **Milestone:** M-05
-**Description:** Integrate context-mode (mksglu/context-mode) as a companion layer for tool-output sandboxing, cost visibility, and session persistence. Context-mode operates at the tool-call layer (reducing what each tool call puts into context), while Loom operates at the orchestration layer (controlling how much context each agent spawn gets). They stack — an agent with a 100k budget cap using context-mode sandboxing can do 10x more work within the same budget. Key integration: configure hook coexistence so Loom hooks and context-mode hooks chain without conflict, use ctx_stats/ctx_insight for pipeline cost visibility, evaluate FTS5 session state as an upgrade to rolling-context HOT/WARM/COLD compression.
+**Description:** Port Aider's RepoMap pattern to Loom as a deterministic, platform-agnostic proactive-context layer. Tree-sitter extracts symbols, a directed graph captures references between files, personalized PageRank ranks importance, and a token-budgeted symbol pack is injected into agent prompts before they begin work. Proactive sibling to Serena's reactive query MCP — pre-populates the agent with the symbols closest to the current plan-phase File Ownership instead of waiting for the agent to ask. Replaces the deferred `wiki-context-suggester` from PLAN-wiki-flows-contracts (its regex-based fuzzy matching was brittle). Strategic property preserved from Aider: no embedding model, no vector store, no model-version pinning — fits Loom's everything-is-files ethos and the C-09 platform-agnostic constraint.
 
-**Entities involved:** StageContext, ExecutionLog, RollingContext
+**Entities involved:** RepoMap, RepoMapSymbol, RankingConfig, StageContext
 
 **Key behaviors:**
-- Install context-mode as companion plugin alongside Loom
-- Configure hook coexistence: Loom hooks (budget, ownership, contract lock) chain before context-mode hooks (tool output sandboxing, routing). Both use PreToolUse — Claude Code supports hook chaining.
-- Exclude Loom agent output from context-mode's terse compression — TOON format and structured AgentResult envelopes must not be mangled
-- Exclude Loom's own orchestration tool calls from context-mode routing — Loom agents read files intentionally via orchestration prompts, don't redirect to ctx_execute
-- Enable context-mode sandboxing for non-Loom tool calls: raw bash output, file reads during exploration, web fetches
-- Integrate ctx_stats into Loom's status output: `/loom status` shows token consumption breakdown per stage from context-mode metrics
-- Integrate ctx_insight analytics into debrief report: context health scores, delegation efficiency, per-tool savings included in debrief.toon
-- Evaluate FTS5-indexed session state as rolling-context upgrade: BM25 retrieval of relevant prior context may outperform HOT/WARM/COLD text tiers for cross-wave knowledge access
-- Convergence loop optimization: sandbox test runner output, delta report diffs, and harness results — these are the largest context consumers during iterative convergence
+- Tree-sitter parses TS/JS/Markdown in v1; other languages fail gracefully (log + skip)
+- Reference graph: directed edge from file A → file B when A references a symbol defined in B; queries are tree-sitter, not regex
+- Personalized PageRank: damping 0.85, personalization weight 100, convergence ε<1e-6 within 100 iterations on a 1k-file graph
+- Token-budgeted pack: hard cap (default 8000), never exceeded, fills as much as possible; estimation via `hooks/lib/token-estimator.ts`
+- Personalization seed composition: orchestrator hint > current plan-phase File Ownership > recent `git diff HEAD~1..HEAD` files
+- `agent-prompt-builder.ts` injects the rendered pack into agent prompts under `## Repo Map (auto-generated)`; respects per-agent context cap (shrinks map before base prompt)
+- `/loom-repo-map build` produces the map on demand; `/loom-repo-map inspect --file <path>` shows PageRank + inbound/outbound refs for debugging
+- `wiki-context-suggester` hook (UserPromptSubmit) injects a top-10 symbol pack into ad-hoc prompts seeded by extracted keywords + git-diff context
+- Wiki bridge: high-rank symbols without a corresponding `component-*` wiki page surface as documentation gaps the wiki-maintainer-agent can ingest
+- Determinism: identical seed + identical disk state produces byte-identical output
 
 **Convergence targets:**
-- context-mode hooks coexist with Loom hooks without interference (both fire, neither blocks the other incorrectly)
-- `/loom status` includes per-stage token consumption from ctx_stats
-- Convergence loop completes with fewer compaction events when context-mode sandboxing is active vs baseline
+- `buildRepoMap()` on the loom-ai repo produces a token-budgeted (≤8k tokens) symbol pack in <5 seconds
+- Personalization measurably re-ranks: seeding with `scenario.schema.md` vs `loom-plan/execute.md` produces distinct top-20s
+- `wiki-context-suggester` UserPromptSubmit hook fires without exceeding the conversation budget
+- At least one structurally-important function in loom-ai without a `component-*` wiki page is surfaced as a documentation gap by the wiki bridge
 
 ## Data Model (Conceptual)
 
@@ -444,20 +446,20 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 3. **Pi phase (after OpenCode ships):** Build Pi extension with registerTool(), npm package
 4. **Degraded targets (opportunistic):** Goose recipe adapter, Codex CLI commands — only if demand exists
 
-### M-05: Context-Mode Integration -- NOT STARTED
+### M-05: Repo Map Integration -- NOT STARTED
 
 **Features:** F-10
-**Status:** Not started -- dependency M-02a is complete. Budget infrastructure exists (context-budget.md, budget-tracker.ts). External context-mode tool not yet installed or integrated.
-**Depends on:** M-02a (convergence engine must exist to measure optimization against)
-**Acceptance:** context-mode hooks coexist with Loom hooks without interference. `/loom status` shows per-stage token consumption. Convergence loop runs with fewer compaction events vs baseline.
-**Effort:** S (companion integration, not core rewrite — configure hook chaining, wire ctx_stats into status output, exclude patterns for TOON/AgentResult)
+**Status:** Not started -- PLAN-repo-map.md drafted 2026-05-30 (4 phases / 4 waves / 2 sub-milestones). No code yet. Supersedes the archived context-mode exploration (see `.plan-history/explorations/2026-05-01-context-mode-vs-repo-map.md`) on the platform-agnostic principle.
+**Depends on:** None for core (M-01). Wiki bridge (Phase 3) benefits from but does not require contract-page materialization (M-02b spec-upgrades, already complete).
+**Acceptance:** `buildRepoMap()` produces a deterministic, token-budgeted, personalizable symbol pack against the loom-ai repo. Orchestrators inject the pack into agent prompts. `wiki-context-suggester` hook fires on UserPromptSubmit. High-rank symbols without `component-*` wiki coverage surface as documentation gaps.
+**Effort:** M (tree-sitter + graph + PageRank + render + orchestrator wiring; pure TypeScript, no external services)
 
 #### Phasing
 
-1. **Install + configure (1 day):** Install context-mode, configure hook coexistence, set exclusion patterns for Loom output
-2. **Cost visibility (1 day):** Wire ctx_stats/ctx_insight into `/loom status` and debrief.toon
-3. **Convergence optimization (2-3 days):** Configure sandboxing for test runner output, delta reports, harness results. Measure compaction frequency before/after.
-4. **Evaluate FTS5 upgrade (deferred):** Assess whether BM25-indexed session state should replace HOT/WARM/COLD rolling-context. Decision gate: run side-by-side comparison on a real convergence loop.
+1. **Schema contracts (Phase 0, Wave 0):** `repo-map.schema.md`, `ranking-config.schema.md` — rendered-pack format, tuning knobs, defaults.
+2. **Core algorithm (Phase 1, Wave 1):** Tree-sitter extraction, reference graph build, personalized PageRank, token-budgeted render. ≥15 vitest cases covering 3 languages, graph correctness, PageRank convergence, budget invariants, determinism.
+3. **Orchestrator integration (Phase 2, Wave 2):** `repo-map-seeder.ts`, `agent-prompt-builder.ts`, `/loom-repo-map build|inspect` CLI. Independently shippable (M-01 sub-milestone).
+4. **Wiki bridge (Phase 3, Wave 3):** `wiki-context-suggester.ts` UserPromptSubmit hook replaces the deferred fuzzy-regex variant. `wiki-maintainer-agent` documents how high-rank symbols without wiki pages become ingestion candidates.
 
 ## Risks & Mitigations
 
@@ -473,9 +475,10 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 | OpenCode experimental APIs (chat.system.transform, session.compacting) may break | medium | medium | Pin to specific OpenCode version. Thin adapter isolates breaking changes. These features are used for rolling-context injection and compaction state — degraded without them but not fatal. |
 | Cross-platform maintenance tax slows convergence development | medium | medium | OpenCode and Pi are separate npm packages with isolated adapters. Core Loom code never branches on platform. Testing: core logic in vitest (zero platform dep) + one smoke test per platform. |
 | GSD trap: wide and shallow multi-platform degrades orchestration quality | medium | low | Constraint C-08 explicitly rejects lowest-common-denominator. OpenCode gets near-full capability (native Task tool). Sequential degradation is documented, not hidden. |
-| context-mode hook conflict with Loom hooks | medium | medium | Both use PreToolUse — Claude Code chains hooks sequentially. Risk: context-mode blocks a file read that a Loom agent needs. Mitigation: configure context-mode exclusion patterns to skip Loom orchestration tool calls. |
-| context-mode terse compression mangles TOON output | low | medium | Exclude Loom agent output from compression via context-mode config. TOON and AgentResult must be passed through verbatim. |
-| FTS5 session state replaces rolling-context too eagerly | low | low | FTS5 evaluation is gated behind a side-by-side comparison. HOT/WARM/COLD stays as default until BM25 retrieval proves superior on real convergence loops. |
+| Tree-sitter grammar maintenance across languages | medium | medium | Ship TS/JS/Markdown only in v1. Document the failure-mode-is-skip contract so adding a language is purely additive — a project with mostly-unsupported languages degrades to empty pack, not a crash. |
+| PageRank perf on large repos (>10k files) | medium | low | v1 measures on loom-ai (~600 files). Cache strategy D-01 has file-watcher invalidation as escape hatch if needed. Projects >5k files surface a warning. |
+| Token-budgeted pack drops critical symbols on overflow | medium | medium | `agent-prompt-builder.ts` shrinks the map before truncating the base prompt. Deterministic ordering means dropped symbols are always the lowest-rank ones. Orchestrators pass a higher `tokenBudget` for phases that need broader context. |
+| Repo map drifts from wiki contract pages | high | low | Repo map is **derived** (never authored); wiki contract pages are **authored**. Repo map never overrides wiki — it can only flag gaps for the maintainer to consider. |
 
 ## Out of Scope
 
