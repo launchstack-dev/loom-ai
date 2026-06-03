@@ -20,7 +20,7 @@ The protocol defines two scopes, selected by the `/loom-upgrade` command:
 | Execution artifacts | *(default, no flag)* | In-flight `.plan-execution/` files: state, agent results, criteria plans, PLAN.md |
 | Project infrastructure | `--project` | Orchestration config, CLAUDE.md conventions, hook wiring, wiki, protocol files, roadmap schema |
 
-Rules 1-5 are execution-artifact rules (original scope). Rules 6-11 are project-infrastructure rules (new `--project` scope). When `--project` is passed, ALL rules (1-11) are evaluated.
+Rules 1-5 are execution-artifact rules (original scope). Rules 6-13 are project-infrastructure rules (new `--project` scope). When `--project` is passed, ALL rules (1-13) are evaluated.
 
 ---
 
@@ -49,6 +49,8 @@ projectDetectionRules[N]{schema,file,strategy,oldIndicator,currentVersion}:
   hooks,.claude/settings.json,hook-absence,missing contract-lock / file-ownership / budget-tracker / context-budget hooks,1
   wiki,.loom/wiki/,dir-absence,wiki directory does not exist or has no index.toon,1
   protocols,agents/protocols/,file-set,missing protocol files that should exist for current Loom version,1
+  install-state,~/.claude/skills/library/install-state.toon,field-absence,schemaVersion < 3 or missing protocolVersion / loomCoreVersion / loomHooksVersion / catalogVersion / components[],3
+  library-catalog,~/.claude/skills/library/library.yaml,field-absence,catalog_version < 3 or missing loomCoreVersion / loomHooksVersion / releases[],3
 ```
 
 ### Detection Logic (pseudocode)
@@ -135,6 +137,32 @@ function detectProjectVersion(schema, projectRoot):
       ]
       missing = requiredProtocols.filter(p => file does not exist at protocolDir + p)
       if missing.length > 0 → return { outdated: true, reason: "missing protocols: " + missing.join(", ") }
+
+    "install-state":
+      statePath = "~/.claude/skills/library/install-state.toon"
+      if file does not exist → return { outdated: false }  // nothing installed yet
+      content = read(statePath)
+      schemaVersion = parseInt(match(/schemaVersion:\s*(\d+)/, content))
+      if schemaVersion === 3:
+        v3Markers = ["protocolVersion:", "loomCoreVersion:", "loomHooksVersion:", "catalogVersion:", "components["]
+        missing = v3Markers.filter(m => not content.includes(m))
+        if missing.length > 0 → return { outdated: true, reason: "v3 declared but missing markers: " + missing }
+        return { outdated: false }
+      if schemaVersion === 2 → return { outdated: true, reason: "install-state v2 — migrate via Rule 12" }
+      if schemaVersion < 2 OR schemaVersion is absent → return { outdated: true, reason: "pre-v2 install-state — migrate via Rule 12" }
+
+    "library-catalog":
+      catalogPath = "~/.claude/skills/library/library.yaml"
+      if file does not exist → return { outdated: false }  // catalog not installed
+      content = read(catalogPath)
+      catalogVersion = parseInt(match(/^catalog_version:\s*(\d+)/m, content))
+      if catalogVersion === 3:
+        v3Markers = ["loomCoreVersion:", "loomHooksVersion:", "releases:"]
+        missing = v3Markers.filter(m => not content.includes(m))
+        if missing.length > 0 → return { outdated: true, reason: "v3 declared but missing markers: " + missing }
+        return { outdated: false }
+      if catalogVersion === 2 → return { outdated: true, reason: "library.yaml v2 — migrate via Rule 13" }
+      if catalogVersion < 2 OR absent → return { outdated: true, reason: "pre-v2 catalog — migrate via Rule 13" }
 
   return { outdated: false }
 ```
@@ -516,11 +544,114 @@ requiredProtocols[N]{file,purpose}:
   wiki-conventions.md,wiki structure and rules
   wiki-index.schema.md,wiki index format
   wiki-page.schema.md,wiki page format
+  install-state.schema.md,install-state.toon v3 spec
+  library-catalog.schema.md,library.yaml v3 spec
 ```
 
 - Files are copied, not generated. The source is the Loom installation directory (`~/.claude/agents/protocols/` or the repo's `agents/protocols/`).
 - If the source file cannot be found, report `status: failed` with `details: "Source protocol file not found: {file}"`.
 - Existing protocol files are NEVER overwritten — only missing files are added. To update existing protocols to newer versions, use `/loom-library sync`.
+
+### Rule 12: install-state.toon — migrate v2 → v3
+
+**Trigger**: `~/.claude/skills/library/install-state.toon` has `schemaVersion: 2`, or is missing `schemaVersion` entirely (pre-v2), or has `schemaVersion: 3` but is missing required v3 markers.
+
+**Implementation**: `hooks/lib/install-state-migrator.ts` exports `detectInstallStateVersion` and `migrateInstallStateV2ToV3` as pure functions. The upgrade command parses the v2 file, calls the migrator with injected `sha256Resolver` and `now`, and serializes the result back to TOON.
+
+**Migration steps**:
+1. Parse the v2 file (top-level `schemaVersion: 2`, `lastSynced`, `items[]{name,type,source,targetPath,installedAt}`).
+2. Compute per-file sha256 of each `targetPath` (best-effort; unreadable files → empty string + warning, do not abort).
+3. Build v3 object:
+   - `schemaVersion: 3`
+   - `protocolVersion: 3`
+   - `lastSynced` preserved from v2
+   - `loomCoreVersion: "0.0.0"` (placeholder — refreshed by the next `/loom upgrade` against catalog v3)
+   - `loomHooksVersion: "0.0.0"` (same)
+   - `catalogVersion: 2` (the v2-era default — bumped by Rule 13 in the same upgrade pass)
+   - `components[1]`: a single `{ name: "loom-core", version: "0.0.0", kind: "core", pinned: false, installedAt: now() }`
+   - `items[]`: each v2 item carried over, with new `sha256` and `component: "loom-core"` fields
+   - `snapshot`: omitted (no in-progress upgrade)
+4. Write the v3 file atomically (`.tmp` + rename).
+5. Re-run detection — must return `outdated: false`.
+
+**Before** (v2):
+```toon
+schemaVersion: 2
+lastSynced: 2026-04-15T12:00:00Z
+
+items[1]{name,type,source,targetPath,installedAt}:
+  loom,prompt,commands/loom.md,/Users/example/.claude/commands/loom.md,2026-04-15T12:00:00Z
+```
+
+**After** (v3):
+```toon
+schemaVersion: 3
+protocolVersion: 3
+lastSynced: 2026-04-15T12:00:00Z
+loomCoreVersion: 0.0.0
+loomHooksVersion: 0.0.0
+catalogVersion: 2
+
+components[1]{name,version,kind,pinned,installedAt}:
+  loom-core,0.0.0,core,false,{now()}
+
+items[1]{name,type,source,targetPath,sha256,component,installedAt}:
+  loom,prompt,commands/loom.md,/Users/example/.claude/commands/loom.md,{sha256},loom-core,2026-04-15T12:00:00Z
+```
+
+**Default values**: `protocolVersion: 3`, `loomCoreVersion: "0.0.0"`, `loomHooksVersion: "0.0.0"`, `catalogVersion: 2`. These placeholders survive only until the next post-migration `/loom upgrade` run, which queries the catalog and writes real values.
+
+**Reset of fail-open behaviour**: After Rule 12 lands a v3 file on disk, `hooks/file-ownership.ts` must reverse its fail-open-on-unreadable-state behaviour (current line 47-49) to fail closed per the v3 contract. Tracked as a Phase 1 deliverable in `PLAN-oss-launch.md`.
+
+### Rule 13: library.yaml — migrate v2 → v3
+
+**Trigger**: `~/.claude/skills/library/library.yaml` has `catalog_version: 2`, is missing `catalog_version` entirely (pre-v2), or has `catalog_version: 3` but is missing required v3 top-level fields (`loomCoreVersion`, `loomHooksVersion`, `releases`).
+
+**Implementation**: `hooks/lib/library-catalog-migrator.ts` exports `detectLibraryCatalogVersion` and `migrateLibraryCatalogV2ToV3`. The upgrade command parses YAML, calls the migrator with the current installed versions, and serializes the result.
+
+**Migration steps**:
+1. Parse the v2 catalog (`catalog_version: 2`, `repo`, `default_dirs`, `library`, optional `kits[]`).
+2. Build v3 object:
+   - `catalog_version: 3`
+   - `loomCoreVersion`, `loomHooksVersion`: supplied by the caller (typically from the install-state v3 written by Rule 12 in the same upgrade pass).
+   - `releases[]`: when an `initialRelease` is provided, synthesize a single entry with URLs derived from `repo` and `version` (`{repo}/releases/download/v{version}/...`). When no initial release is provided (e.g., a pre-launch dev project), `releases: []`.
+   - `default_dirs`, `library`: preserved unchanged.
+   - `kits[]`: preserved unchanged. v3 fields `minCoreVersion` / `minHooksVersion` are left absent (optional; "no constraint" per v3 backward-compat clause).
+3. Write atomically.
+4. Re-run detection — must return `outdated: false`.
+
+**Ordering with Rule 12**: When both rules apply in the same upgrade pass, Rule 12 runs first so Rule 13 can read the freshly-written `loomCoreVersion` / `loomHooksVersion` from `install-state.toon`.
+
+**Before** (v2):
+```yaml
+catalog_version: 2
+repo: https://github.com/launchstack-dev/loom-ai
+kits:
+  - name: data-engineering
+    version: 1.1.0
+```
+
+**After** (v3):
+```yaml
+catalog_version: 3
+repo: https://github.com/launchstack-dev/loom-ai
+loomCoreVersion: 0.1.0
+loomHooksVersion: 0.1.0
+
+releases:
+  - version: 0.1.0
+    coreTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz
+    hooksTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-hooks-v0.1.0.tar.gz
+    cosignSignature: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz.sig
+    sha256Manifest: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/SHA256SUMS
+    releasedAt: {ISO-8601}
+
+kits:
+  - name: data-engineering
+    version: 1.1.0
+```
+
+**Default values**: `releases: []` when no `initialRelease` is supplied. Optional kit fields `minCoreVersion` / `minHooksVersion` stay absent.
 
 ---
 
@@ -567,6 +698,8 @@ The `/loom-upgrade` command performs the full migration pass.
      .claude/settings.json,hooks
      .loom/wiki/,wiki
      agents/protocols/,protocols
+     ~/.claude/skills/library/install-state.toon,install-state
+     ~/.claude/skills/library/library.yaml,library-catalog
    ```
 
 2. **Detect** — run version detection on each found file. Collect a list of files needing migration.

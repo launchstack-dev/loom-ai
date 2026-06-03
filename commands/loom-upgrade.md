@@ -43,15 +43,17 @@ PLAN.md                             → plan artifact
 agents/protocols/*.md               → protocol artifacts
 ```
 
-**Additionally scan when `--project` is set** (project infrastructure — Rules 6-11):
+**Additionally scan when `--project` is set** (project infrastructure — Rules 6-13):
 
 ```
-.claude/orchestration.toml          → orchestration config
-ROADMAP.md                          → roadmap format
-CLAUDE.md                           → Loom conventions
-.claude/settings.json               → hook wiring
-.loom/wiki/                         → wiki bootstrapping
-agents/protocols/                   → protocol file completeness
+.claude/orchestration.toml                          → orchestration config
+ROADMAP.md                                          → roadmap format
+CLAUDE.md                                           → Loom conventions
+.claude/settings.json                               → hook wiring
+.loom/wiki/                                         → wiki bootstrapping
+agents/protocols/                                   → protocol file completeness
+~/.claude/skills/library/install-state.toon         → install-state v3
+~/.claude/skills/library/library.yaml               → library catalog v3
 ```
 
 For each target found, run the appropriate version detection logic defined in `schema-upgrade.md`:
@@ -70,6 +72,8 @@ For each target found, run the appropriate version detection logic defined in `s
 - **hooks**: Check `.claude/settings.json` for missing `contract-lock`, `file-ownership`, `context-budget`, `budget-tracker`, `quality-gate` hook entries.
 - **wiki**: Check if `.loom/wiki/` exists and has `index.toon`.
 - **protocols**: Check `agents/protocols/` for missing required protocol files (13 files minimum).
+- **install-state**: Check `~/.claude/skills/library/install-state.toon`. Outdated if `schemaVersion < 3`, missing entirely (treat as pre-v2), or v3 declared but missing `protocolVersion` / `loomCoreVersion` / `loomHooksVersion` / `catalogVersion` / `components[]`. Detection via `detectInstallStateVersion()` in `hooks/lib/install-state-migrator.ts`.
+- **library-catalog**: Check `~/.claude/skills/library/library.yaml`. Outdated if `catalog_version < 3` or v3 declared but missing top-level `loomCoreVersion` / `loomHooksVersion` / `releases`. Detection via `detectLibraryCatalogVersion()` in `hooks/lib/library-catalog-migrator.ts`.
 
 Collect all files that report `outdated: true` into a migration manifest.
 
@@ -198,8 +202,10 @@ Apply migration rules from `schema-upgrade.md` in-place. Each file is written at
 - **Rule 9 (hooks)**: Add missing hook entries to `.claude/settings.json`. If settings.json is missing entirely, report `manual-required`. Verify hook source files exist after adding entries.
 - **Rule 10 (wiki)**: Create `.loom/wiki/` directory with empty `index.toon`, `log.toon`, `execution-log.toon`, and `pages/` directory. Report `scaffolded` with guidance to run `/loom-wiki ingest`.
 - **Rule 11 (protocols)**: Copy missing protocol files from the Loom source directory. Never overwrite existing protocols.
+- **Rule 12 (install-state v2 → v3)**: Migrate `~/.claude/skills/library/install-state.toon` via `migrateInstallStateV2ToV3()` from `hooks/lib/install-state-migrator.ts`. Supply a `sha256Resolver` that reads each `targetPath` and computes its hash. Items with unreadable files get `sha256: ""` and a warning. Writes a single `loom-core` component with version `0.0.0` (real version refreshed by the next post-migration upgrade).
+- **Rule 13 (library-catalog v2 → v3)**: Migrate `~/.claude/skills/library/library.yaml` via `migrateLibraryCatalogV2ToV3()` from `hooks/lib/library-catalog-migrator.ts`. Reads `loomCoreVersion` and `loomHooksVersion` from the freshly-written install-state.toon (Rule 12 runs first). Synthesizes a single `releases[]` entry derived from the catalog `repo` URL when an `initialRelease` is configured; otherwise emits `releases: []`. Existing kit entries are preserved untouched — v3 fields `minCoreVersion`/`minHooksVersion` are optional and left absent.
 
-**Migration order**: Rules are applied in numeric order (1-11). Within each rule, files are processed alphabetically.
+**Migration order**: Rules are applied in numeric order (1-13). Within each rule, files are processed alphabetically. Rule 12 MUST run before Rule 13 within a single pass (Rule 13 reads versions written by Rule 12).
 
 If a migration rule fails for a specific file (parse error, unexpected format, write failure):
 1. Delete the `.tmp` file if it exists.

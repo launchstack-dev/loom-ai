@@ -1,0 +1,37 @@
+catalog_version: 3
+repo: https://github.com/launchstack-dev/loom-ai
+loomCoreVersion: 0.1.0
+loomHooksVersion: 0.1.0
+
+releases:
+  - version: 0.1.0
+    coreTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz
+    hooksTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-hooks-v0.1.0.tar.gz
+    cosignSignature: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz.sig
+    sha256Manifest: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/SHA256SUMS
+    releasedAt: 2026-06-01T00:00:00Z
+
+default_dirs:
+  skills:
+    - default: .claude/skills/
+    - global: ~/.claude/skills/
+  agents:
+    - default: .claude/agents/
+    - global: ~/.claude/agents/
+  prompts:
+    - default: .claude/commands/
+    - global: ~/.claude/commands/
+
+library:
+  skills: []
+  agents: []
+  prompts: []
+
+kits:
+  - name: data-engineering
+    description: Data pipeline quality gates
+    version: 1.1.0
+    minLoomVersion: 3
+    includes:
+      - data-schema-reviewer
+    command: loom-data.md
