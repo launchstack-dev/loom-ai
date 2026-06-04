@@ -13,7 +13,7 @@ Public open-source launch of Loom in a fresh repo under `launchstack-dev`. Polis
 ## Context
 
 - Repo target: fresh repo under `launchstack-dev` (clean cut from current WIP-laden working copy; this transplant landed on `oss-launch-spec-upgrades`).
-- License: **MIT** (current `LICENSE` file at repo root). PLAN originally noted Apache 2.0 (commit `b8a8f46` on local-main lineage) but the fresh-repo cut landed MIT. Pick one before public announcement and update the planning docs to match.
+- License: **Apache 2.0** (commit `b8a8f46` on local-main lineage; restored on this branch). Chosen over MIT for the explicit patent grant and the contributor protections that matter for a tool with elevated permissions (hooks intercept tool calls, modify `~/.claude/`).
 - Cross-platform vision: Claude Code primary; OpenCode/Codex/Pi follow (per ROADMAP F-09 / C-09). All on-disk state is platform-agnostic TOON.
 - Solo maintainer. Loom dogfoods its own implementation work.
 - Current install: `curl|bash` from `main`, fetches ~50 individual files, sha256 manifest fetched from the same branch it's verifying.
