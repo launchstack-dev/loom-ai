@@ -178,6 +178,29 @@ describe("migrateInstallStateV2ToV3", () => {
     }
   });
 
+  it("invokes onWarning for each unreadable sha256 target", () => {
+    const warnings: string[] = [];
+    migrateInstallStateV2ToV3(makeV2(), {
+      now: () => FIXED_NOW,
+      sha256Resolver: () => null,
+      onWarning: (msg) => warnings.push(msg),
+    });
+    // makeV2() has 2 items; both should produce warnings.
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toMatch(/sha256Resolver returned null/);
+    expect(warnings[0]).toContain("loom-library.md");
+  });
+
+  it("does NOT invoke onWarning when sha256Resolver returns valid hashes", () => {
+    const warnings: string[] = [];
+    migrateInstallStateV2ToV3(makeV2(), {
+      now: () => FIXED_NOW,
+      sha256Resolver: () => FIXED_SHA,
+      onWarning: (msg) => warnings.push(msg),
+    });
+    expect(warnings).toHaveLength(0);
+  });
+
   it("respects overridden defaultCoreVersion / defaultHooksVersion", () => {
     const v3 = migrateInstallStateV2ToV3(makeV2(), {
       now: () => FIXED_NOW,

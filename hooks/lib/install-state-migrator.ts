@@ -81,6 +81,14 @@ export interface MigrationOptions {
   sha256Resolver?: (targetPath: string) => string | null;
   /** Override `now()` for deterministic tests. Returns ISO-8601 string. */
   now?: () => string;
+  /**
+   * Optional callback invoked for non-fatal issues during migration (e.g. a
+   * sha256Resolver returned null for an unreadable file). The migration still
+   * succeeds — the caller decides whether to log, surface to the user, or
+   * fail closed at a higher layer. Empty sha256 in v3 always means
+   * "unreadable at migration time," NOT "intentionally blank."
+   */
+  onWarning?: (message: string) => void;
 }
 
 const TOON_V3_MARKERS = [
@@ -167,15 +175,23 @@ export function migrateInstallStateV2ToV3(
     );
   }
 
-  const items: InstallStateV3Item[] = v2.items.map((item) => ({
-    name: item.name,
-    type: item.type,
-    source: item.source,
-    targetPath: item.targetPath,
-    sha256: sha256Resolver(item.targetPath) ?? "",
-    component: "loom-core",
-    installedAt: item.installedAt,
-  }));
+  const items: InstallStateV3Item[] = v2.items.map((item) => {
+    const resolved = sha256Resolver(item.targetPath);
+    if (resolved == null) {
+      opts.onWarning?.(
+        `sha256Resolver returned null for ${item.targetPath} — sha256 set to "" (empty means "unreadable at migration time")`
+      );
+    }
+    return {
+      name: item.name,
+      type: item.type,
+      source: item.source,
+      targetPath: item.targetPath,
+      sha256: resolved ?? "",
+      component: "loom-core",
+      installedAt: item.installedAt,
+    };
+  });
 
   return {
     schemaVersion: 3,
