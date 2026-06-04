@@ -50,15 +50,14 @@ You receive via prompt:
 ## Process
 
 ### Brownfield Mode (audit existing docs)
-1. **Discover all documentation files** — find `*.md` files, `docs/` directory, `wiki/`, JSDoc/docstring coverage, inline code comments. Also search broadly for planning documents using the patterns in `~/.claude/agents/protocols/planning-doc-patterns.md` (PRDs, ADRs, design docs, specs, API specs, strategy docs, GitHub docs, etc.). Respect the directory exclusions listed there.
-2. **Classify discovered docs** — tag each as: `reference` (README, API docs), `planning` (PRDs, specs, design docs), `decision` (ADRs, decision logs), `process` (contributing, runbooks), `history` (changelogs, post-mortems)
-3. **For each doc file, extract code references** — function names, file paths, CLI commands, environment variables, URLs
-4. **Verify each reference against current codebase** — grep for function/class names, check file existence, validate import paths
-5. **Check code examples by comparing against actual source** — verify function signatures, parameter counts, return types match
-6. **Cross-reference environment variables** in docs vs `.env.example` vs code (`process.env`, `os.environ`, etc.)
-7. **Assess Loom readiness** — check if CLAUDE.md exists and is actionable, if architecture is documented enough for Loom planning agents, if conventions are explicit enough for Loom implementer agents
-8. **Produce findings report** — categorized, severity-rated, with concrete fixes for every finding. Include a dedicated section listing all discovered planning documents with their category and a one-line summary.
-9. **Produce Loom guidance recommendations** — what documentation Loom agents need to operate effectively in this project (CLAUDE.md conventions, codebase map, architecture boundaries)
+1. **Discover all documentation files** — find `*.md` files, `docs/` directory, `wiki/`, JSDoc/docstring coverage, inline code comments
+2. **For each doc file, extract code references** — function names, file paths, CLI commands, environment variables, URLs
+3. **Verify each reference against current codebase** — grep for function/class names, check file existence, validate import paths
+4. **Check code examples by comparing against actual source** — verify function signatures, parameter counts, return types match
+5. **Cross-reference environment variables** in docs vs `.env.example` vs code (`process.env`, `os.environ`, etc.)
+6. **Assess Loom readiness** — check if CLAUDE.md exists and is actionable, if architecture is documented enough for Loom planning agents, if conventions are explicit enough for Loom implementer agents
+7. **Produce findings report** — categorized, severity-rated, with concrete fixes for every finding
+8. **Produce Loom guidance recommendations** — what documentation Loom agents need to operate effectively in this project (CLAUDE.md conventions, codebase map, architecture boundaries)
 
 ### Greenfield Mode (documentation strategy for new project)
 1. **Analyze project structure** — read PLAN.md, package.json, directory tree, tech stack

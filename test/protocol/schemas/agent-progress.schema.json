@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AgentProgress",
-  "description": "Heartbeat and progress reporting from a running agent. Written to .plan-execution/progress/{taskId}.toon",
+  "description": "Heartbeat and progress reporting from a running agent. Written to .plan-execution/ephemeral/progress/{taskId}.toon",
   "type": "object",
   "required": [
     "taskId",

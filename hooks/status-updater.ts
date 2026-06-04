@@ -13,7 +13,7 @@ runHook("status-updater", async (_input) => {
   const planExecDir = findPlanExecutionDir();
   if (!planExecDir) return allow();
 
-  const statusPath = path.join(planExecDir, "status.toon");
+  const statusPath = path.join(planExecDir, "ephemeral", "status.toon");
   try {
     const content = fs.readFileSync(statusPath, "utf-8");
     const updated = content.replace(

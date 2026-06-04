@@ -31,7 +31,7 @@ Read these files for context on Loom conventions:
 
 #### Step 1: Pre-flight Check
 
-1a. Check what already exists:
+1. Check what already exists:
    - `CLAUDE.md` -- project guidance
    - `CONTEXT.md` -- locked decisions and context
    - `ROADMAP.md` -- existing roadmap
@@ -40,9 +40,7 @@ Read these files for context on Loom conventions:
    - `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `Gemfile` -- manifest files
    - `README.md` -- existing docs
 
-1b. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use the search patterns and directory exclusions defined in `~/.claude/agents/protocols/planning-doc-patterns.md`.
-
-1c. Display what was found:
+2. Display what was found:
    ```
    ## Project Scan
 
@@ -58,30 +56,57 @@ Read these files for context on Loom conventions:
      README.md       -- found (42 lines)
      src/            -- 23 files
      tests/          -- 8 files
-
-   Planning documents found:
-     docs/PRD.md             -- 142 lines (product requirements)
-     docs/adr/001-db.md      -- 67 lines (architecture decision)
-     VISION.md               -- 23 lines (strategy)
-     docs/api/openapi.yaml   -- 450 lines (API spec)
-     CONTRIBUTING.md         -- 89 lines (process)
    ```
 
-   If NO planning documents are found, display:
+3. **Gitignore protection check.** First verify we're in a git repo:
+   ```bash
+   git rev-parse --is-inside-work-tree 2>/dev/null && echo "GIT" || echo "NO_GIT"
    ```
-   Planning documents:  none found
-     (No PRDs, ADRs, design docs, or specs detected.
-      The discussion phase will surface these decisions interactively.)
+   If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (.plan-history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
+
+   If `GIT`: check for old `.plan-execution/` layout — if `.plan-execution/.gitignore` exists and contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first to migrate." Continue with the gitignore check.
+
+   Verify that the project's `.gitignore` does not exclude Loom's persistent directories:
+   ```bash
+   git check-ignore -q .plan-history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
    ```
 
-3. If `CLAUDE.md` or `CONTEXT.md` already exist and `--force` was NOT passed:
+   If ANY path returns `BLOCKED`, warn the user and offer to fix:
+   ```
+   ## Gitignore Conflict Detected
+
+   Your .gitignore excludes Loom's persistent directories:
+     .plan-history/    -- BLOCKED (execution history will be lost)
+     .loom/            -- BLOCKED (wiki knowledge will be lost)
+     .plan-execution/  -- BLOCKED (execution state will be lost across sessions)
+
+   This means planning artifacts, decisions, and wiki pages will be
+   silently deleted on worktree cleanup or git clean.
+
+   Fix: Add negation rules to .gitignore? (yes / no)
+   ```
+
+   If user confirms, append to `.gitignore`:
+   ```
+   # Loom persistent directories — do not ignore
+   !.plan-history/
+   !.loom/
+   !.plan-execution/
+   .plan-execution/ephemeral/
+   ```
+
+   If user declines, warn: "Loom artifacts may be lost. Proceeding anyway." and continue.
+
+4. If `CLAUDE.md` or `CONTEXT.md` already exist and `--force` was NOT passed:
    - Warn: "CLAUDE.md already exists. Overwrite? (yes / skip / merge)"
    - `merge` = read existing, pass to project-guidance-agent as context to preserve manual additions
    - `skip` = don't regenerate that file, continue with others
 
 #### Step 2: Discover (parallel)
 
-Launch 4 agents in parallel using the Agent tool. All in a SINGLE message.
+Launch 3 agents in parallel using the Agent tool. All in a SINGLE message.
 
 ##### 2a. Project Guidance Agent
 ```
@@ -109,22 +134,9 @@ Prompt: "Read your instructions from `~/.claude/agents/docs-auditor.md` first." 
 - Instruction: Audit existing documentation. Check for staleness, gaps, contradictions. Assess Loom readiness.
 - List of existing docs found in Step 1
 
-##### 2d. Planning Documents Agent
-```
-subagent_type: "general-purpose"
-model: "haiku"
-```
-Prompt: "Read your instructions from `~/.claude/agents/planning-docs-agent.md` first." Then provide:
-- Instruction: Discover and analyze all existing planning, design, requirements, and strategy documents in this codebase. Extract decisions, requirements, constraints, vision, and milestones. Identify gaps that the discussion phase needs to fill.
-- Planning documents found in Step 1 pre-flight: `{list of planning docs discovered}`
-- Codebase root: `{project root path}`
-- Tech stack: `{from manifest files}`
-
-**If NO planning documents were found in pre-flight:** still spawn this agent — it does its own deep search with broader patterns and may find documents the pre-flight glob missed (e.g., nested directories, non-standard names).
-
 #### Step 3: Present Discovery Results
 
-After all 4 agents return, display a unified analysis:
+After all 3 agents return, display a unified analysis:
 
 ```
 ## Discovery Report
@@ -147,21 +159,6 @@ External integrations:
   Stripe API              -- src/services/stripe.ts
   SendGrid                -- src/services/email.ts
   ...
-
-### Existing Planning Documents ({N} found)
-{from planning-docs-agent: discovered documents by category}
-
-  Requirements:
-    docs/PRD.md             -- 142 lines: product requirements for v2 launch
-  Architecture decisions:
-    docs/adr/001-db.md      -- 67 lines: chose PostgreSQL over MongoDB
-  Strategy:
-    VISION.md               -- 23 lines: company vision and product goals
-  API specs:
-    docs/api/openapi.yaml   -- 450 lines: OpenAPI 3.0 spec
-
-  Extracted: {N} decisions, {M} requirements, {K} constraints
-  Gaps: {list areas marked missing or partial}
 
 ### Documentation Status
 {from docs-auditor: existing docs, staleness, gaps}
@@ -221,7 +218,7 @@ Write the CLAUDE.md content produced by project-guidance-agent. If the user chos
 
 ##### 4b. CONTEXT.md
 
-Synthesize a CONTEXT.md from all 4 agents' output:
+Synthesize a CONTEXT.md from all 3 agents' output:
 
 ```markdown
 # Project Context
@@ -235,28 +232,14 @@ Synthesize a CONTEXT.md from all 4 agents' output:
 ## API Surface
 {summary of internal endpoints and external integrations -- from api-explorer}
 
-## Vision & Strategy
-{vision statement, target users, goals -- from planning-docs-agent extractedVision + extractedMilestones}
-{omit this section if planning-docs-agent found nothing}
-
-## Existing Requirements
-{features, user stories, priorities extracted from planning docs -- from planning-docs-agent extractedRequirements}
-{omit this section if no requirements were extracted}
-
 ## Locked Decisions
-{decisions from BOTH sources, deduplicated:
- - from planning-docs-agent extractedDecisions (ADRs, PRD decisions, design docs)
- - from docs-auditor (decisions detected in code comments or other docs)}
+{any decisions detected from existing docs, ADRs, or code comments -- from docs-auditor}
 
 ## Known Constraints
-{merge constraints from both sources:
- - from planning-docs-agent extractedConstraints (explicit constraints in planning docs)
- - inferred from codebase (performance requirements, compliance needs, deployment targets)}
+{performance requirements, compliance needs, deployment targets -- inferred from codebase}
 
 ## Documentation Gaps
-{merge gaps from both sources:
- - from planning-docs-agent gaps (what's missing for roadmap: vision, features, data model, etc.)
- - from docs-auditor (missing API docs, stale references, etc.)}
+{what's missing -- from docs-auditor}
 ```
 
 ##### 4c. Additional Formats (if --format includes them)
@@ -308,6 +291,22 @@ Synthesize a CONTEXT.md from all 4 agents' output:
    - Fix mode: `fix` (auto-fix any orphaned entries or count drift from the initial ingest)
    - Wiki path: `.loom/wiki`
 
+6. Register wiki health hooks in `.claude/settings.json`. The wiki only earns its keep if the SessionStart status line, PreToolUse impact warnings, and PostToolUse commit ledger actually fire — and those need entries in `.claude/settings.json`. Run the deterministic helper:
+
+   ```bash
+   node scripts/register-wiki-hooks.ts --replace
+   ```
+
+   The script auto-detects:
+   - **mode**: `local` (project-relative `hooks/<name>.ts` paths) when this project IS the loom dev checkout; `plugin` (`${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts`) when loom is installed as a Claude Code plugin.
+   - **runner**: `bunx tsx` if bun is on PATH, else `npx --yes tsx`.
+
+   `--replace` purges any stale wiki hook entries first, then writes fresh ones — safe to re-run, idempotent when settings already match. If the user declined hooks on a prior run, they'll be registered now. **`--force` is NOT needed here** — Rule 9's confirmation prompt is only for `/loom upgrade` (where settings.json already exists); during `/loom init` the user has already opted into Loom by running this command.
+
+   On any failure (script exit != 0), print the error and continue — hooks are additive, never gating. Surface the recovery hint: "Wiki hooks were not registered. Re-run `/loom upgrade --register-hooks` later, or invoke `node scripts/register-wiki-hooks.ts` directly."
+
+   If the script reports `mode: plugin` and the user's actual deployment is a dev checkout (or vice versa), they can override: `node scripts/register-wiki-hooks.ts --mode local --replace`.
+
 #### Step 5: Summary and Next Steps
 
 Display what was created:
@@ -325,16 +324,13 @@ Discovery:
   API endpoints:  14 internal, 3 external integrations
   Doc status:     README current, API docs missing, 0 ADRs
   Conventions:    8 detected, 8 included in CLAUDE.md
-  Planning docs:  {N} found → {M} decisions, {K} requirements, {J} constraints extracted
-  Gaps:           {list of areas needing discussion}
 
 Wiki:
   Pages created:    {N}
   Categories:       component({n}), concept({n}), decision({n}), convention({n}), api-surface({n}), tech-debt({n})
   Cross-references: {K}
   Lint result:      {blocking} blocking, {warning} warnings, {info} info
-
-Context tip: run /clear before the next command for fresh context.
+  Hooks registered: {3 hooks: SessionStart, PreToolUse Write|Edit, PostToolUse Bash | or "skipped" with reason}
 
 Next steps:
   /loom-roadmap init --brownfield       Create a roadmap informed by this analysis
@@ -375,18 +371,10 @@ Next steps:
    filesCreated[N]: CLAUDE.md, CONTEXT.md
    filesSkipped[N]: {any skipped due to user choice}
 
-   agents[4]{name,status,findingCount}:
+   agents[3]{name,status,findingCount}:
      project-guidance-agent,{status},{N}
      api-explorer,{status},{N}
      docs-auditor,{status},{N}
-     planning-docs-agent,{status},{N}
-
-   planningDocs:
-     documentsFound: {N}
-     decisionsExtracted: {N}
-     requirementsExtracted: {N}
-     constraintsExtracted: {N}
-     gaps[N]: {list of missing/partial areas}
 
    wikiGenerated: true
    wikiPageCount: {N}
@@ -398,14 +386,14 @@ Next steps:
 
 ### Error Handling
 
-- **Agent fails**: Log which agent failed, continue with others. Note the gap in the report. If project-guidance-agent fails, CLAUDE.md cannot be generated -- warn and offer to retry. If planning-docs-agent fails, the discussion phase will surface decisions interactively instead -- this is graceful degradation, not a blocker.
+- **Agent fails**: Log which agent failed, continue with others. Note the gap in the report. If project-guidance-agent fails, CLAUDE.md cannot be generated -- warn and offer to retry.
 - **No manifest files found**: Warn that tech stack detection may be incomplete. Continue -- the agents can still analyze code directly.
 - **Empty codebase**: If no source files are found, suggest using greenfield mode: `/loom-roadmap init --from "description"` instead.
 - **Write permission denied**: Report the target path and error. Do not update init-report for that file.
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` at every phase transition:
+Write `.plan-execution/ephemeral/status.toon` at every phase transition:
 ```toon
 command: init
 phase: {preflight | discovering | generating | complete}
@@ -413,7 +401,7 @@ wave: 0
 totalWaves: 1
 agentsRunning: {N}
 agentsDone: {N}
-agentsTotal: 4
+agentsTotal: 3
 agentsFailed: 0
 findings: 0
 updatedAt: {ISO timestamp}

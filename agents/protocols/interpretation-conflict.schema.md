@@ -24,6 +24,7 @@ An InterpretationConflict records a disagreement between how the plan describes 
 | resolvedAt | ISO 8601 | conditional | Timestamp of resolution. Required when status is `resolved`. |
 | featureRef | string | yes | Feature reference. Format: `F-NN`. |
 | phaseRef | string | no | Phase reference. Format: `Phase N`. |
+| scenarioRef | string | no | Scenario reference identifying the specific scenario the conflict targets. Format: `Phase {N}.S-{NN}` (plan-phase scenario) or `F-{NN}.S-{NN}` (roadmap-feature scenario). When set, the conflict is scoped to a single Given/When/Then block rather than the broader feature or phase; the interpretation-reviewer-agent uses this to produce more precise findings. At least one of `featureRef`, `phaseRef`, or `scenarioRef` MUST be non-empty (a conflict must target something). |
 
 ### Example
 
@@ -38,14 +39,16 @@ resolution:
 resolvedAt:
 featureRef: F-01
 phaseRef: Phase 2
+scenarioRef: Phase 2.S-01
 ```
 
 ### Typed Array Form
 
 ```toon
-conflicts[N]{id,source,planInterpretation,testInterpretation,severity,status,resolution,resolvedAt,featureRef,phaseRef}:
-  IC-001,dual-track,"Plan says return all fields","Test only checks id and email",warning,open,,,F-01,Phase 2
-  IC-002,semantic-mismatch,"Plan says 401 for expired tokens","Test expects 403 for expired tokens",blocking,resolved,"Aligned on 401 per RFC 6750",2026-04-18T10:00:00Z,F-03,Phase 4
+conflicts[N]{id,source,planInterpretation,testInterpretation,severity,status,resolution,resolvedAt,featureRef,phaseRef,scenarioRef}:
+  IC-001,dual-track,"Plan says return all fields","Test only checks id and email",warning,open,,,F-01,Phase 2,Phase 2.S-01
+  IC-002,semantic-mismatch,"Plan says 401 for expired tokens","Test expects 403 for expired tokens",blocking,resolved,"Aligned on 401 per RFC 6750",2026-04-18T10:00:00Z,F-03,Phase 4,Phase 4.S-03
+  IC-003,coverage-gap,"Roadmap feature scenario requires rate-limit","No test covers rate-limit",warning,open,,,F-05,,F-05.S-02
 ```
 
 ---
@@ -103,6 +106,9 @@ gaps[N]{id,source,description,planRef,testRef,severity,resolvedAt,resolutionRef}
 6. **Feature ref format.** `featureRef` must match pattern `F-NN`.
 7. **Phase ref format.** If present, `phaseRef` must match pattern `Phase N` (where N is a non-negative integer).
 8. **Max lengths.** `planInterpretation` and `testInterpretation` must not exceed 1000 characters.
+9. **Scenario ref format.** If present, `scenarioRef` must match pattern `Phase \d+\.S-\d{2,}` or `F-\d{2,}\.S-\d{2,}`.
+10. **At least one target.** At least one of `featureRef`, `phaseRef`, or `scenarioRef` must be non-empty. A conflict that targets nothing is rejected.
+11. **Scenario ref consistency.** When `scenarioRef` is set in the form `Phase N.S-NN`, `phaseRef` (if also set) MUST equal `Phase N`. When `scenarioRef` is set in the form `F-NN.S-NN`, `featureRef` (if also set) MUST equal `F-NN`. Mismatches are blocking.
 
 ### CoverageGap
 
@@ -121,3 +127,4 @@ gaps[N]{id,source,description,planRef,testRef,severity,resolvedAt,resolutionRef}
 - **criteria-plan.schema.md** -- Coverage gaps may reference specific criteria entries.
 - **convergence-tier.schema.md** -- Blocking conflicts gate convergence at the feature or milestone tier.
 - **agent-result.schema.md** -- The interpretation-reviewer-agent returns conflicts and gaps inside its AgentResult envelope.
+- **scenario.schema.md** -- Defines the scenarios referenced by `scenarioRef`. Scenario-level conflicts are the finest-grained target the interpretation-reviewer-agent emits.

@@ -29,6 +29,34 @@ You receive:
    - Query pages matching the suspected modules, error patterns, or component names
    - Record which pages informed your diagnosis in `wikiContext`
    - Look for `decision-*` pages that explain WHY code is structured a certain way — respect those decisions
+   - **Walk the cross-ref graph from changed files to flow/contract pages** (see "Wiki Cross-Ref Graph Walk" below). This populates `affectedFlows[]` and `affectedContracts[]` and is the primary signal of user-visible blast radius.
+
+#### Wiki Cross-Ref Graph Walk (flows + contracts)
+
+After you have identified the set of files that will change (the bug's diff), walk the wiki graph to surface user-visible impact:
+
+1. **Build the changed-file set.** Start with the files you plan to modify in Phase 3. If you are still in pre-fix reconnaissance, use your best estimate of the change set and refine after Phase 3.
+
+2. **Flow pages → `affectedFlows[]`.**
+   - For each `flow-*` page in `.loom/wiki/`, inspect its `steps[].touches` column.
+   - If any `touches` entry overlaps the changed-file set (file path or component pageId match), the flow is affected.
+   - For each affected flow, populate `exitStatesAtRisk`:
+     - If the matching step has a populated `errorExits[]`, copy those exitState names verbatim.
+     - Otherwise, fall back to the flow's full `exitStates[]` as a conservative default.
+   - Record one row per affected flow.
+
+3. **Contract pages → `affectedContracts[]`.**
+   - For each `contract-*` page, inspect `producers[]`, `consumers[]`, and `shapeFiles[]`.
+   - If any entry overlaps the changed-file set, the contract is affected.
+   - Compute `riskLevel` from the contract's `compatibilityPolicy`:
+     - `backward-compatible` or `additive-only` → `high` (shape changes could break consumers)
+     - `full-semver` → `medium` (allowed if semver discipline is followed)
+     - `none` → `low` (no commitment to preserve)
+   - Record one row per affected contract.
+
+4. **Preserve existing arrays.** `wikiContext[]` and `relatedWikiPages[]` are unchanged in semantics; the new `affectedFlows[]` and `affectedContracts[]` are additive and more structured.
+
+5. **Surface high-risk impact first.** When you write `integrationNotes` and the archive entry, list `affectedFlows[]` and especially `affectedContracts[]` with `riskLevel: high` ABOVE other context so reviewers see user-visible/consumer-breaking impact before incidental notes.
 
 2. **Fix archive lookup.** If `.loom/fix-archive/index.toon` exists:
    - Scan for prior fixes in the same module or category
@@ -99,7 +127,7 @@ Write the fix archive entry to the provided path following `fix-archive.schema.m
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon`:
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon`:
 
 | Checkpoint | Phase | Percent |
 |------------|-------|---------|
@@ -127,7 +155,7 @@ filesDeleted[N]:
 exportsAdded[N]{file,name,kind}:
 dependenciesAdded[N]:
 
-integrationNotes: "Fixed token expiry check. Callers of validateToken() are unaffected — the fix only changes internal expiry comparison. Regression areas: login flow, token refresh endpoint."
+integrationNotes: "Affected contracts (high risk): contract-auth-token (backward-compatible). Affected flows: flow-user-login (exitStatesAtRisk: invalid-credentials, token-rejected), flow-token-refresh. Fix: token expiry comparison changed from `<` to `<=`. Callers of validateToken() are unaffected — the fix only changes internal expiry comparison."
 
 issues[N]{severity,description,file,line}:
 
@@ -141,6 +169,14 @@ diagnoseLog: "Root cause: expiry comparison used `<` instead of `<=`, causing to
 fixArchiveEntry: .loom/fix-archive/2026-04-19-token-expiry-check.toon
 wikiContext[N]: component-auth-middleware, decision-auth-strategy
 
+affectedFlows[N]{pageId,title,exitStatesAtRisk}:
+  flow-user-login,"User Login","invalid-credentials, token-rejected"
+  flow-token-refresh,"Token Refresh","refresh-denied"
+
+affectedContracts[N]{pageId,title,compatibilityPolicy,riskLevel}:
+  contract-auth-token,"Auth Token Shape",backward-compatible,high
+  contract-session-state,"Session State",full-semver,medium
+
 impactSummary:
   risk: low
   scope: isolated
@@ -148,6 +184,20 @@ impactSummary:
   priorFixCount: 0
   recurringPattern: false
 ```
+
+### `affectedFlows[]` and `affectedContracts[]` columns
+
+- `affectedFlows[N]{pageId,title,exitStatesAtRisk}`
+  - `pageId` — wiki pageId of the affected `flow-*` page
+  - `title` — flow title from the page frontmatter (helps reviewers without round-tripping to the wiki)
+  - `exitStatesAtRisk` — comma-joined list of exitState names that may be impacted. Derived from the affected step's `errorExits[]` when populated; otherwise the flow's full `exitStates[]`.
+
+- `affectedContracts[N]{pageId,title,compatibilityPolicy,riskLevel}`
+  - `pageId` — wiki pageId of the affected `contract-*` page
+  - `title` — contract title
+  - `compatibilityPolicy` — copy of the contract's policy (`backward-compatible` / `additive-only` / `full-semver` / `none`)
+  - `riskLevel` — `high` / `medium` / `low` computed per the mapping in Phase 1's Wiki Cross-Ref Graph Walk
+
 
 ## Rules
 

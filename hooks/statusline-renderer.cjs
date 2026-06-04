@@ -178,7 +178,7 @@ function readCurrentTask(session) {
 // ═══════════════════════════════════════════════════════════
 
 function buildLoomLine(root, isWorktree) {
-  const statusFile = path.join(root, '.plan-execution', 'status.toon');
+  const statusFile = path.join(root, '.plan-execution', 'ephemeral', 'status.toon');
   const pipelineFile = path.join(root, '.plan-execution', 'pipeline-state.toon');
   const planFile = path.join(root, 'PLAN.md');
 
@@ -309,9 +309,9 @@ function renderIdleLine(planMeta, statusFile, root, isWorktree) {
     }
   } catch {}
 
-  // Note count from notes.toon
+  // Note count from notes.toon (persistent — NOT under ephemeral/)
   try {
-    const notesFile = path.join(path.dirname(statusFile), 'notes.toon');
+    const notesFile = path.join(root, '.plan-execution', 'notes.toon');
     if (fs.existsSync(notesFile)) {
       const notesContent = fs.readFileSync(notesFile, 'utf-8');
       const noteCount = notesContent.split('\n').filter(l => /^\s*note\d+:/.test(l)).length;
@@ -350,8 +350,10 @@ function progressBar(current, total, width) {
 function gitBranch(root) {
   try {
     const { execSync } = require('child_process');
+    // 500ms timeout — git rev-parse normally completes in <50ms but can spike
+    // under load (CI parallel runners, FS contention). Fail-open on miss.
     return execSync('git rev-parse --abbrev-ref HEAD', {
-      cwd: root, timeout: 100, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe']
+      cwd: root, timeout: 500, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe']
     }).trim();
   } catch { return ''; }
 }
@@ -360,7 +362,7 @@ function resolveDir(dir) {
   const home = os.homedir();
   try {
     const { execSync } = require('child_process');
-    const opts = { cwd: dir, timeout: 200, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] };
+    const opts = { cwd: dir, timeout: 1000, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] };
 
     const gitDir = execSync('git rev-parse --git-dir', opts).trim();
     const commonDir = execSync('git rev-parse --git-common-dir', opts).trim();

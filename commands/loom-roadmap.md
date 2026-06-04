@@ -38,13 +38,7 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 | scope-feasibility-agent, feature-coverage-agent, strategy-agent, ux-agent | review |
 | wiki-maintainer-agent, wiki-ingest-agent | utility |
 
-**How to resolve (for each agent spawn):**
-
-1. Read `.claude/orchestration.toml` once at the start (cache the result).
-2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
-5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
+**How to resolve:** Read `.claude/orchestration.toml` once at the start. Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, look up the agent's tier, use the profile's model for that tier. If no profile, read the agent's `.md` frontmatter for `model:`. Pass the resolved model on the Agent tool call.
 
 ## Requirements
 

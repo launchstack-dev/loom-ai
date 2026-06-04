@@ -1,0 +1,10 @@
+manifestVersion: 1
+generatedAt: 2026-05-23T12:00:00Z
+generatedBy: human:fixture
+sourceRoadmap: ROADMAP.md
+sourcePlans[1]: PLAN.md
+partitions[2]{domain,entities,description}:
+  invoicing,"Invoice",Invoice issuance and lifecycle
+  customers,"Customer",Customer identity and contact data
+unassignedEntities[0]:
+notes:

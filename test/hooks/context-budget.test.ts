@@ -18,7 +18,7 @@ import {
   isTestAgentSpawn,
   findAgentMdPath,
   checkTestAgentBudget,
-} from "../../hooks/context-budget.js";
+} from "../../hooks/context-budget-test.js";
 
 // ---------------------------------------------------------------------------
 // 1. Token estimation accuracy (AC #1)

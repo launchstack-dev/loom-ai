@@ -17,7 +17,7 @@ Parse arguments after `bugfix`:
 If arguments are empty or equal `--help`, print the following help text and stop:
 
 ```
-/loom-bugfix [flags] <bug description>
+/loom bugfix [flags] <bug description>
 
 Rapidly fix a bug with wiki context, impact analysis, and archiving.
 
@@ -31,11 +31,11 @@ Flags:
   --model <model>      Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
 
 Examples:
-  /loom-bugfix --model opus Complex race condition in the queue worker
-  /loom-bugfix The login button returns 500 after password reset
-  /loom-bugfix --severity critical Users can't check out — payment API timeout
-  /loom-bugfix --path src/auth/ Token refresh fails silently
-  /loom-bugfix --dry-run The dashboard is slow when filtering by date
+  /loom bugfix --model opus Complex race condition in the queue worker
+  /loom bugfix The login button returns 500 after password reset
+  /loom bugfix --severity critical Users can't check out — payment API timeout
+  /loom bugfix --path src/auth/ Token refresh fails silently
+  /loom bugfix --dry-run The dashboard is slow when filtering by date
 ```
 
 ### Instructions
@@ -68,10 +68,36 @@ Gather context before spawning agents. This is fast, read-only work.
 
 Check if `.loom/wiki/` exists and has pages. Record `wikiAvailable: true/false`.
 
-If available, read `.loom/wiki/index.toon` and scan for pages related to the bug description:
-- Match against module names, component names, and keywords from the description
-- Match against any `--path` hint
-- Collect up to 5 relevant page IDs as `wikiHints`
+If available, read `.loom/wiki/index.toon` and scan for pages related to the bug description.
+
+**User-facing-language keying (run BEFORE component matching).** When the bug description is framed in user-facing terms, match `flow-*` page titles FIRST, then resolve flows to the components they exercise via `crossRefs`. Prefer a flow title hit over a component-name hit — flow titles describe user-visible behavior, component titles describe code topology, and a user-framed bug is more likely caused by a regression in the flow's success path than by an arbitrary code-named module.
+
+1. **Detect user-facing language in the bug description.** Apply these patterns (case-insensitive) against the description string. If any pattern matches, set `userFacingMode: true`. Keep the pattern set conservative — these patterns will over-match if broadened (calibration risk, same principle as Hook B):
+
+   - `/user(s)? (can'?t|cannot|fails? to|are? unable to|is unable to) \w+/i`
+   - `/(checkout|signup|sign-up|login|sign-in|password reset|onboarding|payment|subscription|dashboard) (broken|fails?|doesn'?t work|hangs?|times? out|returns? \d+)/i`
+   - `/(error|crash|hang|timeout) (when|while|during|after) \w+/i`
+   - `/(can'?t|cannot|unable to) (check ?out|sign ?up|sign ?in|log ?in|reset|submit|complete)/i`
+   - `/(button|form|page|screen) (returns?|throws?|shows?) \d+/i`
+
+2. **If `userFacingMode` is true:**
+   - Scan `index.toon` for `flow-*` pages whose `title` or `summary` fuzzy-matches tokens from the bug description (lowercase, strip punctuation, drop stopwords; a match is any non-stopword token of length >=4 appearing in the title or summary).
+   - For each matched flow page, read its body and add all `crossRefs` entries where `relationship: exercises` to the wiki-lookup candidate set — these are the components the flow touches.
+   - Record matched flow pageIds as `bugFixContext.matchedFlows[]` (will be passed to the analyst and persisted in the bugfix archive).
+   - Continue with the existing component-matching logic below as a fallback in case no flow matches.
+
+3. **Component matching (existing logic, runs whether or not flows matched):**
+   - Match against module names, component names, and keywords from the description.
+   - Match against any `--path` hint.
+   - Collect up to 5 relevant page IDs as `wikiHints` (union of flow-derived components from step 2 and direct keyword matches).
+
+4. **Surface matched flows prominently in the bug report.** When `bugFixContext.matchedFlows[]` is non-empty, include a line of the form:
+
+   ```
+   This bug appears to affect flow `{flow-title}` — the {affected-exit-state} exit path may be regressing.
+   ```
+
+   Use the flow's `summary` and `exitStates` (per `agents/protocols/wiki-page.schema.md`) to pick a plausible `{affected-exit-state}`; if uncertain, omit the exit-state clause and keep just the flow name.
 
 **2b. Fix archive check.**
 
@@ -120,12 +146,15 @@ Severity: {provided or "auto-detect"}
 Path hints: {--path value or "none"}
 Wiki available: {true/false}
 Wiki hints: {list of relevant page IDs or "none"}
+Matched flows: {list of flow pageIds from bugFixContext.matchedFlows[] or "none"}
+User-facing mode: {true/false — whether user-facing-language detection fired}
 Prior fix hints: {list of related fix IDs or "none"}
 Fix archive path: {if --no-archive: "DISABLED — do not write any archive entry", else: generated path}
 Active file ownership: {ownership map or "none — no active execution"}
 Dry run: {true/false}
 TaskId: {fixId}
 
+{If Matched flows is non-empty: "Treat the listed flow pageIds as authoritative user-facing-impact context. Populate affectedFlows[] in your AgentResult with the flow pageIds whose exitStates or steps[].touches intersect the diff. If the bug regresses a specific exit-state on a flow, name it in your root-cause analysis."}
 {If --no-archive is NOT set: "Read the fix-archive schema at agents/protocols/fix-archive.schema.md before writing the archive entry."}
 {If --no-archive: "Archive is disabled. Do NOT write any fix archive entry or touch .loom/fix-archive/. Skip all archive-related steps."}
 {If --no-verify: "Skip verification — do not run test/typecheck/lint commands."}

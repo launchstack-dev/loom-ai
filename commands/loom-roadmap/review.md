@@ -12,7 +12,7 @@ Before starting, read:
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` SS "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` SS "Orchestration Status".
 
 ### Step R0: Read protocols
 
@@ -84,8 +84,6 @@ After the per-agent summaries, add a section highlighting findings that multiple
 If the roadmap's frontmatter has `status: draft`, update it to `status: reviewed` and set `lastReviewed` to today's date. Do NOT change status if it's already `approved`.
 
 ### Step R6: Offer next steps
-
-Display: "Context tip: run `/clear` before the next command for fresh context."
 
 Ask the user if they want to:
 - Apply the recommendations to the roadmap automatically (via `/loom-roadmap review-integrate`)

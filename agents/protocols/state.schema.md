@@ -51,7 +51,7 @@ lockPid: 12345
 
 1. **Atomic writes.** Always write to `state.toon.tmp` then rename to `state.toon`. Never write directly.
 2. **Update `updatedAt`** on every state change.
-3. **Lock file.** Before starting execution, write PID to `.plan-execution/.lock`. Check on startup — if lock exists and PID is alive, abort with error.
+3. **Lock file.** Before starting execution, write PID to `.plan-execution/ephemeral/.lock`. Check on startup — if lock exists and PID is alive, abort with error.
 4. **Drift detection on resume.** Before `--resume`, compare current file hashes against `fileHashes` from the last completed wave. Warn if any differ.
 5. **Retry tracking.** Increment `retryCount` before each retry. If `retryCount >= 2`, mark as failed and report to user.
 6. **Wave keys are string numbers** ("0", "1", "2") matching TOON block notation.

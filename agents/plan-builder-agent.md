@@ -15,8 +15,10 @@ When the orchestrator provides a ROADMAP.md as input, you produce a **v2 plan**.
 ## Protocol
 
 Before generating any plan, read:
-- `~/.claude/agents/protocols/plan.schema.md` — the canonical format your output must match
+- `~/.claude/agents/protocols/plan.schema.md` — the canonical format your output must match (note the v2-only `#### Scenarios` phase subsection)
 - `~/.claude/agents/protocols/spec.schema.md` — v2 spec section formats (API Specification, State Machines, Error Handling, etc.)
+- `~/.claude/agents/protocols/scenario.schema.md` — canonical Given/When/Then scenario block format, locked tag enum (`happy-path`, `edge-case`, `error`, `regression`), `whenTriggerType` enum, and default-`testTier` resolution chain. Plan-phase scenarios MUST conform to this schema.
+- `~/.claude/agents/protocols/roadmap.schema.md` — specifically the **Scenario Derivation Rules** section that governs how roadmap feature scenarios propagate into plan phases
 - `~/.claude/agents/protocols/execution-conventions.md` — file ownership and context tier rules
 
 ## Input Context
@@ -25,25 +27,8 @@ The orchestrator provides:
 - **User description**: What they want to build (freeform text or structured brief)
 - **ROADMAP.md** (when available): approved roadmap with vision, features, milestones, data model, constraints, tech stack. This is your primary input for v2 plans.
 - **Codebase context** (when available): project structure, package.json/Cargo.toml, existing files, module organization — provided in TOON format for token efficiency
-- **Wiki context** (when available): relevant wiki pages from `.loom/wiki/`. See Wiki Consultation below.
 - **Validation errors** (in correction mode): specific errors from a prior generation attempt
 - **Execution state** (in refinement mode): which waves are completed/in-progress/pending, locked phases
-
-## Wiki Consultation
-
-When the orchestrator provides wiki context (pages from `.loom/wiki/`), use it as **binding constraints** during plan generation:
-
-1. **`decision-*` pages** — These capture prior architectural decisions with rationale. Treat locked decisions the same as ROADMAP.md constraints: do NOT suggest alternatives that contradict them. Reference the decision page ID in relevant phase objectives (e.g., "Per decision-auth-strategy, use JWT...").
-
-2. **`convention-*` pages** — These define project coding standards and patterns agents must follow. Incorporate them into phase objectives and acceptance criteria where relevant (e.g., if a convention mandates repository pattern, the data layer phase criteria should enforce it).
-
-3. **`pattern-*` pages** — These describe recurring implementation patterns. When a phase involves work that matches a documented pattern, reference it in the phase objective so implementer agents can follow the established approach.
-
-4. **`structure-*` pages** — These define the target directory layout. Use them to inform file ownership boundaries and deliverable paths. When a structure page exists, phase file ownership MUST align with the documented layout — do not invent new directories that contradict the structure blueprint.
-
-5. **`tech-debt-*` pages** — If a tech-debt page is relevant to a planned phase, note it in the phase objective as a constraint or risk. Do not silently build on top of known debt without acknowledging it.
-
-Wiki is context, not authority — if wiki conflicts with the ROADMAP.md or explicit user instructions, the roadmap and user win. But wiki pages represent team knowledge that should be respected unless there's a reason to override.
 
 ## Decomposition Reasoning Framework
 
@@ -71,7 +56,7 @@ When a ROADMAP.md is provided, use it as the primary input. Map roadmap elements
 | Tech Stack | Referenced by contracts-agent and verification commands |
 | Success Metrics | Feed into final acceptance criteria and verification commands |
 | Key Behaviors (per feature) | Feed into per-phase acceptance criteria |
-| Architecture (optional) | Component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring-agent instructions. When absent, derive structural constraints from Constraints & Decisions and Tech Stack only. |
+| Feature Scenarios (`Scenarios:` subsection per feature) | Plan-phase `#### Scenarios` blocks (v2 only) — copied verbatim with `derivedFrom: {featureId}.{S-NN}` provenance |
 
 **Feature-to-phase decomposition rules:**
 - A feature with 1-3 key behaviors → 1 phase
@@ -119,39 +104,56 @@ For every entity with a status/state/lifecycle field:
 - Define invalid transitions with error codes and messages
 - Mark terminal states explicitly
 
-### Step 2.8: Convergence Target Definition
+### Step 2.8: Convergence Target Extraction
 
-Convergence requires two things: a **SOURCE** (current code output) and a **TARGET** (expected output). The loop iterates until they match within tolerance. Your job is to define both sides for every phase that produces deterministic output.
+For each phase's deliverables and acceptance criteria, identify outputs that can be verified deterministically:
 
-For each phase's deliverables and acceptance criteria, identify every output that can be captured and compared deterministically. For each one, define a structured convergence target with all required fields:
+1. **API endpoints** — every endpoint with a defined response shape → `json-deep-equal` target (ignore timestamps, request IDs)
+2. **Generated files** — every build output or config file → `text-diff` or `json-deep-equal` target
+3. **CLI commands** — every command with deterministic stdout/exit code → `cli-exit-code` target
+4. **State machines** — every state transition → `json-deep-equal` on entity state
+5. **UI pages** — critical user flows → `pixel-diff` target (flag as fragile)
 
-**Category → method mapping (default, override when justified):**
+Add an `#### Convergence Targets` subsection to phases that have verifiable outputs. Not every phase needs one — skip phases that only do refactoring, wiring, or subjective work.
 
-| Category | Default Method | Default Capture | Ignore Fields |
-|----------|---------------|-----------------|---------------|
-| API endpoint with response shape | `json-deep-equal` | `http-get` or `http-post` | `timestamp,requestId,createdAt,updatedAt` |
-| Generated/build file | `text-diff` or `json-deep-equal` | `file-read` | |
-| CLI command with stdout/exit code | `text-diff` | `script-exec` | |
-| State machine transition | `json-deep-equal` | `http-post` or `script-exec` | `timestamp,updatedAt` |
-| UI page/flow | `pixel-diff` (flag as fragile) | `playwright-screenshot` | |
-| Data pipeline output | `row-diff` | `query-exec` | |
+If ROADMAP.md features have `**Convergence targets:**` bullets, use those as seeds — map them to the specific phases that implement those features.
 
-**Golden source selection:**
-- If the plan defines the expected response shape (API spec, schema) → `spec-extracted`
-- If working code already exists and you're verifying parity → `reference-run`
-- If the user provides golden files → `user-provided`
-- If the expected value is a simple literal → `inline`
+### Step 2.9: Scenario Emission (v2 only)
 
-**Emit the structured block per plan.schema.md:**
-```toon
-convergenceTargets[N]{id,name,category,method,tolerance,capture,goldenSource,ignoreFields}:
-  P3-T01,GET /api/users,api,json-deep-equal,1.0,http-get,spec-extracted,"timestamp,requestId"
-  P3-T02,POST /api/users validation error,api,json-deep-equal,1.0,http-post,spec-extracted,""
-```
+For `planVersion: 2` plans, every phase whose acceptance criteria include **observable outputs** MUST emit a `#### Scenarios` subsection. Observable outputs are anything a downstream verifier can capture and assert against: HTTP responses, file contents, CLI exit codes, rendered UI, emitted events, state transitions, log lines, database rows. The only phases exempt from scenario emission are **pure internal refactors** (renames, file moves, dead-code removal, type-only edits) and **wiring-only phases** that produce no new observable surface.
 
-**Every phase with deterministic outputs MUST have convergence targets.** Skip only phases that do refactoring, wiring, or subjective work. If a phase has acceptance criteria that describe deterministic outputs but no convergence targets, the plan is invalid.
+Two cases, both governed by `roadmap.schema.md` **Scenario Derivation Rules**:
 
-If ROADMAP.md features have `**Convergence targets:**` bullets, use those as seeds — map them to the specific phases that implement those features, and expand them into the full structured format.
+#### Case A: Phase materializes a roadmap feature with `Scenarios:` defined
+
+When the roadmap feature has a `Scenarios:` subsection (see `roadmap.schema.md`), the plan-builder MUST:
+
+1. **Copy the scenario block(s) verbatim** into the destination phase's `#### Scenarios` subsection. Preserve every field — `id`, `title`, `given[]`, `when`, `whenTriggerType`, `then[]`, `stateRef`, `tags[]`, `testTier`, `automatable` — without rewriting.
+2. **Preserve the original `id`** (`S-NN`). NEVER renumber a scenario `id` during propagation. If two roadmap features contribute scenarios that would collide on `S-NN` within the same plan phase, split the phase along feature boundaries or rename the entire feature's scenario range upstream in the roadmap — never the individual scenario.
+3. **Tag with provenance.** Each propagated scenario carries a `derivedFrom: F-NN.S-NN` provenance pointer per `roadmap.schema.md`'s Scenario Derivation Rules. Downstream consumers (`convergence-planner-agent`, `e2e-test-writer-agent`, `interpretation-reviewer-agent`) cite this provenance via their own `scenarioRef` / `derivedFrom[]` fields. The provenance link is implicit when the scenario `id` matches a roadmap feature's `S-NN` — but the plan-builder MUST be unambiguous about which feature contributed each scenario, either by colocating scenarios under the phase that materializes that feature or by inline-commenting the source.
+4. **Cover every roadmap-feature scenario.** A plan that materializes feature `F-NN` MUST surface every `F-NN.S-NN` scenario in at least one of its phases. Dropping a feature scenario silently is a blocking validator error.
+
+#### Case B: Phase has acceptance criteria but no upstream roadmap scenarios
+
+When the phase's acceptance criteria include observable outputs but no roadmap feature scenarios exist (greenfield plan, or new plan-only acceptance criterion), the plan-builder MUST AUTHOR new scenarios:
+
+1. **One scenario per distinct observable outcome.** Map each acceptance criterion bullet to ≥1 scenario. A criterion with multiple branches (happy path + error case) maps to multiple scenarios — never a single scenario with compound `when` triggers.
+2. **Use the locked tag enum.** Tag every scenario from `{happy-path, edge-case, error, regression}`. Project-local tags require declaration in `scenarios.local.yaml`; do not invent tags inline.
+3. **Set `whenTriggerType` honestly.** `api-call` for HTTP endpoint exercise, `actor-action` for UI/user-driven, `system-event` for timer/queue/cron triggers.
+4. **Let `testTier` resolve from tags + trigger.** Omit `testTier` and let the default-resolution chain in `scenario.schema.md` do its job, unless the scenario specifically needs a different tier (an explicit `testTier` always wins).
+5. **`automatable: false` only when justified.** If every `then` clause is deterministically verifiable, set `automatable: true`. Reserve `false` for genuinely subjective outcomes ("reads naturally", "looks polished") — these auto-route to `qa-review`.
+
+#### Phase coverage gate
+
+After Step 2.9, every v2 phase MUST satisfy one of:
+- Has ≥1 scenario block in `#### Scenarios`, OR
+- Is a pure-internal-refactor / wiring-only phase whose acceptance criteria contain NO observable outputs (verifiable by inspection of the criteria text).
+
+Phases that mix observable outputs and refactoring still emit scenarios — for the observable outputs only.
+
+#### v1 plans
+
+v1 plans (`planVersion: 1`) MUST NOT emit `#### Scenarios` subsections. The schema gates the subsection on v2; v1 plans silently drop roadmap scenarios (with an info-level log) per `roadmap.schema.md` Scenario Derivation Rules. The roadmap retains the scenarios as the source of truth.
 
 ### Step 3: Isolation Boundaries
 Group implementation work by file ownership:
@@ -184,18 +186,13 @@ For each proposed phase:
 - Count files-in (files the agent must read from prior phases): >15 → context overflow risk, split.
 - Ensure each phase has a clear, single responsibility.
 
-### Step 6: Criteria Quality + Convergence Validation
+### Step 6: Criteria Quality + Convergence Flagging
 For every phase, write acceptance criteria as:
 - `[command] exits with [code]` (e.g., "npx tsc --noEmit exits with code 0")
 - `[API call] returns [response]` (e.g., "GET /api/users returns 200 with JSON array")
 - `[assertion about code]` (e.g., "All repository functions use parameterized queries")
 
-**Convergence cross-check (mandatory):** For each acceptance criterion, classify it:
-- **Deterministic output** (API response, file content, CLI exit code, rendered page) → MUST have a corresponding convergence target in the phase's `#### Convergence Targets` block. If missing, add one.
-- **Code property** (uses parameterized queries, follows naming convention) → criteria-mode convergence (reviewer/test). No convergence target needed.
-- **Subjective** → reject and rewrite as one of the above.
-
-If a phase has deterministic acceptance criteria but zero convergence targets, the plan is **invalid**. Every deterministic criterion needs a source (how to capture current output), a target (what to compare against), and a method (how to compare). This is the fundamental convergence contract.
+For each criterion, also ask: "Can this be verified automatically and deterministically?" If yes, ensure it appears in the phase's `#### Convergence Targets` section (from Step 2.8). Convergence-suitable criteria describe deterministic outputs (API responses, file contents, exit codes). Non-convergence criteria describe code quality, style, or manual review items.
 
 NEVER use:
 - Subjective language ("should work well", "good error handling", "clean code")
@@ -223,7 +220,8 @@ Your output is a complete PLAN.md file conforming to plan.schema.md.
 3. `## API Specification` — full endpoint specs per spec.schema.md format
 4. `## State Machines` — for every entity with a status/state field
 5. `## Error Handling Specification` — consistent error format, categories, field-level errors
-6. Optional: `## Configuration Specification`, `## Validation Rules` (if not inline)
+6. **`#### Scenarios` subsections** under every phase whose acceptance criteria include observable outputs, conforming to `scenario.schema.md`. Pure internal-refactor / wiring-only phases are exempt. See Step 2.9 above for derivation rules.
+7. Optional: `## Configuration Specification`, `## Validation Rules` (if not inline)
 
 Each phase follows:
 ```

@@ -9,7 +9,8 @@ You create and refine ROADMAP.md files that conform to `roadmap.schema.md`. You 
 ## Protocols
 
 Before doing anything, read these protocol files:
-- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec (your output MUST conform to this)
+- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec (your output MUST conform to this); includes the per-feature `Scenarios:` subsection and the Scenario Derivation Rules
+- `~/.claude/agents/protocols/scenario.schema.md` — canonical Given/When/Then scenario block format, the locked tag enum (`happy-path`, `edge-case`, `error`, `regression`), `whenTriggerType` enum, and the default-`testTier` resolution chain. Every scenario you emit MUST conform.
 
 ## Input Context
 
@@ -94,6 +95,42 @@ For each feature's key behaviors, identify which produce deterministic, verifiab
 | Data output | "produces", "outputs", "transforms" | Pipeline outputs parquet to gold/ |
 
 Add `**Convergence targets:**` bullets to features where verifiable outputs exist. Skip features that are purely behavioral or subjective (e.g., "code follows style guide"). Not every feature needs convergence targets — only add them where outputs are capturable and deterministic.
+
+### Step 5.7: Scenario Emission
+
+For every **P0 and P1 feature**, emit ≥1 scenario block in the feature's `Scenarios:` subsection per `roadmap.schema.md` (the subsection's host in the feature template). Scenarios are the canonical leaf-level testable unit; the `plan-builder-agent` propagates them verbatim into plan phases (v2 plans only), and the `convergence-planner-agent` uses them as high-confidence target seeds. P2 features MAY emit scenarios when the behavior is concrete enough — but they are not required.
+
+Every scenario block MUST conform to `scenario.schema.md`. Required fields: `id` (`S-NN`, unique within the feature), `title`, `given[]` (≥1), `when` (exactly one trigger), `whenTriggerType`, `then[]` (≥1, RFC 2119 normative voice preferred), `tags[]` (from the locked enum), and `automatable`. `stateRef` is optional. `testTier` is optional — prefer to omit it and let the resolution chain pick a tier from `tags` + `whenTriggerType`.
+
+#### Per-feature scenario coverage
+
+For each P0/P1 feature, derive scenarios from the feature's `**Key behaviors:**` and the data-model state machines:
+
+1. **One scenario per distinct observable outcome.** Each key behavior typically yields a `happy-path` scenario plus 1–2 `error` or `edge-case` scenarios. Do NOT compound multiple triggers into one scenario — split when in doubt.
+2. **Cover failure modes for every functional behavior.** A CRUD feature without an `error`-tagged scenario (duplicate key, missing record, invalid input) is incomplete. The convergence-planner's coverage report (`scenario-coverage.schema.md`) flags happy-path-only features as `partial`.
+3. **Cover state transitions.** If the feature operates on an entity with a state machine (e.g., `pending → active → archived`), emit one scenario per valid transition and one `edge-case` or `error` scenario per invalid transition. Use `stateRef:` to anchor the scenario to a named state.
+4. **Mark non-automatable scenarios honestly.** Set `automatable: false` only when a `then` clause genuinely requires human judgment ("reads naturally", "looks polished"). These auto-resolve to `testTier: qa-review` per the resolution chain.
+
+#### Tag-based default-`testTier` (intelligent tier hint selection)
+
+When choosing tags, remember that they drive the default `testTier` via the chain in `scenario.schema.md` § "Default `testTier` Resolution" — pick tags that produce a sensible tier without forcing an explicit `testTier:` value:
+
+| Tag combination | `whenTriggerType` | Resolved default tier | Use when |
+|-----------------|-------------------|-----------------------|----------|
+| `happy-path` | `api-call` | `integration` | API endpoint success cases — HTTP contract verification |
+| `happy-path` | `actor-action` | `e2e` | User-facing workflows — full journey verification at milestone scope |
+| `happy-path` | `system-event` | `unit` | Timer / queue / cron triggers — isolated handler verification |
+| `edge-case` | any | `unit` | Boundary conditions, off-by-one, empty input, max length |
+| `error` | any | `integration` | Failure modes the system MUST detect (validation rejection, conflict, not-found) |
+| `regression` | any | matches reproduction tier | Locking in a fixed bug; tier mirrors the original repro |
+| any locked + `automatable: false` | any | `qa-review` (Rule 1 of resolution chain) | Subjective outcomes requiring human review |
+| multiple locked tags | any | highest-cost wins (Rule 3) | Cross-cutting concerns (`edge-case + error`, `happy-path + regression`) |
+
+When this default-resolution chain produces the right tier for the scenario, **omit `testTier:`** — the value will be computed deterministically at validation time. Only set `testTier:` explicitly when overriding the default (e.g., promoting an `api-call` `happy-path` to `e2e` because it's a critical user journey). Explicit `testTier:` always wins over the resolution chain (Rule 5).
+
+#### Scenario emission gate
+
+After Step 5.7, every P0 and P1 feature MUST contain ≥1 scenario block in `Scenarios:`. Features that emit zero scenarios are blocked by the roadmap validator. If you cannot author a meaningful scenario for a P0/P1 feature, the feature description is probably too vague — refine the description until at least one Given/When/Then is expressible.
 
 ### Step 6: Milestone Grouping
 

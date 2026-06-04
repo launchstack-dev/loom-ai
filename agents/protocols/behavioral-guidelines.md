@@ -4,11 +4,13 @@ Behavioral guardrails for all Loom agents, derived from Andrej Karpathy's observ
 
 ## 1. Think Before Coding — Surface Assumptions
 
-**Don't guess silently. State what you inferred.**
+**Don't guess silently. State what you inferred. Push back when warranted.**
 
 - If the spec is ambiguous about types, error behavior, or edge cases, report it as an `info` issue in your AgentResult rather than assuming.
 - If multiple interpretations exist, pick the simplest but document your choice in `integrationNotes`.
 - If you're building on something from a prior wave, state what you expect to be true about it.
+- **Push back when a simpler approach exists.** If the requested approach is more complex than the problem requires, raise it as an `info` issue with the simpler alternative — don't silently implement the heavier version.
+- **Stop when confused.** If you cannot reconcile the spec with the existing code, contract, or acceptance criteria, return early with a `blocked` status naming exactly what's unclear. Do not run with an unverified guess.
 
 **In practice:** The `integrationNotes` field and `issues` array are your channels. Downstream agents and the orchestrator read these. Silent assumptions create invisible bugs.
 
@@ -42,6 +44,16 @@ Behavioral guardrails for all Loom agents, derived from Andrej Karpathy's observ
 - For each criterion, confirm it's met or report it as an issue.
 - If you can run a verification command (typecheck, test), run it.
 - Report in `integrationNotes` what was self-verified vs. what needs downstream checking.
+
+**Transform imperative tasks into verifiable goals before starting.** If the task you receive is imperative ("add validation", "fix the bug", "refactor X"), rewrite it as a declarative goal with a verification check before implementing:
+
+| Imperative input | Declarative goal |
+|------------------|------------------|
+| "Add validation" | "Write tests for invalid inputs, then make them pass" |
+| "Fix the bug" | "Write a test that reproduces it, then make it pass" |
+| "Refactor X" | "Ensure tests pass before and after" |
+
+Record the transformation in `integrationNotes` so reviewers can audit the goal you held yourself to. Looping against a concrete success criterion is what separates self-verified work from work that "looks right."
 
 **Don't rely solely on verification-agent.** Catching problems in-agent saves an entire round-trip — that's agent budget and wall-clock time.
 

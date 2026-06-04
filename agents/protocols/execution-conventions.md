@@ -4,20 +4,19 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 
 ## Directory Structure
 
+`.plan-execution/` is split into two zones: **tracked** artifacts that survive across sessions and worktrees (committed to git), and **ephemeral** artifacts that are session-specific (gitignored).
+
 ```
 .plan-execution/
-├── .lock                       # PID lock file — prevents concurrent runs
-├── .gitignore                  # Auto-generated: ignores everything in this dir
+├── .gitignore                  # Auto-generated: ignores only ephemeral/
+│
+│── # ── TRACKED (committed to git) ──────────────────────────
 ├── state.toon                  # Execution state (see state.schema.md)
 ├── pipeline-state.toon         # /loom-auto pipeline state (see pipeline-state.schema.md)
 ├── rolling-context.md          # Tiered summary of all prior waves
 ├── contracts/                  # Wave 0 output — shared types/schemas
 │   ├── manifest.toon           # Lists all contract files + their purpose
 │   └── [contract files]        # e.g., types.ts, schema.sql, api-contract.ts
-├── progress/                   # Agent heartbeat files (ephemeral, cleared per wave)
-│   └── {taskId}.toon           # Per-agent progress — see agent-monitoring.schema.md
-├── requests/                   # Cross-boundary requests from implementers
-│   └── {taskId}.toon           # One file per request
 ├── scope-coverage.toon         # Acceptance criteria coverage matrix
 ├── stage-context/              # Structured stage summaries (see stage-context.schema.md)
 │   ├── contracts.toon
@@ -43,8 +42,44 @@ Shared rules that all execution agents and the orchestrator follow. Reference th
 ├── wave-0-summary.md           # Human-readable wave summary
 ├── wave-1-summary.toon
 ├── wave-1-summary.md
+├── debrief.toon                # Debrief report written at execution end (see § Mandatory Debrief)
 └── ...
+│
+│── # ── EPHEMERAL (gitignored via ephemeral/) ───────────────
+├── ephemeral/
+│   ├── .lock                   # PID lock file — prevents concurrent runs
+│   ├── progress/               # Agent heartbeat files (cleared per wave)
+│   │   └── {taskId}.toon       # Per-agent progress — see agent-monitoring.schema.md
+│   ├── requests/               # Cross-boundary requests from implementers
+│   │   └── {taskId}.toon       # One file per request
+│   └── status.toon             # Live status for statusline integration
 ```
+
+### .gitignore for .plan-execution/
+
+The auto-generated `.plan-execution/.gitignore` ignores ONLY the ephemeral subdirectory:
+
+```
+# Ephemeral session artifacts — locks, heartbeats, live status
+ephemeral/
+```
+
+All other files in `.plan-execution/` are tracked by git and survive worktree cleanup.
+
+### Migration from Pre-v2 Layout
+
+Existing projects using the old layout (where `.plan-execution/.gitignore` contained `*` to ignore everything) need migration before the gitignore negation rules take effect. Without migration, adding `!.plan-execution/` to the project's `.gitignore` causes all stale artifacts to appear as untracked files.
+
+`/loom upgrade` handles this automatically:
+
+1. Detect the old `.plan-execution/.gitignore` (contains `*`)
+2. Run a debrief on any existing artifacts (flush to `.plan-history/` and wiki)
+3. Delete stale contents of `.plan-execution/` (everything except the new `.gitignore`)
+4. Write the new `.plan-execution/.gitignore` (ignores only `ephemeral/`)
+5. Create the `ephemeral/` subdirectory structure
+6. Only then apply the gitignore negation rules to the project's `.gitignore`
+
+If `/loom init` or `/loom auto` detect the old layout, they warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first to migrate."
 
 ## File Naming Conventions
 
@@ -83,7 +118,7 @@ TOON (Token-Oriented Object Notation) is the **default format for all runtime ar
 
 ### TOON — Runtime Artifacts (Default)
 - **state.toon**, **manifest.toon**, **wave-N-summary.toon** — on-disk persistence
-- **progress/{taskId}.toon**, **requests/{taskId}.toon** — ephemeral runtime files
+- **ephemeral/progress/{taskId}.toon**, **ephemeral/requests/{taskId}.toon** — ephemeral runtime files
 - Agent prompts and inter-agent data in rolling-context.md
 - Review findings passed between agents
 - Any structured data embedded in LLM context
@@ -144,7 +179,7 @@ Orchestrators MUST NOT embed full agent `.md` file contents in spawned agent pro
 
 ## Orchestration Status (Status Line Integration)
 
-The orchestrator writes `.plan-execution/status.toon` to surface live progress in the Claude Code status line. This file is read by the user's `statusline-command.sh` and must remain small and fast to parse (simple `grep` per field).
+The orchestrator writes `.plan-execution/ephemeral/status.toon` to surface live progress in the Claude Code status line. This file is read by the user's `statusline-command.sh` and must remain small and fast to parse (simple `grep` per field).
 
 **Format:**
 
@@ -180,7 +215,7 @@ updatedAt: 2026-04-06T10:30:00Z
 - Use atomic writes (write `.tmp`, rename)
 - Update at every state transition (wave start, agent complete, phase change)
 - Delete the file when the command completes (clean idle state)
-- If file cannot be written (no `.plan-execution/` dir), skip silently — status line is additive, never gating
+- If file cannot be written (no `.plan-execution/ephemeral/` dir), skip silently — status line is additive, never gating
 
 **Status line reads this via `awk` — keep one key per line, no nesting, no arrays.**
 
@@ -196,7 +231,7 @@ Each orchestrator command sets `command` to its name and updates these additiona
 | `test-plan` | `agentsRunning/Done/Total` as test generators complete |
 | `fix-code` | `agentsRunning/Done/Total` per fixer batch, `findings` (remaining count, decremented as fixes apply) |
 
-All commands: create `.plan-execution/` if needed, delete `status.toon` when complete.
+All commands: create `.plan-execution/ephemeral/` if needed, delete `ephemeral/status.toon` when complete.
 
 ## Atomic Writes
 
@@ -210,7 +245,7 @@ This prevents partial reads of corrupted state.
 
 1. **One owner per file.** No two implementer-agents may modify the same file in the same wave.
 2. **Ownership is explicit.** Each implementer receives an exact list of files it may create/modify in its prompt.
-3. **Cross-boundary needs → request file.** If an implementer needs a file outside its boundary, it writes to `.plan-execution/requests/{taskId}.toon`. The wiring-agent processes these.
+3. **Cross-boundary needs → request file.** If an implementer needs a file outside its boundary, it writes to `.plan-execution/ephemeral/requests/{taskId}.toon`. The wiring-agent processes these.
 4. **Wiring-agent owns shared files.** Package.json, barrel/index files, route registrations, and migration files are explicitly owned by the wiring-agent.
 5. **Contracts are read-only after Wave 0.** No agent may modify contract files after the contracts-agent completes. If amendments are needed, the orchestrator decides whether to re-run Wave 0.
 
@@ -222,7 +257,7 @@ Rules 1-2 and 5 above are **deterministically enforced** by Claude Code hooks in
 - `contract-lock.ts` (PreToolUse) — blocks writes to `contracts/` after Wave 0 completes
 - `budget-tracker.ts` (PreToolUse + SubagentStop) — tracks agent count, blocks spawns at budget limit
 
-These hooks fail open: if `.plan-execution/state.toon` is missing or unreadable, writes are allowed. See `hooks/lib/run-hook.ts` for the shared defensive harness. Registered in `.claude/settings.json`.
+These hooks fail open: if `.plan-execution/state.toon` is missing or unreadable, writes are allowed. Note: `state.toon` is in the tracked zone (not ephemeral) so hooks can read it across sessions. See `hooks/lib/run-hook.ts` for the shared defensive harness. Registered in `.claude/settings.json`.
 
 ## Context Injection Rules
 
@@ -341,7 +376,7 @@ fix(converge-iter-2): pixel diff for login page within tolerance
 
 ### Opting Out
 
-Pass `--no-auto-commit` to `/loom-plan execute`, `/loom-converge`, or `/loom-auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
+Pass `--no-auto-commit` to `/loom-plan execute`, `/loom converge`, or `/loom auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
 
 ### Interaction with Git Tags
 
@@ -357,7 +392,7 @@ Stage context files capture structured summaries of what happened at each pipeli
 ### When to Write
 
 - **`/loom-plan execute`:** After each wave's verification step -- write `stage-context/contracts.toon` after Wave 0 verification, write `stage-context/execute.toon` after Wave N verification.
-- **`/loom-auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
+- **`/loom auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
 
 ### What to Include
 
@@ -406,6 +441,144 @@ Orchestrators write to `.plan-history/` when:
 
 This directory syncs via git, survives worktree cleanup, and is available in future sessions.
 
+---
+
+## Mandatory Debrief Protocol
+
+Every execution — whether it succeeds, fails, stalls, or is interrupted — MUST run a debrief step before `.plan-execution/` artifacts can be cleaned up or a worktree can be destroyed. The debrief ensures that decisions, failures, and convergence history are flushed to persistent storage (wiki + `.plan-history/`) so knowledge is never silently lost.
+
+**The debrief is BLOCKING.** It is not optional, not non-blocking, not best-effort. If the debrief fails, the orchestrator MUST NOT clean up `.plan-execution/` or destroy the worktree. Instead, it warns the user and leaves artifacts in place for manual recovery.
+
+### When Debrief Fires
+
+| Event | Trigger |
+|-------|---------|
+| Execution completes successfully | After final wave verification, before cleanup |
+| Execution fails (circuit breaker, budget exhaustion) | After failure is recorded, before cleanup |
+| Pipeline completes (`/loom auto`) | After final stage, before pipeline-state cleanup |
+| Convergence stalls or regresses | After circuit breaker trips, before cleanup |
+| Worktree about to be destroyed | Before `git worktree remove` |
+| Session ends with active execution | Stop hook detects `.plan-execution/state.toon` |
+| Crash recovery (next session start) | Stale lock detected — see § Crash Recovery |
+
+### Crash Recovery
+
+The Stop hook fires on graceful session end, but force-kill, OOM, or power loss skip all hooks. The debrief never runs. To handle this, orchestrators MUST check for stale execution state at session start:
+
+1. At the beginning of any `/loom auto`, `/loom-plan execute`, or `/loom converge` invocation, check for `.plan-execution/ephemeral/.lock`.
+2. If the lock file exists, read the PID from it.
+3. Check if the PID is still running (`kill -0 {pid} 2>/dev/null`).
+4. If the PID is dead (stale lock), the previous session crashed without debriefing:
+   ```
+   ## Stale Execution Detected
+
+   A previous execution (run {runId}) did not complete its debrief.
+   Execution artifacts in .plan-execution/ may contain uncaptured knowledge.
+
+   Options:
+     debrief    Run the debrief now to capture knowledge before continuing
+     discard    Clear stale state and start fresh
+     inspect    Show what's in .plan-execution/ before deciding
+   ```
+5. If the user chooses `debrief`, run the full Mandatory Debrief Protocol using the stale artifacts.
+6. If the user chooses `discard`, delete `.plan-execution/ephemeral/.lock` and warn that knowledge may be lost.
+7. In `--auto` mode, default to `debrief` — always attempt to preserve knowledge.
+
+### What Debrief Captures
+
+The orchestrator reads `.plan-execution/` and flushes to persistent storage:
+
+#### 1. To `.plan-history/` (always)
+
+| Source | Destination | Condition |
+|--------|-------------|-----------|
+| `stage-context/*.toon` | `.plan-history/executions/stage-context/` | Always — copy all stage context files |
+| `wave-N-summary.toon` | `.plan-history/executions/wave-N-summary.toon` | Always — copy all wave summaries |
+| `convergence/iterations/` | `.plan-history/executions/convergence/` | If convergence ran |
+| `conflicts/` | `.plan-history/executions/conflicts/` | If conflicts exist |
+| `scope-coverage.toon` | `.plan-history/executions/scope-coverage.toon` | Always |
+| `contracts/manifest.toon` | `.plan-history/executions/contracts-manifest.toon` | If Wave 0 ran |
+
+#### 2. To wiki (via wiki-maintainer-agent — BLOCKING)
+
+The orchestrator spawns wiki-maintainer-agent with event type `execution-debrief` and the following data:
+
+- **Decisions made** → wiki decision pages (architecture choices, technology selections, tradeoff resolutions)
+- **What was built** → wiki execution log entries (wave summaries, files changed, exports added)
+- **What failed and why** → wiki pages tagged `failure` (circuit breaker trips, stalled convergence, agent failures with root cause)
+- **Convergence history** → wiki quality pages (approaches tried, what stalled, final pass rates)
+- **Unresolved conflicts** → wiki pages tagged `open-conflict` (so future sessions can pick them up)
+
+#### 3. Debrief report (always)
+
+Write `.plan-execution/debrief.toon`:
+
+```toon
+debriefedAt: {ISO timestamp}
+trigger: {success | failure | stall | interrupt | worktree-cleanup}
+executionId: {from state.toon runId}
+
+wavesCompleted: {N}
+wavesTotal: {N}
+stagesCompleted[N]: contracts, execute, review
+stagesFailed[N]: converge
+
+decisionsRecorded: {count flushed to wiki}
+conflictsOpen: {count of unresolved conflicts}
+conflictsResolved: {count flushed to wiki}
+convergenceIterations: {total iterations across all tiers}
+
+planHistoryFiles[N]: {list of files written to .plan-history/}
+wikiPagesCreated[N]: {list of wiki pages created or updated}
+
+failureReason: {if trigger is failure/stall — one-line summary}
+```
+
+### State Sentinel for Auto-Commits
+
+`state.toon` is in the tracked zone so hooks can read it across sessions. However, committing mid-execution state (`status: in-progress`) creates dirty sentinels in git history. To prevent this:
+
+1. **Before any auto-commit** (per-wave or debrief), write `status: committed` to `state.toon`.
+2. **After the commit**, restore the actual status (e.g., `status: in-progress`).
+3. This ensures checked-out commits never show a false "execution running" signal.
+
+### Debrief Execution Order
+
+1. **Copy tracked artifacts to `.plan-history/`** — file copies, atomic writes, no agent needed
+2. **Spawn wiki-maintainer-agent** with event `execution-debrief` — **BLOCKING**, wait for completion, **timeout: 120 seconds**. If the agent has not completed after 120s, treat it as a failure (see Failure Handling).
+3. **Secret scan.** Before staging any files, scan all tracked artifacts for potential secrets:
+   - Pattern-match against common secret formats: API keys (`sk-`, `ghp_`, `AKIA`), tokens (`Bearer`, `token:`), connection strings, base64-encoded credentials
+   - Scan `rolling-context.md`, `stage-context/*.toon`, `wave-*-summary.*` — these contain freeform agent output most likely to capture leaked values
+   - If any matches are found: warn the user, list the files and matched patterns, and **do NOT auto-commit**. Ask the user to review and redact before proceeding.
+4. **Write `debrief.toon`** — summary of what was captured
+5. **Commit** (unless `--no-auto-commit` is active or secret scan flagged issues):
+   - Set `state.toon` status to `committed` (see § State Sentinel)
+   - `git add .plan-history/ .loom/wiki/ .plan-execution/debrief.toon .plan-execution/state.toon`
+   - **In a worktree:** commit to the worktree's current branch, NOT main. Defer merging to the worktree-merge step or manual merge by the user.
+   - **In the main tree:** commit directly:
+     ```
+     chore(debrief): capture execution knowledge — {N} decisions, {M} wiki pages
+     ```
+   - Restore `state.toon` to its actual status after the commit.
+6. **Only then** may the orchestrator clean up ephemeral artifacts or destroy the worktree
+
+### Opting Out of Debrief Commits
+
+The `--no-auto-commit` flag (already supported by `/loom-plan execute`, `/loom converge`, and `/loom auto`) also applies to the debrief commit. When active:
+
+- The debrief still runs (artifact copy + wiki update are mandatory)
+- Files are staged but NOT committed
+- The user sees: "Debrief complete. Changes staged but not committed (--no-auto-commit). Review with `git diff --cached` and commit when ready."
+
+### Failure Handling
+
+- **Wiki-maintainer-agent fails or times out (>120s):** Retry once. If retry fails, write `.plan-execution/debrief-failed.toon` with the error, warn the user: "Debrief failed — execution artifacts preserved in .plan-execution/ for manual recovery. Run `/loom-wiki ingest --source .plan-execution/` to retry." Do NOT clean up.
+- **Secret scan finds matches:** Block the auto-commit. Warn the user with file paths and matched patterns. Debrief is otherwise complete — artifacts are copied and wiki is updated.
+- **File copy to .plan-history/ fails:** Warn and continue — the tracked files in `.plan-execution/` are still committed to git as a fallback.
+- **Worktree debrief fails:** Block worktree destruction. Warn: "Cannot destroy worktree — debrief incomplete. Artifacts may be lost."
+
+---
+
 ## Wiki Integration
 
 The project wiki (`.loom/wiki/`) is a persistent knowledge base that compounds across executions. See `wiki-conventions.md` for the full specification.
@@ -414,7 +587,9 @@ The project wiki (`.loom/wiki/`) is a persistent knowledge base that compounds a
 
 The orchestrator spawns wiki-maintainer-agent at specific execution events. See `wiki-conventions.md § Wiki Maintenance Triggers` for the full trigger table and what the maintainer does at each point.
 
-Wiki maintenance is **non-blocking**: if wiki-maintainer-agent fails, the orchestrator logs a warning and continues. Wiki health is additive, never gating.
+Wiki maintenance is **non-blocking** for mid-execution triggers (criteria-plan-created, convergence-complete, e2e-stories-verified): if wiki-maintainer-agent fails, the orchestrator logs a warning and continues.
+
+**Exception: the `execution-debrief` trigger is BLOCKING.** See § Mandatory Debrief Protocol. The debrief ensures that execution knowledge is flushed to the wiki before cleanup. If the debrief wiki update fails, the orchestrator must NOT clean up artifacts.
 
 ### Execution Log Entries
 
@@ -488,7 +663,7 @@ When a convergence loop regresses beyond recovery, the rollback protocol (`conve
 
 ### Interpretation Conflict Detection
 
-The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom-auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
+The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
 
 ### E2E Story Verification
 
@@ -512,7 +687,7 @@ Execution events are logged to `.loom/wiki/execution-log.toon` following `execut
 
 ### Schema Upgrades
 
-When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom-upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
+When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
 
 ### Behavioral Guidelines
 

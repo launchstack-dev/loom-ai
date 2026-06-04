@@ -25,6 +25,7 @@ Display available subcommands. Also show brief wiki status: check if `.loom/wiki
 
 Subcommands:
   ingest     Process sources into wiki pages
+  refresh    Refresh stale pages in place
   lint       Structural health check
   query      Search wiki and synthesize answer
   status     Wiki health overview
@@ -32,17 +33,111 @@ Subcommands:
 Examples:
   /loom-wiki ingest
   /loom-wiki ingest --source src/services/
+  /loom-wiki refresh
+  /loom-wiki refresh --scope aging
+  /loom-wiki refresh --page contract-user-create
   /loom-wiki lint --fix
   /loom-wiki query "How does the auth middleware work?"
   /loom-wiki status
 ```
 
 Then display brief wiki status:
-1. Check if `.loom/wiki/` exists. If not: "Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom-init` to create one."
+1. Check if `.loom/wiki/` exists. If not: "Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom init` to create one."
 2. If it exists: count pages in `.loom/wiki/pages/`, read last entry from `.loom/wiki/log.toon`, display:
    ```
    Wiki: {pageCount} pages | Last updated: {timestamp from log}
    ```
+
+## Subcommand: refresh
+
+Targeted refresh of stale pages — the natural remediation target for the SessionStart hook's stale-page surfacing. Distinct from `ingest --full` (which rewrites every page including fresh ones); `refresh` only touches pages that need attention.
+
+### Arguments
+
+Parse arguments after `refresh`:
+- No args: refresh pages matching the default scope (`stale`)
+- `--dry-run`: list candidates and report estimated time; exit without writing
+- `--scope <kind>`: one of `stale` (default), `aging`, `legacy`, `all`. Mutually exclusive — no illegal combinations.
+- `--page <pageId>`: refresh a single specific page. Overrides `--scope` with a warning if both are present.
+- `--category <name>`: restrict to a specific category (`component`, `flow`, `contract`, etc.). Combines with `--scope`.
+- `--max <N>`: cap how many pages to refresh in this invocation (default: unlimited)
+
+### Scope semantics
+
+| `--scope` | Candidate set |
+|-----------|---------------|
+| `stale` (default) | Pages with `staleness == "stale"` OR `sourceRefs` mtime newer than page `updatedAt` |
+| `aging` | All of `stale` plus pages with `staleness == "aging"` |
+| `legacy` | Only pages whose `summary` equals `"(legacy — pending refresh)"` (left over from `/loom upgrade` Rule 7) |
+| `all` | Every page (equivalent to per-page `ingest --full` page-by-page) |
+
+### Instructions
+
+#### Step 0: Read Protocols
+
+Read these files for context:
+- `~/.claude/agents/protocols/wiki-conventions.md` -- significance, atomic writes
+- `~/.claude/agents/protocols/wiki-page.schema.md` -- frontmatter schema, required H2 sections per category
+- `~/.claude/agents/protocols/wiki-index.schema.md` -- index columns (`summary`, `estimatedTokens`, `subtype`)
+
+#### Step 1: Build candidate list
+
+1. Check `.loom/wiki/` exists. If not: print `Wiki not initialized. Run /loom-wiki ingest --full or /loom init.` and exit.
+2. Read `.loom/wiki/index.toon`. Apply the `--scope`, `--page`, and `--category` filters to produce the candidate `pageIds`.
+3. If `--page <pageId>` is set: candidate list is just that single pageId. Warn if `--scope` was also provided.
+4. If candidate list is empty: print `No pages match the refresh scope. Run /loom-wiki status for details.` and exit.
+5. If `--max <N>` is set, truncate the candidate list to N. Note the remainder in the final summary.
+
+#### Step 2: Dry-run report
+
+If `--dry-run` is set, print the candidate list and an estimated time, then exit:
+
+```
+[wiki:refresh] Dry run — would refresh {N} pages.
+  Pages: {first 5 pageIds}{+ M more if applicable}
+  Estimated: {N pages / 5 per batch} = ~{ceil(N/5)} agent spawns; expected ~{ceil(N/5)*30}s
+```
+
+#### Step 3: Refresh in batches of 5
+
+For each batch of up to 5 candidate pages:
+
+1. Spawn `wiki-ingest-agent` with per-page `--source` scoping. Each batch is one agent spawn covering up to 5 pages — this respects the 100k token budget while amortizing spawn overhead.
+2. The agent reads each candidate page's `sourceRefs` files, re-derives content, recomputes `summary` + `estimatedTokens` + `bodySections` + `staleness`, and writes back atomically. Real summaries replace any `(legacy — pending refresh)` placeholders.
+3. After each batch, emit a progress line:
+   ```
+   [wiki:refresh] 10/80 pages refreshed — current: component-auth-middleware
+   ```
+
+#### Step 4: Cross-ref repair
+
+After all batches complete, spawn `wiki-lint-agent --fix` to repair any one-sided cross-refs introduced by the refresh.
+
+#### Step 5: Log entry
+
+Append a single log entry to `.loom/wiki/log.toon` recording the refresh operation with the list of refreshed pageIds (cap at 5 inline, overflow goes to log only).
+
+#### Step 6: Summary
+
+Print a summary to stdout:
+
+```
+[wiki:refresh] Refreshed: {N} pages | Skipped (fresh): {M} | Failed: {K}
+  Refreshed: {first 5 pageIds}{ + N more — see .loom/wiki/log.toon}
+  Lint after: {blocking} blocking, {warning} warnings, {info} info
+```
+
+### Failure semantics
+
+- If refreshing a single page fails, record it and continue with the rest. Final summary reports failures.
+- If an agent batch exceeds the 100k token budget, fall back to smaller batches automatically.
+- `/loom-wiki refresh` is **non-blocking** — it never fails the surrounding workflow. Wiki health is additive, never gating.
+
+### Cross-references
+
+- The implementation reuses `wiki-ingest-agent` with per-page `--source` scoping; no new agent is introduced.
+- SessionStart hook (`hooks/wiki-session-status.ts`) surfaces `/loom-wiki refresh` as the remediation when stale pages exist.
+- W-026 legacy-placeholder carve-out (in `wiki-lint-rules.md`) is resolved when the refresh writes a real summary to replace the placeholder.
 
 ## Subcommand: ingest
 
@@ -72,7 +167,7 @@ Read these files for context on wiki conventions:
 
 1. Check if `.loom/wiki/` exists. If not:
    ```
-   Wiki not initialized. Run `/loom-init` first, or create the wiki structure manually:
+   Wiki not initialized. Run `/loom init` first, or create the wiki structure manually:
      mkdir -p .loom/wiki/pages
    ```
    Stop here.
@@ -164,7 +259,7 @@ Next steps:
 
 ### Error Handling
 
-- **Wiki not initialized:** Stop with instructions to run `/loom-init`
+- **Wiki not initialized:** Stop with instructions to run `/loom init`
 - **Ingest agent fails:** Display partial results if any. Suggest retrying with a narrower scope.
 - **Source not found:** "File or directory not found: {path}. Check the path and try again."
 - **URL fetch fails:** "Could not fetch URL: {url}. Check the URL and try again."
@@ -210,7 +305,7 @@ Read these files for context:
 1. Check if `.loom/wiki/` exists. If not and wiki checks requested:
    ```
    Wiki not found at .loom/wiki/. Skipping wiki checks.
-   Run `/loom-init` to create the wiki.
+   Run `/loom init` to create the wiki.
    ```
    If only wiki checks requested (`--wiki`): stop here.
 
@@ -242,7 +337,7 @@ Run the E-* checks inline (these are structural comparisons, not agent work):
 3. **E-003 (Orphaned exports):** Read wave summaries, check export coverage in wiki.
 4. **E-004 (Unaddressed review findings):** Read `.plan-history/reviews/`, check for decision pages.
 5. **E-005 (Stale rolling context):** Check rolling-context.md against wiki content.
-6. **E-006 (Unresolved requests):** Check `.plan-execution/requests/` for open entries.
+6. **E-006 (Unresolved requests):** Check `.plan-execution/ephemeral/requests/` for open entries.
 
 #### Step 4: Aggregate and Report
 
@@ -284,7 +379,7 @@ For issues marked auto-fixable in `wiki-lint-rules.md`:
 
 ### Error Handling
 
-- **No wiki and no execution state:** "Nothing to lint. Run `/loom-init` to create a wiki, or `/loom-plan execute` to generate execution artifacts."
+- **No wiki and no execution state:** "Nothing to lint. Run `/loom init` to create a wiki, or `/loom-plan execute` to generate execution artifacts."
 - **Lint agent fails:** Report any findings collected before failure. Suggest re-running with a narrower scope.
 - **Auto-fix fails on a specific issue:** Log the failure, continue with remaining fixes.
 
@@ -314,7 +409,7 @@ Parse arguments after `query`:
 
 1. Check if `.loom/wiki/` exists. If not:
    ```
-   No wiki found. Run `/loom-wiki ingest` or `/loom-init` to create one.
+   No wiki found. Run `/loom-wiki ingest` or `/loom init` to create one.
    ```
    Stop here.
 
@@ -363,7 +458,7 @@ Sources:
 
 ### Error Handling
 
-- **Wiki not initialized:** Stop with instructions to run `/loom-init` or `/loom-wiki ingest`
+- **Wiki not initialized:** Stop with instructions to run `/loom init` or `/loom-wiki ingest`
 - **No query provided:** Show usage example and stop
 - **Query agent fails:** "Wiki query failed. Try a more specific question, or browse pages directly in `.loom/wiki/pages/`."
 - **No relevant pages found:** "No wiki pages matched your query. The wiki may not cover this topic yet. Try `/loom-wiki ingest --source <path>` to add relevant sources."
@@ -387,7 +482,7 @@ You display a comprehensive overview of the project wiki's health and recent act
 
 Check if `.loom/wiki/` exists. If not:
 ```
-Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom-init` to create one.
+Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom init` to create one.
 ```
 Stop here.
 

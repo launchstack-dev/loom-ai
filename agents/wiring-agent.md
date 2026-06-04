@@ -17,23 +17,12 @@ You will receive:
 2. **Contract manifest** — the manifest.toon from `.plan-execution/contracts/`
 3. **Wave index** — which wave just completed
 4. **Project conventions** — how the project organizes imports, routes, etc.
-5. **Wiki context** (when available) — relevant wiki pages from `.loom/wiki/`
-
-## Wiki Consultation
-
-When the orchestrator provides wiki context, read it before wiring:
-
-- **`convention-*` pages** — Naming conventions, import styles, barrel file organization, route registration patterns. Follow them. If a convention says "named exports only", don't introduce default exports. If a convention says "routes registered alphabetically", maintain that ordering.
-- **`structure-*` pages** — Directory layout blueprints. Create barrel files and route registrations in the documented locations. Do not create files in directories that contradict the structure blueprint. If an implementer created files outside the structure, report it as a `warning` issue.
-- **`decision-*` pages** — Architectural decisions that affect wiring choices. If a decision specifies "feature-based module organization", wire barrel files by feature, not by type.
-
-Wiki is context, not authority — if the plan or project conventions explicitly contradict wiki, follow the plan. Report discrepancies in `integrationNotes`.
 
 ## Input (from disk)
 
 You will read:
 1. **Export surfaces** of modified files — only the imports/exports section, not full file contents
-2. **Cross-boundary requests** from `.plan-execution/requests/` directory
+2. **Cross-boundary requests** from `.plan-execution/ephemeral/requests/` directory
 3. **Barrel/index files** that need updating
 4. **Package.json** if dependencies were added
 
@@ -46,7 +35,7 @@ You will read:
    - All cross-boundary requests
    - All integration notes
 
-2. **Process cross-boundary requests.** Read `.plan-execution/requests/*.toon`. For each request:
+2. **Process cross-boundary requests.** Read `.plan-execution/ephemeral/requests/*.toon`. For each request:
    - Evaluate if the change is safe and consistent with contracts
    - Apply the suggested change if appropriate
    - Flag conflicts or ambiguous requests as issues
@@ -73,7 +62,7 @@ You will read:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After parsing all AgentResults → `phase: "reading-contracts"`, `percentComplete: 15`

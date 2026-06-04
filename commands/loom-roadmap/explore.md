@@ -408,7 +408,7 @@ Round {N} complete. What would you like to do?
 2. [focus]        → Focus next round on a specific question or concern
 3. [add persona]  → Bring in another perspective (available: {list unused personas from library})
 4. [decide]       → End exploration early and jump to synthesis
-5. [debate]       → Trigger a /loom-debate on the key decision point
+5. [debate]       → Trigger a /loom debate on the key decision point
 ```
 
 **Handling each choice:**
@@ -421,7 +421,7 @@ Round {N} complete. What would you like to do?
 
 - **`decide`**: Skip remaining rounds and jump directly to Step 4 (Synthesis).
 
-- **`debate`**: Identify the key decision point from the round's themes and open questions. Run `/loom-debate "{decision point}"` with the exploration context injected. After the debate concludes, return to the exploration and ask if the user wants to continue rounds or synthesize.
+- **`debate`**: Identify the key decision point from the round's themes and open questions. Run `/loom debate "{decision point}"` with the exploration context injected. After the debate concludes, return to the exploration and ask if the user wants to continue rounds or synthesize.
 
 For `quick` depth: skip Step 3 entirely — go directly from Round 1 to Step 4.
 
@@ -531,7 +531,7 @@ Exploration complete. What would you like to do next?
 
 **If `--add` was passed** (or user selects option 1): Run `/loom-roadmap add "{topic}"` and include the surfaced requirements as acceptance criteria context. Pass the MVP scope as the initial feature description. Pass risks as notes in the phase entry.
 
-**If `--debate` was passed** (or user selects option 2): Identify the most contentious or unresolved decision point from the synthesis. Run `/loom-debate "{decision point}"` with the exploration summary injected as context so debate participants have full background.
+**If `--debate` was passed** (or user selects option 2): Identify the most contentious or unresolved decision point from the synthesis. Run `/loom debate "{decision point}"` with the exploration summary injected as context so debate participants have full background.
 
 ### Wiki Update (non-blocking)
 

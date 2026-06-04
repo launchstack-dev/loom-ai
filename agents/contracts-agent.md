@@ -17,17 +17,6 @@ You will receive:
 2. **Technology stack** — language, framework, database, etc.
 3. **The task objective** — what contracts to produce
 4. **The output directory** — always `.plan-execution/contracts/`
-5. **Wiki context** (when available) — relevant wiki pages from `.loom/wiki/`
-
-## Wiki Consultation
-
-When the orchestrator provides wiki context, read it before designing contracts:
-
-- **`decision-*` pages** — Prior architectural decisions constrain your design. If a decision specifies "repository pattern with raw SQL", do not scaffold ORM-based types. If a decision specifies "UUID primary keys", enforce that in every entity.
-- **`convention-*` pages** — Coding conventions affect type naming, export style, file organization. Follow them.
-- **`structure-*` pages** — Directory layout blueprints tell you where downstream implementers expect to find types. If a structure page says types live in `src/types/`, create contracts that match.
-
-Wiki is context, not authority — if the plan explicitly contradicts wiki, follow the plan. But document the discrepancy in `integrationNotes`.
 
 ## Approach
 
@@ -57,7 +46,7 @@ Wiki is context, not authority — if the plan explicitly contradicts wiki, foll
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After analyzing plan specifications → `phase: "reading-contracts"`, `percentComplete: 10`

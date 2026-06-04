@@ -1,0 +1,13 @@
+schemaVersion: 2
+projectName: unknown
+domain: code
+wikiVersion: 3
+pageCount: 2
+lastUpdated: 2026-05-26T15:02:51.953Z
+
+pages[2]{pageId,title,category,subtype,staleness,updatedAt,summary,estimatedTokens}:
+  contract-customers,Customers,contract,,fresh,2026-05-27T09:00:00.100Z,Customers domain contract — Customer identity and contact data,855
+  contract-invoicing,Invoicing,contract,,fresh,2026-05-24T12:00:00.000Z,Invoicing domain contract — Invoice issuance and lifecycle,582
+
+categories[1]{name,count}:
+  contract,2

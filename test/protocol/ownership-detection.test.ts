@@ -15,11 +15,11 @@ import type { AgentResult, Conflict } from './helpers/types.js';
 
 /**
  * Detect file-level and directory-level ownership conflicts across agent
- * results.  Files inside `.plan-execution/requests/` are excluded because
+ * results.  Files inside `.plan-execution/ephemeral/requests/` are excluded because
  * cross-boundary request files are shared by design.
  */
 function detectConflicts(results: AgentResult[]): Conflict[] {
-  const REQUEST_DIR = '.plan-execution/requests/';
+  const REQUEST_DIR = '.plan-execution/ephemeral/requests/';
   const conflicts: Conflict[] = [];
   const seen = new Map<string, { agents: Set<string>; type: Conflict['type'] }>();
 
@@ -213,7 +213,7 @@ describe('ownership-detection', () => {
     const resultA = createValidAgentResult({
       agent: 'agent-auth',
       filesCreated: [
-        '.plan-execution/requests/task-auth-001.toon',
+        '.plan-execution/ephemeral/requests/task-auth-001.toon',
         'src/auth/middleware.ts',
       ],
       filesModified: [],
@@ -221,16 +221,16 @@ describe('ownership-detection', () => {
     const resultB = createValidAgentResult({
       agent: 'agent-db',
       filesCreated: [
-        '.plan-execution/requests/task-db-001.toon',
+        '.plan-execution/ephemeral/requests/task-db-001.toon',
       ],
-      filesModified: ['.plan-execution/requests/task-auth-001.toon'],
+      filesModified: ['.plan-execution/ephemeral/requests/task-auth-001.toon'],
     });
 
     const conflicts = detectConflicts([resultA, resultB]);
 
-    // No conflict should be flagged for files under .plan-execution/requests/
+    // No conflict should be flagged for files under .plan-execution/ephemeral/requests/
     const requestConflicts = conflicts.filter((c) =>
-      c.file.startsWith('.plan-execution/requests/'),
+      c.file.startsWith('.plan-execution/ephemeral/requests/'),
     );
     expect(requestConflicts).toHaveLength(0);
   });

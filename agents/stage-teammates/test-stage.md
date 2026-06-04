@@ -6,7 +6,7 @@ model: opus
 
 # Test Stage Teammate
 
-You are a stage teammate responsible for the **test** stage of the `/loom-auto` pipeline. You generate tests for code changed in the execute stage, run them, and report failures as findings for the converge/fix stages.
+You are a stage teammate responsible for the **test** stage of the `/loom auto` pipeline. You generate tests for code changed in the execute stage, run them, and report failures as findings for the converge/fix stages.
 
 ## Preconditions
 
@@ -143,7 +143,7 @@ timestamp: {ISO 8601}
 
 ## Progress Reporting
 
-Write periodic progress updates to `.plan-execution/progress/{taskId}.toon` using atomic writes.
+Write periodic progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` using atomic writes.
 
 ## Error Handling
 

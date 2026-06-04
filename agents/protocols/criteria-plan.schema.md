@@ -7,7 +7,7 @@ This is the criteria convergence counterpart to `convergence-plan.schema.md` (ta
 ## Schema
 
 ```toon
-schemaVersion: 1
+schemaVersion: 2
 createdAt: 2026-04-16T10:30:00Z
 updatedAt: 2026-04-16T10:45:00Z
 sourceContext: PLAN.md phase 3 acceptance criteria
@@ -16,14 +16,14 @@ convergenceMode: criteria
 
 intent: Auth middleware blocks unauthenticated requests, returns proper errors, and passes security review.
 
-criteria[N]{id,name,type,verifier,passCondition,blocking,priority,source,rationale,testTier}:
-  C-01,Blocks unauthenticated requests,hard,test-runner,all-pass,true,P0,plan-acceptance,Explicit acceptance criterion in PLAN.md,unit
-  C-02,Returns 401 with error shape,hard,test-runner,all-pass,true,P0,plan-acceptance,API contract requirement,integration
-  C-03,Logs auth attempts,hard,test-runner,all-pass,true,P1,plan-acceptance,Observability requirement from plan,unit
-  C-04,No injection vulnerabilities,soft,security-review,zero-critical,true,P0,inferred,Auth middleware handles user input,qa-review
-  C-05,No XSS vectors in error responses,soft,security-review,zero-critical,true,P0,inferred,Error responses include user-supplied data,qa-review
-  C-06,Clean separation of concerns,soft,code-review,zero-blocking,false,P2,inferred,Maintainability of auth layer,qa-review
-  C-07,No N+1 queries in user lookup,soft,performance-review,zero-blocking,false,P2,inferred,Auth checks run on every request,integration
+criteria[N]{id,name,type,verifier,passCondition,blocking,priority,source,rationale,testTier,scenarioRef}:
+  C-01,Blocks unauthenticated requests,hard,test-runner,all-pass,true,P0,plan-acceptance,Explicit acceptance criterion in PLAN.md,unit,Phase 3.S-01
+  C-02,Returns 401 with error shape,hard,test-runner,all-pass,true,P0,plan-acceptance,API contract requirement,integration,Phase 3.S-02
+  C-03,Logs auth attempts,hard,test-runner,all-pass,true,P1,plan-acceptance,Observability requirement from plan,unit,Phase 3.S-03
+  C-04,No injection vulnerabilities,soft,security-review,zero-critical,true,P0,inferred,Auth middleware handles user input,qa-review,
+  C-05,No XSS vectors in error responses,soft,security-review,zero-critical,true,P0,inferred,Error responses include user-supplied data,qa-review,
+  C-06,Clean separation of concerns,soft,code-review,zero-blocking,false,P2,inferred,Maintainability of auth layer,qa-review,
+  C-07,No N+1 queries in user lookup,soft,performance-review,zero-blocking,false,P2,inferred,Auth checks run on every request,integration,
 
 reviewers[N]{id,type,agent,dimensions,blocking,model}:
   R-01,test-runner,vitest-runner,all-tests,true,
@@ -63,7 +63,7 @@ nonCriteria[N]:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `schemaVersion` | integer | Schema version. Currently `1`. |
+| `schemaVersion` | integer | Schema version. Currently `2`. **v1 → v2 transition:** v2 adds the `scenarioRef` column to `criteria[]` typed-array headers and validation Rules 11–13. v2 readers SHOULD accept v1 documents (without the column) by treating `scenarioRef` as empty for every row. v1 readers will mis-parse v2 documents because TOON typed-array column declarations are positional — always emit `schemaVersion: 2` for any document containing the new column. |
 | `createdAt` | ISO 8601 timestamp | When the plan was first generated. |
 | `updatedAt` | ISO 8601 timestamp | Last modification time. |
 | `sourceContext` | string | What informed the plan (e.g., "PLAN.md phase 3 acceptance criteria"). |
@@ -87,6 +87,7 @@ Typed array. Every criterion to satisfy during convergence.
 | `source` | enum | `plan-acceptance` (explicit in plan), `plan-implied` (inferred from deliverables), `inferred` (discovered from codebase analysis), `user-added` (manually added), `roadmap-acceptance` (explicit in roadmap), `wiki-history` (derived from wiki knowledge base). |
 | `rationale` | string | Why this criterion exists. Traces back to plan requirement. |
 | `testTier` | enum | Convergence tier for this criterion: `unit`, `integration`, `e2e`, `qa-review`. Determines which convergence tier verifies this criterion. See `convergence-tier.schema.md`. |
+| `scenarioRef` | string | Optional. Reference to the originating scenario in the form `{phaseId}.{S-NN}` (e.g., `Phase 3.S-01`) when the source is a plan-phase scenario, or `{featureId}.{S-NN}` (e.g., `F-02.S-04`) when the source is a roadmap feature scenario. Empty for `source: inferred` criteria that have no scenario origin. When set, the validator verifies that the referenced scenario exists in the source plan/roadmap and that its `testTier` matches (or is consistent with the resolution rules in `scenario.schema.md`). See `convergence-tier.schema.md` "Scenario-to-Tier Mapping". |
 
 ### reviewers
 
@@ -185,7 +186,9 @@ If a criterion oscillates for `conflictWindow` consecutive cycles (findings appe
 ## Relationship to Other Schemas
 
 - **convergence-plan.schema.md** — Sibling schema for target convergence. Both feed the convergence-driver but through different harness layers.
-- **plan.schema.md** — Source of acceptance criteria that become hard criteria. The `#### Acceptance Criteria` section maps directly to `criteria[]` entries with `source: plan-acceptance`.
+- **plan.schema.md** — Source of acceptance criteria that become hard criteria. The `#### Acceptance Criteria` section maps directly to `criteria[]` entries with `source: plan-acceptance`. (v2) Plan-phase `#### Scenarios` blocks supply `scenarioRef` values.
+- **roadmap.schema.md** — Roadmap feature `Scenarios:` subsections supply `scenarioRef` values of the form `{featureId}.{S-NN}` for criteria whose origin is a roadmap feature.
+- **scenario.schema.md** — Defines the scenario blocks that `scenarioRef` points to. Each criterion's `testTier` SHOULD match (or be the resolved default of) the referenced scenario's `testTier`.
 - **orchestration-config.schema.md** — Pattern config for `converge-criteria` type references this schema.
 - **agent-result.schema.md** — Reviewer agents return findings in the standard AgentResult envelope with a `findings[]` typed array.
 
@@ -201,3 +204,6 @@ If a criterion oscillates for `conflictWindow` consecutive cycles (findings appe
 8. **Review config required if soft criteria exist.** If any criterion has `type: soft`, `reviewConfig` must be present.
 9. **Unique IDs.** All `id` values in `criteria`, `reviewers`, `decisions` must be unique within their arrays.
 10. **Budget set.** `maxIterations` and `agentBudget` must be positive integers.
+11. **`scenarioRef` format.** When non-empty, `scenarioRef` MUST match either `Phase {N}.S-{NN}` (plan-phase origin) or `F-{NN}.S-{NN}` (roadmap-feature origin). Other formats are rejected.
+12. **`scenarioRef` resolves.** When non-empty, the referenced scenario MUST exist in the source plan or roadmap. Unresolved references are blocking.
+13. **`testTier` consistency with scenario.** When `scenarioRef` is set, the criterion's `testTier` SHOULD equal the referenced scenario's explicit or resolved `testTier` (per `scenario.schema.md` default-testTier resolution chain). Mismatch is a warning, not blocking.

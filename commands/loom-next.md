@@ -49,10 +49,10 @@ Walk through the Loom workflow stages in order. The first incomplete stage is th
 
 | Condition | Suggestion | Reasoning |
 |-----------|------------|-----------|
-| `continue-here.toon` exists | `/loom-resume` | "You have a paused session. Resume where you left off." |
-| `pipeline-state.toon` exists with `currentStage != complete` | `/loom-auto --resume` | "Autonomous pipeline is in progress at stage {currentStage}." |
+| `continue-here.toon` exists | `/loom resume` | "You have a paused session. Resume where you left off." |
+| `pipeline-state.toon` exists with `currentStage != complete` | `/loom auto --resume` | "Autonomous pipeline is in progress at stage {currentStage}." |
 | `state.toon` exists with `status == in-progress` | `/loom-plan execute --resume` | "Plan execution is in progress at wave {currentWave}." |
-| No `CLAUDE.md` and no `ROADMAP.md` | `/loom-init` | "No Loom artifacts found. Start with project onboarding." |
+| No `CLAUDE.md` and no `ROADMAP.md` | `/loom init` | "No Loom artifacts found. Start with project onboarding." |
 | `CLAUDE.md` exists but no `ROADMAP.md` | `/loom-roadmap init --brownfield` | "Project is onboarded but has no roadmap. Create one." |
 | `ROADMAP.md` exists, no reviews in `.plan-history/reviews/*roadmap*` | `/loom-roadmap review` | "Roadmap exists but hasn't been reviewed." |
 | `ROADMAP.md` exists, reviewed, but `status != approved` | `/loom-roadmap approve` | "Roadmap has been reviewed. Approve it to unlock plan generation." |

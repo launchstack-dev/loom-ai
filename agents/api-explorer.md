@@ -40,11 +40,51 @@ findings[N]{id,severity,category,description,file,line,suggestion}:
   api-map-001,info,internal-endpoint,Undocumented POST /api/users/bulk-import endpoint,src/routes/users.ts,47,Add OpenAPI/JSDoc documentation for this endpoint
   api-map-002,warning,external-integration,Stripe API call uses deprecated v1 endpoint,src/services/billing.ts,23,Migrate to Stripe API v2 — see https://stripe.com/docs/upgrades
   api-map-003,blocking,missing-validation,PUT /api/settings accepts unvalidated request body,src/routes/settings.ts,12,Add Zod/Joi schema validation for the request body
+contractCandidates[N]{pageId,contractType,authorityFile,shapeFiles,shape,producers,consumers,compatibilityPolicy,suggestedInvariants}:
+  contract-users-create,api,src/routes/users.ts,"src/routes/users.ts,src/types/user.ts","POST /api/users → req: { email: string, password: string, name?: string } → res 201: { id: string, email: string, createdAt: ISO-8601 }",component-users-routes,,none,"email-unique,password-min-8-chars,name-optional"
+  contract-order-created-event,event,src/events/order-events.ts,src/events/order-events.ts,"OrderCreated payload: { orderId: string, customerId: string, items: Array<{ sku: string, qty: number }>, total: number, createdAt: ISO-8601 }",component-order-service,,none,"orderId-unique,total-non-negative,items-non-empty"
+  contract-users-table,db-table,migrations/0007_users.sql,migrations/0007_users.sql,"users(id UUID PK, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())",,,none,"email-not-null,email-unique,password-hash-not-null"
 summary:
   blocking: 1
   warning: 1
   info: 1
+  contractCandidates: 3
 ```
+
+### contractCandidates schema
+
+Each entry in `contractCandidates[]` describes a *candidate* `contract-*` wiki page that the discovery pass has detected. api-explorer itself does NOT create wiki pages — it emits candidates. `wiki-ingest-agent` (in `full` ingest mode, as wired by Agent B) reads this array and creates `contract-*` pages via the page schema in `agents/protocols/wiki-page.schema.md`.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `pageId` | yes | Suggested wiki page id. Format: `contract-{kebab-route-name}` for API routes (e.g., `contract-users-create` for `POST /api/users`), `contract-{kebab-event-name}` for events (e.g., `contract-order-created-event`), `contract-{kebab-table-name}` for DB tables. |
+| `contractType` | yes | One of: `api`, `event`, `schema`, `function-signature`, `db-table`, `cli-protocol`, `file-format` (matches `wiki-page.schema.md § Contract Pages`). api-explorer typically emits `api`, `event`, or `db-table`. |
+| `authorityFile` | yes | Primary source-of-truth file — the route handler, event emitter, or migration that the system actually enforces. |
+| `shapeFiles[]` | yes | All files whose content collectively defines the shape — route handler + imported type/schema files, event emitter + payload type module, migration + ORM model. When shape lives in a single file, this is a one-element list containing `authorityFile`. |
+| `shape` | yes | Compact human-readable shape string (≤500 chars; truncate with ellipsis if needed). For APIs: method + path + req/res shapes. For events: event name + payload fields. For DB tables: table name + column list with key constraints. |
+| `producers[]` | yes | pageIds (when known) or file paths that *emit* this contract. For an API route, this is the route handler's component pageId (e.g., `component-users-routes`); fall back to the file path if no component page exists yet. |
+| `consumers[]` | yes | pageIds that *consume* this contract. Initially **empty** — api-explorer cannot reliably resolve consumers across the codebase in a single pass. `wiki-maintainer-agent` populates this field on subsequent wiki updates from the import graph and call-site analysis. |
+| `compatibilityPolicy` | yes | One of: `backward-compatible`, `additive-only`, `full-semver`, `none`. **Default to `none`** for newly-discovered contracts — the user or maintainer elevates this later once the contract's audience is understood. Do NOT guess at a stricter policy from code alone. |
+| `suggestedInvariants[]` | yes | Named invariants drawn from validation code (Zod refinements, NOT NULL / UNIQUE / CHECK constraints, runtime guards). Kebab-case names; the maintainer reconciles these into the final page's `invariants[]` field. Empty list is acceptable when no invariants are detectable. |
+
+### When to emit contract candidates
+
+Emit one entry in `contractCandidates[]` for each of:
+
+1. **HTTP route handler with a typed request/response shape.** Detection signals: TypeScript request/response generics (`Request<P, ResBody, ReqBody>`), Zod/Joi/class-validator schemas attached to the route, OpenAPI/JSDoc annotations, Express handler with explicit body type, NestJS DTOs, Fastify schema option, Next.js route handler with typed `NextResponse<T>`. `contractType: api`.
+2. **Event / message payload definition** at a publish site — queue publish (`queue.publish`, `sqs.sendMessage`, `kafka.produce`), webhook emit, pubsub publish, internal event bus emit with a typed payload. `contractType: event`.
+3. **DB table with constraints** — a `CREATE TABLE` migration (or ORM model) declaring `NOT NULL`, `UNIQUE`, or `CHECK` constraints that application logic relies on. `contractType: db-table`.
+
+If a route handler exists but has no detectable typed shape (untyped Express handler, `req.body: any`, no validation), do NOT emit a contract candidate — emit a `missing-validation` finding instead (severity `blocking` or `warning` per the Severity Guide). Contract candidates require evidence of an enforced shape; speculative inference is out of scope for this agent.
+
+### Relationship between api-surface-* and contract-* pages
+
+`api-surface-*` and `contract-*` pages serve different purposes:
+
+- **`api-surface-*` describes *what endpoints exist*** — the inventory map: method, path, auth, documentation status, response-shape consistency. Derived from this agent's findings and the API Surface Map below.
+- **`contract-*` describes *what shape they enforce*** — the durable contract: the request/response/payload schema, the invariants, the compatibility policy, the producers and consumers. Derived from this agent's `contractCandidates[]`.
+
+Both page types are created by `wiki-ingest-agent` (in `full` ingest mode) using this agent's output. **api-explorer itself produces candidates, not pages** — it never writes to `.loom/wiki/`. The split keeps discovery (this agent) decoupled from authoring (the wiki-ingest / wiki-maintainer agents).
 
 ### Severity Guide
 - **blocking** — must fix before merge: unvalidated API inputs accepting arbitrary data, external API calls with credentials in source code

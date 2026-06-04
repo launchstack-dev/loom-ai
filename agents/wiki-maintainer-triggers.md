@@ -11,12 +11,49 @@ This document is a companion to `wiki-maintainer-agent.md`. The maintainer agent
 The wiki-maintainer-agent is invoked when any of the following events occur. Each trigger maps to one or more wiki page types.
 
 ```toon
-triggers[4]{event,source,wikiPageType,description}:
-  criteria-plan-created,criteria-planner-agent,coverage,Criteria plan produced — create or update test coverage map
-  convergence-complete,convergence-driver,quality,Convergence tier passes all criteria — create quality history page
-  conflicts-resolved,interpretation-reviewer-agent,decisions,Conflicts transition to resolved/accepted/wont-fix — create decision page
-  e2e-stories-verified,e2e-runner-agent,flows,E2E runner completes — create verified user flow page
+triggers[6]{event,source,wikiPageType,blocking,description}:
+  criteria-plan-created,criteria-planner-agent,coverage,false,Criteria plan produced — create or update test coverage map
+  convergence-complete,convergence-driver,quality,false,Convergence tier passes all criteria — create quality history page
+  conflicts-resolved,interpretation-reviewer-agent,decisions,false,Conflicts transition to resolved/accepted/wont-fix — create decision page
+  e2e-stories-verified,e2e-runner-agent,flows,false,E2E runner completes — create verified user flow page
+  execution-debrief,orchestrator,debrief,true,Execution ending — flush all knowledge to wiki before cleanup (BLOCKING)
+  feature-with-user-facing-ac-completed,loom-auto / loom-plan execute,flows,false,Phase whose AC contain user-facing verbs completes — propose flow page via --check-flow (info issue only; non-blocking; opt-in)
 ```
+
+The triggers table is also surfaced as a markdown view for cross-referencing from prose:
+
+| Event | Trigger Point | What the Maintainer Does |
+|-------|--------------|--------------------------|
+| **Criteria plan created** | `criteria-planner-agent` writes `criteria-plan.toon` | Create or update the Test Coverage Map page under `.loom/wiki/pages/coverage/`. |
+| **Convergence complete** | `convergence-driver` reports a tier passes all blocking criteria | Create a Quality History page under `.loom/wiki/pages/quality/`. |
+| **Conflicts resolved** | Interpretation conflict transitions to `resolved` / `accepted` / `wont-fix` | Create a Decision page under `.loom/wiki/pages/decisions/`. |
+| **E2E stories verified** | `e2e-runner-agent` completes execution | Create a Verified User Flow page under `.loom/wiki/pages/flows/`. |
+| **Execution debrief (BLOCKING)** | Any execution ends (success, failure, stall, interruption) | Flush all tracked artifacts to wiki pages: execution summary, decision pages, failure pages, convergence report, open conflict pages. Orchestrator MUST wait for completion before cleanup. |
+| **Feature with user-facing AC completes** | After `/loom auto` or `/loom-plan execute` completes a phase whose acceptance criteria contain user-facing verbs ("user can X", "request returns Y") AND no `flow-*` page exists for that behavior | Spawn maintainer with `--check-flow`. Maintainer proposes a `flow-*` page as an `info` issue (does NOT auto-create — flows remain opt-in). |
+
+**Blocking triggers:** The `execution-debrief` trigger is the only blocking trigger. If the wiki-maintainer fails on this trigger, the orchestrator MUST NOT clean up `.plan-execution/` or destroy the worktree. See `execution-conventions.md § Mandatory Debrief Protocol`.
+
+### execution-debrief
+
+Fires when any execution ends — success, failure, stall, or interruption. This is the ONLY blocking trigger. The wiki-maintainer reads all tracked artifacts from `.plan-execution/` and produces wiki pages that capture the full execution knowledge.
+
+**This trigger is BLOCKING.** The orchestrator waits for the wiki-maintainer to complete before allowing cleanup. See `execution-conventions.md § Mandatory Debrief Protocol`.
+
+Input artifacts:
+- `.plan-execution/stage-context/*.toon` — stage outcomes
+- `.plan-execution/wave-*-summary.toon` — wave results
+- `.plan-execution/convergence/iterations/` — convergence history
+- `.plan-execution/conflicts/` — interpretation conflicts (resolved and open)
+- `.plan-execution/scope-coverage.toon` — criteria coverage
+
+Wiki pages produced:
+- **Execution summary** → `.loom/wiki/pages/execution-{runId}.md` — what was built, what failed, final state
+- **Decision pages** → `.loom/wiki/pages/decisions/` — for any decisions in stage-context `keyDecisions` fields
+- **Failure pages** → `.loom/wiki/pages/failures/failure-{runId}.md` — if execution failed: root cause, what was tried, how to avoid repeating (tagged `failure`)
+- **Convergence report** → `.loom/wiki/pages/quality/` — if convergence ran: approaches tried, stall points, final pass rates
+- **Open conflict pages** → `.loom/wiki/pages/conflicts/` — unresolved conflicts carried forward for future sessions (tagged `open-conflict`)
+
+The wiki-maintainer MUST also append to `.loom/wiki/execution-log.toon` with a `debrief` event entry summarizing the captured knowledge.
 
 ### criteria-plan-created
 
@@ -41,6 +78,30 @@ Input artifacts: `.plan-execution/conflicts/resolved/IC-NNN.toon`, `.plan-execut
 Fires when the `e2e-runner-agent` completes execution and writes its AgentResult. The wiki-maintainer reads the E2E story results and produces **Verified User Flow** pages under `.loom/wiki/pages/flows/`.
 
 Input artifact: E2E runner AgentResult, story files from `.plan-execution/convergence/e2e/`
+
+### feature-with-user-facing-ac-completed
+
+Fires when `/loom auto` or `/loom-plan execute` completes a phase whose acceptance criteria are framed as user-facing behavior. The wiki-maintainer is spawned with the `--check-flow` flag (documented in `wiki-maintainer-agent.md`); it looks for an existing `flow-*` page whose `touches`/`exercises` set covers the implemented behavior and, if none exists, proposes one as an `info` issue in its AgentResult. **The maintainer does NOT auto-create flow pages** — flows remain opt-in for the first iteration (see `wiki-conventions.md § Flow significance`). The user, or a follow-up `/loom-wiki ingest --flow` invocation, decides whether to promote the proposal into a page.
+
+**Detection heuristic for "user-facing verbs":** the trigger fires when at least one acceptance-criterion text matches any of these regular expressions (case-insensitive), or when the criterion is explicitly tagged as a user journey in the plan:
+
+- `/user (can|may|should) \w+/i` — e.g., "user can sign up", "user should see error message"
+- `/(returns|responds with|emits) \w+/i` — e.g., "endpoint returns 201", "service emits OrderCreated event"
+- `/(displays|shows) \w+/i` — e.g., "dashboard displays unread count"
+- `/(redirects|navigates) to \w+/i` — e.g., "redirects to /onboarding"
+
+**Ordering:** this trigger fires AFTER the wave's existing post-execution `wiki-maintainer-agent` invocation (the one that ingests `filesCreated`/`filesModified` into `component-*` / `contract-*` pages). It is purely additive — the post-execution wiki update still runs first; the `--check-flow` pass runs second and only reads the wiki it just wrote.
+
+**Non-blocking:** failure or absence of a proposal does not block execution. The maintainer always returns an `info`-severity issue (proposal or "no flow needed") so the orchestrator can record the decision without halting.
+
+**Gated on flow significance:** the trigger is skipped if the completed phase touches **fewer than 3 components** (per the cross-cutting heuristic in `wiki-conventions.md § Flow significance` — a flow is significant if it spans 3+ components or files, has multiple exit states, is externally cited, or is end-user-exposed). Single-component phases (e.g., a typo fix, a one-file refactor) do not warrant a flow page even if their AC mentions a user. Component count is read from the wave's `filesCreated` + `filesModified` set, mapped to `component-*` pageIds via the wiki index; if fewer than 3 distinct components are touched, the trigger is suppressed.
+
+Input artifacts:
+- Phase acceptance criteria from the active plan (e.g., `PLAN-*.md` acceptance-criteria block)
+- Wave summary (`.plan-execution/wave-*-summary.toon`) for the `filesCreated` + `filesModified` set
+- Current wiki index (`.loom/wiki/index.toon`) for the existing `flow-*` page list and `component-*` mapping
+
+Wiki pages produced: **none** (proposal only). The maintainer's AgentResult contains an `info` issue with the suggested `pageId` (e.g., `flow-user-signup`), candidate `touches[]`, candidate `trigger`, and candidate `exitStates[]` drawn from the AC text.
 
 ---
 

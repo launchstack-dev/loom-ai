@@ -124,7 +124,52 @@ Produce guidance files following evidence-based best practices.
 ## Critical Constraints
 
 {3-5 MUST/NEVER rules for security, data integrity, or architecture. Only rules where violation causes real damage.}
+
+## Coding Behavior
+
+> Adapted from Andrej Karpathy's observations on LLM coding pitfalls. These bias toward caution on non-trivial work — use judgment on simple changes.
+
+**Think Before Coding.** State assumptions when the request is ambiguous. Present multiple interpretations rather than picking silently. Push back when a simpler approach exists. Stop and ask when confused — don't run with an unverified guess.
+
+**Simplicity First.** Implement exactly what was asked — nothing speculative. No abstractions for single-use code, no error handling for impossible scenarios, no "flexibility" that wasn't requested. If 200 lines could be 50, rewrite it.
+
+**Surgical Changes.** Every changed line traces directly to the request. Don't "improve" adjacent code, comments, or formatting. Match existing style. Mention unrelated issues — don't silently fix them.
+
+**Goal-Driven Execution.** Transform imperative tasks into verifiable goals before starting ("fix the bug" → "write a failing test, then make it pass"). For multi-step work, state the plan with verification checks. Loop on success criteria until they pass — don't stop at "looks right".
+
+<!-- loom:karpathy-v1 — managed by /loom upgrade. Edit text freely; preserve this marker. -->
+
+## Loom Wiki Discipline
+
+This project has a Loom wiki at `.loom/wiki/`. The wiki is the authoritative source for prior decisions, contracts, flows, and conventions. Consult it before assuming or proposing.
+
+**Before stating an assumption** (per Coding Behavior § Think Before Coding): check `/loom-wiki query "<topic>"` for prior decisions or contracts that resolve it. If a `contract-*` page defines the shape your work depends on, that page is authoritative — the code's current behavior may be the bug.
+
+**Before introducing a new pattern or abstraction** (per § Simplicity First): check `pattern-*` and `convention-*` pages. If a pattern already exists, follow it. If none fits, your new pattern should be documented as you go.
+
+**Before changing a file** (per § Surgical Changes): check whether it's referenced by any `flow-*` page's `steps[].touches` or any `contract-*` page's `producers` / `consumers`. Changes there have user-visible or cross-boundary impact — call it out in your response.
+
+**For user-facing tasks** (per § Goal-Driven Execution): the matching `flow-*` page IS the goal definition. Its `exitStates` are the success criteria. For changes to API or event surfaces, the matching `contract-*` page's `shape` is the goal — preserve it unless the task explicitly says to break it.
+
+If the relevant wiki page is missing or stale, say so in your response — don't silently work around it.
+
+<!-- loom:wiki-discipline-v1 — managed by /loom upgrade. Edit text freely; preserve this marker. -->
 ```
+
+The `## Coding Behavior` block is **mandatory** in every generated CLAUDE.md. It must:
+- Appear as the final section (so user-added sections sit above it)
+- Preserve the `<!-- loom:karpathy-v1 -->` marker on its own line at the end
+- Use the four-principle structure shown above
+
+The marker enables `/loom upgrade` to detect and inject this block into pre-existing CLAUDE.md files (see `agents/protocols/schema-upgrade.md` Rule 6). Do not include the principles inline elsewhere — duplicating them across sections defeats line-count budgets and confuses upgrade detection.
+
+The `## Loom Wiki Discipline` block is **conditional**: emit it ONLY when `.loom/wiki/` exists at the project root at the time `--init` / `--update` runs. If no wiki, emit ONLY the Coding Behavior block — existing behavior is preserved verbatim for non-wiki projects. When emitted, the Wiki Discipline block:
+
+- Appears immediately after the Coding Behavior block, in the fixed order Coding Behavior first, Wiki Discipline second.
+- Preserves the `<!-- loom:wiki-discipline-v1 -->` marker on its own line at the end of the block.
+- Operationalizes each of the four Karpathy principles against the wiki — each `**Before X**` paragraph references its corresponding Coding Behavior § by name.
+
+The marker enables `/loom upgrade` Rule 8 to detect and inject this block into pre-existing CLAUDE.md files when a wiki appears later (see `agents/protocols/schema-upgrade.md` Rule 8). The conditional gate is `.loom/wiki/` existence at the project root, checked at run time. Do NOT emit the Wiki Discipline block for projects without a wiki — surfacing wiki-discipline guidance in a repo with no wiki is noise.
 
 ### Subdirectory Guidance
 
@@ -163,12 +208,14 @@ globs: ["**/*.{ts,tsx,js,jsx}"]
 
 Before returning, check output quality:
 
-1. **Line count** — root CLAUDE.md must be under 200 lines. Warn if over 150.
+1. **Line count** — root CLAUDE.md must be under 200 lines. Warn if over 150. The mandatory `## Coding Behavior` block contributes ~15 lines and does not count toward the warn threshold.
 2. **No fabricated references** — every file path, function name, or command mentioned must exist in the codebase. Verify with grep/glob.
 3. **No obvious rules** — review each convention. If it's a language/framework default, remove it.
-4. **No negation-based instructions** — scan for "don't", "never", "avoid", "do not" and rewrite as positive imperatives where possible. Exception: critical constraints where NEVER is intentional.
+4. **No negation-based instructions** — scan for "don't", "never", "avoid", "do not" and rewrite as positive imperatives where possible. Exception: critical constraints where NEVER is intentional, and the `## Coding Behavior` block (whose negation framing is intentional and verbatim).
 5. **No kitchen-sink mixing** — if the file covers unrelated concerns (brand guidelines + database rules + CSS patterns), split into subdirectory files.
 6. **Command accuracy** — verify every command in the Commands section actually works (exists in package.json scripts, Makefile, etc.).
+7. **Coding Behavior marker present** — confirm the generated CLAUDE.md ends with the `<!-- loom:karpathy-v1 -->` marker line. Missing marker is a validation failure.
+8. **Wiki Discipline marker present when wiki exists** — if `.loom/wiki/` exists at the project root, the generated CLAUDE.md must end with the `<!-- loom:wiki-discipline-v1 -->` marker AFTER the `<!-- loom:karpathy-v1 -->` marker. The two markers appear in fixed order: Coding Behavior first, Wiki Discipline second. Missing wiki-discipline marker when wiki exists is a validation failure. If `.loom/wiki/` does NOT exist, the absence of the wiki-discipline marker is expected and not a failure.
 
 ## Modes
 
@@ -188,7 +235,13 @@ Refresh existing CLAUDE.md with new conventions discovered in current code:
 3. Diff detected conventions against existing guidance
 4. Add missing conventions, flag stale ones
 5. Preserve user-written sections (don't overwrite custom rules)
-6. Report what changed
+6. If the existing CLAUDE.md lacks the `<!-- loom:karpathy-v1 -->` marker, append the Coding Behavior block from the Section Template at the end of the file. If the marker is present, leave that block untouched — user edits to the text are preserved.
+7. **Wiki Discipline block handling.** If `.loom/wiki/` exists at the project root:
+   - If the existing CLAUDE.md has the `<!-- loom:karpathy-v1 -->` marker AND lacks the `<!-- loom:wiki-discipline-v1 -->` marker, append the `## Loom Wiki Discipline` block from the Section Template immediately after the Coding Behavior block (preserving the two-block order: Coding Behavior first, Wiki Discipline second).
+   - If both markers are present, leave both blocks untouched — user edits to either block are preserved.
+   - If the file contains a `## Loom Wiki Discipline` heading but no `<!-- loom:wiki-discipline-v1 -->` marker, do NOT append. This indicates a user-authored block that requires manual merge — surface as an `info` issue with details `Loom Wiki Discipline section present without marker — manual merge required.` (mirrors `/loom upgrade` Rule 8 manual-merge guard).
+   - If `.loom/wiki/` does NOT exist, do not emit the Wiki Discipline block. If a stale `<!-- loom:wiki-discipline-v1 -->` marker exists in the file (e.g., wiki was deleted), leave it in place — removing it is a destructive action reserved for the user.
+8. Report what changed
 
 ### `--audit`
 

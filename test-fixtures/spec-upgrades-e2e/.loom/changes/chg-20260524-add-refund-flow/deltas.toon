@@ -1,0 +1,3 @@
+# deltas.toon mirror — refreshed by /loom-change archive on commit. Source of truth is proposal.md.
+deltas[1]{domain,breakingChange,addedReqCount,modifiedReqCount,removedReqCount,addedScenarioCount,modifiedScenarioCount,removedScenarioCount}:
+  invoicing,false,1,0,0,0,0,0

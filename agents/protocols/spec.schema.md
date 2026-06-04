@@ -358,3 +358,67 @@ CREATE INDEX idx_users_email ON users(email);
 - SQL Schema is optional but recommended — it removes ambiguity for the contracts-agent
 - Index names should follow a convention: `pk_` for primary, `uq_` for unique, `idx_` for regular
 - Cascade behavior must specify both ON DELETE and ON UPDATE for every foreign key relationship
+
+---
+
+## Scenarios
+
+**Optional for v2 plans. The canonical leaf-level testable unit, parallel in role to `## API Specification` and `## State Machines`.**
+
+The `## Scenarios` section hosts Given/When/Then blocks that describe externally observable behaviors. Scenarios are the source of truth that the convergence-planner-agent uses to emit verification targets, the criteria-planner derives criteria from, and the e2e-test-writer-agent maps onto stories.
+
+This section is parallel to (not nested inside) the per-phase `#### Scenarios` subsections defined in `plan.schema.md`. The plan-level `## Scenarios` section collects cross-phase or top-of-plan scenarios that don't fit cleanly under a single phase; the per-phase subsections collect phase-local scenarios. Both forms conform to `scenario.schema.md`.
+
+### Format
+
+````markdown
+## Scenarios
+
+### {Feature or Entity Name}
+
+```toon
+id: S-01
+title: Create user with valid signup payload
+given[2]: No user with email "alice@example.com" exists, The signup endpoint is reachable
+when: A client POSTs to /api/users with valid signup payload for "alice@example.com"
+whenTriggerType: api-call
+then[3]: Response status MUST be 201, Response body MUST contain id and email fields, A row MUST exist in users where email = "alice@example.com"
+stateRef:
+tags[1]: happy-path
+testTier: integration
+automatable: true
+```
+
+```toon
+id: S-02
+title: Reject signup when email already exists
+given[1]: A user with email "alice@example.com" exists
+when: A client POSTs to /api/users with email "alice@example.com"
+whenTriggerType: api-call
+then[2]: Response status MUST be 409, Response body MUST contain error code "email-exists"
+stateRef:
+tags[2]: error, regression
+testTier: integration
+automatable: true
+```
+````
+
+### Rules
+
+- Every block under `## Scenarios` MUST conform to `scenario.schema.md` (required fields, locked tag enum, valid `whenTriggerType`, valid `testTier`).
+- Scenario `id`s MUST be unique within the plan document — across all `## Scenarios` blocks AND all per-phase `#### Scenarios` blocks.
+- Scenarios SHOULD reference entities defined in `## Schema / Type Definitions`. The validator emits a warning when an UpperCamelCase token in `given`/`when`/`then` cannot be resolved to a known entity.
+- When a scenario sets `stateRef`, the referenced state MUST appear in `## State Machines`.
+- Acceptance criteria across all phases SHOULD be covered by at least one scenario; uncovered criteria are flagged by `scenario-coverage.schema.md`.
+- Subsection headings (e.g., `### {Feature or Entity Name}`) are recommended for readability when there are many scenarios. They are advisory — the validator parses scenario blocks regardless of subsection structure.
+
+### Validation Checks
+
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Scenario block format | blocking | Every fenced TOON block under `## Scenarios` must satisfy `scenario.schema.md` rules. |
+| Cross-block id uniqueness | blocking | A scenario `id` cannot appear in two places within the same plan document (top-level `## Scenarios` plus per-phase `#### Scenarios` are a single namespace). |
+| `## Scenarios` in v1 plans | blocking | This section is v2-only. v1 plans MUST omit it. |
+| stateRef resolves | blocking | If `stateRef` is set, the referenced state must exist in `## State Machines`. |
+| Acceptance criteria covered | warning | Every phase's acceptance criteria SHOULD have ≥1 scenario covering it; uncovered criteria flagged. |
+| Every scenario tied to acceptance | info | Scenarios that do not appear to back any acceptance criterion are flagged for review. |

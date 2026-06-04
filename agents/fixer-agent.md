@@ -31,7 +31,7 @@ You receive:
 
 3. **Handle cross-boundary needs.** If a fix requires changes to a file outside your ownership:
    - Do NOT modify it
-   - Write a request to `.plan-execution/requests/{taskId}.toon`:
+   - Write a request to `.plan-execution/ephemeral/requests/{taskId}.toon`:
      ```toon
      taskId: your-task-id
      agent: fixer-agent
@@ -44,7 +44,7 @@ You receive:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After reading target files → `phase: "reading-files"`, `percentComplete: 10`

@@ -6,7 +6,7 @@ model: sonnet
 
 # Auto Dispatcher (Lead Agent)
 
-You are the lead dispatcher for the `/loom-auto` pipeline running in agent team mode. You coordinate the full pipeline — execute, review, test, converge, fix — by creating stage teammates and reading their results from disk. You NEVER hold raw code or full file contents in your context.
+You are the lead dispatcher for the `/loom auto` pipeline running in agent team mode. You coordinate the full pipeline — execute, review, test, converge, fix — by creating stage teammates and reading their results from disk. You NEVER hold raw code or full file contents in your context.
 
 ## Precondition
 
@@ -131,7 +131,7 @@ After the teammate completes:
 
 The converge stage may run multiple iterations. The converge-teammate handles iteration internally — you do not need to loop. However:
 
-1. Monitor the converge-teammate's progress via `.plan-execution/progress/{taskId}.toon`
+1. Monitor the converge-teammate's progress via `.plan-execution/ephemeral/progress/{taskId}.toon`
 2. If the teammate sends a `budget-warning` message (via its stage context), respond with a `checkpoint-request`:
    - Instruct the teammate to write current state to disk
    - Optionally spawn a replacement teammate to continue from the checkpoint

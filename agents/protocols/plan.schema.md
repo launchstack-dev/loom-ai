@@ -180,7 +180,7 @@ These sections are recommended but not required:
 
 Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MUST follow this structure:
 
-```markdown
+````markdown
 ### Phase N — Wave W: {Phase Name}
 
 **Agent:** {agent name}
@@ -198,32 +198,28 @@ Each phase is a `### Phase N` subsection within `## Execution Phases`. Phases MU
 - [ ] {testable criterion}
 - [ ] {another testable criterion}
 
-#### Convergence Targets
-
-Every phase with deterministic, verifiable outputs MUST include a structured convergence targets block. Phases that only do refactoring, wiring, or subjective work may omit this section.
-
-```toon
-convergenceTargets[N]{id,name,category,method,tolerance,capture,goldenSource,ignoreFields}:
-  P{phase}-T01,GET /api/users,api,json-deep-equal,1.0,http-get,spec-extracted,"timestamp,requestId"
-  P{phase}-T02,Error response shape,api,json-deep-equal,1.0,http-get,spec-extracted,""
-```
-
-Each target defines: what to capture (SOURCE), what to compare against (TARGET via goldenSource), how to compare (method + tolerance), and what noise to ignore. This block is the formal contract that the convergence-planner-agent reads — not a hint, the primary input.
-
-| Column | Values | Description |
-|--------|--------|-------------|
-| `id` | `P{phase}-T{NN}` | Unique target ID scoped to the phase |
-| `name` | string | Human-readable name for the output being verified |
-| `category` | `api`, `generated-file`, `cli-output`, `ui`, `data-pipeline`, `custom` | What kind of output |
-| `method` | `json-deep-equal`, `text-diff`, `pixel-diff`, `semantic-html`, `row-diff`, `cli-exit-code`, `custom` | Comparison method |
-| `tolerance` | `0.0`–`1.0` | Match threshold. `1.0` = exact match after ignoring excluded fields |
-| `capture` | `http-get`, `http-post`, `file-read`, `script-exec`, `playwright-screenshot`, `query-exec`, `custom` | How to obtain the current output (SOURCE) |
-| `goldenSource` | `spec-extracted`, `reference-run`, `user-provided`, `inline` | Where the expected output (TARGET) comes from |
-| `ignoreFields` | comma-separated | Fields excluded from comparison (timestamps, request IDs, etc.) |
+#### Convergence Targets *(optional)*
+- {deterministic output to verify, e.g., "GET /api/users returns JSON array (ignore: timestamps)"}
+- {e.g., "Error responses match shape: {error: {code, message}}"}
 
 #### Convergence Tiers *(optional)*
 - {tier assignments for this phase's verification, referencing convergence-tier.schema.md}
+
+#### Scenarios *(optional, v2 plans only)*
+
+```toon
+id: S-01
+title: Reject signup when email already exists
+given[2]: A user with email "alice@example.com" exists, The signup endpoint is reachable
+when: A client POSTs to /api/users with email "alice@example.com"
+whenTriggerType: api-call
+then[2]: Response status MUST be 409, Response body MUST contain error code "email-exists"
+stateRef:
+tags[2]: error, regression
+testTier: integration
+automatable: true
 ```
+````
 
 ### Phase Fields
 
@@ -238,8 +234,9 @@ Each target defines: what to capture (SOURCE), what to compare against (TARGET v
 | File Ownership | yes | Directories (with `**` glob) and/or individual files this phase exclusively controls. |
 | Deliverables | yes | Table of files with Action (Create/Modify/Delete) and Owner hint. |
 | Acceptance Criteria | yes | Checkbox list of testable criteria. |
-| Convergence Targets | conditional | Structured TOON block defining every deterministic, verifiable output for the phase. Required for any phase that has capturable outputs (API responses, generated files, CLI exit codes, rendered pages). Omit only for phases with no deterministic outputs (refactoring, wiring, subjective work). Each target specifies source capture method, target golden source, comparison method, tolerance, and ignore fields. This is the primary input for convergence-planner-agent — not a hint. |
+| Convergence Targets | no | Free-text bullets listing deterministic, verifiable outputs. Read by convergence-planner-agent as high-confidence seeds. Only include outputs that are capturable and deterministic (API responses, generated files, CLI exit codes, rendered pages). |
 | Convergence Tiers | no | Optional tier assignments for this phase's verification strategy. References tier names from `convergence-tier.schema.md`. When omitted, the default tier for the phase's hierarchy level (per `taxonomy.md`) applies. |
+| Scenarios | no (v2 only) | **planVersion 2 only.** Optional `#### Scenarios` subsection containing one or more scenario blocks conforming to `scenario.schema.md`. Each block is a fenced TOON block with `id` (`S-NN`), `title`, `given[]`, `when`, `whenTriggerType`, `then[]`, `stateRef`, `tags[]`, optional `testTier`, and `automatable`. Scenario `id`s MUST be unique within the phase. The convergence-planner-agent reads these as the canonical leaf-level testable units. For v1 plans this subsection MUST be absent — validators reject scenarios under v1 phases. |
 
 ### Dependency Syntax
 
@@ -359,6 +356,13 @@ Orchestrators validate plans through these stages. Stages are version-aware — 
 - **Index coverage:** Every foreign key in Schema has a corresponding index in the Indexing subsection
 - **Cascade coverage:** Every foreign key has ON DELETE / ON UPDATE behavior defined
 
+### Stage 8: Scenario Validity (v2 only, optional)
+- **Scenario block format:** Every `#### Scenarios` block conforms to `scenario.schema.md` (required fields, locked tag enum, valid `whenTriggerType`, valid `testTier`).
+- **Scenario id uniqueness:** Every scenario `id` MUST be unique within its phase. Cross-phase id collisions emit a warning, not blocking.
+- **Scenarios appear only in v2:** `#### Scenarios` subsection MUST NOT appear in v1 plans (blocking — the subsection is gated on `planVersion` being 2).
+- **stateRef resolves:** If a scenario sets `stateRef`, the referenced state MUST exist in `## State Machines`.
+- **Acceptance criteria coverage:** Every phase acceptance criterion SHOULD be covered by at least one scenario; uncovered criteria are flagged as warnings via `scenario-coverage.schema.md`.
+
 ---
 
 ## Examples
@@ -383,10 +387,10 @@ See `test-fixtures/broken-plan/PLAN.md` — demonstrates common errors:
 
 ## Relationship to Convergence Schemas
 
-- **convergence-plan.schema.md** -- The `convergenceTargets` blocks in plan phases are the primary input for convergence-planner-agent. Plan target IDs (`P{phase}-T{NN}`) map to convergence-plan.toon target IDs (`T-NN`). The convergence-planner validates, refines, and supplements plan targets — it does not re-discover them from scratch. **Field mapping:** plan targets use `method` and `capture`; convergence-plan.toon uses `comparisonMethod` and `captureMethod`. The convergence-planner performs this renaming during target loading. Additionally, convergence-plan.toon requires a `goldenPath` field — the convergence-planner synthesizes this from `goldenSource` during Step 5 (golden source validation). The convergence-plan also adds `metadata` and `rationale` columns not present in plan targets — these are enrichments, not renames.
 - **convergence-tier.schema.md** -- Defines the 4 convergence tiers (unit, integration, e2e, qa-review) that map to plan hierarchy levels. Phases may optionally specify convergence tier overrides in their Convergence Tiers section.
 - **taxonomy.md** -- Defines the planning hierarchy (milestone > feature > phase > wave) and the default convergence tier assignment for each level.
-- **criteria-plan.schema.md** -- Criteria entries derived from plan acceptance criteria include a `testTier` column referencing convergence tier names.
-- **e2e-story.schema.md** -- E2E stories reference milestones defined through the plan's phase-to-milestone mapping.
-- **interpretation-conflict.schema.md** -- Interpretation conflicts reference plan phases (`phaseRef`) and roadmap features (`featureRef`). Blocking conflicts discovered during dual-track planning halt plan execution.
+- **criteria-plan.schema.md** -- Criteria entries derived from plan acceptance criteria include a `testTier` column referencing convergence tier names, and a `scenarioRef` column linking criteria back to the scenarios they verify.
+- **e2e-story.schema.md** -- E2E stories reference milestones defined through the plan's phase-to-milestone mapping, and MUST cite one or more source scenarios in their `derivedFrom[]` field.
+- **interpretation-conflict.schema.md** -- Interpretation conflicts reference plan phases (`phaseRef`), roadmap features (`featureRef`), and (v2) individual scenarios (`scenarioRef`). Blocking conflicts discovered during dual-track planning halt plan execution.
+- **scenario.schema.md** -- (v2) Defines the canonical leaf-level testable unit. Plan phases host scenarios via the optional `#### Scenarios` subsection.
 - **delta-report** -- DeltaReport entities (defined in PLAN.md Schema section) are produced at convergence boundaries (wave, feature, milestone) and include `phaseRef`, `featureRef`, and `milestoneRef` fields linking back to plan structures.

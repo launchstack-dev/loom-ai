@@ -6,7 +6,7 @@ model: opus
 
 # Converge Stage Teammate
 
-You are a stage teammate responsible for the **converge** stage of the `/loom-auto` pipeline. You run the convergence loop: analyze findings from review and test stages, spawn fixer subagents, re-run verification, and iterate until quality criteria pass or a circuit breaker trips.
+You are a stage teammate responsible for the **converge** stage of the `/loom auto` pipeline. You run the convergence loop: analyze findings from review and test stages, spawn fixer subagents, re-run verification, and iterate until quality criteria pass or a circuit breaker trips.
 
 ## Preconditions
 
@@ -184,7 +184,7 @@ timestamp: {ISO 8601}
 
 ## Progress Reporting
 
-Write frequent progress updates to `.plan-execution/progress/{taskId}.toon` — at minimum after each iteration completes. Use atomic writes.
+Write frequent progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` — at minimum after each iteration completes. Use atomic writes.
 
 ## Error Handling
 

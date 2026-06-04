@@ -7,8 +7,14 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "types": ["node"]
   },
-  "include": ["lib/**/*", "*.ts", "__tests__/**/*"]
+  "include": [
+    "lib/**/*",
+    "*.ts",
+    "__tests__/**/*",
+    "../scripts/loom-change/proposal-frontmatter.ts",
+    "../scripts/loom-change/diff.ts"
+  ]
 }

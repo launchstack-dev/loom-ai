@@ -54,22 +54,9 @@ Parse arguments after `converge`:
 
 ### Instructions
 
-#### Step 0: Read Protocols, Resolve Models, and Gather Wiki Context
+#### Step 0: Read Protocols and Resolve Models
 
-**Model Resolution (for each agent spawn):**
-
-Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility.
-
-1. Read `.claude/orchestration.toml` once (cache the result).
-2. If orchestration.toml exists AND has a `modelProfile`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:`. Use that value. This step is NOT optional.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
-5. Pass `model: "{resolved}"` on each Agent tool call.
-
-**Wiki Context:** If `.loom/wiki/` exists, read `index.toon` and gather relevant pages:
-- **Target mode (`--plan` or `--target`):** collect `api-surface-*` pages (convergence target seeds), `decision-*` pages (method constraints), `convention-*` pages (naming/routing patterns), `pattern-*` pages (additional target signals). Cap at 8 pages.
-- **Criteria mode (`--criteria`):** collect `decision-*` pages (architectural constraints for criteria), `convention-*` pages (reviewer dimensions), `pattern-*` pages (test generation guidance), `structure-*` pages (file ownership validation). Also collect quality history entries (tagged `quality`, `bug`, `regression`). Cap at 8 pages.
-- Record as `wikiContext` for injection into convergence-planner-agent or criteria-planner-agent prompts.
+**Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
 
 Read convergence-related protocols:
 - `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
@@ -80,7 +67,7 @@ Read convergence-related protocols:
 
 **If no args provided:** display usage help and stop:
 ```
-## Usage: /loom-converge
+## Usage: /loom converge
 
 Two modes: target convergence (match a reference) and criteria convergence (satisfy conditions).
 
@@ -116,22 +103,22 @@ Two modes: target convergence (match a reference) and criteria convergence (sati
   --status                Show current convergence state
 
 Examples:
-  /loom-converge --plan                     Target: discover targets from codebase
-  /loom-converge --plan --light             Target: one-batch discovery
-  /loom-converge --target golden/api.json   Target: direct reference file
-  /loom-converge --criteria                 Criteria: TDD + all reviewers from plan
-  /loom-converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
-  /loom-converge --criteria --feature F-01  Criteria: feature F-01 boundary only
-  /loom-converge --criteria --no-soft       Criteria: pure TDD (tests only)
-  /loom-converge --criteria --reviewers security,code-review   Criteria: specific reviewers
-  /loom-converge --criteria --no-hard       Review-only: iterate code reviews on existing code
-  /loom-converge --tier unit                Run only unit tier convergence
-  /loom-converge --tier e2e                 Run only e2e tier convergence
-  /loom-converge --full                     Run all 4 tiers in order
-  /loom-converge --approve-qa               Bulk-approve non-blocking QA findings
-  /loom-converge --criteria --no-tests      Skip unit/integration (warns on stderr)
-  /loom-converge --resume
-  /loom-converge --status
+  /loom converge --plan                     Target: discover targets from codebase
+  /loom converge --plan --light             Target: one-batch discovery
+  /loom converge --target golden/api.json   Target: direct reference file
+  /loom converge --criteria                 Criteria: TDD + all reviewers from plan
+  /loom converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
+  /loom converge --criteria --feature F-01  Criteria: feature F-01 boundary only
+  /loom converge --criteria --no-soft       Criteria: pure TDD (tests only)
+  /loom converge --criteria --reviewers security,code-review   Criteria: specific reviewers
+  /loom converge --criteria --no-hard       Review-only: iterate code reviews on existing code
+  /loom converge --tier unit                Run only unit tier convergence
+  /loom converge --tier e2e                 Run only e2e tier convergence
+  /loom converge --full                     Run all 4 tiers in order
+  /loom converge --approve-qa               Bulk-approve non-blocking QA findings
+  /loom converge --criteria --no-tests      Skip unit/integration (warns on stderr)
+  /loom converge --resume
+  /loom converge --status
 ```
 
 **If `--status`:**
@@ -148,7 +135,7 @@ Examples:
    - Circuit breaker status
 5. Suggest next action based on state:
    - If `status == converged`: "Convergence complete. No action needed."
-   - If `status == running` or `status == paused`: "Run `/loom-converge --resume` to continue."
+   - If `status == running` or `status == paused`: "Run `/loom converge --resume` to continue."
    - If `status == stalled` or `status == regression`: "Review stuck deltas below. Manual intervention may be needed before `--resume`."
    - If `status == budget_exhausted`: "Increase agent budget in orchestration.toml and `--resume`."
    - **Criteria mode only:** If frozen conflicts exist: "The following criteria have conflicting reviewer findings and were frozen. Review manually: {list}."
@@ -221,9 +208,6 @@ Examples:
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary from project scanning}
     {if --target provided: 'Seed target: ' + targetPath}
-    {if wikiContext gathered: <file-content path="wiki-context">
-    {concatenated wiki page contents, each prefixed with its pageId}
-    </file-content>}
     Write plan to: .plan-execution/convergence-plan.toon"
    ```
 
@@ -266,9 +250,6 @@ This path replaces Steps 1.5 through 4 for criteria mode. It uses criteria-plann
     {if --no-hard: 'Soft criteria only (no test generation)'}
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary}
-    {if wikiContext gathered: <file-content path="wiki-context">
-    {concatenated wiki page contents, each prefixed with its pageId}
-    </file-content>}
     Write plan to: .plan-execution/criteria-plan.toon
     Write tests to: .plan-execution/convergence/criteria/tests/"
    ```
@@ -556,7 +537,7 @@ Wait for user response:
        Iter 3: {n3}/{total} passing  (blocking: {b3} failing, conflicts: {c3})
    ```
 
-6. Update `.plan-execution/status.toon` at each progress check.
+6. Update `.plan-execution/ephemeral/status.toon` at each progress check.
 
 #### Step 5.5: Convergence Context Checkpoint (every 3 iterations)
 
@@ -584,7 +565,7 @@ After each progress check in Step 5, evaluate whether a context checkpoint is ap
    Iterations used: {i}/{max}
 
    Run `/clear` for fresh context, then:
-     /loom-converge --resume
+     /loom converge --resume
    ```
 
 4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue iteration loop. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
@@ -620,7 +601,6 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
 - Budget remaining: {budget - N}
 
 ### Next Steps
-Context tip: run /clear before the next command for fresh context.
 {contextual recommendations based on final status}
 ```
 
@@ -655,7 +635,6 @@ Context tip: run /clear before the next command for fresh context.
 - Budget remaining: {budget - N}
 
 ### Next Steps
-Context tip: run /clear before the next command for fresh context.
 {contextual recommendations -- same status-based logic, plus:
  - If frozen conflicts exist: "Review frozen conflicts above. These represent reviewer disagreements that cannot be resolved automatically."
  - converged with frozen: "All blocking criteria pass. {N} frozen conflicts remain for human review."}
@@ -665,7 +644,7 @@ Context tip: run /clear before the next command for fresh context.
 
 1. Save convergence report to `.plan-execution/convergence/convergence-report.md`.
 
-2. If this run was triggered during a `/loom-auto` pipeline (check for `.plan-execution/pipeline-state.toon`), save a summary to `.plan-execution/convergence-summary.toon` for the outer loop to read:
+2. If this run was triggered during a `/loom auto` pipeline (check for `.plan-execution/pipeline-state.toon`), save a summary to `.plan-execution/convergence-summary.toon` for the outer loop to read:
 
    **Target mode:**
    ```toon
@@ -696,7 +675,7 @@ Context tip: run /clear before the next command for fresh context.
    completedAt: {ISO timestamp}
    ```
 
-3. Update final `.plan-execution/status.toon`.
+3. Update final `.plan-execution/ephemeral/status.toon`.
 
 ### Error Handling
 
@@ -706,14 +685,14 @@ Context tip: run /clear before the next command for fresh context.
 - **target-parser fails** (target mode): "Target parsing failed: {error}. Cannot converge without targets." Stop.
 - **criteria-planner fails** (criteria mode): "Criteria planning failed: {error}." Stop.
 - **harness-builder fails** (either mode): "Harness build failed: {error}. Cannot converge without a harness." Stop.
-- **convergence-driver fails**: Save partial state to `.plan-execution/convergence-state.toon` for `--resume`. Display what completed and suggest: "Run `/loom-converge --resume` to continue from iteration {N}."
+- **convergence-driver fails**: Save partial state to `.plan-execution/convergence-state.toon` for `--resume`. Display what completed and suggest: "Run `/loom converge --resume` to continue from iteration {N}."
 - **convergence-state.toon missing on `--resume`**: "No convergence state found. Use `--target` or `--criteria` to start a new run." Stop.
 - **convergence-state.toon from a different source**: Compare `convergenceMode` + source path in state with current flags. If they differ: "Warning: existing convergence state is for a different {mode/source} (`{old}`). Continue with existing state or start fresh? (continue / fresh)" If fresh, delete old state and restart.
 - **Agent failure during loop**: The convergence-driver handles internal agent failures. If the driver itself fails, save state and offer `--resume`.
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` at every phase transition:
+Write `.plan-execution/ephemeral/status.toon` at every phase transition:
 ```toon
 command: converge
 phase: {parsing-targets | building-harness | approval-gate | converging | complete}

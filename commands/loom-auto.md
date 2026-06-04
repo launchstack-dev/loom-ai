@@ -51,13 +51,7 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 2. Agent `.md` frontmatter `model:` field
 3. Default: omit `model` parameter (inherits parent)
 
-**How to resolve (for each agent spawn):**
-
-1. Read `.claude/orchestration.toml` once at initialization (Step 0). Cache the result.
-2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
-5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
+**How to resolve:** Read `.claude/orchestration.toml` once at initialization (Step 0). Check for `modelProfile` under `[settings]`. If set, read the profile definition for per-tier models. For each agent spawn, determine the agent's tier (planning/execution/review/verification/utility), use the profile's model for that tier. If no profile, read the agent's `.md` frontmatter. Pass `model: "{resolved}"` on the Agent tool call.
 
 **Tier mapping:** planning = roadmap-builder, plan-builder, questioner, criteria-planner, interpretation-reviewer, prompt-refiner. execution = contracts, implementer, wiring, data-pipeline. review = all reviewers + scope-feasibility. verification = verification-agent. utility = meta-agent, wiki agents, fixer, delta-analyzer, convergence-planner, acceptance-criteria, target-parser, harness-builder, convergence-driver.
 
@@ -148,9 +142,38 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    ```
    Stop here.
 
-4. Create or verify `.plan-execution/` directory structure.
+4. Create or verify `.plan-execution/` directory structure, including the `ephemeral/` subdirectory:
+   ```bash
+   mkdir -p .plan-execution/ephemeral/progress
+   mkdir -p .plan-execution/ephemeral/requests
+   mkdir -p .plan-execution/stage-context
+   mkdir -p .plan-execution/contracts
+   mkdir -p .plan-execution/conflicts
+   mkdir -p .plan-execution/convergence/iterations
+   mkdir -p .plan-execution/convergence/e2e/stories
+   mkdir -p .plan-execution/convergence/e2e/tests
+   mkdir -p .plan-execution/convergence/e2e/screenshots
+   ```
 
-5. **Install enforcement hooks.** If `.claude/settings.json` doesn't exist in the project, create it with Loom's deterministic hooks (file-ownership, contract-lock, budget-tracker, quality-gate, status-updater, typecheck-on-write). The hooks live in `~/Projects/meta-orchestration/hooks/` and are registered via:
+   Write `.plan-execution/.gitignore` (ignores only ephemeral):
+   ```
+   # Ephemeral session artifacts — locks, heartbeats, live status
+   ephemeral/
+   ```
+
+5. **Gitignore protection check.** First verify we're in a git repo (`git rev-parse --is-inside-work-tree`). If not, warn and skip this step. Then check for old layout — if `.plan-execution/.gitignore` contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first."
+
+   Verify the project's `.gitignore` does not exclude Loom's persistent directories:
+   ```bash
+   git check-ignore -q .plan-history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
+   ```
+   If any path is blocked, warn and offer to add negation rules (see `/loom init` Step 1.3 for the full fix flow). If running in `--auto` mode, apply the fix automatically and log a warning.
+
+6. **Install enforcement hooks.** This is a SAFETY NET for users who skipped `/loom init` — that command is the canonical place hooks get registered. Step 6 ensures the pipeline still works if init was bypassed.
+
+   **Pipeline enforcement hooks** (file-ownership, contract-lock, budget-tracker, quality-gate, status-updater, typecheck-on-write, wiki-write-guard): if `.claude/settings.json` doesn't exist, create it with the block below. The hooks live in `~/Projects/meta-orchestration/hooks/`.
 
    ```bash
    mkdir -p .claude && cat > .claude/settings.json << 'EOF'
@@ -178,6 +201,22 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    ```
 
    If `.claude/settings.json` already exists, merge the `hooks` key. The hooks fail open -- no `.plan-execution/` means exit 0 immediately.
+
+   **Wiki health hooks** (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`): when `.loom/wiki/` exists, register the wiki hooks via the deterministic helper. Do NOT inline these in the heredoc above — the helper auto-detects whether to emit `${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts` (plugin install) or project-relative `hooks/<name>.ts` (dev checkout), and picks `bunx tsx` vs `npx --yes tsx` based on what's actually on PATH.
+
+   ```bash
+   if [ -d .loom/wiki ]; then
+     node scripts/register-wiki-hooks.ts --replace
+   fi
+   ```
+
+   `--replace` purges any stale wiki hook entries (different prefix, different runner) before writing fresh ones, so this is safe to re-run from any starting state. Idempotent when settings already match. Non-fatal on failure: print the script's error, continue with the pipeline.
+
+   **Wiki hook behavior:**
+   - `wiki-session-status` (SessionStart) — surfaces `.loom/wiki/` freshness and injects high-confidence page summaries into session context. Honors `[wiki].sessionContext` (default `minimal`).
+   - `wiki-impact-warner` (PreToolUse Write|Edit) — emits informational impact notices when an edit targets files referenced by any flow/contract page. Per-file-per-session dedup and 5-minute session throttle. Honors `[wiki].impactAck` (default `notify`) and `[wiki].impactDedup` / `[wiki].sessionThrottle` (default on).
+   - `wiki-commit-ledger` (PostToolUse Bash) — detects successful `git commit` invocations and appends a ledger entry to `.loom/wiki/freshness-ledger.toon` tracking wiki debt vs. fresh status.
+   - All three honor `LOOM_WIKI_HOOKS=0` (silence for the session) and fail-open on any error.
 
 6. Initialize `pipeline-state.toon`:
    ```toon
@@ -658,7 +697,7 @@ Spawn a general-purpose agent:
  {if not convergeConfig: '--config .plan-execution/converge.config'}
  Max iterations: 10
  {if noAutoCommit: '--no-auto-commit'}
- This is running as part of /loom-auto -- write convergence-summary.toon when done.
+ This is running as part of /loom auto -- write convergence-summary.toon when done.
  Your AgentResult MUST include verificationStatus."
 ```
 
@@ -682,7 +721,7 @@ If convergence-summary.toon is missing: warn and continue to Step 4 (convergence
 
 ##### 3.5e: Criteria Convergence (if `convergeCriteria == true`)
 
-Run criteria convergence as an auto-mode `/loom-converge --criteria`:
+Run criteria convergence as an auto-mode `/loom converge --criteria`:
 
 1. **Plan criteria.** Spawn criteria-planner-agent:
    ```
@@ -724,7 +763,7 @@ Run criteria convergence as an auto-mode `/loom-converge --criteria`:
     Max iterations: 10
     Agent budget: {from orchestration.toml or 30}
     {if noAutoCommit: '--no-auto-commit'}
-    This is running as part of /loom-auto -- write convergence-summary.toon when done.
+    This is running as part of /loom auto -- write convergence-summary.toon when done.
     All fixer-agent invocations within the convergence loop MUST include diagnoseLog
     per behavioral-guidelines.md section 6 (Diagnose Before Fix).
     Your AgentResult MUST include verificationStatus."
@@ -968,7 +1007,7 @@ Write `.plan-execution/escalation-report.md`:
 {contextual suggestion: manual fix, plan redesign, scope reduction}
 
 ### Resume Command
-Run `/loom-auto --resume` after addressing the above.
+Run `/loom auto --resume` after addressing the above.
 ```
 
 Display the escalation report to the user.
@@ -1041,7 +1080,7 @@ When `--resume` is passed:
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orchestration Status". Include these additional fields for pipeline tracking:
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` section "Orchestration Status". Include these additional fields for pipeline tracking:
 
 ```toon
 command: loom-auto

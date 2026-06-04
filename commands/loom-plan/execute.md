@@ -35,7 +35,7 @@ In addition to project-specific agents (which use the `phase` field), check `orc
 
 **6 insertion points** (kit agents fire at these pipeline boundaries):
 
-- `pre-scope` -- before scope contract generation (only in `/loom-auto`)
+- `pre-scope` -- before scope contract generation (only in `/loom auto`)
 - `post-scope` -- after scope contract locked, before roadmap
 - `pre-execute` -- before each execution wave starts (before contracts-agent or implementers)
 - `post-execute` -- after each execution wave completes (after wiring-agent finishes)
@@ -87,7 +87,7 @@ kitWarnings: 0
 kitHalts: 0
 ```
 
-**Status line:** When kit agents are running, update `.plan-execution/status.toon` with `kitAgentsRunning: {N}` and `kitInsertionPoint: {current point}`.
+**Status line:** When kit agents are running, update `.plan-execution/ephemeral/status.toon` with `kitAgentsRunning: {N}` and `kitInsertionPoint: {current point}`.
 
 ### Instructions
 
@@ -131,7 +131,7 @@ kitHalts: 0
 
 #### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` section "Orchestration Status".
 
 #### Step 1: Initialize
 
@@ -160,8 +160,8 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
    - `.plan-execution/state.toon` (initialized per schema)
    - `.plan-execution/rolling-context.md` (empty)
    - `.plan-execution/contracts/` directory
-   - `.plan-execution/requests/` directory
-   - `.plan-execution/progress/` directory (for agent monitoring)
+   - `.plan-execution/ephemeral/requests/` directory
+   - `.plan-execution/ephemeral/progress/` directory (for agent monitoring)
 5. Create a git tag `plan-exec-start` for rollback safety
 
 #### Step 1.5: Scope Coverage Check
@@ -199,12 +199,10 @@ Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orch
 
 1. Update state.toon: wave 0 = in_progress
 2. Create a git tag `plan-exec-wave-0-pre`
-3. **Gather wiki context for contracts.** If `.loom/wiki/` exists, read `index.toon` and collect `decision-*`, `convention-*`, and `structure-*` pages (cap at 5 pages). These inform type naming, schema design, and file placement.
-4. Spawn a single Agent (general-purpose) with:
+3. Spawn a single Agent (general-purpose) with:
    - Instruction: "Read your instructions from `~/.claude/agents/contracts-agent.md` first."
    - The schema/type specifications extracted from the plan
    - The output directory: `.plan-execution/contracts/`
-   - If wiki pages gathered: include them as `<file-content path="wiki-context">{concatenated pages}</file-content>`
    - Instruction to return an AgentResult as the last block of output
 
 5. Parse the AgentResult from the agent's return value
@@ -266,13 +264,6 @@ Display to the user:
 ```
 ## Wave 0 Complete: Contracts
 
-### Phase Status Summary
-| Phase | Feature | Status | Notes |
-|-------|---------|--------|-------|
-| 0     | Contracts | COMPLETE | {entity list, shared types created} |
-| 1     | {name}    | PENDING  | |
-| ...   | ...       | PENDING  | |
-
 Files created: [count]
 [list of files]
 
@@ -280,17 +271,13 @@ Verification: [pass/fail]
 [details if failed]
 
 Next wave: Wave 1 -- [description]
-- {task 1 description}
-- {task 2 description}
+Tasks: [count] parallel implementers
+Files affected: [count]
 
-Run /clear for fresh context, then:
-  /loom-plan execute --resume
-
-Or type 'continue' to proceed without clearing.
-(re-run wave 0 / abort also available)
+Proceed? (yes / re-run wave 0 / abort)
 ```
 
-Wait for user input before continuing.
+Wait for user approval before continuing.
 
 #### Step 5: Wave N -- Implementation (repeat for each wave)
 
@@ -300,13 +287,7 @@ For each implementation wave (1, 2, ...):
 2. Create git tag `plan-exec-wave-N-pre`
 3. Read `rolling-context.md`
 4. **Pattern check:** If `.claude/orchestration.toml` exists and has `[patterns.*]` entries, check each task's description against pattern triggers. If a task matches a pattern trigger (per `~/.claude/agents/protocols/pattern-executor.md`), execute the pattern instead of spawning a single implementer. The pattern's output replaces the implementer's AgentResult.
-5. **Gather wiki context for this wave.** If `.loom/wiki/` exists, read `index.toon` and collect wiki pages relevant to this wave's tasks:
-   - `decision-*` pages relevant to the wave's domain (e.g., auth decisions for auth tasks)
-   - `convention-*` pages (all — these apply globally)
-   - `pattern-*` pages matching the task's implementation area
-   - `structure-*` pages (all — file placement guidance applies globally)
-   - Cap at 5 pages per task to stay within context budget. If multiple tasks share the same pages, each task still gets its own copy in its prompt.
-6. For each task in this wave, prepare the implementer prompt:
+5. For each task in this wave, prepare the implementer prompt:
    - Instruction: "Read your instructions from `~/.claude/agents/implementer-agent.md` first."
    - Task objective and acceptance criteria
    - File ownership list for this specific task
@@ -314,20 +295,19 @@ For each implementation wave (1, 2, ...):
    - Rolling context content
    - Technology stack and conventions
    - If `scope-contract.toon` exists, include relevant contract decisions in the prompt (filter to decisions that affect this task's domain — e.g., data access decisions for data layer tasks, auth decisions for auth tasks)
-   - If wiki pages gathered: include them as `<file-content path="wiki-context">{concatenated pages relevant to this task}</file-content>`
-7. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/progress/` (fresh wave).
+6. **Clear progress directory:** Remove all `*.toon` files from `.plan-execution/ephemeral/progress/` (fresh wave).
 
 7. **Launch all implementer agents in parallel** using the Agent tool -- send ALL agent calls in a SINGLE message:
    - Each agent is `general-purpose` -- it reads its own instructions from disk
    - Each agent gets its own scoped prompt (different file ownership, different task)
-   - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/progress/{taskId}.toon`
+   - Include the agent's `taskId` in the prompt so it can write progress to `.plan-execution/ephemeral/progress/{taskId}.toon`
    - Use `run_in_background: true` for all agents
 
 8. **Monitor agents via polling loop** (per `agent-monitoring.schema.md`):
 
    While any agent has not completed:
    1. Wait 15 seconds (`pollIntervalSeconds`)
-   2. Read `.plan-execution/progress/{taskId}.toon` for each running agent
+   2. Read `.plan-execution/ephemeral/progress/{taskId}.toon` for each running agent
    3. Classify each agent:
       - **reporting** -- progress file exists, `heartbeatAt` within 90s
       - **silent** -- no progress file (agent may not support protocol or just started)
@@ -360,7 +340,7 @@ For each implementation wave (1, 2, ...):
 Before wiring, check for problems:
 1. **File ownership violations**: Did any agent modify files outside its declared boundary?
 2. **Conflicting exports**: Did two agents export the same symbol name?
-3. **Cross-boundary requests**: Are there files in `.plan-execution/requests/`?
+3. **Cross-boundary requests**: Are there files in `.plan-execution/ephemeral/requests/`?
 4. **Contract amendments**: Did any agent flag contract issues?
 
 If `--auto` and blocking conflicts found: attempt auto-resolution by assigning conflicting files to the wiring-agent. If still conflicting after wiring: escalate (set wave status to failed).
@@ -375,7 +355,6 @@ If not `--auto` and blocking conflicts found, report to user and ask how to proc
    - Contract manifest path
    - Wave index
    - Project conventions
-   - If wiki pages gathered for this wave: include `convention-*` and `structure-*` pages as `<file-content path="wiki-context">{concatenated pages}</file-content>`
 3. Parse wiring AgentResult
 4. Write `wave-N-summary.toon` and `wave-N-summary.md` to `.plan-execution/`. Also copy `wave-N-summary.toon` to `.plan-history/executions/wave-N-summary.toon` for persistence.
 
@@ -441,51 +420,20 @@ If verification passed (Step 8):
      - Mark a criterion as `orphaned` ONLY if its `coveringTasks` becomes empty AND its status is not already `covered` or `dropped`
    - If new orphans detected, display SCOPE DRIFT warning before the human gate
 
-4. **Human approval gate** -- If `--auto`: run the Automated Quality Gate instead of asking the user. Otherwise, display:
-   ```
-   ## Wave {N} Complete: {description}
+4. **Human approval gate** -- If `--auto`: run the Automated Quality Gate instead of asking the user. Otherwise, same format as Step 4:
+   - Show files changed, verification results
+   - Show next wave preview
+   - Ask: proceed / re-run wave / abort
 
-   ### Phase Status Summary
-   | Phase | Feature | Status | Notes |
-   |-------|---------|--------|-------|
-   | {N}   | {name}  | COMPLETE | {key outcomes, files created, patterns applied} |
-   | {N-1} | {name}  | COMPLETE | {summary from prior wave} |
-   | ...   | ...     | ...    | ... |
+#### Step 9.1: Context Checkpoint (every 2 waves)
 
-   (Show ALL phases from the plan with current status: COMPLETE, IN PROGRESS, or PENDING.
-    For completed phases, include a brief note summarizing what was done.
-    For the just-completed wave, include more detail: key files, verification result, any warnings.)
+After updating context and before the contract drift check, evaluate whether a context checkpoint is appropriate:
 
-   Files created this wave: [count]
-   Files verified existing: [count] (from prior execution)
-   {any notes about deviations, missing files, or verification issues}
-
-   Verification: [pass/fail]
-   {scope drift warnings if any}
-
-   Next wave: Wave {N+1} -- {description}
-   - {task 1 description}
-   - {task 2 description}
-   - ...
-
-   Run /clear for fresh context, then:
-     /loom-plan execute --resume
-
-   Or type 'continue' to proceed without clearing.
-   (re-run wave {N} / abort also available)
-   ```
-
-   Wait for user input before continuing.
-
-#### Step 9.1: Context Checkpoint (every wave)
-
-**Before** presenting the human approval gate (Step 9 item 4), write checkpoint state to disk so the user can safely `/clear`:
-
-1. **Always checkpoint.** Every wave completion triggers a checkpoint. Context accumulation degrades quality across waves — the user needs the option to `/clear` and resume fresh.
+1. **Check wave count.** If `N % 2 == 0` and `N > 0` (i.e., after waves 2, 4, 6, ...):
 
 2. **Write all state to disk atomically:**
    - Ensure `state.toon` is current (already done in Step 9.2)
-   - Ensure `rolling-context.md` is current
+   - Ensure `rolling-context.md` is current (already done in Step 9.1)
    - Ensure all `stage-context/*.toon` files are current
    - Write a checkpoint marker to `.plan-execution/checkpoint.toon`:
      ```toon
@@ -498,9 +446,28 @@ If verification passed (Step 8):
      ```
      Use atomic write (`.tmp` then rename).
 
-3. **The human gate prompt (Step 9 item 4) serves as the checkpoint prompt.** Do NOT display a separate checkpoint message — the `/clear` + resume guidance is already embedded in the human gate. This avoids double-prompting the user.
+3. **Present checkpoint prompt:**
+   ```
+   ## Context Checkpoint (Wave {N}/{total})
 
-4. **If `--auto`:** the checkpoint data is on disk if the context monitor hook triggers a forced clear later. Continue without pausing.
+   State saved to disk:
+   - Execution state: .plan-execution/state.toon (wave {N} complete)
+   - Rolling context: .plan-execution/rolling-context.md
+   - Stage summaries: .plan-execution/stage-context/
+   - Scope coverage: .plan-execution/scope-coverage.toon
+
+   Waves completed: {N}/{total}
+   Next wave: Wave {N+1} -- {description}
+
+   Run `/clear` for fresh context, then:
+     /loom-plan execute --resume
+   ```
+
+4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue to the next step. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
+
+5. **If not `--auto`:** display the checkpoint prompt and wait for user input:
+   - `continue` -- proceed without clearing (default)
+   - `clear` -- user will manually run `/clear` then `--resume`
 
 #### Step 9.3: Contract Drift Check
 
@@ -558,7 +525,7 @@ Use --resume if you need to re-run any wave.
 - Ask user: fix manually and re-verify / re-run wave / abort
 
 #### Unexpected state
-- If `.plan-execution/.lock` exists with a live PID, abort with warning
+- If `.plan-execution/ephemeral/.lock` exists with a live PID, abort with warning
 - If state.toon is missing or corrupt, offer to reinitialize
 
 ### Automated Quality Gate (--auto mode)
@@ -593,7 +560,7 @@ On retry:
 On escalate:
 1. Set wave status to "failed" in state.toon
 2. Set run status to "paused"
-3. The calling orchestrator (`/loom-auto`) reads state.toon and decides: revise plan or give up
+3. The calling orchestrator (`/loom auto`) reads state.toon and decides: revise plan or give up
 
 **GATE-WARN** (proceed with logged warnings) if:
 - Kit gates returned `gate: warn` (or `gate: fail` with `failAction: warn`)

@@ -43,13 +43,13 @@ Do NOT intercept any of the following:
 
 2. **Refactoring requests**: "Fix the architecture of this module" — use `/loom-plan create`.
 
-3. **Quick cosmetic fixes with no investigation needed**: "Fix the typo in README" — route to `/loom-quick` instead.
+3. **Quick cosmetic fixes with no investigation needed**: "Fix the typo in README" — route to `/loom quick` instead.
 
 4. **Plan-level bug investigations**: "Create a plan to fix all the auth bugs" — route to `/loom-plan create`.
 
 5. **Questions without fix intent**: "Why does this function exist?" — just answer the question.
 
-6. **Already using /loom-bugfix**: If the user explicitly typed `/loom-bugfix`, don't re-route.
+6. **Already using /loom bugfix**: If the user explicitly typed `/loom bugfix`, don't re-route.
 
 ## Disambiguation: Bugfix vs Quick
 
@@ -57,12 +57,12 @@ If the request is ambiguous between a quick fix and a bugfix:
 
 | Signal | Route to |
 |--------|----------|
-| User describes a **symptom** (error message, wrong behavior, crash) | `/loom-bugfix` |
-| User describes the **fix** ("change X to Y", "add a null check") | `/loom-quick` |
-| User says "investigate" or "figure out why" | `/loom-bugfix` |
-| User says "just do" or "real quick" | `/loom-quick` |
+| User describes a **symptom** (error message, wrong behavior, crash) | `/loom bugfix` |
+| User describes the **fix** ("change X to Y", "add a null check") | `/loom quick` |
+| User says "investigate" or "figure out why" | `/loom bugfix` |
+| User says "just do" or "real quick" | `/loom quick` |
 
-When in doubt and the user describes broken behavior: route to `/loom-bugfix`. The overhead of context gathering and impact assessment is worth it for real bugs.
+When in doubt and the user describes broken behavior: route to `/loom bugfix`. The overhead of context gathering and impact assessment is worth it for real bugs.
 
 ## Instructions
 

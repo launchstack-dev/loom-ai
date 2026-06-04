@@ -45,7 +45,7 @@ The orchestrator provides:
 Before generating any proposals, load ALL available project context. This makes proposals specific to the existing codebase rather than generic.
 
 **Full context loading (default):**
-1. `.plan-execution/init-report.toon` — full codebase analysis from `/loom-init` (API endpoints, integrations, patterns, tech debt, documentation gaps)
+1. `.plan-execution/init-report.toon` — full codebase analysis from `/loom init` (API endpoints, integrations, patterns, tech debt, documentation gaps)
 2. `.loom/wiki/pages/` — all wiki pages. These are the richest source:
    - `component-*.md` — existing modules, services, architectural components
    - `api-surface-*.md` — API endpoint groups and integration surfaces
@@ -83,6 +83,54 @@ Generate proposals across these dimensions (skip categories that are fully locke
 | **Scope Boundaries** | What is in/out, MVP vs full, deferred features |
 | **Success Criteria** | How to verify completion, what tests prove it works |
 | **Constraints** | Performance targets, backward compatibility, resource limits |
+| **User-facing impact** | Which existing `flow-*` pages the proposal would disturb; what user-visible exit states are at risk |
+| **Compatibility commitments** | Which existing `contract-*` pages the proposal would touch; whether their `compatibilityPolicy` permits the change |
+
+### Wiki-driven proposal dimensions
+
+Two of the dimensions above derive directly from `.loom/wiki/` content rather than from the refined brief. Surface them in every proposal batch where the wiki has matching pages.
+
+#### User-facing impact (flow-derived)
+
+When reading the wiki to inform proposals, identify every `flow-*` page whose `steps[].touches` intersects the proposed scope (files, components, or pageIds the proposal would modify). For each match, surface the flow to the user under a **Flows touched by this proposal** header, alongside that flow's `exitStates`, so the user can reason about user-visible behavior changes before locking the proposal.
+
+Format inside the relevant proposal:
+
+```
+**Flows touched by this proposal:**
+- `flow-user-signup` (User Signup) — exitStates: user-created, validation-error
+- `flow-password-reset` (Password Reset) — exitStates: reset-emailed, invalid-account
+
+These flows currently reach the listed exit states. Any option you pick should preserve every exit state unless the proposal explicitly retires one.
+```
+
+If a chosen option would remove or rename an `exitState`, the proposal MUST flag it as a **Scope risk** with the impacted flow pageId. Don't bury this — exit-state changes are user-visible regressions if not deliberate.
+
+#### Compatibility commitments (contract-derived)
+
+When the wiki contains `contract-*` pages whose `producers[]`, `consumers[]`, or `shapeFiles[]` intersect the proposed scope, surface them to the user under a **Contracts you must preserve** header, listing each contract's `shape` and `compatibilityPolicy`. This is the compatibility commitment the user is already on the hook for — the proposal either preserves it or knowingly breaks it.
+
+Format inside the relevant proposal:
+
+```
+**Contracts you must preserve:**
+- `contract-user-create` (User Create Contract)
+  - shape: POST /api/users { email, password, name? } -> 201 { id, email, name } | 400
+  - compatibilityPolicy: backward-compatible
+- `contract-billing-webhook` (Billing Webhook Payload)
+  - shape: { event: string, accountId: string, amountCents: int, occurredAt: iso8601 }
+  - compatibilityPolicy: additive-only
+```
+
+A proposal that requires changing a contract whose `compatibilityPolicy` is `backward-compatible` or `additive-only` is a **higher-risk proposal**. Flag it prominently with a Scope risk warning:
+
+```
+**Scope risk (compatibility):** Option B modifies `contract-user-create`, which is marked `backward-compatible`. Choosing this option requires either (a) a backward-compatible extension only, or (b) a version bump and migration plan for existing consumers: component-user-service, component-admin-portal.
+```
+
+For contracts with `compatibilityPolicy: full-semver` or `none`, list the contract for awareness but do not escalate to Scope risk — the policy already accommodates change.
+
+These two wiki-driven dimensions are **additive** to the existing proposal-generation logic. They run alongside Architecture, Data Model, Auth & Security, etc. — they do not replace them. If the wiki has no matching flow or contract pages, simply skip these dimensions for that proposal batch.
 
 ### Step 1: Analyze Context
 

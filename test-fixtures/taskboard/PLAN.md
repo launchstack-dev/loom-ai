@@ -300,7 +300,7 @@ Two independent tracks execute simultaneously. Neither track may modify files ow
 - `src/middleware/error-handler.ts` (exports)
 
 **Cross-Boundary Requests to Process:**
-- Any requests from Wave 1 agents in `.plan-execution/requests/`
+- Any requests from Wave 1 agents in `.plan-execution/ephemeral/requests/`
 
 ---
 

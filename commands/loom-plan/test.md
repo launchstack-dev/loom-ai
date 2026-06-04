@@ -21,7 +21,7 @@ Parse remaining arguments:
 
 #### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` section "Orchestration Status".
 
 #### Step 0: Gather Context
 

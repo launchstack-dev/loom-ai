@@ -49,29 +49,23 @@ Additional context (provided in both modes):
 
 ---
 
-## Step 0: Wiki Context Query
+## Step 0: Wiki Quality History Query
 
-Before generating criteria, query the project wiki for quality history and architectural context to inform criteria priorities, constraints, and known problem areas.
+Before generating criteria, query the project wiki for quality history to inform criteria priorities and known problem areas.
 
 1. **Check for wiki.** If `.loom/wiki/` exists:
    - Search for entries tagged with `quality`, `bug`, `regression`, `test-failure`, `security`, `performance`, or `incident`.
    - Extract recurring problem patterns (e.g., "auth bypasses found in 3 reviews", "N+1 queries in user listing").
    - Extract previously established quality baselines (e.g., "test coverage at 85%", "zero critical security findings since M-02").
 
-2. **Read architectural context pages:**
-   - **`decision-*` pages** — Locked architectural decisions constrain what criteria are valid. If a decision specifies "repository pattern with raw SQL", criteria should verify parameterized queries, not ORM usage. If a decision locks a specific auth strategy, don't generate criteria that test alternative approaches.
-   - **`convention-*` pages** — Coding conventions define reviewer dimensions. If a convention mandates "no default exports", add that as a code-review dimension. If a convention specifies error handling patterns, generate criteria that verify adherence.
-   - **`pattern-*` pages** — Established patterns inform test generation. If a pattern documents the middleware chain approach, generate tests that verify middleware ordering, not alternative architectures.
-   - **`structure-*` pages** — Directory layout blueprints inform file ownership validation. Use them to verify that plan phase boundaries align with documented directory structure.
-
-3. **Integrate quality history into criteria discovery:**
+2. **Integrate quality history into criteria discovery:**
    - Recurring problems → elevate related criteria to `P0` and `blocking: true` (e.g., if auth bypasses recur, security review criteria become P0).
    - Known regressions → add explicit regression-prevention criteria with `source: wiki-history`.
    - Quality baselines → use as pass conditions for soft criteria (e.g., if coverage was 85%, set that as the floor).
 
-4. **If `.loom/wiki/` does not exist:** skip this step. No wiki context available. Proceed with standard criteria discovery.
+3. **If `.loom/wiki/` does not exist:** skip this step. No quality history available. Proceed with standard criteria discovery.
 
-Wiki is context, not authority — it informs priority, blocking decisions, and reviewer dimensions but does not override explicit plan acceptance criteria or user instructions.
+Quality history is advisory — it informs priority and blocking decisions but does not override explicit plan acceptance criteria.
 
 ---
 
@@ -144,15 +138,59 @@ If `scope-contract.toon` exists:
 - `successCriteria` with `verificationMethod` containing "test", "review", "security" → criteria candidates
 - Non-goals → explicitly exclude from criteria
 
+### 1e. Wiki Flow Cross-Reference (`source: wiki-flow`)
+
+If `.loom/wiki/` exists, scan every `flow-*` page and identify those whose `steps[].touches` intersects the plan's scope (the files, components, or pageIds the plan is going to modify). For each intersecting flow, auto-emit a hard criterion that preserves user-visible behavior:
+
+- **Per significant flow** — emit ONE criterion. Two acceptable phrasings, pick whichever fits the flow:
+  - Aggregate form: `"All {flow-title} exit states preserved"` — appropriate when the flow has multiple `exitStates` and the plan should not change any.
+  - Targeted form: `"Flow {flow-title} continues to reach {exitState} for valid inputs"` — appropriate when one specific exit state is the user-visible success path that must remain reachable.
+
+Each emitted criterion:
+- `source: wiki-flow`
+- `priority: P1` by default; elevate to `P0` if the flow is referenced by the plan's acceptance criteria, by `CONTEXT.md`, or by the roadmap.
+- `blocking: true` if the flow has `subtype: user-journey` (user-facing regressions block ship). Other flow subtypes (`system-pipeline`, `scheduled-job`, `event-driven`, `lifecycle`) default to `blocking: false` (advisory) unless the plan elevates them.
+- `confidence: medium` (the wiki snapshot is authoritative but the criterion is auto-derived).
+- The rationale must cite the flow pageId so reviewers can trace the criterion back.
+
+Skip flows whose `steps[].touches` does NOT intersect the plan's scope — emitting criteria for unrelated flows just inflates the criteria set without informing convergence.
+
+### 1f. Wiki Contract Cross-Reference (`source: wiki-contract`)
+
+If `.loom/wiki/` exists, scan every `contract-*` page and identify those whose `producers[]`, `consumers[]`, or `shapeFiles[]` intersects the plan's scope. For each intersecting contract:
+
+- **Per contract** — emit ONE criterion of the form: `"Contract {contract-title} shape preserved per compatibilityPolicy: {policy}"`.
+- `source: wiki-contract`
+- `priority: P0` when `compatibilityPolicy` is `backward-compatible` or `additive-only` (these are the strict policies — violating them is a breaking change). `priority: P1` for `full-semver`. `priority: P2` for `none`.
+- `blocking: true` when `compatibilityPolicy` is `backward-compatible` or `additive-only`. `blocking: false` (advisory) for `full-semver` and `none`.
+- `confidence: high` (contracts are explicit shape commitments — the wiki page IS the spec).
+- The rationale must cite the contract pageId, the `compatibilityPolicy`, and the relevant `producers` / `consumers` that intersect the plan's scope.
+
+Additionally, for each `breakingChanges[]` entry on a touched contract, emit one **info-severity** criterion listing the breaking change as a known risk for this plan:
+
+- Phrasing: `"Known risk: {contract-title} previously broke {policy} with: {breaking-change-entry}"`.
+- `source: wiki-contract`
+- `priority: P2`
+- `blocking: false`
+- `severity: info` (carried in the rationale or notes column)
+- `confidence: high` (sourced directly from the contract page's `breakingChanges[]`).
+
+These info-severity criteria are not gating — they exist so reviewers can surface "this contract has a track record of breaking changes; tread carefully" rather than silently inherit risk.
+
+### Wiki-source priority interaction with Step 0
+
+Step 0's wiki quality-history pass (`source: wiki-history`) remains in effect and runs first — it captures recurring problems and regression baselines independent of the plan's scope. Sections 1e and 1f are **additive** sources of criteria that derive specifically from flow and contract pages intersecting the current plan's scope. A single plan may produce criteria from `wiki-history` (recurring quality problems), `wiki-flow` (preserve user-visible behavior of touched flows), and `wiki-contract` (preserve shape commitments of touched contracts) simultaneously — they are not mutually exclusive.
+
 ### Discovery Output
 
 Build an internal candidate list. For each candidate:
 - Name, description, rationale
 - Type: hard (testable) or soft (reviewable)
 - Recommended verifier, pass condition, blocking status
-- Priority and source (valid sources: `plan-acceptance`, `roadmap-acceptance`, `plan-implied`, `inferred`, `user-added`, `wiki-history`)
-- Confidence: high (explicit in plan/roadmap), medium (implied), low (inferred)
+- Priority and source (valid sources: `plan-acceptance`, `roadmap-acceptance`, `plan-implied`, `inferred`, `user-added`, `wiki-history`, `wiki-flow`, `wiki-contract`)
+- Confidence: high (explicit in plan/roadmap, or sourced from a contract page), medium (implied, or auto-derived from a flow page), low (inferred from codebase signals)
 - If wiki quality history elevated the priority or blocking status, note this in the rationale
+- If a `wiki-flow` or `wiki-contract` criterion was emitted, the rationale MUST cite the originating pageId (and for contracts, the `compatibilityPolicy`)
 
 ---
 
@@ -397,7 +435,7 @@ Return a standard AgentResult with:
 
 ## Per-Plan Auto-Wrapping
 
-When invoked by `/loom-auto` or `/loom-plan execute` with convergence enabled, the criteria planner can auto-wrap any plan phase:
+When invoked by `/loom auto` or `/loom execute` with convergence enabled, the criteria planner can auto-wrap any plan phase:
 
 1. Read the phase's acceptance criteria
 2. Run discovery in `--auto` mode

@@ -20,11 +20,11 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 
 | Command | Description |
 |---------|-------------|
-| `/loom-init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
-| `/loom-init --full` | Onboarding + chain into roadmap creation |
-| `/loom-init --full --from "desc"` | Onboarding + roadmap from description |
-| `/loom-init --audit-only` | Analyze only, don't write files |
-| `/loom-init --format all` | Generate CLAUDE.md + AGENTS.md + .cursorrules |
+| `/loom init` | Brownfield onboarding: analyze codebase, generate CLAUDE.md + CONTEXT.md |
+| `/loom init --full` | Onboarding + chain into roadmap creation |
+| `/loom init --full --from "desc"` | Onboarding + roadmap from description |
+| `/loom init --audit-only` | Analyze only, don't write files |
+| `/loom init --format all` | Generate CLAUDE.md + AGENTS.md + .cursorrules |
 
 #### Roadmapping & Planning
 
@@ -71,45 +71,45 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-plan execute --wave N` | Re-run a single wave |
 | `/loom-plan execute --contracts-only` | Run only Wave 0 (contracts) |
 | `/loom-plan execute --no-auto-commit` | Disable per-wave auto-commits |
-| `/loom-auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
-| `/loom-auto --plan PLAN.md` | Autonomous pipeline from existing plan |
-| `/loom-auto --resume` | Resume autonomous pipeline from saved state |
-| `/loom-auto --max-iterations N` | Cap outer loop iterations (default: 3) |
-| `/loom-auto --max-agents N` | Cap total agent spawns (default: 50) |
-| `/loom-auto --dry-run` | Show pipeline plan without executing |
-| `/loom-auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
-| `/loom-auto --no-auto-commit` | Disable per-wave and per-iteration auto-commits |
-| `/loom-auto --converge-target <path>` | Enable target convergence with a golden target file |
-| `/loom-auto --converge-config <path>` | Enable target convergence with existing harness config |
-| `/loom-auto --converge-criteria` | Enable criteria convergence (TDD + reviews) for each plan phase |
-| `/loom-auto --converge-criteria --reviewers X,Y` | Criteria convergence with specific reviewer types |
-| `/loom-converge --target <path>` | Target convergence: compare implementation against deterministic reference |
-| `/loom-converge --criteria` | Criteria convergence: TDD + reviews until all conditions pass |
-| `/loom-converge --criteria --phase N` | Criteria convergence for a specific plan phase |
-| `/loom-converge --criteria --reviewers security,code-review` | Criteria convergence with specific reviewer types |
-| `/loom-converge --criteria --no-soft` | Criteria convergence with tests only (no agent reviews) |
-| `/loom-converge --criteria --no-hard` | Review-only convergence (no tests, just agent reviews on existing code) |
-| `/loom-converge --config <path>` | Run convergence with existing harness config (either mode) |
-| `/loom-converge --max-iterations N` | Cap convergence iterations (default: 10) |
-| `/loom-converge --tolerance <threshold>` | Global tolerance override for target mode (0.0-1.0) |
-| `/loom-converge --dry-run` | Parse targets/criteria + build harness, show setup, stop before loop |
-| `/loom-converge --resume` | Resume convergence from saved state (either mode) |
-| `/loom-converge --status` | Show current convergence state |
-| `/loom-quick "task description"` | Execute a quick task (auto-detects mode) |
-| `/loom-quick --append "task"` | Force append as new plan phase |
-| `/loom-quick --inject "task"` | Force inject into running execution |
-| `/loom-quick --no-verify "task"` | Skip post-execution verification |
+| `/loom auto --from "description"` | Full autonomous pipeline: plan → build → test → review → fix loops |
+| `/loom auto --plan PLAN.md` | Autonomous pipeline from existing plan |
+| `/loom auto --resume` | Resume autonomous pipeline from saved state |
+| `/loom auto --max-iterations N` | Cap outer loop iterations (default: 3) |
+| `/loom auto --max-agents N` | Cap total agent spawns (default: 50) |
+| `/loom auto --dry-run` | Show pipeline plan without executing |
+| `/loom auto --stop-after <stage>` | Stop after named stage (roadmap, plan, execute, converge, test, review, fix) |
+| `/loom auto --no-auto-commit` | Disable per-wave and per-iteration auto-commits |
+| `/loom auto --converge-target <path>` | Enable target convergence with a golden target file |
+| `/loom auto --converge-config <path>` | Enable target convergence with existing harness config |
+| `/loom auto --converge-criteria` | Enable criteria convergence (TDD + reviews) for each plan phase |
+| `/loom auto --converge-criteria --reviewers X,Y` | Criteria convergence with specific reviewer types |
+| `/loom converge --target <path>` | Target convergence: compare implementation against deterministic reference |
+| `/loom converge --criteria` | Criteria convergence: TDD + reviews until all conditions pass |
+| `/loom converge --criteria --phase N` | Criteria convergence for a specific plan phase |
+| `/loom converge --criteria --reviewers security,code-review` | Criteria convergence with specific reviewer types |
+| `/loom converge --criteria --no-soft` | Criteria convergence with tests only (no agent reviews) |
+| `/loom converge --criteria --no-hard` | Review-only convergence (no tests, just agent reviews on existing code) |
+| `/loom converge --config <path>` | Run convergence with existing harness config (either mode) |
+| `/loom converge --max-iterations N` | Cap convergence iterations (default: 10) |
+| `/loom converge --tolerance <threshold>` | Global tolerance override for target mode (0.0-1.0) |
+| `/loom converge --dry-run` | Parse targets/criteria + build harness, show setup, stop before loop |
+| `/loom converge --resume` | Resume convergence from saved state (either mode) |
+| `/loom converge --status` | Show current convergence state |
+| `/loom quick "task description"` | Execute a quick task (auto-detects mode) |
+| `/loom quick --append "task"` | Force append as new plan phase |
+| `/loom quick --inject "task"` | Force inject into running execution |
+| `/loom quick --no-verify "task"` | Skip post-execution verification |
 
 #### Session Management
 
 | Command | Description |
 |---------|-------------|
-| `/loom-pause` | Snapshot workflow state for session handoff |
-| `/loom-resume` | Restore context from paused session |
-| `/loom-do "text"` | Smart routing to the right Loom command |
-| `/loom-next` | State-aware next step suggestion |
-| `/loom-profile [name]` | View or switch model cost profile |
-| `/loom-status` | Project status overview |
+| `/loom pause` | Snapshot workflow state for session handoff |
+| `/loom resume` | Restore context from paused session |
+| `/loom do "text"` | Smart routing to the right Loom command |
+| `/loom next` | State-aware next step suggestion |
+| `/loom profile [name]` | View or switch model cost profile |
+| `/loom status` | Project status overview |
 
 #### Review & Testing
 
@@ -265,14 +265,14 @@ When kits are installed, this section dynamically lists them. For example with t
 - `infra-reviewer` -- Dockerfile, CI pipelines, IaC, secrets, resource limits, networking
 - `observability-reviewer` -- Structured logging, metrics, tracing, health checks, alerting
 
-**Target Convergence** (spawned by `/loom-converge --target` or `--plan`):
+**Target Convergence** (spawned by `/loom converge --target` or `--plan`):
 - `convergence-planner-agent` -- Interactive target discovery from plan + codebase
 - `target-parser` -- Normalizes deterministic sources into comparable target manifests
 - `harness-builder` -- Scaffolds comparison infrastructure (diff scripts, config, runner)
 - `delta-analyzer` -- Triages deltas: noise vs actionable, prioritizes fixes
 - `convergence-driver` -- Iteration orchestrator with circuit breakers (stall, regression, budget)
 
-**Criteria Convergence** (spawned by `/loom-converge --criteria`):
+**Criteria Convergence** (spawned by `/loom converge --criteria`):
 - `criteria-planner-agent` -- Discovers criteria from plan, generates test stubs, configures reviewers
 - `criteria-harness-builder` -- Builds test runner + reviewer agent harness with conflict tracking
 - `delta-analyzer` -- Shared with target convergence, layered priority (tests > security > code review)
@@ -296,7 +296,7 @@ Greenfield:
   /loom-roadmap init --from "desc"  -- discussion phase + ROADMAP.md creation
 
 Brownfield (existing codebase):
-  /loom-init                     -- analyze codebase, generate CLAUDE.md + CONTEXT.md
+  /loom init                     -- analyze codebase, generate CLAUDE.md + CONTEXT.md
   /loom-roadmap init --brownfield   -- roadmap informed by existing code
 
 Either path continues:
@@ -326,12 +326,12 @@ Tier 4 -- Qualify:
 
 Or one-shot brownfield:
 ```
-/loom-init --full --from "desc"   -- onboard + roadmap in one step
+/loom init --full --from "desc"   -- onboard + roadmap in one step
 ```
 
 Or fully autonomous:
 ```
-/loom-auto --from "description"    -- plan, build, test, review, fix until done
+/loom auto --from "description"    -- plan, build, test, review, fix until done
 ```
 
 ### Execution Pipeline
@@ -343,7 +343,7 @@ Wave N: implementer-agents (parallel) -> wiring-agent -> verify -> scope drift c
         ^ repeat for each wave
 ```
 
-### Autonomous Pipeline (/loom-auto)
+### Autonomous Pipeline (/loom auto)
 
 ```
 Outer Loop (max 3 iterations):
@@ -354,7 +354,7 @@ Outer Loop (max 3 iterations):
   Gate:    DONE / FIX / REVISE-PLAN / REVISE-ROADMAP / ESCALATE
 ```
 
-### Convergence Pipeline (/loom-converge)
+### Convergence Pipeline (/loom converge)
 
 Two modes sharing a common driver loop:
 
@@ -387,7 +387,7 @@ Human approval gate: review criteria + test stubs
 Final: convergence report (pass/fail per criterion, frozen conflicts)
 ```
 
-Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` -- the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
+Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/ephemeral/progress/{taskId}.toon` -- the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
 
 ### File Structure (during execution)
 
