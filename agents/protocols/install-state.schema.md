@@ -94,7 +94,7 @@ The v2→v3 reader is implemented in `/loom-upgrade` and triggered automatically
 v2 → v3 migration steps:
 1. Read v2 install-state.toon (schemaVersion: 2).
 2. Default loomCoreVersion to "0.0.0", loomHooksVersion to "0.0.0".
-3. Default catalogVersion to 2 (the current).
+3. Default catalogVersion to 2 (the v2-era default — refreshed by Rule 13 in the same upgrade pass).
 4. For each item in v2 items[]:
    - Compute sha256 of file at targetPath (best-effort; missing files → skip with warning).
    - Assign component = "loom-core" for all items (v2 has no component concept).
@@ -104,6 +104,10 @@ v2 → v3 migration steps:
 ```
 
 After migration, the next `/loom-upgrade` will refresh `loomCoreVersion`, `loomHooksVersion`, and split components correctly based on the new release tarball's manifest.
+
+## Forward Compat for v2 Readers
+
+A v2 reader (a hook or installer built before v3 shipped) that encounters a v3 file MUST fail closed — treat the file as outdated/unknown and refuse to operate. Do not attempt best-effort parsing: a v3 file with `protocolVersion: 3` and an unfamiliar `components[]` block contains semantics a v2 reader cannot honor, and any "best-effort" path will silently lose integrity guarantees. This rule mirrors the fail-closed posture on `protocolVersion` mismatch above.
 
 ## Atomic Write Discipline
 

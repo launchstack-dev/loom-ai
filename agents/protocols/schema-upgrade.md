@@ -628,7 +628,7 @@ items[1]{name,type,source,targetPath,sha256,component,installedAt}:
 3. Write atomically.
 4. Re-run detection — must return `outdated: false`.
 
-**Ordering with Rule 12**: When both rules apply in the same upgrade pass, Rule 12 runs first so Rule 13 can read the freshly-written `loomCoreVersion` / `loomHooksVersion` from `install-state.toon`.
+**Ordering with Rule 12**: When both rules apply in the same upgrade pass, Rule 12 runs first. Rule 13's `MigrationOptions` requires `coreVersion` and `hooksVersion` — the orchestrator passes these from the v3 install-state Rule 12 just wrote. The dependency is encoded in Rule 13's type signature (required option fields), not just in prose: a caller that forgets to pass them fails TypeScript compilation before runtime.
 
 **Before** (v2):
 ```yaml
@@ -671,9 +671,10 @@ When a future release bumps a schema (e.g., `install-state` v3→v4), follow thi
 
 2. **Add the migration step.** In the schema's migrator module (e.g., `hooks/lib/install-state-migrator.ts`):
    - Add a new pure function `migrateInstallStateVNToVN+1(input, opts) → output`.
-   - Add a `MIGRATIONS["N->N+1"]` entry pointing to it.
-   - Bump the exported `CURRENT_VERSION` constant to match the registry.
-   - The walker (`migrateToLatest`) needs no changes — it iterates over `MIGRATIONS` keys.
+   - Add a `MIGRATIONS["N->N+1"]` entry pointing to it. Remember `MIGRATIONS` is `Object.freeze`'d at module load — your new entry must be in the literal at module-init time, not added later.
+   - Bump the exported `CURRENT_VERSION` constant to match the registry. The registry-parity test guards against drift between these two values.
+   - The walker (`migrateToLatest`) needs no changes — it iterates over the supplied registry (default: `MIGRATIONS`).
+   - **MigrationOptions discipline.** If your new step needs options the prior steps didn't, extend `MigrationOptions` with OPTIONAL fields only (`fieldName?: T`). Required-option changes break backward compat for chain walks — callers running v(N-2)→v(N) need to satisfy your v(N-1)→v(N) options without knowing what they are. Reserve required-option breakage for full version-major bumps where every step is being rewritten.
 
 3. **Add a fixture pair.** In `test-fixtures/<schema>-migration/`:
    - `vN-input.toon` (or `.yaml`) — sample document at the prior version.
