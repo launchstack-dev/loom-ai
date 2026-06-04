@@ -30,6 +30,8 @@ import {
   MissingMigrationStepError,
 } from "../../hooks/lib/migration-errors.js";
 
+import { parseToon, parseToonArray } from "../../hooks/lib/toon-reader.js";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadFixture(rel: string): string {
@@ -807,5 +809,153 @@ describe("detectLibraryCatalogVersion — line-anchored + integer-only", () => {
     // collapses to "pre-v2" (now reported as v2-equivalent for chain compat).
     expect(result.version).toBe(2);
     expect(result.outdated).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fixture parity — v2 input file migrated produces v3 expected file
+// ---------------------------------------------------------------------------
+
+describe("fixture parity — install-state", () => {
+  it("migrating parsed v2-input.toon produces the same shape as parsed v3-expected.toon", () => {
+    const v2Content = loadFixture("../../test-fixtures/install-state-migration/v2-input.toon");
+    const v3ExpectedContent = loadFixture("../../test-fixtures/install-state-migration/v3-expected.toon");
+
+    const v2Scalars = parseToon(v2Content);
+    const v2Items = parseToonArray(v2Content, "items") as unknown as Array<{
+      name: string;
+      type: string;
+      source: string;
+      targetPath: string;
+      installedAt: string;
+    }>;
+    const v2: InstallStateV2 = {
+      schemaVersion: 2,
+      lastSynced: String(v2Scalars["lastSynced"]),
+      items: v2Items,
+    };
+
+    const v3 = migrateInstallStateV2ToV3(v2, {
+      now: () => FIXED_NOW,
+      sha256Resolver: () => FIXED_SHA,
+    });
+
+    const expectedScalars = parseToon(v3ExpectedContent);
+    const expectedComponents = parseToonArray(v3ExpectedContent, "components");
+    const expectedItems = parseToonArray(v3ExpectedContent, "items");
+
+    expect(v3.schemaVersion).toBe(Number(expectedScalars["schemaVersion"]));
+    expect(v3.protocolVersion).toBe(Number(expectedScalars["protocolVersion"]));
+    expect(v3.lastSynced).toBe(expectedScalars["lastSynced"]);
+    expect(v3.loomCoreVersion).toBe(expectedScalars["loomCoreVersion"]);
+    expect(v3.loomHooksVersion).toBe(expectedScalars["loomHooksVersion"]);
+    expect(v3.catalogVersion).toBe(Number(expectedScalars["catalogVersion"]));
+
+    expect(v3.components).toHaveLength(expectedComponents.length);
+    expect(v3.components[0].name).toBe(expectedComponents[0].name);
+    expect(v3.components[0].version).toBe(expectedComponents[0].version);
+    expect(v3.components[0].kind).toBe(expectedComponents[0].kind);
+    expect(v3.components[0].installedAt).toBe(expectedComponents[0].installedAt);
+
+    expect(v3.items).toHaveLength(expectedItems.length);
+    for (let i = 0; i < v3.items.length; i++) {
+      expect(v3.items[i].name).toBe(expectedItems[i].name);
+      expect(v3.items[i].type).toBe(expectedItems[i].type);
+      expect(v3.items[i].source).toBe(expectedItems[i].source);
+      expect(v3.items[i].targetPath).toBe(expectedItems[i].targetPath);
+      expect(v3.items[i].sha256).toBe(expectedItems[i].sha256);
+      expect(v3.items[i].component).toBe(expectedItems[i].component);
+      expect(v3.items[i].installedAt).toBe(expectedItems[i].installedAt);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Registry parity — schema-versions.toon → CURRENT_VERSION constants
+// ---------------------------------------------------------------------------
+
+describe("schema-versions.toon registry parity", () => {
+  it("install-state CURRENT_VERSION matches the registry entry", () => {
+    const registry = loadFixture("../../agents/protocols/schema-versions.toon");
+    const entries = parseToonArray(registry, "registry") as unknown as Array<{
+      schema: string;
+      currentVersion: number;
+    }>;
+    const installState = entries.find((e) => e.schema === "install-state");
+    expect(installState).toBeDefined();
+    expect(INSTALL_STATE_CURRENT_VERSION).toBe(Number(installState!.currentVersion));
+  });
+
+  it("library-catalog CURRENT_VERSION matches the registry entry", () => {
+    const registry = loadFixture("../../agents/protocols/schema-versions.toon");
+    const entries = parseToonArray(registry, "registry") as unknown as Array<{
+      schema: string;
+      currentVersion: number;
+    }>;
+    const libraryCatalog = entries.find((e) => e.schema === "library-catalog");
+    expect(libraryCatalog).toBeDefined();
+    expect(LIBRARY_CATALOG_CURRENT_VERSION).toBe(Number(libraryCatalog!.currentVersion));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Targeted coverage gaps from review
+// ---------------------------------------------------------------------------
+
+describe("targeted coverage gaps", () => {
+  function makeV2(): InstallStateV2 {
+    return {
+      schemaVersion: 2,
+      lastSynced: "2026-04-15T12:00:00Z",
+      items: [],
+    };
+  }
+
+  it("snapshot block is absent on v2→v3 migration", () => {
+    const v3 = migrateInstallStateV2ToV3(makeV2(), { now: () => FIXED_NOW });
+    expect(v3.snapshot).toBeUndefined();
+  });
+
+  it("override defaultCoreVersion alone leaves loomHooksVersion at default", () => {
+    const v3 = migrateInstallStateV2ToV3(makeV2(), {
+      now: () => FIXED_NOW,
+      defaultCoreVersion: "1.2.3",
+    });
+    expect(v3.loomCoreVersion).toBe("1.2.3");
+    expect(v3.loomHooksVersion).toBe("0.0.0");
+    expect(v3.components[0].version).toBe("1.2.3");
+  });
+
+  it("override defaultHooksVersion alone leaves loomCoreVersion at default", () => {
+    const v3 = migrateInstallStateV2ToV3(makeV2(), {
+      now: () => FIXED_NOW,
+      defaultHooksVersion: "9.9.9",
+    });
+    expect(v3.loomCoreVersion).toBe("0.0.0");
+    expect(v3.loomHooksVersion).toBe("9.9.9");
+  });
+
+  it("schemaVersion: 0 is reported as unknown", () => {
+    const result = detectInstallStateVersion("schemaVersion: 0\n");
+    expect(result.version).toBe("unknown");
+    expect(result.outdated).toBe(true);
+  });
+
+  it("schemaVersion: 99 is reported as unknown", () => {
+    const result = detectInstallStateVersion("schemaVersion: 99\n");
+    expect(result.version).toBe("unknown");
+  });
+
+  it("wrong-casing SchemaVersion falls to pre-v2 (case-sensitive regex)", () => {
+    const result = detectInstallStateVersion("SchemaVersion: 2\n");
+    expect(result.version).toBe(2); // collapses to v2-equivalent pre-v2 path
+    expect(result.reason).toMatch(/missing schemaVersion/);
+  });
+
+  it("trailing-whitespace on schemaVersion is tolerated", () => {
+    const result = detectInstallStateVersion("schemaVersion: 2   \n");
+    expect(result.version).toBe(2);
+    expect(result.outdated).toBe(true);
+    expect(result.reason).toMatch(/Rule 12/);
   });
 });
