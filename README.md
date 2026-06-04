@@ -103,24 +103,24 @@ If `/loom` returns "Unknown command", confirm `~/.claude/commands/loom.md` exist
 Once installed, in a project directory:
 
 ```
-/loom init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
+/loom-init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
 /loom-library use loom-plan         Pulls the plan/execution agents on demand
 /loom-roadmap init                  Creates ROADMAP.md from a guided interview
 /loom-plan create                   Generates PLAN.md (dual-track: plan + criteria)
 /loom-plan execute                  Wave-by-wave build with hook enforcement
-/loom converge --criteria --full    Run all 4 convergence tiers
+/loom-converge --criteria --full    Run all 4 convergence tiers
 ```
 
 For a single-shot autonomous run:
 
 ```
-/loom auto --from "add user auth with RBAC and team management"
+/loom-auto --from "add user auth with RBAC and team management"
 ```
 
 For a one-off task in an existing project:
 
 ```
-/loom quick "add rate limiting to /api/* endpoints"
+/loom-quick "add rate limiting to /api/* endpoints"
 ```
 
 ### Pull what you need
@@ -141,7 +141,7 @@ After the bootstrap, kits are pulled on demand:
 /loom-library list                  See installed vs available
 /loom-library sync                  Re-pull all installed items, detect changes
 /loom-library update                Fetch new catalog entries + update everything
-/loom upgrade                       Atomic upgrade (signed-release path, in flight)
+/loom-upgrade                       Atomic upgrade (signed-release path, in flight)
 ```
 
 ```bash
@@ -207,9 +207,9 @@ See `docs/scenarios-authoring-template.md` for authoring guidance and `agents/pr
 
 ## Convergence Loop
 
-`/loom converge` is the iteration engine that closes the gap between what was built and what was specified. It has two modes:
+`/loom-converge` is the iteration engine that closes the gap between what was built and what was specified. It has two modes:
 
-- **Criteria mode** (`--criteria`) — TDD + reviews. Iterate until every scenario passes and every reviewer approves. This is the default for `/loom auto` and the recommended mode for most work.
+- **Criteria mode** (`--criteria`) — TDD + reviews. Iterate until every scenario passes and every reviewer approves. This is the default for `/loom-auto` and the recommended mode for most work.
 - **Target mode** (`--target <path>` or `--plan`) — match a deterministic reference (a golden file, an API response, a known-good output). Iterate until the delta against the reference reaches zero.
 
 ### Iteration shape
@@ -267,10 +267,10 @@ By default the loop commits at the end of each iteration that produces file chan
 ### Inspect and resume
 
 ```
-/loom converge --status              Show iteration count, per-tier gate status, failing targets,
+/loom-converge --status              Show iteration count, per-tier gate status, failing targets,
                                      stall/regression detection, next-action suggestion
 
-/loom converge --resume              Continue from saved state. Refuses if previous run
+/loom-converge --resume              Continue from saved state. Refuses if previous run
                                      converged; warns if it stalled or regressed.
 ```
 
@@ -279,12 +279,12 @@ By default the loop commits at the end of each iteration that produces file chan
 Run a single tier or all four:
 
 ```
-/loom converge --criteria --tier unit          Just unit tests
-/loom converge --criteria --tier e2e           Just E2E (Playwright headless by default; --chrome for MCP)
-/loom converge --criteria --full               All 4 tiers in order
-/loom converge --criteria --phase 3            Scope to plan phase 3
-/loom converge --criteria --feature F-01       Scope to feature F-01
-/loom converge --criteria --reviewers security,architecture   Specific reviewer types
+/loom-converge --criteria --tier unit          Just unit tests
+/loom-converge --criteria --tier e2e           Just E2E (Playwright headless by default; --chrome for MCP)
+/loom-converge --criteria --full               All 4 tiers in order
+/loom-converge --criteria --phase 3            Scope to plan phase 3
+/loom-converge --criteria --feature F-01       Scope to feature F-01
+/loom-converge --criteria --reviewers security,architecture   Specific reviewer types
 ```
 
 ### Target mode
@@ -292,16 +292,16 @@ Run a single tier or all four:
 For deterministic outputs (API responses, generated files, golden schemas):
 
 ```
-/loom converge --plan                          Interactive target discovery (planner asks questions)
-/loom converge --target golden/api.json        Direct target file, skip planner
-/loom converge --target golden/api.json --tolerance 0.95   Allow up to 5% diff
+/loom-converge --plan                          Interactive target discovery (planner asks questions)
+/loom-converge --target golden/api.json        Direct target file, skip planner
+/loom-converge --target golden/api.json --tolerance 0.95   Allow up to 5% diff
 ```
 
 Target mode is the right choice when "correct" is a known file you can diff against. Criteria mode is the right choice when "correct" is a set of scenarios that must hold.
 
 ## Testing Pipeline
 
-Loom treats tests as a planning artifact, not an afterthought. The default mode for `/loom auto` and `/loom-plan create` is **dual-track**: a `plan-builder-agent` and a `criteria-planner-agent` run in parallel from the same roadmap input — neither reads the other's output. An `interpretation-reviewer-agent` then cross-references the two and surfaces conflicts before any code is written.
+Loom treats tests as a planning artifact, not an afterthought. The default mode for `/loom-auto` and `/loom-plan create` is **dual-track**: a `plan-builder-agent` and a `criteria-planner-agent` run in parallel from the same roadmap input — neither reads the other's output. An `interpretation-reviewer-agent` then cross-references the two and surfaces conflicts before any code is written.
 
 ```
                   ROADMAP.md
@@ -350,10 +350,10 @@ The `implementer-agent` must confirm test stubs **fail** before writing implemen
 ```
 /loom-plan test                    Generate test stubs from criteria-plan + run them
 /loom-plan test --run              Generate + execute in one shot
-/loom converge --criteria --tier unit          Just unit tier
-/loom converge --criteria --tier e2e --chrome  E2E with authenticated browser
-/loom converge --criteria --full               All 4 tiers
-/loom converge --criteria --feature F-01       Scope to one feature
+/loom-converge --criteria --tier unit          Just unit tier
+/loom-converge --criteria --tier e2e --chrome  E2E with authenticated browser
+/loom-converge --criteria --full               All 4 tiers
+/loom-converge --criteria --feature F-01       Scope to one feature
 ```
 
 ### Test artifacts
@@ -377,7 +377,7 @@ The `implementer-agent` must confirm test stubs **fail** before writing implemen
 | Default | security, architecture, plan-compliance + the base built-in reviewers |
 | `--full` | All of the above + extended: performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability |
 
-Plus convergence-tier QA review (`qa-review-agent`) runs at phase boundaries inside `/loom converge --criteria` and produces advisory findings on interpretation drift, coverage gaps, and cross-cutting concerns.
+Plus convergence-tier QA review (`qa-review-agent`) runs at phase boundaries inside `/loom-converge --criteria` and produces advisory findings on interpretation drift, coverage gaps, and cross-cutting concerns.
 
 ### Selecting scope
 
@@ -390,10 +390,10 @@ Plus convergence-tier QA review (`qa-review-agent`) runs at phase boundaries ins
 /loom-code review --full             All reviewers in parallel
 ```
 
-For dimension-scoped iteration inside the convergence loop use `--reviewers` on `/loom converge`:
+For dimension-scoped iteration inside the convergence loop use `--reviewers` on `/loom-converge`:
 
 ```
-/loom converge --criteria --reviewers security,code-review,performance,architecture
+/loom-converge --criteria --reviewers security,code-review,performance,architecture
 ```
 
 ### The review → fix → re-review cycle
@@ -410,9 +410,9 @@ For dimension-scoped iteration inside the convergence loop use `--reviewers` on 
 For iterative review inside the convergence loop:
 
 ```
-/loom converge --criteria --no-soft                        Skip tests; iterate reviews only
-/loom converge --criteria --reviewers security,architecture   Specific reviewers in the loop
-/loom converge --criteria --no-hard                        Reviews + tests, but skip review-only iteration
+/loom-converge --criteria --no-soft                        Skip tests; iterate reviews only
+/loom-converge --criteria --reviewers security,architecture   Specific reviewers in the loop
+/loom-converge --criteria --no-hard                        Reviews + tests, but skip review-only iteration
 ```
 
 Convergence iterates: review → fixer fan-out → re-review → driver decides converged/stalled/regression. The same circuit breakers apply (`stalled`, `regression`, `budget_exhausted`).
@@ -427,7 +427,7 @@ The fixer-agent runs scoped: it reads only the findings assigned to it, edits on
 |----------|----------|
 | `critical` | Blocks merge; convergence loop iterates until resolved |
 | `blocking` | Blocks the current convergence tier from passing |
-| `warning` | Advisory; surfaced in `/loom status`; does not block |
+| `warning` | Advisory; surfaced in `/loom-status`; does not block |
 | `info` | Logged to the wiki and the review summary; advisory only |
 
 `--severity critical` on `/loom-code fix` restricts fixers to critical findings only — useful for ship-readiness checks where you want a clean critical/blocking list before merge.
@@ -573,7 +573,7 @@ Selected protocols (47 total in `agents/protocols/`):
 ### Full pipeline
 
 ```
-/loom init                              Brownfield onboarding → CLAUDE.md + wiki
+/loom-init                              Brownfield onboarding → CLAUDE.md + wiki
 /loom-roadmap init --brownfield         Create roadmap informed by existing code
 /loom-roadmap explore "feature idea"    Multi-persona brainstorming (optional)
 /loom-roadmap review                    4 agents review in parallel
@@ -582,7 +582,7 @@ Selected protocols (47 total in `agents/protocols/`):
                                         + interpretation-reviewer blocks on conflicts
 /loom-plan review                       6 agents analyze plan
 /loom-plan execute                      Wave-by-wave with contract-lock + ownership
-/loom converge --criteria --full        4-tier convergence: unit → integration → e2e → qa-review
+/loom-converge --criteria --full        4-tier convergence: unit → integration → e2e → qa-review
 /loom-code review                       9+ reviewers + contract/scenario compliance
 /loom-code fix                          Auto-apply findings
 /loom-plan materialize                  Emit per-domain contract-* wiki pages
@@ -591,7 +591,7 @@ Selected protocols (47 total in `agents/protocols/`):
 ### Autonomous
 
 ```
-/loom auto --from "add user auth with RBAC and team management"
+/loom-auto --from "add user auth with RBAC and team management"
 ```
 
 Prompt refiner → scope interrogation → roadmap → dual-track plan → execute → converge → test → review → fix. Circuit breakers stop the loop if stuck. Contract drift detection per wave.
@@ -601,7 +601,7 @@ Flags: `--skip-preflight`, `--light-preflight`, `--auto` (accept all defaults).
 ### Quick task
 
 ```
-/loom quick "add rate limiting to the API endpoints"
+/loom-quick "add rate limiting to the API endpoints"
 ```
 
 Wiki-context-aware, impact-assessment-aware. On completion, emits a retroactive change proposal via `/loom-change quick-archive` so contract pages stay coherent.
@@ -609,7 +609,7 @@ Wiki-context-aware, impact-assessment-aware. On completion, emits a retroactive 
 ### Bugfix
 
 ```
-/loom bugfix "users see 500 on /api/teams when invited but not active"
+/loom-bugfix "users see 500 on /api/teams when invited but not active"
 ```
 
 Bugfix-analyst-agent isolates the failing scenario, the convergence loop blocks until the scenario passes.
@@ -638,10 +638,10 @@ Bugfix-analyst-agent isolates the failing scenario, the convergence loop blocks 
 Invoke directly or as flags on any command:
 
 ```
-/loom debate "Redis vs Postgres for sessions"
-/loom chain "draft auth API spec"
-/loom vote "best caching strategy" --candidates 3
-/loom triage "fix this production error"
+/loom-debate "Redis vs Postgres for sessions"
+/loom-chain "draft auth API spec"
+/loom-vote "best caching strategy" --candidates 3
+/loom-triage "fix this production error"
 
 /loom-plan create --debate "monolith vs microservices"
 /loom-roadmap init --debate "build vs buy for auth"
@@ -650,37 +650,37 @@ Invoke directly or as flags on any command:
 ### Session management
 
 ```
-/loom pause                     Snapshot state, WIP commit
-/loom resume                    Restore context, continue where you left off
-/loom next                      State-aware suggestion for next step
+/loom-pause                     Snapshot state, WIP commit
+/loom-resume                    Restore context, continue where you left off
+/loom-next                      State-aware suggestion for next step
 /loom do "review my code"       Natural language routing to the right command
-/loom status                    Project overview (test metrics + convergence + ctx budget)
+/loom-status                    Project overview (test metrics + convergence + ctx budget)
 ```
 
 ## Agent Groups
 
 | Group | Agents | Used by |
 |-------|--------|---------|
-| **Pre-flight** | prompt-refiner, questioner | `/loom auto`, `/loom-roadmap init` |
-| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom init` |
+| **Pre-flight** | prompt-refiner, questioner | `/loom-auto`, `/loom-roadmap init` |
+| **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom-init` |
 | **Strategy & UX** | strategy-agent, ux-agent | review pipelines |
 | **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap init` |
 | **Dual-track Planning** | plan-builder, criteria-planner, interpretation-reviewer, feature-coverage, phasing, parallelization, agentic-workflow, context-budget-reviewer | `/loom-plan create`, `/loom-plan review` |
 | **Execution** | contracts, implementer, api-route-creator, api-connector, wiring, verification | `/loom-plan execute` |
-| **Convergence** | convergence-planner, target-parser, harness-builder, criteria-harness-builder, delta-analyzer, convergence-driver | `/loom converge` |
-| **Testing** | acceptance-criteria, unit-test, integration-test, e2e-test-writer, e2e-runner, e2e-test, qa-review | `/loom-plan test`, `/loom converge --criteria` |
+| **Convergence** | convergence-planner, target-parser, harness-builder, criteria-harness-builder, delta-analyzer, convergence-driver | `/loom-converge` |
+| **Testing** | acceptance-criteria, unit-test, integration-test, e2e-test-writer, e2e-runner, e2e-test, qa-review | `/loom-plan test`, `/loom-converge --criteria` |
 | **Code Review** | security, architecture, plan-compliance + 6 built-in | `/loom-code review` |
 | **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-code review --full` |
-| **Stage Teammates** | execute-stage, test-stage, review-stage, fix-stage, converge-stage | `/loom auto` agent-team mode |
+| **Stage Teammates** | execute-stage, test-stage, review-stage, fix-stage, converge-stage | `/loom-auto` agent-team mode |
 | **Architecture Debaters** | tech-stack-debater, migration-architect | debate/chain |
 | **Wiki** | wiki-maintainer, wiki-ingest, wiki-lint, wiki-query | `/loom-wiki`, execution events |
 | **Data** | data-lineage-tracker, data-pipeline-agent, data-quality-gate, data-schema-reviewer, data-test-generator | `/loom-data` |
-| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom init` |
+| **Documentation** | docs-generator, docs-auditor, project-guidance | `/loom-init` |
 | **Utility** | meta-agent, tdd-coach, bugfix-analyst, fixer-agent, auto-dispatcher | various |
 
 ## Orchestration Patterns
 
-Available as direct commands (`/loom debate`) or flags on any command (`--debate`):
+Available as direct commands (`/loom-debate`) or flags on any command (`--debate`):
 
 | Pattern | Best for | How it works |
 |---------|----------|-------------|
@@ -799,7 +799,7 @@ The wiki system and behavioral-guidelines draw from Andrej Karpathy's observatio
 ```
 agents/                      67 agent definitions + 5 stage teammates
   protocols/                 48 protocol files (31 schemas + 17 supporting docs)
-  stage-teammates/           Stage-teammate agents for /loom auto agent-team mode
+  stage-teammates/           Stage-teammate agents for /loom-auto agent-team mode
 commands/                    29 top-level files (12 noun-grouped roots + /loom dispatcher + subcommand verbs)
   loom-plan/                 5 subcommand decomposition files
   loom-roadmap/              6 subcommand decomposition files

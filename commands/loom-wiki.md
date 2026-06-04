@@ -42,7 +42,7 @@ Examples:
 ```
 
 Then display brief wiki status:
-1. Check if `.loom/wiki/` exists. If not: "Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom init` to create one."
+1. Check if `.loom/wiki/` exists. If not: "Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom-init` to create one."
 2. If it exists: count pages in `.loom/wiki/pages/`, read last entry from `.loom/wiki/log.toon`, display:
    ```
    Wiki: {pageCount} pages | Last updated: {timestamp from log}
@@ -68,7 +68,7 @@ Parse arguments after `refresh`:
 |-----------|---------------|
 | `stale` (default) | Pages with `staleness == "stale"` OR `sourceRefs` mtime newer than page `updatedAt` |
 | `aging` | All of `stale` plus pages with `staleness == "aging"` |
-| `legacy` | Only pages whose `summary` equals `"(legacy — pending refresh)"` (left over from `/loom upgrade` Rule 7) |
+| `legacy` | Only pages whose `summary` equals `"(legacy — pending refresh)"` (left over from `/loom-upgrade` Rule 7) |
 | `all` | Every page (equivalent to per-page `ingest --full` page-by-page) |
 
 ### Instructions
@@ -82,7 +82,7 @@ Read these files for context:
 
 #### Step 1: Build candidate list
 
-1. Check `.loom/wiki/` exists. If not: print `Wiki not initialized. Run /loom-wiki ingest --full or /loom init.` and exit.
+1. Check `.loom/wiki/` exists. If not: print `Wiki not initialized. Run /loom-wiki ingest --full or /loom-init.` and exit.
 2. Read `.loom/wiki/index.toon`. Apply the `--scope`, `--page`, and `--category` filters to produce the candidate `pageIds`.
 3. If `--page <pageId>` is set: candidate list is just that single pageId. Warn if `--scope` was also provided.
 4. If candidate list is empty: print `No pages match the refresh scope. Run /loom-wiki status for details.` and exit.
@@ -167,7 +167,7 @@ Read these files for context on wiki conventions:
 
 1. Check if `.loom/wiki/` exists. If not:
    ```
-   Wiki not initialized. Run `/loom init` first, or create the wiki structure manually:
+   Wiki not initialized. Run `/loom-init` first, or create the wiki structure manually:
      mkdir -p .loom/wiki/pages
    ```
    Stop here.
@@ -259,7 +259,7 @@ Next steps:
 
 ### Error Handling
 
-- **Wiki not initialized:** Stop with instructions to run `/loom init`
+- **Wiki not initialized:** Stop with instructions to run `/loom-init`
 - **Ingest agent fails:** Display partial results if any. Suggest retrying with a narrower scope.
 - **Source not found:** "File or directory not found: {path}. Check the path and try again."
 - **URL fetch fails:** "Could not fetch URL: {url}. Check the URL and try again."
@@ -305,7 +305,7 @@ Read these files for context:
 1. Check if `.loom/wiki/` exists. If not and wiki checks requested:
    ```
    Wiki not found at .loom/wiki/. Skipping wiki checks.
-   Run `/loom init` to create the wiki.
+   Run `/loom-init` to create the wiki.
    ```
    If only wiki checks requested (`--wiki`): stop here.
 
@@ -379,7 +379,7 @@ For issues marked auto-fixable in `wiki-lint-rules.md`:
 
 ### Error Handling
 
-- **No wiki and no execution state:** "Nothing to lint. Run `/loom init` to create a wiki, or `/loom-plan execute` to generate execution artifacts."
+- **No wiki and no execution state:** "Nothing to lint. Run `/loom-init` to create a wiki, or `/loom-plan execute` to generate execution artifacts."
 - **Lint agent fails:** Report any findings collected before failure. Suggest re-running with a narrower scope.
 - **Auto-fix fails on a specific issue:** Log the failure, continue with remaining fixes.
 
@@ -409,7 +409,7 @@ Parse arguments after `query`:
 
 1. Check if `.loom/wiki/` exists. If not:
    ```
-   No wiki found. Run `/loom-wiki ingest` or `/loom init` to create one.
+   No wiki found. Run `/loom-wiki ingest` or `/loom-init` to create one.
    ```
    Stop here.
 
@@ -458,7 +458,7 @@ Sources:
 
 ### Error Handling
 
-- **Wiki not initialized:** Stop with instructions to run `/loom init` or `/loom-wiki ingest`
+- **Wiki not initialized:** Stop with instructions to run `/loom-init` or `/loom-wiki ingest`
 - **No query provided:** Show usage example and stop
 - **Query agent fails:** "Wiki query failed. Try a more specific question, or browse pages directly in `.loom/wiki/pages/`."
 - **No relevant pages found:** "No wiki pages matched your query. The wiki may not cover this topic yet. Try `/loom-wiki ingest --source <path>` to add relevant sources."
@@ -482,7 +482,7 @@ You display a comprehensive overview of the project wiki's health and recent act
 
 Check if `.loom/wiki/` exists. If not:
 ```
-Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom init` to create one.
+Wiki not initialized. Run `/loom-wiki ingest --full` or `/loom-init` to create one.
 ```
 Stop here.
 

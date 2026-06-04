@@ -58,7 +58,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
   Active:              {profile name or "inherit"}
 
 ### Suggested Next Step
-  {Run the /loom next logic to determine suggestion, display one-line version}
+  {Run the /loom-next logic to determine suggestion, display one-line version}
 ```
 
 Then render the Wiki Health block (Step 3) if `.loom/wiki/` exists.
@@ -90,7 +90,7 @@ When `.loom/wiki/` exists at the project root, render an additional block:
 - *Component coverage* = (count of `component-*` pages) / (count of significant files in repo per the heuristics in `wiki-conventions.md` § Significance Threshold).
 - *Contract coverage* = (count of `contract-*` pages) / (count of public route handlers detected in the codebase).
 - *Flows* are opt-in (per `wiki-conventions.md` § Flow significance) — they have no auto-coverage metric and display `[opt-in — no target]`.
-- Coverage % is **computed lazily** only when `/loom status` is invoked. If the computation runs > 5 seconds (large monorepos), display `Coverage: (computing — run again in a moment)` and skip to the next field.
+- Coverage % is **computed lazily** only when `/loom-status` is invoked. If the computation runs > 5 seconds (large monorepos), display `Coverage: (computing — run again in a moment)` and skip to the next field.
 
 **Source files:**
 - `pageCount` and category breakdown: parse `.loom/wiki/index.toon` `pages[]` typed array and group by `category`.
@@ -101,5 +101,5 @@ When `.loom/wiki/` exists at the project root, render an additional block:
 ### Error Handling
 
 - **File read errors:** Skip any file that cannot be read. Display "error reading" in its status slot.
-- **No state at all:** If no Loom artifacts exist whatsoever, display: "No Loom artifacts found. Get started with `/loom init` (brownfield) or `/loom-roadmap init --from 'description'` (greenfield)."
+- **No state at all:** If no Loom artifacts exist whatsoever, display: "No Loom artifacts found. Get started with `/loom-init` (brownfield) or `/loom-roadmap init --from 'description'` (greenfield)."
 - **Wiki Health computation timeout:** if coverage % can't be computed in 5s, render the static fields (page count, stale count, days-since-lint/ingest) and substitute `(computing — run again in a moment)` for the coverage lines. The remaining wiki block is always rendered.

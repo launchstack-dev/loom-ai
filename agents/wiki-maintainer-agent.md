@@ -186,7 +186,7 @@ Whenever you create OR update a page — across any event type and any flag — 
 | `updatedAt` | Now (ISO-8601). |
 | `updatedBy` | `wiki-maintainer-agent`. |
 
-**Legacy placeholder replacement.** Pages migrated by `/loom upgrade` Rule 7 carry `summary: "(legacy — pending refresh)"`. On ANY page write touching such a page (any event, any reason), generate a real summary that replaces the placeholder. Once replaced, the placeholder becoming present again is a regression.
+**Legacy placeholder replacement.** Pages migrated by `/loom-upgrade` Rule 7 carry `summary: "(legacy — pending refresh)"`. On ANY page write touching such a page (any event, any reason), generate a real summary that replaces the placeholder. Once replaced, the placeholder becoming present again is a regression.
 
 **Index mirroring.** After writing a page, mirror `summary`, `estimatedTokens`, `subtype`, `category`, `staleness`, and `updatedAt` into the corresponding row of `index.toon`'s `pages[]` typed-array (schemaVersion 2). The orchestrator depends on these mirrored fields for rolling-context packing without page-body reads.
 

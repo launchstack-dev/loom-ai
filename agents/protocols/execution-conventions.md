@@ -70,7 +70,7 @@ All other files in `.plan-execution/` are tracked by git and survive worktree cl
 
 Existing projects using the old layout (where `.plan-execution/.gitignore` contained `*` to ignore everything) need migration before the gitignore negation rules take effect. Without migration, adding `!.plan-execution/` to the project's `.gitignore` causes all stale artifacts to appear as untracked files.
 
-`/loom upgrade` handles this automatically:
+`/loom-upgrade` handles this automatically:
 
 1. Detect the old `.plan-execution/.gitignore` (contains `*`)
 2. Run a debrief on any existing artifacts (flush to `.plan-history/` and wiki)
@@ -79,7 +79,7 @@ Existing projects using the old layout (where `.plan-execution/.gitignore` conta
 5. Create the `ephemeral/` subdirectory structure
 6. Only then apply the gitignore negation rules to the project's `.gitignore`
 
-If `/loom init` or `/loom auto` detect the old layout, they warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first to migrate."
+If `/loom-init` or `/loom-auto` detect the old layout, they warn: "Old .plan-execution/ layout detected. Run `/loom-upgrade` first to migrate."
 
 ## File Naming Conventions
 
@@ -376,7 +376,7 @@ fix(converge-iter-2): pixel diff for login page within tolerance
 
 ### Opting Out
 
-Pass `--no-auto-commit` to `/loom-plan execute`, `/loom converge`, or `/loom auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
+Pass `--no-auto-commit` to `/loom-plan execute`, `/loom-converge`, or `/loom-auto` to disable auto-commits. All code changes accumulate in the working tree as before. Git tags (`plan-exec-wave-N-pre`) are still created regardless of this flag.
 
 ### Interaction with Git Tags
 
@@ -392,7 +392,7 @@ Stage context files capture structured summaries of what happened at each pipeli
 ### When to Write
 
 - **`/loom-plan execute`:** After each wave's verification step -- write `stage-context/contracts.toon` after Wave 0 verification, write `stage-context/execute.toon` after Wave N verification.
-- **`/loom auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
+- **`/loom-auto`:** After each pipeline stage completes -- write the corresponding `stage-context/{stage}.toon` at every stage boundary (execute, test, review, converge, fix).
 
 ### What to Include
 
@@ -455,7 +455,7 @@ Every execution — whether it succeeds, fails, stalls, or is interrupted — MU
 |-------|---------|
 | Execution completes successfully | After final wave verification, before cleanup |
 | Execution fails (circuit breaker, budget exhaustion) | After failure is recorded, before cleanup |
-| Pipeline completes (`/loom auto`) | After final stage, before pipeline-state cleanup |
+| Pipeline completes (`/loom-auto`) | After final stage, before pipeline-state cleanup |
 | Convergence stalls or regresses | After circuit breaker trips, before cleanup |
 | Worktree about to be destroyed | Before `git worktree remove` |
 | Session ends with active execution | Stop hook detects `.plan-execution/state.toon` |
@@ -465,7 +465,7 @@ Every execution — whether it succeeds, fails, stalls, or is interrupted — MU
 
 The Stop hook fires on graceful session end, but force-kill, OOM, or power loss skip all hooks. The debrief never runs. To handle this, orchestrators MUST check for stale execution state at session start:
 
-1. At the beginning of any `/loom auto`, `/loom-plan execute`, or `/loom converge` invocation, check for `.plan-execution/ephemeral/.lock`.
+1. At the beginning of any `/loom-auto`, `/loom-plan execute`, or `/loom-converge` invocation, check for `.plan-execution/ephemeral/.lock`.
 2. If the lock file exists, read the PID from it.
 3. Check if the PID is still running (`kill -0 {pid} 2>/dev/null`).
 4. If the PID is dead (stale lock), the previous session crashed without debriefing:
@@ -564,7 +564,7 @@ failureReason: {if trigger is failure/stall — one-line summary}
 
 ### Opting Out of Debrief Commits
 
-The `--no-auto-commit` flag (already supported by `/loom-plan execute`, `/loom converge`, and `/loom auto`) also applies to the debrief commit. When active:
+The `--no-auto-commit` flag (already supported by `/loom-plan execute`, `/loom-converge`, and `/loom-auto`) also applies to the debrief commit. When active:
 
 - The debrief still runs (artifact copy + wiki update are mandatory)
 - Files are staged but NOT committed
@@ -663,7 +663,7 @@ When a convergence loop regresses beyond recovery, the rollback protocol (`conve
 
 ### Interpretation Conflict Detection
 
-The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
+The `interpretation-reviewer-agent` runs at the qa-review tier (or on-demand via `/loom-auto`). It detects conflicts between agents' interpretations of plan criteria and writes conflict reports to `.plan-execution/conflicts/`. The report format follows `interpretation-conflict.schema.md`, and the aggregate output follows `interpretation-report.schema.md`.
 
 ### E2E Story Verification
 
@@ -687,7 +687,7 @@ Execution events are logged to `.loom/wiki/execution-log.toon` following `execut
 
 ### Schema Upgrades
 
-When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
+When protocol schemas evolve across versions, `schema-upgrade.md` defines the migration procedure. The `/loom-upgrade` command (`loom-upgrade.md`) reads migration definitions and applies transformations to on-disk artifacts. The `interpretation-reviewer-agent` also references `schema-upgrade.md` for backward-compatible schema transitions during conflict detection.
 
 ### Behavioral Guidelines
 

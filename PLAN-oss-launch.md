@@ -43,7 +43,7 @@ Public open-source launch of Loom in a fresh repo under `launchstack-dev`. Polis
 
 - `loom-core` — commands, protocols, schemas. Atomic, prompted updates, semver.
 - `loom-kit-*` — specialized agents, language packs, integrations. Pulled on demand; auto-update on use (opt-in by definition).
-- `loom-hooks` — file-ownership, contract-lock, statusline, etc. Never auto-update; explicit `/loom upgrade --hooks` shows diff and requires confirmation.
+- `loom-hooks` — file-ownership, contract-lock, statusline, etc. Never auto-update; explicit `/loom-upgrade --hooks` shows diff and requires confirmation.
 
 ### Version-compat machinery (NEW — closes the silent-fail gap)
 
@@ -68,10 +68,10 @@ Extend `install-state.toon` with:
 
 ### Update UX
 
-- Statusline: `v0.5.0 available — /loom upgrade` (existing pattern, unchanged).
-- `/loom upgrade` — prompted, atomic, rollback on failure. Shows summary of which components will move (core / kits / hooks) and surfaces any cross-component requirements.
-- `/loom upgrade --kits` — silent, additive only. Blocks if a kit's `minHooksVersion` / `minCoreVersion` is unmet.
-- `/loom upgrade --hooks` — shows diff, requires explicit confirmation.
+- Statusline: `v0.5.0 available — /loom-upgrade` (existing pattern, unchanged).
+- `/loom-upgrade` — prompted, atomic, rollback on failure. Shows summary of which components will move (core / kits / hooks) and surfaces any cross-component requirements.
+- `/loom-upgrade --kits` — silent, additive only. Blocks if a kit's `minHooksVersion` / `minCoreVersion` is unmet.
+- `/loom-upgrade --hooks` — shows diff, requires explicit confirmation.
 
 ## Decisions
 
@@ -113,7 +113,7 @@ Nothing in Phases 1+ starts until Phase 0 closes.
 | 2 | `install.sh` rewrite as shim | 0.5 |
 | 2 | Release notes + version bump tooling | 0.5 |
 | 3 | Version-compat machinery (kit checks, hook fail-closed, core startup gate) | 1.0 |
-| 3 | `/loom upgrade` differentiated semantics | 1.5 |
+| 3 | `/loom-upgrade` differentiated semantics | 1.5 |
 | 4 | CI test matrix (macOS/Ubuntu: install → use → upgrade → rollback → schema-v1 upgrade) | 1.5 |
 | | **Total work-days** | **~12.5** |
 
@@ -122,7 +122,7 @@ Nothing in Phases 1+ starts until Phase 0 closes.
 ## Phase order and critical path
 
 **Critical path** (cannot parallelize):
-Phase 0 spike → catalog v3 schema doc → `install-state.toon` v2 schema doc → GH Actions workflow produces signed tagged tarball → version-compat machinery → `/loom upgrade` with rollback → CI matrix passes.
+Phase 0 spike → catalog v3 schema doc → `install-state.toon` v2 schema doc → GH Actions workflow produces signed tagged tarball → version-compat machinery → `/loom-upgrade` with rollback → CI matrix passes.
 
 Off the critical path (can be broken at launch and tarball-direct install still works): Homebrew formula, plugin manifest, `install.sh` shim polish.
 

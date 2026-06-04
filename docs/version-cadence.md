@@ -8,7 +8,7 @@
 Until the public catalog v3 schema and `install-state.toon` v3 schema are both stable for 30 days post-launch, Loom remains in `v0.0.x`. This signals to users:
 
 - Schemas may change. Migrations are provided, but breakage is possible.
-- The `/loom upgrade` UX is still being tuned based on real user feedback.
+- The `/loom-upgrade` UX is still being tuned based on real user feedback.
 - API surface (commands, agents, hooks) may evolve with non-trivial breaking changes.
 
 ## When to bump
@@ -23,7 +23,7 @@ Inside v0.0.x, **all** non-trivial changes ship as patch bumps. There is no mino
 
 ## Component bump rules
 
-- **`loom-core`** drives the master version. A `loom-core` patch bump may include schema changes; users see this as a single `/loom upgrade` action.
+- **`loom-core`** drives the master version. A `loom-core` patch bump may include schema changes; users see this as a single `/loom-upgrade` action.
 - **`loom-hooks`** is versioned independently, but the version line moves at `loom-core`'s cadence — a hooks bump is always shipped alongside a core bump in the same release. Hooks never ship without core, and core never ships without checking that the bundled hooks version is compatible (per `library-catalog.schema.md` resolution algorithm).
 - **`loom-kit-*`** versions independently. Kit bumps are not tied to core/hooks releases.
 
@@ -40,9 +40,9 @@ Inside v0.0.x, **all** non-trivial changes ship as patch bumps. There is no mino
 
 The statusline notifier categorizes updates by component:
 
-- `core: v0.0.5 available — /loom upgrade` — for core or core+hooks bumps.
+- `core: v0.0.5 available — /loom-upgrade` — for core or core+hooks bumps.
 - `kit: data-engineering v1.1.0 available — /loom-library use data-engineering` — for kit-only bumps.
-- `hooks: v0.0.5 available — /loom upgrade --hooks` — only surfaced if hooks lag behind core's `minHooksVersion`. (Normally hooks ship with core, so this should be rare.)
+- `hooks: v0.0.5 available — /loom-upgrade --hooks` — only surfaced if hooks lag behind core's `minHooksVersion`. (Normally hooks ship with core, so this should be rare.)
 
 ## Breaking changes inside v0.0.x
 
@@ -50,7 +50,7 @@ When a breaking change ships:
 
 1. The release notes lead with `BREAKING:` and describe the impact + migration steps.
 2. The release commit is tagged `v0.0.x-breaking` in addition to `v0.0.x`, so `git log --grep BREAKING` surfaces them.
-3. The migration logic ships in the release itself — `/loom upgrade` runs the migration before applying changes; if migration fails, upgrade aborts and rollback restores the prior version.
+3. The migration logic ships in the release itself — `/loom-upgrade` runs the migration before applying changes; if migration fails, upgrade aborts and rollback restores the prior version.
 4. The `lastBreakingVersion` field is added to `install-state.toon` as an **optional v3 field** (no schema bump — additive change). Migrators write it; older readers that don't know the field simply ignore it. Users below this version are blocked from skipping it during multi-step upgrades. If a future breaking change ever requires a non-additive field, that's when v4 ships.
 
 ## Retro trigger for exiting v0.0.x
@@ -58,7 +58,7 @@ When a breaking change ships:
 After 30 days of stable v3 schemas in production, the maintainer runs a retro:
 
 - Have any breaking changes been required in the last 30 days?
-- Has the `/loom upgrade` flow been triggered cleanly by at least 5 different users?
+- Has the `/loom-upgrade` flow been triggered cleanly by at least 5 different users?
 - Has at least one rollback been triggered and worked correctly?
 
 If all three are yes, bump to `v0.1.0` with no other code changes. The version bump itself is the signal that schemas are stable.

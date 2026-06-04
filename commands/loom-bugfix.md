@@ -17,7 +17,7 @@ Parse arguments after `bugfix`:
 If arguments are empty or equal `--help`, print the following help text and stop:
 
 ```
-/loom bugfix [flags] <bug description>
+/loom-bugfix [flags] <bug description>
 
 Rapidly fix a bug with wiki context, impact analysis, and archiving.
 
@@ -31,11 +31,11 @@ Flags:
   --model <model>      Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
 
 Examples:
-  /loom bugfix --model opus Complex race condition in the queue worker
-  /loom bugfix The login button returns 500 after password reset
-  /loom bugfix --severity critical Users can't check out — payment API timeout
-  /loom bugfix --path src/auth/ Token refresh fails silently
-  /loom bugfix --dry-run The dashboard is slow when filtering by date
+  /loom-bugfix --model opus Complex race condition in the queue worker
+  /loom-bugfix The login button returns 500 after password reset
+  /loom-bugfix --severity critical Users can't check out — payment API timeout
+  /loom-bugfix --path src/auth/ Token refresh fails silently
+  /loom-bugfix --dry-run The dashboard is slow when filtering by date
 ```
 
 ### Instructions

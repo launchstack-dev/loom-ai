@@ -130,7 +130,7 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 **Entities involved:** CriteriaPlan, InterpretationConflict, PlanPhase
 
 **Key behaviors:**
-- Plan-builder and criteria-planner spawn in parallel during `/loom-plan create` and `/loom auto`
+- Plan-builder and criteria-planner spawn in parallel during `/loom-plan create` and `/loom-auto`
 - interpretation-reviewer produces conflict report with severity (blocking/warning/info)
 - Blocking conflicts halt pipeline and surface to user for decision
 - Resolved conflicts become wiki decision pages
@@ -154,7 +154,7 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 <!-- Applied: SF-01 — split M-02 into M-02a and M-02b; F-03 moves to M-02a -->
 **Milestone:** M-02a
 <!-- Applied: SF-03 -->
-**Description:** Implement the 4-tier testing model: unit tests (phase level), integration tests (feature level), e2e tests (milestone level), QA agentic code review (phase/feature level, configurable). Each tier has a runner, pass condition, and gating behavior. Unit and QA review are default-on in all modes. Integration is default-on. E2E is default-on in auto mode, triggered via `/loom converge --e2e` in manual mode. Initial implementation targets convergence-driver and contracts-agent only. Other agents adopt the 4-tier model incrementally via M-03 system integration.
+**Description:** Implement the 4-tier testing model: unit tests (phase level), integration tests (feature level), e2e tests (milestone level), QA agentic code review (phase/feature level, configurable). Each tier has a runner, pass condition, and gating behavior. Unit and QA review are default-on in all modes. Integration is default-on. E2E is default-on in auto mode, triggered via `/loom-converge --e2e` in manual mode. Initial implementation targets convergence-driver and contracts-agent only. Other agents adopt the 4-tier model incrementally via M-03 system integration.
 
 **Entities involved:** ConvergenceTier, CriteriaPlan, DeltaReport
 
@@ -164,14 +164,14 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - Integration tests run at feature completion boundary
 - E2E tests run at milestone completion boundary
 - Opt-out flags: `--no-tests`, `--no-e2e`, `--no-qa-review`, `--tests-only`
-- `/loom converge --e2e` triggers e2e for completed plan in manual mode
-- `/loom converge --full` triggers all 4 tiers
+- `/loom-converge --e2e` triggers e2e for completed plan in manual mode
+- `/loom-converge --full` triggers all 4 tiers
 <!-- Applied: FC-02 -->
 - criteria-plan.toon targets array includes testTier column (unit|integration|e2e|qa-review)
 <!-- Applied: FC-03 -->
-- `/loom converge --tier unit|integration|e2e|qa-review` runs only the specified tier
+- `/loom-converge --tier unit|integration|e2e|qa-review` runs only the specified tier
 <!-- Applied: FC-05 -->
-- QA findings support bulk-approve: `/loom converge --approve-qa` accepts all non-blocking findings in the current review
+- QA findings support bulk-approve: `/loom-converge --approve-qa` accepts all non-blocking findings in the current review
 <!-- Applied: UX-04 -->
 - On unit gate failure: stderr shows failing test names + file paths, wave is halted, statusline shows '✗ unit gate failed (N/M tests)', next wave is blocked until fix-and-rerun
 <!-- Applied: UX-05 -->
@@ -220,7 +220,7 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - Delta report includes screenshot paths and console dumps per failing criterion
 - E2E runner is haiku model (orchestrates execution, parses results)
 <!-- Applied: UX-02 -->
-- `/loom converge --e2e` is valid at any point during or after execution. It runs against whatever milestones are complete. Mid-execution e2e runs test completed milestones only.
+- `/loom-converge --e2e` is valid at any point during or after execution. It runs against whatever milestones are complete. Mid-execution e2e runs test completed milestones only.
 
 **Convergence targets:**
 - Screenshot directory is populated after e2e run with sequentially numbered PNGs
@@ -290,7 +290,7 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - Execution-log adds event types: unit-test-gate, qa-review-gate, convergence-iteration, e2e-complete, interpretation-conflict
 - All test agents stay within 100k token budget (context-budget-reviewer preflight)
 <!-- Applied: UX-07 -->
-- Statusline truncation: if content exceeds terminal width, truncate from right with '...' suffix. Full status available via `/loom status`.
+- Statusline truncation: if content exceeds terminal width, truncate from right with '...' suffix. Full status available via `/loom-status`.
 - Wiki-query protocol formalized: targeted queries scoped to feature/phase being worked on, results injected as rolling-context section `## Project Knowledge [WIKI]`
 - Rolling-context wiki injection is default-on for all execution agents (implementers, reviewers, fixers) — opt-out via `--no-wiki-context`
 
@@ -415,7 +415,7 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 **Features:** F-04, F-05
 **Status:** Complete -- e2e-test-writer-agent.md, e2e-runner-agent.md, e2e-story.schema.md all shipped. Playwright headless + Chrome MCP modes.
 **Depends on:** M-02a
-**Acceptance:** E2E test writer produces Playwright tests from YAML stories, e2e runner executes with screenshot audit trail, `/loom converge --e2e` works in manual mode and mid-execution.
+**Acceptance:** E2E test writer produces Playwright tests from YAML stories, e2e runner executes with screenshot audit trail, `/loom-converge --e2e` works in manual mode and mid-execution.
 **Effort:** L
 
 <!-- Applied: ST-01 — removed standalone M-03 (Behavioral Hardening), renumbered M-04 to M-03 -->

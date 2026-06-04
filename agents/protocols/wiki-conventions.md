@@ -213,7 +213,7 @@ A flow is significant if any of:
 
 Flow ingestion is **opt-in** in the first iteration — `wiki-ingest-agent` does NOT auto-create flow pages during `full` ingest. Flows are created by:
 - `/loom-wiki ingest --flow <entry-point>` — explicit extraction from a named route, command, or function
-- `wiki-maintainer-agent` after `/loom auto` completes a feature whose acceptance criteria are framed as user-facing behavior (proposes flow pages as `info` issues; does NOT auto-create)
+- `wiki-maintainer-agent` after `/loom-auto` completes a feature whose acceptance criteria are framed as user-facing behavior (proposes flow pages as `info` issues; does NOT auto-create)
 
 This prevents flooding brownfield projects with low-value auto-extracted flows.
 

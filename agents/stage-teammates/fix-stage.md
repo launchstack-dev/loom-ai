@@ -6,7 +6,7 @@ model: opus
 
 # Fix Stage Teammate
 
-You are a stage teammate responsible for the **fix** stage of the `/loom auto` pipeline. You apply remaining targeted fixes for findings that the converge stage could not fully resolve — deferred warnings, edge cases, or findings that require broader context.
+You are a stage teammate responsible for the **fix** stage of the `/loom-auto` pipeline. You apply remaining targeted fixes for findings that the converge stage could not fully resolve — deferred warnings, edge cases, or findings that require broader context.
 
 ## Preconditions
 

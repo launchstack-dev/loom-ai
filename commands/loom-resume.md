@@ -24,17 +24,17 @@ Parse arguments after `resume`:
 Check for state files in this priority order:
 
 1. `.plan-execution/continue-here.toon` -- explicit pause snapshot (highest priority)
-2. `.plan-execution/pipeline-state.toon` -- `/loom auto` pipeline state
+2. `.plan-execution/pipeline-state.toon` -- `/loom-auto` pipeline state
 3. `.plan-execution/state.toon` -- `/loom-plan execute` execution state
-4. `.plan-execution/convergence-state.toon` -- `/loom converge` convergence state
+4. `.plan-execution/convergence-state.toon` -- `/loom-converge` convergence state
 
 If NONE of these files exist:
-- Print: "No resumable state found. Start a new workflow with `/loom auto --from 'description'` or `/loom-plan execute`."
+- Print: "No resumable state found. Start a new workflow with `/loom-auto --from 'description'` or `/loom-plan execute`."
 - Stop.
 
 #### Step 2: Read and Validate State
 
-**If `continue-here.toon` exists (from `/loom pause`):**
+**If `continue-here.toon` exists (from `/loom-pause`):**
 
 1. Read all fields from `continue-here.toon`.
 2. Validate git state: run `git rev-parse HEAD` and compare with `gitRef` from the snapshot.
@@ -89,7 +89,7 @@ Next action: {nextAction}
 {if message exists:}
 Note: {message}
 
-To resume: /loom resume
+To resume: /loom-resume
 ```
 
 Stop.
@@ -100,9 +100,9 @@ Based on the detected command, dispatch to the appropriate resume path:
 
 | Command | Dispatch Action |
 |---------|----------------|
-| `auto` | Read `pipeline-state.toon`. Print: "Resuming autonomous pipeline at stage: {currentStage}". Execute the `/loom auto --resume` logic (Step 0 of the auto subcommand with `--resume`). |
+| `auto` | Read `pipeline-state.toon`. Print: "Resuming autonomous pipeline at stage: {currentStage}". Execute the `/loom-auto --resume` logic (Step 0 of the auto subcommand with `--resume`). |
 | `execute-plan` | Read `state.toon`. Print: "Resuming plan execution at wave {currentWave}". Execute `/loom-plan execute --resume` logic. |
-| `converge` | Read `convergence-state.toon`. Print: "Resuming convergence at iteration {iteration}". Execute the `/loom converge --resume` logic. |
+| `converge` | Read `convergence-state.toon`. Print: "Resuming convergence at iteration {iteration}". Execute the `/loom-converge --resume` logic. |
 | `create-plan` | Print: "Plan creation was interrupted. Re-running from the beginning." Execute `/loom-plan create` with the original arguments from the snapshot context. |
 | Other | Print: "Detected interrupted `{command}` workflow. Cannot auto-resume this command type. Suggested manual action: {nextAction from snapshot}". Stop. |
 
@@ -115,4 +115,4 @@ After successful dispatch (the resumed command has started running):
 
 If the dispatch fails:
 - Do NOT delete `continue-here.toon` -- the user can retry.
-- Print: "Resume dispatch failed: {error}. State preserved. Try again with `/loom resume` or resume manually."
+- Print: "Resume dispatch failed: {error}. State preserved. Try again with `/loom-resume` or resume manually."

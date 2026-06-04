@@ -36,8 +36,8 @@ existingTypeFiles[2]: src/types/index.ts,src/types/api.ts
 
 This step produces a deep analysis of the existing codebase so the roadmap accounts for what's already built. It goes beyond Step 1's basic scan.
 
-1. **Check for cached analysis.** Read `.plan-execution/init-report.toon` if it exists (produced by `/loom init`).
-   - If the file exists and `completedAt` is less than 7 days old: use cached results. Display: "Using cached analysis from `/loom init` ({date}). Run `/loom init` to refresh."
+1. **Check for cached analysis.** Read `.plan-execution/init-report.toon` if it exists (produced by `/loom-init`).
+   - If the file exists and `completedAt` is less than 7 days old: use cached results. Display: "Using cached analysis from `/loom-init` ({date}). Run `/loom-init` to refresh."
    - If the file is stale or missing: run fresh analysis (steps 2-3 below).
 
 2. **If no cached analysis**, spawn 2 agents in parallel (single message):
@@ -56,7 +56,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
     Existing docs found: {list from Step 1}"
    ```
 
-   Also read `CLAUDE.md` and `CONTEXT.md` if they exist (produced by `/loom init` or manually).
+   Also read `CLAUDE.md` and `CONTEXT.md` if they exist (produced by `/loom-init` or manually).
 
 3. **Compile brownfield context** into a structured summary for the discussion and roadmap phases:
 

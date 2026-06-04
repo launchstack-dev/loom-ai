@@ -351,15 +351,15 @@ Return a standard AgentResult envelope with:
 
 ---
 
-## Integration with `/loom converge --e2e`
+## Integration with `/loom-converge --e2e`
 
-The writer agent is invoked as part of the `/loom converge --e2e` pipeline. This command is valid at any point during or after plan execution -- it does not require all phases or waves to be complete.
+The writer agent is invoked as part of the `/loom-converge --e2e` pipeline. This command is valid at any point during or after plan execution -- it does not require all phases or waves to be complete.
 
 When invoked mid-execution:
 1. The writer reads `criteria-plan.toon` as it currently exists and extracts all `testTier: e2e` entries
 2. Stories are generated for whatever e2e criteria are defined, even if the corresponding features are not yet implemented
 3. Playwright tests will fail for unimplemented features -- this is expected and feeds the convergence loop
-4. As more phases/waves complete and criteria are added or refined, re-running `/loom converge --e2e` regenerates stories and tests
+4. As more phases/waves complete and criteria are added or refined, re-running `/loom-converge --e2e` regenerates stories and tests
 
 When invoked after execution:
 1. All e2e criteria should be present in `criteria-plan.toon`

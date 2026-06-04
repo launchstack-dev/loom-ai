@@ -22,7 +22,7 @@ Loom's wiki today maps **what exists** (components, decisions, patterns, convent
 1. **Two new first-class page categories** — `flow-*` and `contract-*` — plus the supporting relationships and lint rules.
 2. **Context-efficiency upgrades** to the page schema (`summary` field, body length caps, structured H2 sections, per-page token estimates in the index) so a populated wiki scales without blowing the rolling-context budget.
 3. **Karpathy + Wiki Discipline integration** in user-project `CLAUDE.md` — a new `## Loom Wiki Discipline` section (separate marker, conditional on `.loom/wiki/` existing) that operationalizes the four Karpathy principles against the wiki: consult before assuming, check contracts before proposing, treat flow exit states as success criteria.
-4. **Maintenance enforcement** — SessionStart wiki health surfacing, `/loom status` wiki block, auto-lint cadence, and two hooks (PreToolUse `wiki-impact-warner` for deterministic write-time impact surfacing, UserPromptSubmit `wiki-context-suggester` for fuzzy prompt-time context injection).
+4. **Maintenance enforcement** — SessionStart wiki health surfacing, `/loom-status` wiki block, auto-lint cadence, and two hooks (PreToolUse `wiki-impact-warner` for deterministic write-time impact surfacing, UserPromptSubmit `wiki-context-suggester` for fuzzy prompt-time context injection).
 
 Inspired by Understand-Anything's domain-analyzer (`/understand-domain` produces "domains, flows, and process steps") and the gap where Loom's contracts live only in ephemeral `.plan-execution/contracts/` and never enter the persistent wiki. Flows and contracts are inseparable from the maintenance + Karpathy work — they will rot without enforcement and won't be consulted without the CLAUDE.md discipline block — so they ship as one plan.
 
@@ -248,7 +248,7 @@ Add to `wiki-conventions.md` Significance Threshold section.
 
 Flow ingestion is **opt-in for the first iteration** — wiki-ingest-agent does NOT auto-create flow pages during `full` ingest. Flows are created by:
 - `/loom-wiki ingest --flow <name>` — explicit flow extraction from a named entry point
-- `wiki-maintainer-agent` after `/loom auto` completes a feature, if the executed plan included acceptance criteria framed as user-facing behavior
+- `wiki-maintainer-agent` after `/loom-auto` completes a feature, if the executed plan included acceptance criteria framed as user-facing behavior
 
 This avoids flooding brownfield projects with low-value auto-extracted flows.
 
@@ -296,7 +296,7 @@ Update existing `full` ingest mode: after creating component pages, scan for sig
 
 ### wiki-maintainer-agent
 
-Add post-execution hook: when `/loom auto` or `/loom-plan execute` completes a phase whose acceptance criteria contained user-facing verbs ("user can sign up", "request returns 201"), spawn maintainer with a `--check-flow` flag. The maintainer asks: "Does a flow page exist for this behavior? If not, propose one with the implemented files as `touches`." Output is a suggestion in the `info` issues — not auto-created (still opt-in for flows).
+Add post-execution hook: when `/loom-auto` or `/loom-plan execute` completes a phase whose acceptance criteria contained user-facing verbs ("user can sign up", "request returns 201"), spawn maintainer with a `--check-flow` flag. The maintainer asks: "Does a flow page exist for this behavior? If not, propose one with the implemented files as `touches`." Output is a suggestion in the `info` issues — not auto-created (still opt-in for flows).
 
 For contracts: on every wave completion, scan `filesCreated`/`filesModified` for files matching the contract significance threshold. Create or update the corresponding `contract-*` page automatically.
 
@@ -381,7 +381,7 @@ This project has a Loom wiki at `.loom/wiki/`. The wiki is the authoritative sou
 
 If the relevant wiki page is missing or stale, say so in your response — don't silently work around it.
 
-<!-- loom:wiki-discipline-v1 — managed by /loom upgrade. Edit text freely; preserve this marker. -->
+<!-- loom:wiki-discipline-v1 — managed by /loom-upgrade. Edit text freely; preserve this marker. -->
 ```
 
 ### Source-of-truth location
@@ -423,7 +423,7 @@ Extended behavior of the same SessionStart hook: if `D > 14` (days since last in
 
 This means a wiki that's been actively maintained shows a quiet `[wiki] 47 pages | 0 stale | last ingest 3d ago` line and nothing else. A neglected wiki surfaces the lint findings the user has been ignoring.
 
-### 3. `/loom status` wiki health block
+### 3. `/loom-status` wiki health block
 
 Extend `commands/loom-status.md` to include a wiki section when `.loom/wiki/` exists:
 
@@ -438,7 +438,7 @@ Wiki Health:
   Days since last ingest: 3
 ```
 
-Coverage % is computed lazily — only when `/loom status` is invoked. Significance is the same set defined in `wiki-conventions.md`.
+Coverage % is computed lazily — only when `/loom-status` is invoked. Significance is the same set defined in `wiki-conventions.md`.
 
 ### 4. Hook A: `wiki-impact-warner` (PreToolUse on `Edit` / `Write`)
 
@@ -481,7 +481,7 @@ Today the closest thing to a stale-refresh command is `/loom-wiki ingest --full`
 1. Read `.loom/wiki/index.toon`. Collect candidate pages:
    - Pages with `staleness == "stale"` (default).
    - Pages where any `sourceRefs[]` file has an mtime newer than the page's `updatedAt`.
-   - Pages with `summary == "(legacy — pending refresh)"` (left over from a prior `/loom upgrade` Rule 7 migration).
+   - Pages with `summary == "(legacy — pending refresh)"` (left over from a prior `/loom-upgrade` Rule 7 migration).
 2. For each candidate, in batches of 5 to respect token budget:
    - Re-run the ingest logic scoped to the page's `sourceRefs`. This is equivalent to invoking `wiki-ingest-agent` with `--source <files>` for each page individually but batched into one agent spawn.
    - Recompute `summary` (real elevator pitch, replacing any legacy placeholder), `estimatedTokens` (`Math.ceil(charCount / 4)`), `staleness` (now `fresh`), and `updatedAt` (now).
@@ -529,7 +529,7 @@ The SessionStart hook's stale-page suggestion now points at a concrete command:
 
 ---
 
-## /loom upgrade Migration (Rule 7)
+## /loom-upgrade Migration (Rule 7)
 
 Add Rule 7 to `agents/protocols/schema-upgrade.md`:
 
@@ -556,7 +556,7 @@ Add Rule 7 to `agents/protocols/schema-upgrade.md`:
 
 Update `commands/loom-upgrade.md` scan list and migration rules list to include Rule 7. Bump artifact-type count from 6 to 7.
 
-## /loom upgrade Migration (Rule 8) — CLAUDE.md wiki-discipline block
+## /loom-upgrade Migration (Rule 8) — CLAUDE.md wiki-discipline block
 
 Add Rule 8 to `agents/protocols/schema-upgrade.md`:
 
@@ -576,17 +576,17 @@ Add Rule 8 to `agents/protocols/schema-upgrade.md`:
 
 **Manual-merge guard:** if the file contains a `## Loom Wiki Discipline` heading but no marker, do NOT append. Record this file with status `skipped` and details `Loom Wiki Discipline section present without marker — manual merge required.`
 
-**Order dependency:** Rule 8 must run AFTER Rule 6 in a single `/loom upgrade` pass. The scan list should list `CLAUDE.md` once but the migration phase applies Rule 6 then Rule 8 sequentially to the same file. This keeps the two blocks in stable order (Coding Behavior first, Wiki Discipline second).
+**Order dependency:** Rule 8 must run AFTER Rule 6 in a single `/loom-upgrade` pass. The scan list should list `CLAUDE.md` once but the migration phase applies Rule 6 then Rule 8 sequentially to the same file. This keeps the two blocks in stable order (Coding Behavior first, Wiki Discipline second).
 
 **No-wiki case:** if `.loom/wiki/` does not exist, Rule 8 does not apply (only Rule 6 fires for CLAUDE.md).
 
-**No-CLAUDE.md case:** if `CLAUDE.md` does not exist, Rule 8 does not apply (`/loom init` should be run instead).
+**No-CLAUDE.md case:** if `CLAUDE.md` does not exist, Rule 8 does not apply (`/loom-init` should be run instead).
 
 Update `commands/loom-upgrade.md` migration rules list to include Rule 8. Bump artifact-type count from 7 to 8.
 
-## /loom upgrade Migration (Rule 9) — settings.json hook registration
+## /loom-upgrade Migration (Rule 9) — settings.json hook registration
 
-The three new hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-context-suggester`) ship as files in `hooks/` and are registered by `/loom init` going forward. Existing repos that ran `/loom init` *before* this change will have the hook files installed (via Loom updates) but no entries in their `.claude/settings.json` — so the hooks never fire. Rule 9 closes this gap.
+The three new hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-context-suggester`) ship as files in `hooks/` and are registered by `/loom-init` going forward. Existing repos that ran `/loom-init` *before* this change will have the hook files installed (via Loom updates) but no entries in their `.claude/settings.json` — so the hooks never fire. Rule 9 closes this gap.
 
 **Detection rule:**
 ```
@@ -618,7 +618,7 @@ Settings files are user-controlled configuration — they may contain personal h
 
    Register these hooks? (y/N — declining keeps the hook files installed but inert)
    ```
-3. If user declines: record status `skipped` with details `User declined hook registration. Re-run /loom upgrade --register-hooks to revisit.` Continue with remaining rules.
+3. If user declines: record status `skipped` with details `User declined hook registration. Re-run /loom-upgrade --register-hooks to revisit.` Continue with remaining rules.
 4. If user accepts: parse the settings JSON, append the hook entries to the `hooks` section, preserve all other settings, write atomically.
 5. Prefer `.claude/settings.json` (project-scoped) over `.claude/settings.local.json`. If both exist, ask which to modify.
 6. Idempotent: if all three hook entries are already present, skip.
@@ -641,13 +641,13 @@ If the user's existing `hooks` block already contains entries with different mat
 
 **No-wiki case:** if `.loom/wiki/` does not exist, Rule 9 does not apply.
 
-**`--force` flag interaction:** `/loom upgrade --force` skips the confirmation prompt for Rule 9 and applies the change automatically. Document this in `commands/loom-upgrade.md`.
+**`--force` flag interaction:** `/loom-upgrade --force` skips the confirmation prompt for Rule 9 and applies the change automatically. Document this in `commands/loom-upgrade.md`.
 
 Update `commands/loom-upgrade.md` migration rules list to include Rule 9. Bump artifact-type count from 8 to 9. Add the `--register-hooks` flag described above.
 
 ## Rule application order
 
-`/loom upgrade` applies rules within a single pass in **numeric order per file**. This ensures:
+`/loom-upgrade` applies rules within a single pass in **numeric order per file**. This ensures:
 
 - CLAUDE.md gets Rule 6 (Karpathy) applied before Rule 8 (Wiki Discipline), keeping the two blocks in stable order.
 - `.loom/wiki/index.toon` and `.loom/wiki/pages/*.md` get Rule 7 transformations applied before any agent reads the wiki under the new schema.
@@ -658,7 +658,7 @@ The scan-phase (Step 1) collects per-file rule lists; the migrate-phase (Step 5)
 **Failure semantics:**
 - Rule N fails on file F → record failure, continue to Rule N+1 on file F (rules are independent).
 - File-write failure during Rule N → leave file untouched, record failure, continue.
-- Re-running `/loom upgrade` after partial failure will re-detect missing migrations and complete them.
+- Re-running `/loom-upgrade` after partial failure will re-detect missing migrations and complete them.
 
 ---
 
@@ -705,7 +705,7 @@ This wave establishes the canonical type contracts that every downstream paralle
 
 **Phase 2.5 — Integration plumbing (Wave 2, depends on Wave 1 complete)**
 
-Hidden dependency declared: this phase reads `summary` + `estimatedTokens` from `index.toon`, which Phase 1's agents populate. The rolling-context packer must handle absent `estimatedTokens` defensively (fall back to inline char-count estimation) for brownfield repos that haven't yet run `/loom upgrade`.
+Hidden dependency declared: this phase reads `summary` + `estimatedTokens` from `index.toon`, which Phase 1's agents populate. The rolling-context packer must handle absent `estimatedTokens` defensively (fall back to inline char-count estimation) for brownfield repos that haven't yet run `/loom-upgrade`.
 
 Sub-phases for intra-wave parallelization:
 
@@ -714,7 +714,7 @@ Sub-phases for intra-wave parallelization:
 - **Phase 2.5c (parallel with 2.5b):** Command keying — `commands/loom-bugfix.md`, `commands/loom-quick.md`.
 - **Phase 2.5d (parallel with 2.5b/c):** Fill the Rule 8 stub-marker in `commands/loom-upgrade.md` left by Phase 0. Verify Rule 6 → Rule 8 sequencing.
 
-**Phase 4 — Wiki maintenance hooks + `/loom status` + `/loom-wiki refresh` (Wave 3)**
+**Phase 4 — Wiki maintenance hooks + `/loom-status` + `/loom-wiki refresh` (Wave 3)**
 
 Sub-phases for sequenced hook rollout:
 
@@ -727,7 +727,7 @@ Sub-phases for sequenced hook rollout:
 - Vitest tests for all eight new lint rules.
 - Vitest tests for the two new hooks (mocked SessionStart, mocked Edit).
 - Vitest tests for Rule 7 + Rule 8 + Rule 9 schema upgrade idempotency, including the Rule 9 file-existence guard.
-- Run `/loom upgrade` on this repo to migrate wiki-index to v2 AND append the Loom Wiki Discipline block to this repo's CLAUDE.md.
+- Run `/loom-upgrade` on this repo to migrate wiki-index to v2 AND append the Loom Wiki Discipline block to this repo's CLAUDE.md.
 - Hand-author one `flow-*` page (with `nextOnFail` + `errorExits[]` populated) and one `contract-*` page (with `compatibilityPolicy` populated) as a smoke test of the rolling-context ranking heuristic and the new schema fields.
 
 ---
@@ -765,7 +765,7 @@ These are the gates that prove the headline `flow-*` feature delivers value. If 
 | 2 | **Extraction quality**: `/loom-wiki ingest --flow <real-route>` against an actual route in this repo. Hand-review for verb-led steps, accurate `touches`, correct `exitStates`, ≤12 steps | L3 | AC-05 | Plan's central feature doesn't work; HALT before locking lint rules around bad output |
 | 3 | **Cross-ref bidirectionality**: flow `exercises` component → wiki-maintainer creates `exercised-by` back-ref; deleting the flow cleans up the back-ref | L2 | (extends AC-24) | Cross-ref graph is broken; impact-warner and bugfix-analyst can't trust it |
 | 4 | **Rolling-context ranking lands**: simulated wave with files in a flow's `touches` produces a `[WIKI]` block where the flow's `summary` appears ranked above generic component pages, and summaries pack before bodies expand | L2/L3 | AC-09 | Wave 2's primary value isn't delivered |
-| 5 | **Legacy migration**: `/loom upgrade` on a fixture wiki representing each legacy edge case (missing schemaVersion, missing categories[], populated pages without summary). Rule 7 backfills `(legacy — pending refresh)` + `estimatedTokens`. Re-run is idempotent. Mid-rule failure → re-run completes without rollback | L3 | AC-22, AC-25 | Existing repos can't upgrade safely; legacy users break |
+| 5 | **Legacy migration**: `/loom-upgrade` on a fixture wiki representing each legacy edge case (missing schemaVersion, missing categories[], populated pages without summary). Rule 7 backfills `(legacy — pending refresh)` + `estimatedTokens`. Re-run is idempotent. Mid-rule failure → re-run completes without rollback | L3 | AC-22, AC-25 | Existing repos can't upgrade safely; legacy users break |
 
 **Test #2 is the single most important gate.** Extraction algorithm has the most uncertainty (call-graph tracing through dynamic dispatch, middleware chains, decorators). If `--flow` can't produce useful pages on a known route, every downstream feature falls apart — every lint rule, every ranking heuristic, every hook depends on accurate flow pages. Run this gate before locking Phase 2's lint rules.
 
@@ -789,7 +789,7 @@ Real but not testable before merge. Track post-ship:
 | **Wave 1** | Critical Test #1 (round-trip parse + lint) + Critical Test #2 (extraction quality on a real route) + Critical Test #5 (legacy migration) + all L1 unit tests for W-020 through W-027 pass | MVP slice not shippable; HALT before locking schemas around bad extraction |
 | **Wave 2** | Critical Test #3 (cross-ref bidirectionality) + Critical Test #4 (rolling-context ranking) + L2 integration tests for `bugfix-analyst-agent` `affectedFlows[]`/`affectedContracts[]` and `interpretation-reviewer-agent` contract-conflict escalation | Wave 2 value not delivered; cross-cutting integrations broken |
 | **Wave 3** | L1 hook tests (mocked SessionStart, mocked PreToolUse Edit/Write with dedup state) + L3 dogfood: hooks enabled on this repo for 5 consecutive sessions without user `LOOM_WIKI_HOOKS=0` opt-out | Hooks not safe to enable by default |
-| **Ship** | All 36 ACs pass + this repo runs cleanly with the new system enabled for 1 week + one external-repo dogfood (run `/loom upgrade` + `--flow` against a non-Loom repo with a wiki) | Roll back to pre-flow state; re-evaluate scope |
+| **Ship** | All 36 ACs pass + this repo runs cleanly with the new system enabled for 1 week + one external-repo dogfood (run `/loom-upgrade` + `--flow` against a non-Loom repo with a wiki) | Roll back to pre-flow state; re-evaluate scope |
 
 ### Test infrastructure expectations
 
@@ -807,7 +807,7 @@ Real but not testable before merge. Track post-ship:
 | AC-01 | `wiki-page.schema.md` documents `flow-*` and `contract-*` categories with full frontmatter field tables | manual review |
 | AC-02 | `wiki-page.schema.md` documents new relationships and their inverses | manual review |
 | AC-03 | `wiki-index.toon` schemaVersion 2 example present in `wiki-index.schema.md` | manual review |
-| AC-04 | Running `/loom upgrade` on a repo with v1 wiki-index migrates to v2 idempotently | dogfood + diff |
+| AC-04 | Running `/loom-upgrade` on a repo with v1 wiki-index migrates to v2 idempotently | dogfood + diff |
 | AC-05 | `wiki-ingest-agent` with `--flow <route>` produces a valid `flow-*` page on Loom's own routes | dogfood |
 | AC-06 | `wiki-ingest-agent` in `full` mode auto-creates at least one `contract-*` page when run on a tiny fixture project with cross-module type exports | vitest fixture |
 | AC-07 | `wiki-lint-agent` reports W-020/W-022/W-024 correctly on synthetic broken pages | vitest |
@@ -817,18 +817,18 @@ Real but not testable before merge. Track post-ship:
 | AC-11 | `interpretation-reviewer-agent` escalates a contract-conflict to `blocking` when a plan AC's shape contradicts a `contract-*` page's `shape` field | vitest with fixture |
 | AC-12 | Every page written by any wiki agent has a `summary` field ≤200 chars and an `estimatedTokens` field equal to `Math.ceil(pageCharCount / 4)` | vitest + lint |
 | AC-13 | `wiki-lint-agent` reports W-025 / W-026 / W-027 on synthetic pages exceeding body/summary/field caps; W-026 auto-fix inserts missing H2 section stubs | vitest |
-| AC-14 | `/loom upgrade` Rule 6 + Rule 8 applied in sequence on a CLAUDE.md with neither marker produce both blocks in fixed order (Karpathy first, Wiki Discipline second) with both markers present | dogfood + integration test |
-| AC-15 | `/loom upgrade` Rule 8 only fires when `.loom/wiki/` exists; running on a wiki-less repo skips Rule 8 entirely | vitest with fixture |
+| AC-14 | `/loom-upgrade` Rule 6 + Rule 8 applied in sequence on a CLAUDE.md with neither marker produce both blocks in fixed order (Karpathy first, Wiki Discipline second) with both markers present | dogfood + integration test |
+| AC-15 | `/loom-upgrade` Rule 8 only fires when `.loom/wiki/` exists; running on a wiki-less repo skips Rule 8 entirely | vitest with fixture |
 | AC-16 | `agents/project-guidance-agent.md` emits the Loom Wiki Discipline block in newly-generated CLAUDE.md if and only if `.loom/wiki/` exists at project root | vitest fixture (two fixture repos: with-wiki and without-wiki) |
 | AC-17 | `hooks/wiki-session-status.ts` prints a one-line `[wiki]` status block on SessionStart when `.loom/wiki/` exists, and exits silently when it doesn't; auto-lint fires when `D > 14` and never modifies files | vitest with mocked SessionStart |
 | AC-18 | `hooks/wiki-impact-warner.ts` emits `[wiki:impact]` with affected pageIds when an Edit/Write targets a file in any flow's `touches` or contract's `producers`/`consumers`; never blocks unless `impactAck = "require"` | vitest with mocked PreToolUse |
 | AC-19 | `hooks/wiki-context-suggester.ts` appends summary-only context (never bodies) when a user prompt matches the regex list; emits a visible audit line; is disabled when `promptHookEnabled = false` | vitest with mocked UserPromptSubmit |
-| AC-20 | `/loom status` displays a Wiki Health block with page count, category breakdown, coverage %, stale count, and days-since-lint/ingest when `.loom/wiki/` exists | dogfood |
-| AC-21 | `/loom upgrade` on a wiki-index with missing `schemaVersion` field AND missing `categories[]` array produces a valid schemaVersion-2 index with a categories array reconstructed from page-file scanning | vitest fixture |
-| AC-22 | `/loom upgrade` Rule 7 backfills `summary: "(legacy — pending refresh)"` and computed `estimatedTokens` into existing page frontmatter; W-026 treats this placeholder as info-severity not warn | vitest fixture + lint check |
-| AC-23 | `/loom upgrade` Rule 9 prompts user for confirmation before modifying settings.json; declining records `skipped` status with re-run instructions; `--force` skips the prompt | vitest with mocked prompt |
-| AC-24 | `/loom upgrade` on a CLAUDE.md missing both markers applies Rule 6 then Rule 8 in that order in a single pass, leaving the file with both blocks in stable order and both markers present | dogfood + integration test |
-| AC-25 | Re-running `/loom upgrade` after a partial-failure pass (e.g., Rule 6 succeeded, Rule 8 failed) re-detects and completes the missing migrations without rolling back successful ones | vitest fixture |
+| AC-20 | `/loom-status` displays a Wiki Health block with page count, category breakdown, coverage %, stale count, and days-since-lint/ingest when `.loom/wiki/` exists | dogfood |
+| AC-21 | `/loom-upgrade` on a wiki-index with missing `schemaVersion` field AND missing `categories[]` array produces a valid schemaVersion-2 index with a categories array reconstructed from page-file scanning | vitest fixture |
+| AC-22 | `/loom-upgrade` Rule 7 backfills `summary: "(legacy — pending refresh)"` and computed `estimatedTokens` into existing page frontmatter; W-026 treats this placeholder as info-severity not warn | vitest fixture + lint check |
+| AC-23 | `/loom-upgrade` Rule 9 prompts user for confirmation before modifying settings.json; declining records `skipped` status with re-run instructions; `--force` skips the prompt | vitest with mocked prompt |
+| AC-24 | `/loom-upgrade` on a CLAUDE.md missing both markers applies Rule 6 then Rule 8 in that order in a single pass, leaving the file with both blocks in stable order and both markers present | dogfood + integration test |
+| AC-25 | Re-running `/loom-upgrade` after a partial-failure pass (e.g., Rule 6 succeeded, Rule 8 failed) re-detects and completes the missing migrations without rolling back successful ones | vitest fixture |
 | AC-26 | `/loom-wiki refresh` on a wiki with mixed states refreshes only `--scope stale` (default); `--dry-run` previews with estimated time; `--scope aging` widens scope; `--scope legacy` targets placeholder summaries; `--scope all` is the previous `--force` behavior; `--page <pageId>` targets a single page | vitest fixture + dogfood |
 | AC-27 | When `hooks/wiki-session-status.ts` detects stale pages, the surfaced remediation suggests `/loom-wiki refresh` (not `ingest --full`) as the targeted fix command. When `M==0 AND D<7` the hook emits nothing | manual review |
 | AC-28 | Flow `steps[]` schema supports `nextOnFail` and `errorExits[]` optional columns; a fixture flow with two named exit states and a step that branches to one of them via `nextOnFail` parses cleanly and lint W-020/W-024 accept it | vitest fixture |

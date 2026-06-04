@@ -349,7 +349,7 @@ Adjust any targets? (adjust N / remove N / add "description" / looks good)
 
 Write `convergence-plan.toon` following the schema in `convergence-plan.schema.md`. Return a standard AgentResult.
 
-When the run is in **criteria mode** (`/loom converge plan` or scenario-driven discovery), also emit a `criteria-plan.toon` per `criteria-plan.schema.md`. Every criterion derived from a scenario MUST populate the `scenarioRef` column with `Phase {N}.S-NN` (plan-phase origin) or `F-NN.S-NN` (roadmap-feature origin). The `testTier` column for scenario-derived criteria MUST come from `resolveTestTier(scenario)` — never recomputed inline.
+When the run is in **criteria mode** (`/loom-converge plan` or scenario-driven discovery), also emit a `criteria-plan.toon` per `criteria-plan.schema.md`. Every criterion derived from a scenario MUST populate the `scenarioRef` column with `Phase {N}.S-NN` (plan-phase origin) or `F-NN.S-NN` (roadmap-feature origin). The `testTier` column for scenario-derived criteria MUST come from `resolveTestTier(scenario)` — never recomputed inline.
 
 ---
 

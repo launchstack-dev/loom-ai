@@ -188,7 +188,7 @@ Whenever you create OR update a page — across any mode — you MUST recompute 
 | `updatedAt` | Now (ISO-8601). |
 | `updatedBy` | This agent's name (`wiki-ingest-agent`). |
 
-**Legacy placeholder replacement.** Pages migrated by `/loom upgrade` Rule 7 carry `summary: "(legacy — pending refresh)"`. On ANY page write touching such a page (any mode, any reason), generate a real summary that replaces the placeholder. Lint W-026 treats the placeholder as `info`-severity (not warn) until the next agent write replaces it — once written, future placeholders are a regression.
+**Legacy placeholder replacement.** Pages migrated by `/loom-upgrade` Rule 7 carry `summary: "(legacy — pending refresh)"`. On ANY page write touching such a page (any mode, any reason), generate a real summary that replaces the placeholder. Lint W-026 treats the placeholder as `info`-severity (not warn) until the next agent write replaces it — once written, future placeholders are a regression.
 
 **Index mirroring.** After writing a page, mirror `summary`, `estimatedTokens`, `subtype`, `category`, `staleness`, and `updatedAt` into the corresponding row of `index.toon`'s `pages[]` typed-array (schemaVersion 2). The orchestrator packs rolling-context from index-only reads when possible — keeping the mirror current is what makes that packing O(1).
 

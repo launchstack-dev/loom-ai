@@ -80,7 +80,7 @@ Read these files for context on Loom conventions:
    ```
    If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (.plan-history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
 
-   If `GIT`: check for old `.plan-execution/` layout — if `.plan-execution/.gitignore` exists and contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first to migrate." Continue with the gitignore check.
+   If `GIT`: check for old `.plan-execution/` layout — if `.plan-execution/.gitignore` exists and contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom-upgrade` first to migrate." Continue with the gitignore check.
 
    Verify that the project's `.gitignore` does not exclude Loom's persistent directories:
    ```bash
@@ -359,9 +359,9 @@ Synthesize a CONTEXT.md from all 4 agents' output:
    - **mode**: `local` (project-relative `hooks/<name>.ts` paths) when this project IS the loom dev checkout; `plugin` (`${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts`) when loom is installed as a Claude Code plugin.
    - **runner**: `bunx tsx` if bun is on PATH, else `npx --yes tsx`.
 
-   `--replace` purges any stale wiki hook entries first, then writes fresh ones — safe to re-run, idempotent when settings already match. If the user declined hooks on a prior run, they'll be registered now. **`--force` is NOT needed here** — Rule 9's confirmation prompt is only for `/loom upgrade` (where settings.json already exists); during `/loom init` the user has already opted into Loom by running this command.
+   `--replace` purges any stale wiki hook entries first, then writes fresh ones — safe to re-run, idempotent when settings already match. If the user declined hooks on a prior run, they'll be registered now. **`--force` is NOT needed here** — Rule 9's confirmation prompt is only for `/loom-upgrade` (where settings.json already exists); during `/loom-init` the user has already opted into Loom by running this command.
 
-   On any failure (script exit != 0), print the error and continue — hooks are additive, never gating. Surface the recovery hint: "Wiki hooks were not registered. Re-run `/loom upgrade --register-hooks` later, or invoke `node scripts/register-wiki-hooks.ts` directly."
+   On any failure (script exit != 0), print the error and continue — hooks are additive, never gating. Surface the recovery hint: "Wiki hooks were not registered. Re-run `/loom-upgrade --register-hooks` later, or invoke `node scripts/register-wiki-hooks.ts` directly."
 
    If the script reports `mode: plugin` and the user's actual deployment is a dev checkout (or vice versa), they can override: `node scripts/register-wiki-hooks.ts --mode local --replace`.
 

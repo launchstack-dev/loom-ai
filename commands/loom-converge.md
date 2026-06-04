@@ -67,7 +67,7 @@ Read convergence-related protocols:
 
 **If no args provided:** display usage help and stop:
 ```
-## Usage: /loom converge
+## Usage: /loom-converge
 
 Two modes: target convergence (match a reference) and criteria convergence (satisfy conditions).
 
@@ -103,22 +103,22 @@ Two modes: target convergence (match a reference) and criteria convergence (sati
   --status                Show current convergence state
 
 Examples:
-  /loom converge --plan                     Target: discover targets from codebase
-  /loom converge --plan --light             Target: one-batch discovery
-  /loom converge --target golden/api.json   Target: direct reference file
-  /loom converge --criteria                 Criteria: TDD + all reviewers from plan
-  /loom converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
-  /loom converge --criteria --feature F-01  Criteria: feature F-01 boundary only
-  /loom converge --criteria --no-soft       Criteria: pure TDD (tests only)
-  /loom converge --criteria --reviewers security,code-review   Criteria: specific reviewers
-  /loom converge --criteria --no-hard       Review-only: iterate code reviews on existing code
-  /loom converge --tier unit                Run only unit tier convergence
-  /loom converge --tier e2e                 Run only e2e tier convergence
-  /loom converge --full                     Run all 4 tiers in order
-  /loom converge --approve-qa               Bulk-approve non-blocking QA findings
-  /loom converge --criteria --no-tests      Skip unit/integration (warns on stderr)
-  /loom converge --resume
-  /loom converge --status
+  /loom-converge --plan                     Target: discover targets from codebase
+  /loom-converge --plan --light             Target: one-batch discovery
+  /loom-converge --target golden/api.json   Target: direct reference file
+  /loom-converge --criteria                 Criteria: TDD + all reviewers from plan
+  /loom-converge --criteria --phase 3       Criteria: phase 3 acceptance criteria only
+  /loom-converge --criteria --feature F-01  Criteria: feature F-01 boundary only
+  /loom-converge --criteria --no-soft       Criteria: pure TDD (tests only)
+  /loom-converge --criteria --reviewers security,code-review   Criteria: specific reviewers
+  /loom-converge --criteria --no-hard       Review-only: iterate code reviews on existing code
+  /loom-converge --tier unit                Run only unit tier convergence
+  /loom-converge --tier e2e                 Run only e2e tier convergence
+  /loom-converge --full                     Run all 4 tiers in order
+  /loom-converge --approve-qa               Bulk-approve non-blocking QA findings
+  /loom-converge --criteria --no-tests      Skip unit/integration (warns on stderr)
+  /loom-converge --resume
+  /loom-converge --status
 ```
 
 **If `--status`:**
@@ -135,7 +135,7 @@ Examples:
    - Circuit breaker status
 5. Suggest next action based on state:
    - If `status == converged`: "Convergence complete. No action needed."
-   - If `status == running` or `status == paused`: "Run `/loom converge --resume` to continue."
+   - If `status == running` or `status == paused`: "Run `/loom-converge --resume` to continue."
    - If `status == stalled` or `status == regression`: "Review stuck deltas below. Manual intervention may be needed before `--resume`."
    - If `status == budget_exhausted`: "Increase agent budget in orchestration.toml and `--resume`."
    - **Criteria mode only:** If frozen conflicts exist: "The following criteria have conflicting reviewer findings and were frozen. Review manually: {list}."
@@ -565,7 +565,7 @@ After each progress check in Step 5, evaluate whether a context checkpoint is ap
    Iterations used: {i}/{max}
 
    Run `/clear` for fresh context, then:
-     /loom converge --resume
+     /loom-converge --resume
    ```
 
 4. **If `--auto`:** log the checkpoint message but do NOT pause. Continue iteration loop. The checkpoint data is on disk if the context monitor hook triggers a forced clear later.
@@ -644,7 +644,7 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
 
 1. Save convergence report to `.plan-execution/convergence/convergence-report.md`.
 
-2. If this run was triggered during a `/loom auto` pipeline (check for `.plan-execution/pipeline-state.toon`), save a summary to `.plan-execution/convergence-summary.toon` for the outer loop to read:
+2. If this run was triggered during a `/loom-auto` pipeline (check for `.plan-execution/pipeline-state.toon`), save a summary to `.plan-execution/convergence-summary.toon` for the outer loop to read:
 
    **Target mode:**
    ```toon
@@ -685,7 +685,7 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
 - **target-parser fails** (target mode): "Target parsing failed: {error}. Cannot converge without targets." Stop.
 - **criteria-planner fails** (criteria mode): "Criteria planning failed: {error}." Stop.
 - **harness-builder fails** (either mode): "Harness build failed: {error}. Cannot converge without a harness." Stop.
-- **convergence-driver fails**: Save partial state to `.plan-execution/convergence-state.toon` for `--resume`. Display what completed and suggest: "Run `/loom converge --resume` to continue from iteration {N}."
+- **convergence-driver fails**: Save partial state to `.plan-execution/convergence-state.toon` for `--resume`. Display what completed and suggest: "Run `/loom-converge --resume` to continue from iteration {N}."
 - **convergence-state.toon missing on `--resume`**: "No convergence state found. Use `--target` or `--criteria` to start a new run." Stop.
 - **convergence-state.toon from a different source**: Compare `convergenceMode` + source path in state with current flags. If they differ: "Warning: existing convergence state is for a different {mode/source} (`{old}`). Continue with existing state or start fresh? (continue / fresh)" If fresh, delete old state and restart.
 - **Agent failure during loop**: The convergence-driver handles internal agent failures. If the driver itself fails, save state and offer `--resume`.

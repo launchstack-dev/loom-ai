@@ -488,7 +488,7 @@ requiredHooks[N]{event,matcher,hookCommand,timeout}:
   3. Append the hook entry: `{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/{hookFile}\"", "timeout": {timeout} }`
   4. **File-existence guard (critical)**: before adding a hook entry, verify the hook source file exists at `hooks/{hookFile}`. If it doesn't, SKIP that entry — do not write a settings.json entry pointing to a missing file. Report `status: partial` for the run when any hook is skipped this way. The guard is per-hook: if `hooks/wiki-impact-warner.ts` exists but `hooks/wiki-session-status.ts` does not, the impact-warner is still registered and only the session-status entry is skipped.
 
-**Standalone wiki-hook deploy**: `scripts/register-wiki-hooks.ts` provides a deterministic, idempotent registration path for the three wiki hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`) — used by `/loom init` (greenfield), `/loom auto` (safety-net), and `/loom-upgrade --register-hooks` (existing-repo backfill). Rule 9 calls into the script for wiki hooks; Rule 9's inline logic handles the other hooks.
+**Standalone wiki-hook deploy**: `scripts/register-wiki-hooks.ts` provides a deterministic, idempotent registration path for the three wiki hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`) — used by `/loom-init` (greenfield), `/loom-auto` (safety-net), and `/loom-upgrade --register-hooks` (existing-repo backfill). Rule 9 calls into the script for wiki hooks; Rule 9's inline logic handles the other hooks.
 
 **Atomic write**: write to `settings.json.tmp`, then rename.
 
@@ -573,7 +573,7 @@ requiredProtocols[N]{file,purpose}:
    - `schemaVersion: 3`
    - `protocolVersion: 3`
    - `lastSynced` preserved from v2
-   - `loomCoreVersion: "0.0.0"` (placeholder — refreshed by the next `/loom upgrade` against catalog v3)
+   - `loomCoreVersion: "0.0.0"` (placeholder — refreshed by the next `/loom-upgrade` against catalog v3)
    - `loomHooksVersion: "0.0.0"` (same)
    - `catalogVersion: 2` (the v2-era default — bumped by Rule 13 in the same upgrade pass)
    - `components[1]`: a single `{ name: "loom-core", version: "0.0.0", kind: "core", pinned: false, installedAt: now() }`
@@ -607,7 +607,7 @@ items[1]{name,type,source,targetPath,sha256,component,installedAt}:
   loom,prompt,commands/loom.md,/Users/example/.claude/commands/loom.md,{sha256},loom-core,2026-04-15T12:00:00Z
 ```
 
-**Default values**: `protocolVersion: 3`, `loomCoreVersion: "0.0.0"`, `loomHooksVersion: "0.0.0"`, `catalogVersion: 2`. These placeholders survive only until the next post-migration `/loom upgrade` run, which queries the catalog and writes real values.
+**Default values**: `protocolVersion: 3`, `loomCoreVersion: "0.0.0"`, `loomHooksVersion: "0.0.0"`, `catalogVersion: 2`. These placeholders survive only until the next post-migration `/loom-upgrade` run, which queries the catalog and writes real values.
 
 **Reset of fail-open behaviour**: After Rule 12 lands a v3 file on disk, `hooks/file-ownership.ts` must reverse its fail-open-on-unreadable-state behaviour (current line 47-49) to fail closed per the v3 contract. Tracked as a Phase 1 deliverable in `PLAN-oss-launch.md`.
 

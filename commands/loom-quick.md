@@ -17,7 +17,7 @@ Parse arguments after `quick`:
 If arguments are empty or equal `--help`, print the following help text and stop:
 
 ```
-/loom quick [flags] <task description>
+/loom-quick [flags] <task description>
 
 Execute a task with wiki context, impact assessment, verification, and archiving.
 
@@ -34,11 +34,11 @@ Modes (auto-detected):
   injection     Plan execution is running. Inject into current wave or queue for next.
 
 Examples:
-  /loom quick Add input validation to the signup form
-  /loom quick --no-verify Fix the broken CSS on the dashboard
-  /loom quick --append Add a caching layer to the API
-  /loom quick --inject --no-commit Add retry logic to the webhook handler
-  /loom quick --no-impact Rename the logger variable
+  /loom-quick Add input validation to the signup form
+  /loom-quick --no-verify Fix the broken CSS on the dashboard
+  /loom-quick --append Add a caching layer to the API
+  /loom-quick --inject --no-commit Add retry logic to the webhook handler
+  /loom-quick --no-impact Rename the logger variable
 ```
 
 ### Instructions

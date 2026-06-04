@@ -161,7 +161,7 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    ephemeral/
    ```
 
-5. **Gitignore protection check.** First verify we're in a git repo (`git rev-parse --is-inside-work-tree`). If not, warn and skip this step. Then check for old layout — if `.plan-execution/.gitignore` contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom upgrade` first."
+5. **Gitignore protection check.** First verify we're in a git repo (`git rev-parse --is-inside-work-tree`). If not, warn and skip this step. Then check for old layout — if `.plan-execution/.gitignore` contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom-upgrade` first."
 
    Verify the project's `.gitignore` does not exclude Loom's persistent directories:
    ```bash
@@ -169,9 +169,9 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
    ```
-   If any path is blocked, warn and offer to add negation rules (see `/loom init` Step 1.3 for the full fix flow). If running in `--auto` mode, apply the fix automatically and log a warning.
+   If any path is blocked, warn and offer to add negation rules (see `/loom-init` Step 1.3 for the full fix flow). If running in `--auto` mode, apply the fix automatically and log a warning.
 
-6. **Install enforcement hooks.** This is a SAFETY NET for users who skipped `/loom init` — that command is the canonical place hooks get registered. Step 6 ensures the pipeline still works if init was bypassed.
+6. **Install enforcement hooks.** This is a SAFETY NET for users who skipped `/loom-init` — that command is the canonical place hooks get registered. Step 6 ensures the pipeline still works if init was bypassed.
 
    **Pipeline enforcement hooks** (file-ownership, contract-lock, budget-tracker, quality-gate, status-updater, typecheck-on-write, wiki-write-guard): if `.claude/settings.json` doesn't exist, create it with the block below. The hooks live in `~/Projects/meta-orchestration/hooks/`.
 
@@ -697,7 +697,7 @@ Spawn a general-purpose agent:
  {if not convergeConfig: '--config .plan-execution/converge.config'}
  Max iterations: 10
  {if noAutoCommit: '--no-auto-commit'}
- This is running as part of /loom auto -- write convergence-summary.toon when done.
+ This is running as part of /loom-auto -- write convergence-summary.toon when done.
  Your AgentResult MUST include verificationStatus."
 ```
 
@@ -721,7 +721,7 @@ If convergence-summary.toon is missing: warn and continue to Step 4 (convergence
 
 ##### 3.5e: Criteria Convergence (if `convergeCriteria == true`)
 
-Run criteria convergence as an auto-mode `/loom converge --criteria`:
+Run criteria convergence as an auto-mode `/loom-converge --criteria`:
 
 1. **Plan criteria.** Spawn criteria-planner-agent:
    ```
@@ -763,7 +763,7 @@ Run criteria convergence as an auto-mode `/loom converge --criteria`:
     Max iterations: 10
     Agent budget: {from orchestration.toml or 30}
     {if noAutoCommit: '--no-auto-commit'}
-    This is running as part of /loom auto -- write convergence-summary.toon when done.
+    This is running as part of /loom-auto -- write convergence-summary.toon when done.
     All fixer-agent invocations within the convergence loop MUST include diagnoseLog
     per behavioral-guidelines.md section 6 (Diagnose Before Fix).
     Your AgentResult MUST include verificationStatus."
@@ -1007,7 +1007,7 @@ Write `.plan-execution/escalation-report.md`:
 {contextual suggestion: manual fix, plan redesign, scope reduction}
 
 ### Resume Command
-Run `/loom auto --resume` after addressing the above.
+Run `/loom-auto --resume` after addressing the above.
 ```
 
 Display the escalation report to the user.

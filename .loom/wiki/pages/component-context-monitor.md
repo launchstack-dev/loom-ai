@@ -93,7 +93,7 @@ The update uses atomic write: write to `status.toon.tmp`, then `fs.renameSync`. 
 
 ```
 [context warning] ~42% context remaining (~116000 of 200000 tokens)
-When ready to checkpoint: `/clear` then `/loom auto --resume`
+When ready to checkpoint: `/clear` then `/loom-auto --resume`
 ```
 
 ### Critical Severity
@@ -104,9 +104,9 @@ Estimated context: 75% used (~150000 tokens of 200000)
 Remaining: ~50000 tokens (25%)
 
 Recommended action:
-  1. Run `/loom pause --compact` to save all state
+  1. Run `/loom-pause --compact` to save all state
   2. Run `/clear` for fresh context
-  3. Then: `/loom auto --resume`
+  3. Then: `/loom-auto --resume`
 ---
 ```
 
@@ -116,10 +116,10 @@ The hook inspects the plan execution directory to suggest the most appropriate r
 
 | File Present | Suggested Command |
 |-------------|------------------|
-| `pipeline-state.toon` | `/loom auto --resume` |
-| `convergence-state.toon` | `/loom converge --resume` |
+| `pipeline-state.toon` | `/loom-auto --resume` |
+| `convergence-state.toon` | `/loom-converge --resume` |
 | `state.toon` | `/loom-plan execute --resume` |
-| (none) | `/loom resume` |
+| (none) | `/loom-resume` |
 
 ## Fail-Open Guarantee
 

@@ -95,7 +95,7 @@ Kits gain two new optional fields. See `kit.schema.md` for the full kit schema.
 | Field | Required | Type | Description |
 |---|---|---|---|
 | minCoreVersion | no | semver | Minimum installed `loom-core` version required for this kit. If unmet, kit installation is blocked with a prompt to upgrade core. |
-| minHooksVersion | no | semver | Minimum installed `loom-hooks` version required for this kit. If unmet, kit installation is blocked with a prompt to upgrade hooks. Because hook upgrades require explicit user confirmation (`/loom upgrade --hooks`), this prompt surfaces a diff and waits for consent. |
+| minHooksVersion | no | semver | Minimum installed `loom-hooks` version required for this kit. If unmet, kit installation is blocked with a prompt to upgrade hooks. Because hook upgrades require explicit user confirmation (`/loom-upgrade --hooks`), this prompt surfaces a diff and waits for consent. |
 
 ## Resolution Algorithm (v3)
 
@@ -106,9 +106,9 @@ When a user runs `/loom-library use <kit-name>`:
 2. Find kit entry by name.
 3. Read install-state.toon v3.
 4. Check kit.minCoreVersion against install-state.loomCoreVersion:
-   - If unmet: prompt user to /loom upgrade core. Block kit install.
+   - If unmet: prompt user to /loom-upgrade core. Block kit install.
 5. Check kit.minHooksVersion against install-state.loomHooksVersion:
-   - If unmet: prompt user to /loom upgrade --hooks (which shows diff, requires confirmation). Block kit install.
+   - If unmet: prompt user to /loom-upgrade --hooks (which shows diff, requires confirmation). Block kit install.
 6. Check kit.minLoomVersion against catalog.catalog_version:
    - If unmet: prompt user to upgrade Loom (covers core, hooks, catalog together).
 7. If all checks pass, install kit items per existing v2 flow.

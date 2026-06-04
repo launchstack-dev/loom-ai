@@ -1,6 +1,6 @@
 # Install State Schema
 
-Canonical schema for `~/.claude/skills/library/install-state.toon` — the on-disk record of what Loom has installed, at what version, with what integrity. Read by `/loom upgrade`, the statusline update checker, and rollback machinery.
+Canonical schema for `~/.claude/skills/library/install-state.toon` — the on-disk record of what Loom has installed, at what version, with what integrity. Read by `/loom-upgrade`, the statusline update checker, and rollback machinery.
 
 ## Versions
 
@@ -57,7 +57,7 @@ Tracks each top-level installable unit and its update status.
 | name | yes | string | Component identifier. Must be one of `loom-core`, `loom-hooks`, or `loom-kit-<name>`. |
 | version | yes | semver | Currently-installed version of this component. |
 | kind | yes | enum | One of `core`, `hooks`, `kit`. Determines update policy. |
-| pinned | yes | bool | If `true`, `/loom upgrade` skips this component without explicit `--force` or component-specific flag. Hooks default to `pinned: true`. |
+| pinned | yes | bool | If `true`, `/loom-upgrade` skips this component without explicit `--force` or component-specific flag. Hooks default to `pinned: true`. |
 | installedAt | yes | ISO 8601 | Timestamp when this component version was installed. |
 
 ### `items[]` table
@@ -70,7 +70,7 @@ Per-file inventory. Replaces v2's `items[]` (name, type, source, targetPath, ins
 | type | yes | enum | `prompt`, `agent`, `infrastructure`, `protocol`, `hook`, `config`. |
 | source | yes | path | Repo-relative path of source file in the release tarball. |
 | targetPath | yes | abspath | Absolute install path on disk. |
-| sha256 | yes | hex | SHA256 of installed file. Verified by `/loom upgrade` before applying changes; mismatch indicates external modification → blocks upgrade with `--force` override. |
+| sha256 | yes | hex | SHA256 of installed file. Verified by `/loom-upgrade` before applying changes; mismatch indicates external modification → blocks upgrade with `--force` override. |
 | component | yes | string | Owning component (`loom-core`, `loom-hooks`, or kit name). Drives rollback scoping. |
 | installedAt | yes | ISO 8601 | Timestamp of install for this item. |
 
@@ -88,7 +88,7 @@ Records the previous version's state for atomic rollback. Present only when an u
 
 ## Migration: v2 → v3
 
-The v2→v3 reader is implemented in `/loom upgrade` and triggered automatically on first run after a v3-aware Loom installation.
+The v2→v3 reader is implemented in `/loom-upgrade` and triggered automatically on first run after a v3-aware Loom installation.
 
 ```
 v2 → v3 migration steps:
@@ -103,7 +103,7 @@ v2 → v3 migration steps:
 7. Write as v3 atomically (tmp + rename).
 ```
 
-After migration, the next `/loom upgrade` will refresh `loomCoreVersion`, `loomHooksVersion`, and split components correctly based on the new release tarball's manifest.
+After migration, the next `/loom-upgrade` will refresh `loomCoreVersion`, `loomHooksVersion`, and split components correctly based on the new release tarball's manifest.
 
 ## Atomic Write Discipline
 
@@ -114,7 +114,7 @@ All writes to `install-state.toon` MUST be atomic:
 2. fs.renameSync({path}.tmp, {path})
 ```
 
-Crashes mid-write must never leave a partial file. `/loom upgrade` and the installer share the same write helper.
+Crashes mid-write must never leave a partial file. `/loom-upgrade` and the installer share the same write helper.
 
 ## Rollback Scoping
 

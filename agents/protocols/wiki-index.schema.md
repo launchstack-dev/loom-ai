@@ -43,7 +43,7 @@ categories[11]{name,count}:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `schemaVersion` | yes | `2` as of the flows-and-contracts upgrade. Was `1` previously. `/loom upgrade` Rule 7 migrates v1 → v2. |
+| `schemaVersion` | yes | `2` as of the flows-and-contracts upgrade. Was `1` previously. `/loom-upgrade` Rule 7 migrates v1 → v2. |
 | `projectName` | yes | Name of the project this wiki belongs to. |
 | `domain` | yes | Project domain: `code`, `research`, `creative`, `business`, or custom. |
 | `wikiVersion` | yes | Monotonically increasing counter. Incremented on every index write. |
@@ -78,7 +78,7 @@ categories[11]{name,count}:
 
 ## Migration from schemaVersion 1
 
-`/loom upgrade` Rule 7 handles legacy index files:
+`/loom-upgrade` Rule 7 handles legacy index files:
 
 - If `schemaVersion: 1` → bump to `2`.
 - If `schemaVersion` field missing entirely → insert `schemaVersion: 2` as the first line.

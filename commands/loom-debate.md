@@ -93,4 +93,4 @@ If `.loom/wiki/` exists, spawn wiki-maintainer-agent in the background:
 ### Error Handling
 
 - **Agent failure mid-debate:** If advocate or critic fails, attempt one retry with the same context. If retry fails, synthesize from whatever rounds completed.
-- **No question provided:** Print: "Usage: `/loom debate \"Redis vs Postgres for sessions\"`"
+- **No question provided:** Print: "Usage: `/loom-debate \"Redis vs Postgres for sessions\"`"

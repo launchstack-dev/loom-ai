@@ -29,7 +29,7 @@ The triggers table is also surfaced as a markdown view for cross-referencing fro
 | **Conflicts resolved** | Interpretation conflict transitions to `resolved` / `accepted` / `wont-fix` | Create a Decision page under `.loom/wiki/pages/decisions/`. |
 | **E2E stories verified** | `e2e-runner-agent` completes execution | Create a Verified User Flow page under `.loom/wiki/pages/flows/`. |
 | **Execution debrief (BLOCKING)** | Any execution ends (success, failure, stall, interruption) | Flush all tracked artifacts to wiki pages: execution summary, decision pages, failure pages, convergence report, open conflict pages. Orchestrator MUST wait for completion before cleanup. |
-| **Feature with user-facing AC completes** | After `/loom auto` or `/loom-plan execute` completes a phase whose acceptance criteria contain user-facing verbs ("user can X", "request returns Y") AND no `flow-*` page exists for that behavior | Spawn maintainer with `--check-flow`. Maintainer proposes a `flow-*` page as an `info` issue (does NOT auto-create — flows remain opt-in). |
+| **Feature with user-facing AC completes** | After `/loom-auto` or `/loom-plan execute` completes a phase whose acceptance criteria contain user-facing verbs ("user can X", "request returns Y") AND no `flow-*` page exists for that behavior | Spawn maintainer with `--check-flow`. Maintainer proposes a `flow-*` page as an `info` issue (does NOT auto-create — flows remain opt-in). |
 
 **Blocking triggers:** The `execution-debrief` trigger is the only blocking trigger. If the wiki-maintainer fails on this trigger, the orchestrator MUST NOT clean up `.plan-execution/` or destroy the worktree. See `execution-conventions.md § Mandatory Debrief Protocol`.
 
@@ -81,7 +81,7 @@ Input artifact: E2E runner AgentResult, story files from `.plan-execution/conver
 
 ### feature-with-user-facing-ac-completed
 
-Fires when `/loom auto` or `/loom-plan execute` completes a phase whose acceptance criteria are framed as user-facing behavior. The wiki-maintainer is spawned with the `--check-flow` flag (documented in `wiki-maintainer-agent.md`); it looks for an existing `flow-*` page whose `touches`/`exercises` set covers the implemented behavior and, if none exists, proposes one as an `info` issue in its AgentResult. **The maintainer does NOT auto-create flow pages** — flows remain opt-in for the first iteration (see `wiki-conventions.md § Flow significance`). The user, or a follow-up `/loom-wiki ingest --flow` invocation, decides whether to promote the proposal into a page.
+Fires when `/loom-auto` or `/loom-plan execute` completes a phase whose acceptance criteria are framed as user-facing behavior. The wiki-maintainer is spawned with the `--check-flow` flag (documented in `wiki-maintainer-agent.md`); it looks for an existing `flow-*` page whose `touches`/`exercises` set covers the implemented behavior and, if none exists, proposes one as an `info` issue in its AgentResult. **The maintainer does NOT auto-create flow pages** — flows remain opt-in for the first iteration (see `wiki-conventions.md § Flow significance`). The user, or a follow-up `/loom-wiki ingest --flow` invocation, decides whether to promote the proposal into a page.
 
 **Detection heuristic for "user-facing verbs":** the trigger fires when at least one acceptance-criterion text matches any of these regular expressions (case-insensitive), or when the criterion is explicitly tagged as a user journey in the plan:
 

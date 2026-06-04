@@ -45,7 +45,7 @@ The orchestrator provides:
 Before generating any proposals, load ALL available project context. This makes proposals specific to the existing codebase rather than generic.
 
 **Full context loading (default):**
-1. `.plan-execution/init-report.toon` — full codebase analysis from `/loom init` (API endpoints, integrations, patterns, tech debt, documentation gaps)
+1. `.plan-execution/init-report.toon` — full codebase analysis from `/loom-init` (API endpoints, integrations, patterns, tech debt, documentation gaps)
 2. `.loom/wiki/pages/` — all wiki pages. These are the richest source:
    - `component-*.md` — existing modules, services, architectural components
    - `api-surface-*.md` — API endpoint groups and integration surfaces

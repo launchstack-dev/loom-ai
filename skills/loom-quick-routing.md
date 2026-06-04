@@ -50,7 +50,7 @@ Do NOT intercept any of the following:
    - "loom data:lineage"
    - "data:profile this project"
 
-5. **Bug reports and broken behavior**: Requests that describe **symptoms** (errors, crashes, broken behavior) rather than a known fix. These should route to `/loom bugfix` instead. Examples:
+5. **Bug reports and broken behavior**: Requests that describe **symptoms** (errors, crashes, broken behavior) rather than a known fix. These should route to `/loom-bugfix` instead. Examples:
    - "the login page throws a 500"
    - "getting a null reference error"
    - "this crashes when I filter by date"

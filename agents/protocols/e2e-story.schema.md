@@ -24,7 +24,7 @@ An E2EStory describes a user workflow as a sequence of steps with expected outco
 | derivedFrom | string[] | yes | Source scenario references that this story derives from. **At least 1 entry required.** Each entry uses the form `{phaseId}.{S-NN}` (e.g., `Phase 4.S-02`) for plan-phase scenarios or `{featureId}.{S-NN}` (e.g., `F-03.S-05`) for roadmap-feature scenarios. E2E stories without a source scenario are rejected as blocking — every story MUST trace back to at least one scenario. See `scenario.schema.md` for scenario IDs. |
 | screenshots | string[] | no | File paths to reference screenshots for visual verification. |
 | consoleDumps | string[] | no | File paths to console output dumps for debugging. |
-| tags | string[] | no | Freeform tags for filtering and grouping (e.g., `smoke`, `regression`, `auth`). Used by `/loom converge --e2e` to run subsets of stories. |
+| tags | string[] | no | Freeform tags for filtering and grouping (e.g., `smoke`, `regression`, `auth`). Used by `/loom-converge --e2e` to run subsets of stories. |
 | storyTimeout | integer | no | Overall timeout for the entire story in milliseconds. Default: 120000 (2 minutes). |
 
 ### StoryStep Fields

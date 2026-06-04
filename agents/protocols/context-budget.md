@@ -383,7 +383,7 @@ When an atomic block (flow `steps[]`, contract `shape`, etc.) within the chosen 
 
 ### Step 5 — Defensive handling for legacy / pre-migration pages
 
-A page may lack `summary`, `estimatedTokens`, or `subtype` during the deployment window between `/loom upgrade` Rule 7 migration and the next agent-driven write of that page. The packer MUST handle absence defensively:
+A page may lack `summary`, `estimatedTokens`, or `subtype` during the deployment window between `/loom-upgrade` Rule 7 migration and the next agent-driven write of that page. The packer MUST handle absence defensively:
 
 | Missing field | Fallback |
 |---------------|----------|

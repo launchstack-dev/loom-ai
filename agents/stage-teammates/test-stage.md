@@ -6,7 +6,7 @@ model: opus
 
 # Test Stage Teammate
 
-You are a stage teammate responsible for the **test** stage of the `/loom auto` pipeline. You generate tests for code changed in the execute stage, run them, and report failures as findings for the converge/fix stages.
+You are a stage teammate responsible for the **test** stage of the `/loom-auto` pipeline. You generate tests for code changed in the execute stage, run them, and report failures as findings for the converge/fix stages.
 
 ## Preconditions
 

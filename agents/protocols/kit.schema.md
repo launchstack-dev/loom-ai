@@ -55,7 +55,7 @@ Kit agents register at specific pipeline insertion points rather than using the 
 
 | Insertion Point | When It Fires |
 |---|---|
-| pre-scope | Before scope contract generation in `/loom auto` |
+| pre-scope | Before scope contract generation in `/loom-auto` |
 | post-scope | After scope contract is locked, before roadmap generation |
 | pre-execute | Before each execution wave starts (before contracts-agent or implementers) |
 | post-execute | After each execution wave completes (after wiring-agent finishes) |
@@ -68,7 +68,7 @@ Kit insertion points map to the existing `phase` values used by project-specific
 
 | Kit Insertion Point | Closest Existing Phase | When It Fires |
 |---|---|---|
-| pre-scope | (new — no equivalent) | Before scope contract generation in /loom auto |
+| pre-scope | (new — no equivalent) | Before scope contract generation in /loom-auto |
 | post-scope | (new — no equivalent) | After scope contract locked |
 | pre-execute | pre-contracts | Before contracts-agent or implementers in a wave |
 | post-execute | post-wiring | After wiring-agent completes a wave |
