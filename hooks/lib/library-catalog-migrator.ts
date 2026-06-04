@@ -4,6 +4,61 @@
  * See agents/protocols/library-catalog.schema.md and schema-upgrade.md Rule 13.
  */
 
+import { MigrationValidationError } from "./migration-errors.js";
+
+const ALLOWED_REPO_HOSTS = new Set(["github.com", "codeberg.org"]);
+const SEMVER_RE = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
+
+/**
+ * Validate a `repo` URL before interpolating it into release-tarball URLs.
+ * Repo URLs flow from user-edited YAML straight into fetch + cosign verify;
+ * un-validated values can produce file://, javascript:, or attacker-origin URLs.
+ * Returns a normalized URL (trailing slash stripped).
+ */
+export function validateRepoUrl(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new MigrationValidationError("repo", value, "must be a non-empty string");
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new MigrationValidationError("repo", value, "not a valid URL");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new MigrationValidationError("repo", value, `scheme must be https (got "${parsed.protocol}")`);
+  }
+  if (parsed.username || parsed.password) {
+    throw new MigrationValidationError("repo", value, "must not contain userinfo (user:pass@)");
+  }
+  if (parsed.hash) {
+    throw new MigrationValidationError("repo", value, "must not contain a fragment (#...)");
+  }
+  if (!ALLOWED_REPO_HOSTS.has(parsed.host)) {
+    throw new MigrationValidationError(
+      "repo",
+      value,
+      `host must be one of [${[...ALLOWED_REPO_HOSTS].join(", ")}] (got "${parsed.host}")`
+    );
+  }
+  // Strip trailing slash so synthesized release URLs don't end up with `//releases`.
+  return value.replace(/\/+$/, "");
+}
+
+/**
+ * Validate a semver release version before interpolation into release URLs.
+ * Rejects path-traversal payloads and any non-semver tokens.
+ */
+export function validateSemver(value: unknown, field: string = "release.version"): string {
+  if (typeof value !== "string") {
+    throw new MigrationValidationError(field, value, "must be a string");
+  }
+  if (!SEMVER_RE.test(value)) {
+    throw new MigrationValidationError(field, value, "must match major.minor.patch[-prerelease]");
+  }
+  return value;
+}
+
 export interface LibraryCatalogV2 {
   catalog_version: 2;
   repo: string;
@@ -68,7 +123,9 @@ const V3_TOP_LEVEL_MARKERS = [
  * Heuristic: explicit `catalog_version` field plus presence of v3 markers.
  */
 export function detectLibraryCatalogVersion(content: string): DetectionResult {
-  const match = /^\s*catalog_version:\s*(\d+)/m.exec(content);
+  // Line-anchored + end-anchored to reject `catalog_version: 3.9` (which previously
+  // truncated silently via parseInt) and embedded substring smuggling.
+  const match = /^catalog_version:\s*(\d+)\s*$/m.exec(content);
 
   if (!match) {
     return {
@@ -127,13 +184,14 @@ export function migrateLibraryCatalogV2ToV3(
     );
   }
 
+  const normalizedRepo = validateRepoUrl(v2.repo);
   const releases: ReleaseEntry[] = opts.initialRelease
-    ? [synthesizeRelease(v2.repo, opts.initialRelease)]
+    ? [synthesizeRelease(normalizedRepo, opts.initialRelease)]
     : [];
 
   return {
     catalog_version: 3,
-    repo: v2.repo,
+    repo: normalizedRepo,
     loomCoreVersion: opts.coreVersion,
     loomHooksVersion: opts.hooksVersion,
     releases,
@@ -147,12 +205,16 @@ function synthesizeRelease(
   repoUrl: string,
   release: { version: string; releasedAt: string }
 ): ReleaseEntry {
-  const base = `${repoUrl}/releases/download/v${release.version}`;
+  // Both inputs are already validated by validateRepoUrl + validateSemver at the boundary,
+  // but re-assert the semver here so this function is safe to call from future code paths
+  // that don't go through migrateLibraryCatalogV2ToV3.
+  const version = validateSemver(release.version);
+  const base = `${repoUrl}/releases/download/v${version}`;
   return {
-    version: release.version,
-    coreTarball: `${base}/loom-core-v${release.version}.tar.gz`,
-    hooksTarball: `${base}/loom-hooks-v${release.version}.tar.gz`,
-    cosignSignature: `${base}/loom-core-v${release.version}.tar.gz.sig`,
+    version,
+    coreTarball: `${base}/loom-core-v${version}.tar.gz`,
+    hooksTarball: `${base}/loom-hooks-v${version}.tar.gz`,
+    cosignSignature: `${base}/loom-core-v${version}.tar.gz.sig`,
     sha256Manifest: `${base}/SHA256SUMS`,
     releasedAt: release.releasedAt,
   };

@@ -18,8 +18,12 @@ import {
   migrateToLatest as migrateLibraryCatalogToLatest,
   MIGRATIONS as LIBRARY_CATALOG_MIGRATIONS,
   CURRENT_VERSION as LIBRARY_CATALOG_CURRENT_VERSION,
+  validateRepoUrl,
+  validateSemver,
   type LibraryCatalogV2,
 } from "../../hooks/lib/library-catalog-migrator.js";
+
+import { MigrationValidationError } from "../../hooks/lib/migration-errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -490,5 +494,181 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
     } finally {
       delete LIBRARY_CATALOG_MIGRATIONS["3->4"];
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Security — URL + semver validation (Commit 1)
+// ---------------------------------------------------------------------------
+
+describe("validateRepoUrl", () => {
+  it("accepts a clean github.com https URL and returns it unchanged", () => {
+    const url = "https://github.com/launchstack-dev/loom-ai";
+    expect(validateRepoUrl(url)).toBe(url);
+  });
+
+  it("strips trailing slash to prevent //releases double-slash", () => {
+    expect(validateRepoUrl("https://github.com/launchstack-dev/loom-ai/")).toBe(
+      "https://github.com/launchstack-dev/loom-ai"
+    );
+    expect(validateRepoUrl("https://github.com/launchstack-dev/loom-ai///")).toBe(
+      "https://github.com/launchstack-dev/loom-ai"
+    );
+  });
+
+  it("rejects javascript: scheme", () => {
+    expect(() => validateRepoUrl("javascript:alert(1)")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects file:// scheme", () => {
+    expect(() => validateRepoUrl("file:///etc/passwd")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects http (non-https)", () => {
+    expect(() => validateRepoUrl("http://github.com/x/y")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects URL with userinfo (user:pass@)", () => {
+    expect(() => validateRepoUrl("https://evil:pwd@github.com/x/y")).toThrow(
+      MigrationValidationError
+    );
+  });
+
+  it("rejects URL with fragment (#)", () => {
+    expect(() => validateRepoUrl("https://github.com/x/y#evil")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects URL on a non-allowlisted host", () => {
+    expect(() => validateRepoUrl("https://evil.com/x/y")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects empty string + non-string inputs", () => {
+    expect(() => validateRepoUrl("")).toThrow(MigrationValidationError);
+    expect(() => validateRepoUrl(null)).toThrow(MigrationValidationError);
+    expect(() => validateRepoUrl(123)).toThrow(MigrationValidationError);
+  });
+
+  it("rejects malformed URLs", () => {
+    expect(() => validateRepoUrl("not a url")).toThrow(MigrationValidationError);
+  });
+});
+
+describe("validateSemver", () => {
+  it("accepts plain semver", () => {
+    expect(validateSemver("0.1.0")).toBe("0.1.0");
+    expect(validateSemver("12.34.56")).toBe("12.34.56");
+  });
+
+  it("accepts semver with prerelease tag", () => {
+    expect(validateSemver("1.0.0-alpha.1")).toBe("1.0.0-alpha.1");
+    expect(validateSemver("0.1.0-beta")).toBe("0.1.0-beta");
+  });
+
+  it("rejects path-traversal payloads", () => {
+    expect(() => validateSemver("../../../etc/passwd")).toThrow(MigrationValidationError);
+    expect(() => validateSemver("0.1.0/../evil")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects partial versions", () => {
+    expect(() => validateSemver("1.0")).toThrow(MigrationValidationError);
+    expect(() => validateSemver("1")).toThrow(MigrationValidationError);
+  });
+
+  it("rejects non-string", () => {
+    expect(() => validateSemver(undefined)).toThrow(MigrationValidationError);
+    expect(() => validateSemver(0.1)).toThrow(MigrationValidationError);
+  });
+});
+
+describe("migrateLibraryCatalogV2ToV3 — repo validation at boundary", () => {
+  function makeV2WithRepo(repo: string): LibraryCatalogV2 {
+    return {
+      catalog_version: 2,
+      repo,
+      default_dirs: {},
+      library: {},
+      kits: [],
+    };
+  }
+
+  it("rejects a v2 with malicious repo URL before migrating", () => {
+    expect(() =>
+      migrateLibraryCatalogV2ToV3(makeV2WithRepo("javascript:alert(1)"), {
+        coreVersion: "0.1.0",
+        hooksVersion: "0.1.0",
+      })
+    ).toThrow(MigrationValidationError);
+  });
+
+  it("rejects a v2 with malicious release.version", () => {
+    expect(() =>
+      migrateLibraryCatalogV2ToV3(makeV2WithRepo("https://github.com/launchstack-dev/loom-ai"), {
+        coreVersion: "0.1.0",
+        hooksVersion: "0.1.0",
+        initialRelease: { version: "../../../etc/passwd", releasedAt: FIXED_NOW },
+      })
+    ).toThrow(MigrationValidationError);
+  });
+
+  it("normalizes trailing-slash repo into release URLs without double-slash", () => {
+    const v3 = migrateLibraryCatalogV2ToV3(
+      makeV2WithRepo("https://github.com/launchstack-dev/loom-ai/"),
+      {
+        coreVersion: "0.1.0",
+        hooksVersion: "0.1.0",
+        initialRelease: { version: "0.1.0", releasedAt: FIXED_NOW },
+      }
+    );
+    expect(v3.repo).toBe("https://github.com/launchstack-dev/loom-ai");
+    expect(v3.releases[0].coreTarball).not.toContain("loom-ai//releases");
+    expect(v3.releases[0].coreTarball).toBe(
+      "https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz"
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Security — install-state detector hardening against string smuggling
+// ---------------------------------------------------------------------------
+
+describe("detectInstallStateVersion — line-anchored regex", () => {
+  it("is not fooled by `schemaVersion: 3` smuggled inside an item value", () => {
+    const malicious = [
+      `schemaVersion: 2`,
+      `lastSynced: 2026-04-15T12:00:00Z`,
+      ``,
+      `items[1]{name,type,source,targetPath,installedAt}:`,
+      `  evil schemaVersion: 3 protocolVersion: 3 loomCoreVersion: x loomHooksVersion: x catalogVersion: 3 components[1]: x,prompt,a,/b,2026-04-15T12:00:00Z`,
+    ].join("\n");
+    const result = detectInstallStateVersion(malicious);
+    expect(result.version).toBe(2);
+    expect(result.outdated).toBe(true);
+  });
+
+  it("rejects fractional `schemaVersion: 3.9` instead of silently truncating to 3", () => {
+    const result = detectInstallStateVersion(`schemaVersion: 3.9\n`);
+    // No line matches /^schemaVersion:\s*(\d+)\s*$/m so it's treated as v1.
+    expect(result.outdated).toBe(true);
+    expect(result.version).not.toBe(3);
+  });
+
+  it("rejects mid-line schemaVersion (must be at start of line)", () => {
+    const result = detectInstallStateVersion(`  # schemaVersion: 3 in a comment\n`);
+    expect(result.outdated).toBe(true);
+    expect(result.version).not.toBe(3);
+  });
+});
+
+describe("detectLibraryCatalogVersion — line-anchored + integer-only", () => {
+  it("rejects fractional `catalog_version: 3.9`", () => {
+    const result = detectLibraryCatalogVersion(`catalog_version: 3.9\n`);
+    expect(result.outdated).toBe(true);
+    expect(result.version).not.toBe(3);
+  });
+
+  it("rejects smuggled catalog_version inside a value", () => {
+    const malicious = `repo: https://example.com\n# catalog_version: 3 (commented)\nkits: []\n`;
+    const result = detectLibraryCatalogVersion(malicious);
+    expect(result.version).toBe(1); // line-anchored regex never matches the comment
   });
 });

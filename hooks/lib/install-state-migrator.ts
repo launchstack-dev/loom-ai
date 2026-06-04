@@ -90,7 +90,11 @@ const TOON_V3_MARKERS = [
  * and whether it's outdated relative to current (v3).
  */
 export function detectInstallStateVersion(content: string): DetectionResult {
-  const hasSchemaVersion = /\bschemaVersion:\s*(\d+)\b/.exec(content);
+  // Line-anchored to defeat string-smuggling: a malicious v2 file can't put
+  // `schemaVersion: 3` inside an item value and trick the detector. Trailing-
+  // whitespace allowed; trailing non-digit characters (e.g. `3.9`, `3abc`) fall
+  // through to the "missing schemaVersion" branch instead of silently truncating.
+  const hasSchemaVersion = /^schemaVersion:\s*(\d+)\s*$/m.exec(content);
 
   if (hasSchemaVersion) {
     const v = parseInt(hasSchemaVersion[1], 10);
