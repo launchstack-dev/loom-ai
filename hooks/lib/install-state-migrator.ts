@@ -4,6 +4,12 @@
  * See agents/protocols/install-state.schema.md and schema-upgrade.md Rule 12.
  */
 
+import {
+  MigrationDowngradeError,
+  MigrationSchemaVersionMismatchError,
+  MissingMigrationStepError,
+} from "./migration-errors.js";
+
 export interface InstallStateV2 {
   schemaVersion: 2;
   lastSynced: string;
@@ -154,9 +160,10 @@ export function migrateInstallStateV2ToV3(
   const catalogVersion = opts.defaultCatalogVersion ?? 2;
   const protocolVersion = opts.defaultProtocolVersion ?? 3;
 
-  if (v2.schemaVersion !== 2) {
-    throw new Error(
-      `migrateInstallStateV2ToV3: expected schemaVersion === 2, got ${v2.schemaVersion}`
+  if (v2 == null || (v2 as { schemaVersion?: unknown }).schemaVersion !== 2) {
+    throw new MigrationSchemaVersionMismatchError(
+      2,
+      v2 == null ? v2 : (v2 as { schemaVersion?: unknown }).schemaVersion
     );
   }
 
@@ -204,46 +211,56 @@ export function migrateInstallStateV2ToV3(
 
 export type AnyInstallState = InstallStateV2 | InstallStateV3;
 
-export type MigrationStep = (input: any, opts: MigrationOptions) => any;
+export type MigrationStep = (input: AnyInstallState, opts: MigrationOptions) => AnyInstallState;
 
-export const MIGRATIONS: Record<string, MigrationStep> = {
-  "2->3": (input, opts) => migrateInstallStateV2ToV3(input as InstallStateV2, opts),
-};
+export type MigrationRegistry = Readonly<Record<string, MigrationStep>>;
+
+/**
+ * Built-in migration steps. Frozen at module load so production code cannot
+ * mutate the privileged execution surface (CWE-913). Tests inject stub steps
+ * by passing a separate registry to `migrateToLatest`, not by mutating this.
+ */
+export const MIGRATIONS: MigrationRegistry = Object.freeze({
+  "2->3": (input: AnyInstallState, opts: MigrationOptions) =>
+    migrateInstallStateV2ToV3(input as InstallStateV2, opts),
+});
 
 /** Current schema version targeted by `migrateToLatest`. Mirror of registry. */
 export const CURRENT_VERSION = 3;
 
 /**
- * Walk the migration chain from `fromVersion` to `CURRENT_VERSION`.
- * Throws if any step in the chain is missing from MIGRATIONS.
+ * Walk the migration chain from `fromVersion` to `targetVersion` (default
+ * `CURRENT_VERSION`). Throws if any step in the chain is missing from the
+ * supplied `registry`.
+ *
+ * Production callers omit `registry` and get the frozen built-in MIGRATIONS.
+ * Tests supply `{ ...MIGRATIONS, "3->4": stub }` to exercise future-version
+ * walks without mutating module state.
  *
  * @example
- *   migrateToLatest(v2Parsed, 2, { sha256Resolver })       // → v3
- *   migrateToLatest(v2Parsed, 2, { sha256Resolver }, 4)    // → v4 (when v4 exists)
+ *   migrateToLatest(v2Parsed, 2, { sha256Resolver })                              // → v3
+ *   migrateToLatest(v2Parsed, 2, opts, 4, { ...MIGRATIONS, "3->4": stub })        // → v4
  */
 export function migrateToLatest(
   input: AnyInstallState,
   fromVersion: number,
   opts: MigrationOptions = {},
-  targetVersion: number = CURRENT_VERSION
+  targetVersion: number = CURRENT_VERSION,
+  registry: MigrationRegistry = MIGRATIONS
 ): AnyInstallState {
   if (fromVersion === targetVersion) {
     return input;
   }
   if (fromVersion > targetVersion) {
-    throw new Error(
-      `migrateToLatest: cannot downgrade from v${fromVersion} to v${targetVersion}`
-    );
+    throw new MigrationDowngradeError(fromVersion, targetVersion);
   }
 
-  let current: any = input;
+  let current: AnyInstallState = input;
   for (let v = fromVersion; v < targetVersion; v++) {
     const key = `${v}->${v + 1}`;
-    const step = MIGRATIONS[key];
+    const step = registry[key];
     if (!step) {
-      throw new Error(
-        `migrateToLatest: missing migration step "${key}" (chain ${fromVersion}→${targetVersion})`
-      );
+      throw new MissingMigrationStepError(key, fromVersion, targetVersion);
     }
     current = step(current, opts);
   }

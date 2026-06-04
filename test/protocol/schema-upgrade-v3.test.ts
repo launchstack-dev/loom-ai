@@ -23,7 +23,12 @@ import {
   type LibraryCatalogV2,
 } from "../../hooks/lib/library-catalog-migrator.js";
 
-import { MigrationValidationError } from "../../hooks/lib/migration-errors.js";
+import {
+  MigrationDowngradeError,
+  MigrationSchemaVersionMismatchError,
+  MigrationValidationError,
+  MissingMigrationStepError,
+} from "../../hooks/lib/migration-errors.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -195,10 +200,27 @@ describe("migrateInstallStateV2ToV3", () => {
     expect(v3.components).toHaveLength(1);
   });
 
-  it("rejects non-v2 input", () => {
+  it("rejects non-v2 input with MigrationSchemaVersionMismatchError", () => {
+    try {
+      migrateInstallStateV2ToV3({ schemaVersion: 1 } as unknown as InstallStateV2, {});
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MigrationSchemaVersionMismatchError);
+      expect((err as MigrationSchemaVersionMismatchError).expected).toBe(2);
+      expect((err as MigrationSchemaVersionMismatchError).actual).toBe(1);
+    }
+  });
+
+  it("rejects null/undefined input with MigrationSchemaVersionMismatchError", () => {
     expect(() =>
-      migrateInstallStateV2ToV3({ schemaVersion: 1 } as unknown as InstallStateV2, {})
-    ).toThrow(/expected schemaVersion === 2/);
+      migrateInstallStateV2ToV3(null as unknown as InstallStateV2, {})
+    ).toThrow(MigrationSchemaVersionMismatchError);
+    expect(() =>
+      migrateInstallStateV2ToV3(undefined as unknown as InstallStateV2, {})
+    ).toThrow(MigrationSchemaVersionMismatchError);
+    expect(() =>
+      migrateInstallStateV2ToV3({} as unknown as InstallStateV2, {})
+    ).toThrow(MigrationSchemaVersionMismatchError);
   });
 });
 
@@ -352,13 +374,33 @@ describe("migrateLibraryCatalogV2ToV3", () => {
     expect(v3.kits).toEqual([]);
   });
 
-  it("rejects non-v2 input", () => {
-    expect(() =>
+  it("rejects non-v2 input with MigrationSchemaVersionMismatchError", () => {
+    try {
       migrateLibraryCatalogV2ToV3(
         { catalog_version: 1 } as unknown as LibraryCatalogV2,
         { coreVersion: "0.1.0", hooksVersion: "0.1.0" }
-      )
-    ).toThrow(/expected catalog_version === 2/);
+      );
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MigrationSchemaVersionMismatchError);
+      expect((err as MigrationSchemaVersionMismatchError).expected).toBe(2);
+      expect((err as MigrationSchemaVersionMismatchError).actual).toBe(1);
+    }
+  });
+
+  it("rejects null/undefined catalog input with MigrationSchemaVersionMismatchError", () => {
+    expect(() =>
+      migrateLibraryCatalogV2ToV3(null as unknown as LibraryCatalogV2, {
+        coreVersion: "0.1.0",
+        hooksVersion: "0.1.0",
+      })
+    ).toThrow(MigrationSchemaVersionMismatchError);
+    expect(() =>
+      migrateLibraryCatalogV2ToV3({} as unknown as LibraryCatalogV2, {
+        coreVersion: "0.1.0",
+        hooksVersion: "0.1.0",
+      })
+    ).toThrow(MigrationSchemaVersionMismatchError);
   });
 });
 
@@ -395,35 +437,61 @@ describe("migrateInstallStateToLatest (chained walker)", () => {
     expect((result as any).schemaVersion).toBe(3);
   });
 
-  it("rejects downgrades", () => {
+  it("rejects downgrades with MigrationDowngradeError", () => {
     const v2 = makeV2();
-    expect(() => migrateInstallStateToLatest(v2, 3, {}, 2)).toThrow(/cannot downgrade/);
-  });
-
-  it("throws on missing migration step in the chain", () => {
-    const v2 = makeV2();
-    expect(() => migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW }, 5)).toThrow(
-      /missing migration step "3->4"/
-    );
-  });
-
-  it("walks a multi-step chain when v3→v4 stub is registered", () => {
-    // Simulate a future v4 by registering a stub. Clean up afterward.
-    const v3StubField = "introducedInV4";
-    INSTALL_STATE_MIGRATIONS["3->4"] = (input, _opts) => ({
-      ...input,
-      schemaVersion: 4,
-      [v3StubField]: "hello",
-    });
     try {
-      const v2 = makeV2();
-      const result: any = migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW }, 4);
-      expect(result.schemaVersion).toBe(4);
-      expect(result[v3StubField]).toBe("hello");
-      expect(result.protocolVersion).toBe(3); // carried through from v2→v3 step
-    } finally {
-      delete INSTALL_STATE_MIGRATIONS["3->4"];
+      migrateInstallStateToLatest(v2, 3, {}, 2);
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MigrationDowngradeError);
+      expect((err as MigrationDowngradeError).fromVersion).toBe(3);
+      expect((err as MigrationDowngradeError).toVersion).toBe(2);
     }
+  });
+
+  it("throws MissingMigrationStepError with structured props on chain gap", () => {
+    const v2 = makeV2();
+    try {
+      migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW }, 5);
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MissingMigrationStepError);
+      expect((err as MissingMigrationStepError).key).toBe("3->4");
+      expect((err as MissingMigrationStepError).fromVersion).toBe(2);
+      expect((err as MissingMigrationStepError).toVersion).toBe(5);
+    }
+  });
+
+  it("freezes the built-in MIGRATIONS map", () => {
+    expect(Object.isFrozen(INSTALL_STATE_MIGRATIONS)).toBe(true);
+    expect(() => {
+      (INSTALL_STATE_MIGRATIONS as Record<string, unknown>)["evil"] = () => null;
+    }).toThrow(TypeError);
+  });
+
+  it("walks a multi-step chain via registry override (no global mutation)", () => {
+    const v3StubField = "introducedInV4";
+    const testRegistry = {
+      ...INSTALL_STATE_MIGRATIONS,
+      "3->4": (input: any, _opts: any) => ({
+        ...input,
+        schemaVersion: 4,
+        [v3StubField]: "hello",
+      }),
+    };
+    const v2 = makeV2();
+    const result: any = migrateInstallStateToLatest(
+      v2,
+      2,
+      { now: () => FIXED_NOW },
+      4,
+      testRegistry
+    );
+    expect(result.schemaVersion).toBe(4);
+    expect(result[v3StubField]).toBe("hello");
+    expect(result.protocolVersion).toBe(3); // carried through from v2→v3 step
+    // Built-in registry untouched — proves no module-state pollution.
+    expect("3->4" in INSTALL_STATE_MIGRATIONS).toBe(false);
   });
 });
 
@@ -458,42 +526,70 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
     expect((result as any).catalog_version).toBe(3);
   });
 
-  it("rejects downgrades", () => {
-    expect(() =>
-      migrateLibraryCatalogToLatest(makeV2(), 3, { coreVersion: "0.1.0", hooksVersion: "0.1.0" }, 2)
-    ).toThrow(/cannot downgrade/);
+  it("rejects downgrades with MigrationDowngradeError", () => {
+    try {
+      migrateLibraryCatalogToLatest(
+        makeV2(),
+        3,
+        { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
+        2
+      );
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MigrationDowngradeError);
+    }
   });
 
-  it("throws on missing migration step in the chain", () => {
-    expect(() =>
+  it("throws MissingMigrationStepError on chain gap", () => {
+    try {
       migrateLibraryCatalogToLatest(
         makeV2(),
         2,
         { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
         5
-      )
-    ).toThrow(/missing migration step "3->4"/);
+      );
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(MissingMigrationStepError);
+      expect((err as MissingMigrationStepError).key).toBe("3->4");
+    }
   });
 
-  it("walks a multi-step chain when v3→v4 stub is registered", () => {
-    LIBRARY_CATALOG_MIGRATIONS["3->4"] = (input, _opts) => ({
-      ...input,
-      catalog_version: 4,
-      newOptionalField: true,
-    });
-    try {
-      const result: any = migrateLibraryCatalogToLatest(
-        makeV2(),
-        2,
-        { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
-        4
-      );
-      expect(result.catalog_version).toBe(4);
-      expect(result.newOptionalField).toBe(true);
-      expect(result.loomCoreVersion).toBe("0.1.0"); // carried through v2→v3 step
-    } finally {
-      delete LIBRARY_CATALOG_MIGRATIONS["3->4"];
-    }
+  it("freezes the built-in MIGRATIONS map", () => {
+    expect(Object.isFrozen(LIBRARY_CATALOG_MIGRATIONS)).toBe(true);
+  });
+
+  it("walks a multi-step chain via registry override (no global mutation)", () => {
+    const testRegistry = {
+      ...LIBRARY_CATALOG_MIGRATIONS,
+      "3->4": (input: any, _opts: any) => ({
+        ...input,
+        catalog_version: 4,
+        newOptionalField: true,
+      }),
+    };
+    const result: any = migrateLibraryCatalogToLatest(
+      makeV2(),
+      2,
+      { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
+      4,
+      testRegistry
+    );
+    expect(result.catalog_version).toBe(4);
+    expect(result.newOptionalField).toBe(true);
+    expect(result.loomCoreVersion).toBe("0.1.0");
+    expect("3->4" in LIBRARY_CATALOG_MIGRATIONS).toBe(false);
+  });
+
+  it("length-0 chain (fromVersion === targetVersion) returns input unchanged", () => {
+    const v2 = makeV2();
+    const result = migrateLibraryCatalogToLatest(
+      v2,
+      3,
+      { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
+      3
+    );
+    expect(result).toBe(v2);
   });
 });
 

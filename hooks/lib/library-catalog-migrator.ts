@@ -4,7 +4,12 @@
  * See agents/protocols/library-catalog.schema.md and schema-upgrade.md Rule 13.
  */
 
-import { MigrationValidationError } from "./migration-errors.js";
+import {
+  MigrationDowngradeError,
+  MigrationSchemaVersionMismatchError,
+  MigrationValidationError,
+  MissingMigrationStepError,
+} from "./migration-errors.js";
 
 const ALLOWED_REPO_HOSTS = new Set(["github.com", "codeberg.org"]);
 const SEMVER_RE = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
@@ -178,9 +183,10 @@ export function migrateLibraryCatalogV2ToV3(
   v2: LibraryCatalogV2,
   opts: MigrationOptions
 ): LibraryCatalogV3 {
-  if (v2.catalog_version !== 2) {
-    throw new Error(
-      `migrateLibraryCatalogV2ToV3: expected catalog_version === 2, got ${v2.catalog_version}`
+  if (v2 == null || (v2 as { catalog_version?: unknown }).catalog_version !== 2) {
+    throw new MigrationSchemaVersionMismatchError(
+      2,
+      v2 == null ? v2 : (v2 as { catalog_version?: unknown }).catalog_version
     );
   }
 
@@ -234,42 +240,44 @@ function synthesizeRelease(
 
 export type AnyLibraryCatalog = LibraryCatalogV2 | LibraryCatalogV3;
 
-export type MigrationStep = (input: any, opts: MigrationOptions) => any;
+export type MigrationStep = (input: AnyLibraryCatalog, opts: MigrationOptions) => AnyLibraryCatalog;
 
-export const MIGRATIONS: Record<string, MigrationStep> = {
-  "2->3": (input, opts) => migrateLibraryCatalogV2ToV3(input as LibraryCatalogV2, opts),
-};
+export type MigrationRegistry = Readonly<Record<string, MigrationStep>>;
+
+/** Frozen built-in registry. Tests inject stubs by passing a separate registry. */
+export const MIGRATIONS: MigrationRegistry = Object.freeze({
+  "2->3": (input: AnyLibraryCatalog, opts: MigrationOptions) =>
+    migrateLibraryCatalogV2ToV3(input as LibraryCatalogV2, opts),
+});
 
 /** Current schema version targeted by `migrateToLatest`. Mirror of registry. */
 export const CURRENT_VERSION = 3;
 
 /**
- * Walk the migration chain from `fromVersion` to `CURRENT_VERSION`.
- * Throws if any step in the chain is missing from MIGRATIONS.
+ * Walk the migration chain from `fromVersion` to `targetVersion`. Production
+ * callers omit `registry` and get the frozen built-in MIGRATIONS; tests pass
+ * an override to exercise future-version walks without mutating module state.
  */
 export function migrateToLatest(
   input: AnyLibraryCatalog,
   fromVersion: number,
   opts: MigrationOptions,
-  targetVersion: number = CURRENT_VERSION
+  targetVersion: number = CURRENT_VERSION,
+  registry: MigrationRegistry = MIGRATIONS
 ): AnyLibraryCatalog {
   if (fromVersion === targetVersion) {
     return input;
   }
   if (fromVersion > targetVersion) {
-    throw new Error(
-      `migrateToLatest: cannot downgrade from v${fromVersion} to v${targetVersion}`
-    );
+    throw new MigrationDowngradeError(fromVersion, targetVersion);
   }
 
-  let current: any = input;
+  let current: AnyLibraryCatalog = input;
   for (let v = fromVersion; v < targetVersion; v++) {
     const key = `${v}->${v + 1}`;
-    const step = MIGRATIONS[key];
+    const step = registry[key];
     if (!step) {
-      throw new Error(
-        `migrateToLatest: missing migration step "${key}" (chain ${fromVersion}→${targetVersion})`
-      );
+      throw new MissingMigrationStepError(key, fromVersion, targetVersion);
     }
     current = step(current, opts);
   }
