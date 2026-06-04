@@ -6,12 +6,18 @@ import { fileURLToPath } from "node:url";
 import {
   detectInstallStateVersion,
   migrateInstallStateV2ToV3,
+  migrateToLatest as migrateInstallStateToLatest,
+  MIGRATIONS as INSTALL_STATE_MIGRATIONS,
+  CURRENT_VERSION as INSTALL_STATE_CURRENT_VERSION,
   type InstallStateV2,
 } from "../../hooks/lib/install-state-migrator.js";
 
 import {
   detectLibraryCatalogVersion,
   migrateLibraryCatalogV2ToV3,
+  migrateToLatest as migrateLibraryCatalogToLatest,
+  MIGRATIONS as LIBRARY_CATALOG_MIGRATIONS,
+  CURRENT_VERSION as LIBRARY_CATALOG_CURRENT_VERSION,
   type LibraryCatalogV2,
 } from "../../hooks/lib/library-catalog-migrator.js";
 
@@ -349,5 +355,140 @@ describe("migrateLibraryCatalogV2ToV3", () => {
         { coreVersion: "0.1.0", hooksVersion: "0.1.0" }
       )
     ).toThrow(/expected catalog_version === 2/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chained migration walker — install-state
+// ---------------------------------------------------------------------------
+
+describe("migrateInstallStateToLatest (chained walker)", () => {
+  function makeV2(): InstallStateV2 {
+    return {
+      schemaVersion: 2,
+      lastSynced: "2026-04-15T12:00:00Z",
+      items: [],
+    };
+  }
+
+  it("CURRENT_VERSION matches the schema-versions.toon registry entry", () => {
+    expect(INSTALL_STATE_CURRENT_VERSION).toBe(3);
+  });
+
+  it("MIGRATIONS exposes 2->3 step", () => {
+    expect(INSTALL_STATE_MIGRATIONS["2->3"]).toBeTypeOf("function");
+  });
+
+  it("returns input unchanged when fromVersion === targetVersion", () => {
+    const v2 = makeV2();
+    const result = migrateInstallStateToLatest(v2, 2, {}, 2);
+    expect(result).toBe(v2);
+  });
+
+  it("walks a single-step chain (v2→v3)", () => {
+    const v2 = makeV2();
+    const result = migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW });
+    expect((result as any).schemaVersion).toBe(3);
+  });
+
+  it("rejects downgrades", () => {
+    const v2 = makeV2();
+    expect(() => migrateInstallStateToLatest(v2, 3, {}, 2)).toThrow(/cannot downgrade/);
+  });
+
+  it("throws on missing migration step in the chain", () => {
+    const v2 = makeV2();
+    expect(() => migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW }, 5)).toThrow(
+      /missing migration step "3->4"/
+    );
+  });
+
+  it("walks a multi-step chain when v3→v4 stub is registered", () => {
+    // Simulate a future v4 by registering a stub. Clean up afterward.
+    const v3StubField = "introducedInV4";
+    INSTALL_STATE_MIGRATIONS["3->4"] = (input, _opts) => ({
+      ...input,
+      schemaVersion: 4,
+      [v3StubField]: "hello",
+    });
+    try {
+      const v2 = makeV2();
+      const result: any = migrateInstallStateToLatest(v2, 2, { now: () => FIXED_NOW }, 4);
+      expect(result.schemaVersion).toBe(4);
+      expect(result[v3StubField]).toBe("hello");
+      expect(result.protocolVersion).toBe(3); // carried through from v2→v3 step
+    } finally {
+      delete INSTALL_STATE_MIGRATIONS["3->4"];
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chained migration walker — library-catalog
+// ---------------------------------------------------------------------------
+
+describe("migrateLibraryCatalogToLatest (chained walker)", () => {
+  function makeV2(): LibraryCatalogV2 {
+    return {
+      catalog_version: 2,
+      repo: "https://github.com/launchstack-dev/loom-ai",
+      default_dirs: {},
+      library: {},
+      kits: [],
+    };
+  }
+
+  it("CURRENT_VERSION matches the schema-versions.toon registry entry", () => {
+    expect(LIBRARY_CATALOG_CURRENT_VERSION).toBe(3);
+  });
+
+  it("MIGRATIONS exposes 2->3 step", () => {
+    expect(LIBRARY_CATALOG_MIGRATIONS["2->3"]).toBeTypeOf("function");
+  });
+
+  it("walks a single-step chain (v2→v3)", () => {
+    const result = migrateLibraryCatalogToLatest(makeV2(), 2, {
+      coreVersion: "0.1.0",
+      hooksVersion: "0.1.0",
+    });
+    expect((result as any).catalog_version).toBe(3);
+  });
+
+  it("rejects downgrades", () => {
+    expect(() =>
+      migrateLibraryCatalogToLatest(makeV2(), 3, { coreVersion: "0.1.0", hooksVersion: "0.1.0" }, 2)
+    ).toThrow(/cannot downgrade/);
+  });
+
+  it("throws on missing migration step in the chain", () => {
+    expect(() =>
+      migrateLibraryCatalogToLatest(
+        makeV2(),
+        2,
+        { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
+        5
+      )
+    ).toThrow(/missing migration step "3->4"/);
+  });
+
+  it("walks a multi-step chain when v3→v4 stub is registered", () => {
+    LIBRARY_CATALOG_MIGRATIONS["3->4"] = (input, _opts) => ({
+      ...input,
+      catalog_version: 4,
+      newOptionalField: true,
+    });
+    try {
+      const result: any = migrateLibraryCatalogToLatest(
+        makeV2(),
+        2,
+        { coreVersion: "0.1.0", hooksVersion: "0.1.0" },
+        4
+      );
+      expect(result.catalog_version).toBe(4);
+      expect(result.newOptionalField).toBe(true);
+      expect(result.loomCoreVersion).toBe("0.1.0"); // carried through v2→v3 step
+    } finally {
+      delete LIBRARY_CATALOG_MIGRATIONS["3->4"];
+    }
   });
 });

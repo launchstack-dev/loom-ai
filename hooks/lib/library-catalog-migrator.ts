@@ -157,3 +157,59 @@ function synthesizeRelease(
     releasedAt: release.releasedAt,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Chained migration walker
+// ---------------------------------------------------------------------------
+//
+// See install-state-migrator.ts for the registry/walker rationale. Same pattern
+// here: MIGRATIONS maps "fromV->toV" → step; walker chains them.
+//
+// Catalog migrations are NOT pure-pure — opts.coreVersion/hooksVersion are
+// required for v2→v3 because v2 has no version concept. The walker forwards
+// opts through every step; future migrations that don't need these fields
+// simply ignore them.
+
+export type AnyLibraryCatalog = LibraryCatalogV2 | LibraryCatalogV3;
+
+export type MigrationStep = (input: any, opts: MigrationOptions) => any;
+
+export const MIGRATIONS: Record<string, MigrationStep> = {
+  "2->3": (input, opts) => migrateLibraryCatalogV2ToV3(input as LibraryCatalogV2, opts),
+};
+
+/** Current schema version targeted by `migrateToLatest`. Mirror of registry. */
+export const CURRENT_VERSION = 3;
+
+/**
+ * Walk the migration chain from `fromVersion` to `CURRENT_VERSION`.
+ * Throws if any step in the chain is missing from MIGRATIONS.
+ */
+export function migrateToLatest(
+  input: AnyLibraryCatalog,
+  fromVersion: number,
+  opts: MigrationOptions,
+  targetVersion: number = CURRENT_VERSION
+): AnyLibraryCatalog {
+  if (fromVersion === targetVersion) {
+    return input;
+  }
+  if (fromVersion > targetVersion) {
+    throw new Error(
+      `migrateToLatest: cannot downgrade from v${fromVersion} to v${targetVersion}`
+    );
+  }
+
+  let current: any = input;
+  for (let v = fromVersion; v < targetVersion; v++) {
+    const key = `${v}->${v + 1}`;
+    const step = MIGRATIONS[key];
+    if (!step) {
+      throw new Error(
+        `migrateToLatest: missing migration step "${key}" (chain ${fromVersion}→${targetVersion})`
+      );
+    }
+    current = step(current, opts);
+  }
+  return current;
+}

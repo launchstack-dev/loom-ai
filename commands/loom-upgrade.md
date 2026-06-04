@@ -21,12 +21,18 @@ Parse flags from the arguments string.
 |------|---------|-------------|
 | `--dry-run` | `false` | Show migration plan without modifying any files. Prints what would be changed and exits. |
 | `--force` | `false` | Skip confirmation prompt and apply migrations immediately. |
-| `--project` | `false` | Run full project infrastructure upgrade (Rules 6-11) in addition to execution artifact migration (Rules 1-5). |
+| `--project` | `false` | Run full project infrastructure upgrade (Rules 6-13) in addition to execution artifact migration (Rules 1-5). |
 | `--backup-dir <path>` | `.plan-execution/backups/{timestamp}/` | Override the default backup directory path. |
+| `--from-version <schema>=<N>` | (detect) | **Testing/debugging only.** Forces a specific source version for one schema, bypassing detection. Repeatable. Example: `--from-version install-state=2 --from-version library-catalog=2`. Useful when fixtures predate the detector or you're testing the chained walker against synthetic input. |
+| `--to-version <schema>=<N>` | (latest) | **Testing/debugging only.** Forces a specific target version (defaults to `CURRENT_VERSION` from the migrator module). Lets you stop the chain partway. Example: `--to-version install-state=3` will halt at v3 even if v4 exists. |
 
 ### Execution Steps
 
-Read migration rules from `agents/protocols/schema-upgrade.md`. The schema-upgrade protocol defines 11 artifact types with version detection logic and migration rules. Follow that protocol exactly.
+Read migration rules from `agents/protocols/schema-upgrade.md`. The schema-upgrade protocol defines 13 artifact types with version detection logic and migration rules. Schema-to-current-version mappings live in `agents/protocols/schema-versions.toon` — that registry is the single source of truth for "what version is current."
+
+For schemas with `migratorKind: module` in the registry (currently `install-state` and `library-catalog`), migration uses the chained walker pattern: `migrateToLatest(parsed, fromVersion, opts, targetVersion?)` walks every step in the schema's `MIGRATIONS` map from `fromVersion` to `targetVersion`. A user upgrading from v2 directly to v5 gets v2→v3→v4→v5 executed in sequence — no special handling needed. See "Adding a new schema version" in schema-upgrade.md for the pattern.
+
+Follow the schema-upgrade.md protocol exactly.
 
 #### Step 1: Scan
 

@@ -1,0 +1,47 @@
+# Schema Version Registry
+#
+# Single source of truth for "what's the current version of every Loom schema".
+# Read by /loom-upgrade detection logic, the install-state writer, and tests.
+#
+# Adding a new schema version: see "Adding a new schema version" in schema-upgrade.md.
+# To bump a schema to vN+1: (a) update currentVersion below, (b) add the migrateVNToVN+1
+# function to the migrator module, (c) add a fixture pair, (d) document the new rule
+# (or extend an existing rule's migration block) in schema-upgrade.md.
+
+schemaVersion: 1
+lastUpdated: 2026-06-04
+
+# `migratorKind` values:
+#   - "module"   → typed migrator module exporting MIGRATIONS + migrateToLatest()
+#   - "inline"   → migration logic lives directly in /loom-upgrade (Rule N steps)
+#   - "agent"    → structural migration via an upgrade agent (Tier C)
+#   - "scaffold" → empty structure created when missing (no version concept)
+#   - "static"   → no migration ever; file is read at current version or not at all
+
+registry[18]{schema,file,currentVersion,migratorKind,migratorPath,rule}:
+  install-state,~/.claude/skills/library/install-state.toon,3,module,hooks/lib/install-state-migrator.ts,12
+  library-catalog,~/.claude/skills/library/library.yaml,3,module,hooks/lib/library-catalog-migrator.ts,13
+  criteria-plan,*/criteria-plan.toon,1,inline,—,1
+  agent-result,*.agent-result.toon,1,inline,—,2
+  plan,PLAN.md,2,agent,agents/plan-upgrade-agent.md,3
+  state,.plan-execution/state.toon,1,inline,—,4
+  convergence-tier,convergence-tier.schema.md,1,static,—,5
+  orchestration-config,.claude/orchestration.toml,2,inline,—,6
+  roadmap,ROADMAP.md,1,agent,agents/roadmap-upgrade-agent.md,7
+  claude-md,CLAUDE.md,2,inline,—,8
+  hooks,.claude/settings.json,1,inline,—,9
+  wiki-index,.loom/wiki/index.toon,1,scaffold,—,10
+  protocols,agents/protocols/,1,inline,—,11
+  scope-contract,*/scope-contract.toon,1,static,—,—
+  scenario,*/scenarios/,1,static,—,—
+  change-proposal,.loom/changes/*/proposal.md,1,static,—,—
+  change-state,.loom/changes/*/state.toon,1,static,—,—
+  contract-page-extensions,.loom/wiki/pages/contract-*.md,1,static,—,—
+
+# When a schema's currentVersion bumps:
+#   1. Update currentVersion above.
+#   2. Update the migratorKind if changing (e.g., "static" → "module").
+#   3. For "module" kind: add migrateVNToVN+1 to the migrator's MIGRATIONS map.
+#   4. For "inline" kind: extend the rule body in schema-upgrade.md.
+#   5. Add a fixture pair under test-fixtures/<schema>-migration/.
+#   6. Detection logic in the migrator/rule reads currentVersion from this file.

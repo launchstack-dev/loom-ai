@@ -655,6 +655,33 @@ kits:
 
 ---
 
+## Adding a New Schema Version
+
+When a future release bumps a schema (e.g., `install-state` v3→v4), follow this 4-step checklist. The chained-migration pattern means you do NOT add a new Rule N — you extend the existing migrator.
+
+1. **Update the registry.** Edit `agents/protocols/schema-versions.toon` and bump the `currentVersion` field for the schema. This is the single source of truth — every code path that asks "what's current?" reads from here.
+
+2. **Add the migration step.** In the schema's migrator module (e.g., `hooks/lib/install-state-migrator.ts`):
+   - Add a new pure function `migrateInstallStateVNToVN+1(input, opts) → output`.
+   - Add a `MIGRATIONS["N->N+1"]` entry pointing to it.
+   - Bump the exported `CURRENT_VERSION` constant to match the registry.
+   - The walker (`migrateToLatest`) needs no changes — it iterates over `MIGRATIONS` keys.
+
+3. **Add a fixture pair.** In `test-fixtures/<schema>-migration/`:
+   - `vN-input.toon` (or `.yaml`) — sample document at the prior version.
+   - `vN+1-expected.toon` — the expected output after migration.
+   - Add a test in `test/protocol/schema-upgrade-v3.test.ts` (rename if needed) that asserts `migrateVNToVN+1(input)` produces the expected output.
+
+4. **Update the rule body.** In this file (`schema-upgrade.md`), find the rule that owns the schema (Rule 12 for install-state, Rule 13 for catalog) and append a new subsection describing the v(N)→v(N+1) trigger, migration steps, before/after example, and default values. The walker still runs every step in sequence — your new step gets executed automatically for any user upgrading from any older version.
+
+For "inline" or "agent" migrator kinds (where the rule body itself is the migration logic, not a TS module), skip step 2 and put the migration logic directly into the rule.
+
+**Skipping intermediate versions**: A user on v(N-3) running `/loom-upgrade` after multiple releases is migrated through v(N-2), v(N-1), v(N) automatically. Each step is independently testable.
+
+**Downgrades are not supported.** The walker rejects any `targetVersion < fromVersion`. Use rollback (`install-state.snapshot`) for that.
+
+---
+
 ## Automatic Detection Protocol
 
 When any agent reads a Loom artifact, it MUST apply the detection logic above. If the artifact is outdated:

@@ -185,3 +185,63 @@ export function migrateInstallStateV2ToV3(
     items,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Chained migration walker
+// ---------------------------------------------------------------------------
+//
+// MIGRATIONS maps "fromVersion->toVersion" → migration function. When a future
+// v4 ships, add a "3->4" entry pointing to migrateInstallStateV3ToV4. The
+// walker handles any chain length — a user upgrading from v2 directly to v5
+// gets v2→v3→v4→v5 in sequence.
+//
+// Each step receives a parsed object of its `from` version and returns the
+// next version's shape. Options are forwarded through the chain unchanged.
+
+export type AnyInstallState = InstallStateV2 | InstallStateV3;
+
+export type MigrationStep = (input: any, opts: MigrationOptions) => any;
+
+export const MIGRATIONS: Record<string, MigrationStep> = {
+  "2->3": (input, opts) => migrateInstallStateV2ToV3(input as InstallStateV2, opts),
+};
+
+/** Current schema version targeted by `migrateToLatest`. Mirror of registry. */
+export const CURRENT_VERSION = 3;
+
+/**
+ * Walk the migration chain from `fromVersion` to `CURRENT_VERSION`.
+ * Throws if any step in the chain is missing from MIGRATIONS.
+ *
+ * @example
+ *   migrateToLatest(v2Parsed, 2, { sha256Resolver })       // → v3
+ *   migrateToLatest(v2Parsed, 2, { sha256Resolver }, 4)    // → v4 (when v4 exists)
+ */
+export function migrateToLatest(
+  input: AnyInstallState,
+  fromVersion: number,
+  opts: MigrationOptions = {},
+  targetVersion: number = CURRENT_VERSION
+): AnyInstallState {
+  if (fromVersion === targetVersion) {
+    return input;
+  }
+  if (fromVersion > targetVersion) {
+    throw new Error(
+      `migrateToLatest: cannot downgrade from v${fromVersion} to v${targetVersion}`
+    );
+  }
+
+  let current: any = input;
+  for (let v = fromVersion; v < targetVersion; v++) {
+    const key = `${v}->${v + 1}`;
+    const step = MIGRATIONS[key];
+    if (!step) {
+      throw new Error(
+        `migrateToLatest: missing migration step "${key}" (chain ${fromVersion}→${targetVersion})`
+      );
+    }
+    current = step(current, opts);
+  }
+  return current;
+}
