@@ -68,12 +68,19 @@ describe("detectInstallStateVersion", () => {
     expect(result.reason).toMatch(/missing required markers/);
   });
 
-  it("treats a file with no schemaVersion as v1 (pre-v2)", () => {
-    const v1 = `lastSynced: 2026-04-15T12:00:00Z\nitems[0]{name,type}:\n`;
-    const result = detectInstallStateVersion(v1);
-    expect(result.version).toBe(1);
+  it("treats a file with no schemaVersion as v2-equivalent (pre-v2 collapse)", () => {
+    const preV2 = `lastSynced: 2026-04-15T12:00:00Z\nitems[0]{name,type}:\n`;
+    const result = detectInstallStateVersion(preV2);
+    expect(result.version).toBe(2);
     expect(result.outdated).toBe(true);
     expect(result.reason).toMatch(/missing schemaVersion/);
+  });
+
+  it("treats schemaVersion:1 as v2-equivalent (chain walks as v2→v3)", () => {
+    const result = detectInstallStateVersion("schemaVersion: 1\n");
+    expect(result.version).toBe(2);
+    expect(result.outdated).toBe(true);
+    expect(result.reason).toMatch(/pre-v2 content-hashed/);
   });
 
   it("flags an unrecognized schemaVersion as outdated", () => {
@@ -306,10 +313,18 @@ describe("detectLibraryCatalogVersion", () => {
     expect(result.reason).toMatch(/missing top-level fields/);
   });
 
-  it("treats a file with no catalog_version as v1", () => {
+  it("treats a file with no catalog_version as v2-equivalent (pre-v2 collapse)", () => {
     const result = detectLibraryCatalogVersion(`repo: https://example.com\n`);
-    expect(result.version).toBe(1);
+    expect(result.version).toBe(2);
     expect(result.outdated).toBe(true);
+    expect(result.reason).toMatch(/missing catalog_version/);
+  });
+
+  it("treats catalog_version:1 as v2-equivalent (chain walks as v2→v3)", () => {
+    const result = detectLibraryCatalogVersion("catalog_version: 1\n");
+    expect(result.version).toBe(2);
+    expect(result.outdated).toBe(true);
+    expect(result.reason).toMatch(/pre-kit catalog/);
   });
 });
 
@@ -788,6 +803,9 @@ describe("detectLibraryCatalogVersion — line-anchored + integer-only", () => {
   it("rejects smuggled catalog_version inside a value", () => {
     const malicious = `repo: https://example.com\n# catalog_version: 3 (commented)\nkits: []\n`;
     const result = detectLibraryCatalogVersion(malicious);
-    expect(result.version).toBe(1); // line-anchored regex never matches the comment
+    // Line-anchored regex never matches the commented line, so detection
+    // collapses to "pre-v2" (now reported as v2-equivalent for chain compat).
+    expect(result.version).toBe(2);
+    expect(result.outdated).toBe(true);
   });
 });

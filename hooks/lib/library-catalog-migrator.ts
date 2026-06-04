@@ -101,11 +101,14 @@ export interface ReleaseEntry {
   releasedAt: string;
 }
 
-export interface DetectionResult {
-  version: 1 | 2 | 3 | "unknown";
+export interface LibraryCatalogDetectionResult {
+  version: 2 | 3 | "unknown";
   outdated: boolean;
   reason: string | null;
 }
+
+/** @deprecated Use `LibraryCatalogDetectionResult`. Kept for one cycle for callers. */
+export type DetectionResult = LibraryCatalogDetectionResult;
 
 export interface MigrationOptions {
   coreVersion: string;
@@ -133,10 +136,12 @@ export function detectLibraryCatalogVersion(content: string): DetectionResult {
   const match = /^catalog_version:\s*(\d+)\s*$/m.exec(content);
 
   if (!match) {
+    // No catalog_version field — pre-v2 catalog. Collapse to v2-equivalent so
+    // the chain walker can run the 2->3 step.
     return {
-      version: 1,
+      version: 2,
       outdated: true,
-      reason: "missing catalog_version — pre-v2 catalog, migrate via Rule 13",
+      reason: "missing catalog_version — pre-v2 catalog; chain walks as v2→v3",
     };
   }
 
@@ -160,10 +165,11 @@ export function detectLibraryCatalogVersion(content: string): DetectionResult {
     };
   }
   if (v === 1) {
+    // v1 (pre-kit catalog) had no users at v3 launch. Collapse to v2-equivalent.
     return {
-      version: 1,
+      version: 2,
       outdated: true,
-      reason: "catalog_version: 1 — pre-kit catalog, migrate via Rule 13",
+      reason: "catalog_version: 1 — pre-kit catalog; chain walks as v2→v3 (verify kits[] shape)",
     };
   }
   return {

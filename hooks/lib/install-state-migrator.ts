@@ -62,11 +62,14 @@ export interface InstallStateV3Snapshot {
   expiresAt: string;
 }
 
-export interface DetectionResult {
-  version: 1 | 2 | 3 | "unknown";
+export interface InstallStateDetectionResult {
+  version: 2 | 3 | "unknown";
   outdated: boolean;
   reason: string | null;
 }
+
+/** @deprecated Use `InstallStateDetectionResult`. Kept for one cycle for callers. */
+export type DetectionResult = InstallStateDetectionResult;
 
 export interface MigrationOptions {
   /** Default core version when migrating from v2 (which has no version concept). Defaults to "0.0.0". */
@@ -131,10 +134,13 @@ export function detectInstallStateVersion(content: string): DetectionResult {
       };
     }
     if (v === 1) {
+      // v1 (pre-2026-04 content-hashed inventory) had no users at v3 launch.
+      // We collapse it into "outdated v2-equivalent" so the chain walker can
+      // run the 2->3 step. Caller is responsible for inspecting items[] shape.
       return {
-        version: 1,
+        version: 2,
         outdated: true,
-        reason: "schemaVersion: 1 — pre-v2 content-hashed inventory, migrate via Rule 12 (treat as v2 with no items)",
+        reason: "schemaVersion: 1 — pre-v2 content-hashed inventory; chain walks as v2→v3 (verify items[] shape)",
       };
     }
     return {
@@ -144,11 +150,12 @@ export function detectInstallStateVersion(content: string): DetectionResult {
     };
   }
 
-  // No schemaVersion at all. Per Rule 4 historical behaviour, treat as v1.
+  // No schemaVersion at all — pre-v2 file without a version marker.
+  // Same treatment as v1: collapse to v2-equivalent for chain-walker compatibility.
   return {
-    version: 1,
+    version: 2,
     outdated: true,
-    reason: "missing schemaVersion — pre-v2 install-state, migrate via Rule 12",
+    reason: "missing schemaVersion — pre-v2 install-state; chain walks as v2→v3",
   };
 }
 
