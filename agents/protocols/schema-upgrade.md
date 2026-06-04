@@ -468,19 +468,27 @@ Exceptions: app-specific data (JSON API responses, SQL), standard tooling config
 - Required hooks and their matchers:
 
 ```toon
-requiredHooks[N]{matcher,hookCommand,timeout}:
-  Write|Edit,contract-lock.ts,10
-  Write|Edit,file-ownership.ts,10
-  Agent,context-budget.ts,10
-  Agent,budget-tracker.ts,10
-  Stop,quality-gate.ts,10
+requiredHooks[N]{event,matcher,hookCommand,timeout}:
+  PreToolUse,Write|Edit,contract-lock.ts,10
+  PreToolUse,Write|Edit,file-ownership.ts,10
+  PreToolUse,Write|Edit,wiki-write-guard.ts,10
+  PreToolUse,Write|Edit,wiki-impact-warner.ts,10
+  PreToolUse,Bash,deploy-guard.ts,10
+  PreToolUse,Agent,context-budget.ts,10
+  PreToolUse,Agent,budget-tracker.ts,10
+  PostToolUse,Write|Edit,typecheck-on-write.ts,30
+  PostToolUse,Bash,wiki-commit-ledger.ts,10
+  SessionStart,,wiki-session-status.ts,10
+  Stop,,quality-gate.ts,10
 ```
 
 - For each missing hook:
-  1. Find the `PreToolUse` / `PostToolUse` / `Stop` array matching the hook's matcher.
-  2. If the matcher group doesn't exist, create it.
+  1. Find the appropriate event array (`PreToolUse` / `PostToolUse` / `Stop` / `SessionStart`) and matcher group.
+  2. If the event array or matcher group doesn't exist, create it.
   3. Append the hook entry: `{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/{hookFile}\"", "timeout": {timeout} }`
-  4. Verify the hook source file exists at `hooks/{hookFile}`. If it doesn't, report `status: partial` — the hook entry was added but the hook file is missing.
+  4. **File-existence guard (critical)**: before adding a hook entry, verify the hook source file exists at `hooks/{hookFile}`. If it doesn't, SKIP that entry — do not write a settings.json entry pointing to a missing file. Report `status: partial` for the run when any hook is skipped this way. The guard is per-hook: if `hooks/wiki-impact-warner.ts` exists but `hooks/wiki-session-status.ts` does not, the impact-warner is still registered and only the session-status entry is skipped.
+
+**Standalone wiki-hook deploy**: `scripts/register-wiki-hooks.ts` provides a deterministic, idempotent registration path for the three wiki hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`) — used by `/loom init` (greenfield), `/loom auto` (safety-net), and `/loom-upgrade --register-hooks` (existing-repo backfill). Rule 9 calls into the script for wiki hooks; Rule 9's inline logic handles the other hooks.
 
 **Atomic write**: write to `settings.json.tmp`, then rename.
 
