@@ -141,7 +141,7 @@ If any step fails, leave snapshot intact and surface error — never corrupt sta
 
 Hooks read `protocolVersion` on every invocation. If the field is missing (corrupt v3 file) OR if `protocolVersion` is below the hook's embedded `MIN_PROTOCOL_VERSION` constant, the hook fails **closed** — denies the operation it was guarding rather than failing open.
 
-Current behavior of `hooks/file-ownership.ts:47-49` (fail open on unreadable state) is a v2 holdover and MUST be reversed when v3 is implemented. Tracked as part of the version-compat machinery work.
+Current behavior of `hooks/file-ownership.ts` (the fallback branch that returns `allow` on unreadable install-state) is a v2 holdover and MUST be reversed when v3 is implemented — that branch should fail closed once `protocolVersion` is enforceable. Tracked as part of the version-compat machinery work.
 
 ## Discovery
 

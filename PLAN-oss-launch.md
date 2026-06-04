@@ -1,6 +1,6 @@
 # Loom OSS Launch — Installation & Distribution Architecture
 
-**Status:** Phase 0 contracts LANDED (2026-05-26). 4 of 6 Phase 0 deliverables on disk; cosign spike workflow authored but unverified; 5-stranger demand test still outstanding. Phase 1 (release workflow + install-state v3 implementation) is the next blocker. Convergence engine + scenarios + change-proposal lifecycle (M-01 through M-03 + spec-upgrades) all shipped — the launch story is now "convergence-first dev tool" not "yet another orchestrator."
+**Status:** Phase 0 IN-FLIGHT (last updated 2026-06-04). 4 of 6 Phase 0 deliverables shipped to disk (schemas v3, version cadence, verify-release, cosign spike workflow). Two preconditions remain before Phase 0 closes: (a) cosign spike workflow needs a real `workflow_dispatch` run on GitHub Actions to verify keyless signing end-to-end (~2 hours, low risk); (b) 5-stranger demand test gates the plan — if 4+/5 cold-install bounces, the entire installation polish stream halts pending re-scoping. Phase 1 (release workflow + install-state v3 implementation) cannot start until both gates clear. Convergence engine + scenarios + change-proposal lifecycle (M-01 through M-03 + spec-upgrades) all shipped — the launch story is "convergence-first dev tool" not "yet another orchestrator."
 
 **Original lock:** 2026-05-07 — incorporates 4-agent review (strategy, phasing, architecture, devil's advocate).
 **Owner:** Jensen (solo maintainer)
@@ -12,8 +12,8 @@ Public open-source launch of Loom in a fresh repo under `launchstack-dev`. Polis
 
 ## Context
 
-- Repo target: fresh repo under `launchstack-dev` (clean cut from current WIP-laden working copy; final form TBD in Phase 0).
-- License: Apache 2.0 (commit `b8a8f46`).
+- Repo target: fresh repo under `launchstack-dev` (clean cut from current WIP-laden working copy; this transplant landed on `oss-launch-spec-upgrades`).
+- License: **MIT** (current `LICENSE` file at repo root). PLAN originally noted Apache 2.0 (commit `b8a8f46` on local-main lineage) but the fresh-repo cut landed MIT. Pick one before public announcement and update the planning docs to match.
 - Cross-platform vision: Claude Code primary; OpenCode/Codex/Pi follow (per ROADMAP F-09 / C-09). All on-disk state is platform-agnostic TOON.
 - Solo maintainer. Loom dogfoods its own implementation work.
 - Current install: `curl|bash` from `main`, fetches ~50 individual files, sha256 manifest fetched from the same branch it's verifying.

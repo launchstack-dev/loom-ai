@@ -17,10 +17,10 @@ The four pillars:
 
 ## Surface area
 
-- **32 command files** — 12 noun-grouped roots, one `/loom` dispatcher, plus subcommand decompositions
-- **64 agent definitions** + 5 stage teammates
-- **47 protocol/schema files**
-- **17 hook files** (13 enforcement + 2 infrastructure + cmux WIP + context-budget test harness)
+- **41 command files** — 29 top-level (12 noun-grouped roots + `/loom` dispatcher + subcommand verbs) + 12 subcommand decomposition files
+- **67 agent definitions** + 5 stage teammates
+- **48 protocol files** (31 typed schemas + 17 supporting protocol docs)
+- **17 hook files** (13 enforcement + 3 infrastructure + 1 context-budget test harness)
 - **104 catalog entries** in `skills/library.yaml`
 
 ## Commands
@@ -702,15 +702,15 @@ Thirteen Claude Code hooks enforce invariants at the tool-call level. Fail-open 
 | `budget-tracker` | PreToolUse + SubagentStop | Tracks agent count vs budget |
 | `checkpoint-trigger` | (various) | Triggers stage-summary checkpoints at thresholds |
 | `context-monitor` | (various) | Streams context state into the statusline |
+| `deploy-guard` | PreToolUse (Bash) | Blocks destructive bash commands without explicit confirmation |
 | `quality-gate` | Stop | Prevents premature pipeline stops |
-| `status-updater` | SubagentStop | Updates `status.toon` timestamps and ambient state |
 | `typecheck-on-write` | PostToolUse (Write/Edit on .ts) | Runs `tsc` after TS writes, feeds errors back |
 | `wiki-write-guard` | PreToolUse | Enforces wiki page format + cross-ref integrity |
 | `wiki-impact-warner` | PreToolUse | Warns when code edits affect contract-page-tracked domains |
 | `wiki-session-status` | SessionStart | Loads wiki context summary on session start |
 | `wiki-commit-ledger` | PostToolUse | Records wiki-affecting commits for drift detection |
 
-Plus two infrastructure scripts: `statusline-renderer.cjs` (pipeline + test metrics + convergence segments) and `loom-update-checker.cjs` (background catalog version check, 4h throttle).
+Plus three infrastructure scripts: `statusline-renderer.cjs` (pipeline + test metrics + convergence segments), `loom-update-checker.cjs` (background catalog version check, 4h throttle), and `status-updater.ts` (writes `status.toon` timestamps and ambient state on SubagentStop). Plus one test harness: `context-budget-test.ts`.
 
 Register wiki hooks into `~/.claude/settings.json` via `scripts/register-wiki-hooks.ts`.
 
@@ -797,13 +797,16 @@ The wiki system and behavioral-guidelines draw from Andrej Karpathy's observatio
 ## File Structure
 
 ```
-agents/                      64 agent definitions + 5 stage teammates
-  protocols/                 47 protocol specs (scenarios, change-proposal, taxonomy, …)
+agents/                      67 agent definitions + 5 stage teammates
+  protocols/                 48 protocol files (31 schemas + 17 supporting docs)
   stage-teammates/           Stage-teammate agents for /loom auto agent-team mode
-commands/                    32 command files (12 noun-grouped roots + /loom dispatcher + subcommands)
-hooks/                       17 files: 13 enforcement hooks + 2 infrastructure + WIP/test
-  lib/                       Shared harness, TOON reader, context resolver, change paths
-  __tests__/                 Hook tests
+commands/                    29 top-level files (12 noun-grouped roots + /loom dispatcher + subcommand verbs)
+  loom-plan/                 5 subcommand decomposition files
+  loom-roadmap/              6 subcommand decomposition files
+  loom-plan/materialize.md   Contract-page materializer
+hooks/                       17 files: 13 enforcement + 3 infrastructure + 1 context-budget test harness
+  lib/                       Shared harness, TOON reader, context resolver, change paths, spec validators
+  __tests__/                 Hook tests (ambient-state, statusline, wiki-impact, wiki-session, register-wiki-hooks, …)
 skills/library.yaml          Catalog (104 entries: commands, agents, protocols, kits)
 docs/                        scenarios-and-changes, scenarios-authoring-template,
                              version-cadence, design-philosophy

@@ -51,7 +51,7 @@ When a breaking change ships:
 1. The release notes lead with `BREAKING:` and describe the impact + migration steps.
 2. The release commit is tagged `v0.0.x-breaking` in addition to `v0.0.x`, so `git log --grep BREAKING` surfaces them.
 3. The migration logic ships in the release itself — `/loom upgrade` runs the migration before applying changes; if migration fails, upgrade aborts and rollback restores the prior version.
-4. The `lastBreakingVersion` field is added to `install-state.toon` (TBD whether v3.1 schema bump). Users below this version are blocked from skipping it.
+4. The `lastBreakingVersion` field is added to `install-state.toon` as an **optional v3 field** (no schema bump — additive change). Migrators write it; older readers that don't know the field simply ignore it. Users below this version are blocked from skipping it during multi-step upgrades. If a future breaking change ever requires a non-additive field, that's when v4 ships.
 
 ## Retro trigger for exiting v0.0.x
 
