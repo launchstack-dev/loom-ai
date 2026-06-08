@@ -41,10 +41,15 @@ If no `ROADMAP.md` exists, display a basic project overview:
   Wiki (.loom/wiki/):  {found (N pages) | not found}
 
 ### Execution State
-  Pipeline state:      {not found | stage: {currentStage}}
+  Pipeline state:      {not found | stage: {currentStage}{ STALE: {N}d since last touch} if stale}
   Execution state:     {not found | status: {status}, wave: {currentWave}}
   Convergence state:   {not found | status: {status}, iter: {iteration}}
   Paused session:      {not found | paused at {phase} on {pausedAt}}
+
+  {if pipeline state is stale (mtime > 7 days, currentStage not in {complete,escalated}):}
+    → Stale pipeline-state.toon ({N} days, stage: {currentStage}). Run:
+        mv .plan-execution/pipeline-state.toon .plan-history/abandoned/
+      (or wait — quality-gate hook auto-skips after 7 days of inactivity.)
 
 ### Recent Activity
   Last command:        {from status.toon or "unknown"}

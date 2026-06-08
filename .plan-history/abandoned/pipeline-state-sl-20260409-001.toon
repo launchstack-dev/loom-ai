@@ -1,0 +1,19 @@
+schemaVersion: 1
+runId: sl-20260409-001
+mode: auto
+description: Claude Code Status Line — pipeline + ambient indicators with statusline-command.sh and Starship integration
+roadmapFile:
+planFile: PLAN.md
+outerIteration: 1
+maxIterations: 3
+agentsSpawned: 0
+maxAgents: 50
+fixCycleCount: 0
+convergenceEnabled: false
+convergeTarget:
+convergeConfig:
+currentStage: plan-review
+
+stageHistory[0]{stage,status,iteration,startedAt,completedAt,agentsUsed,gateResult}:
+
+failureLog[0]{iteration,stage,error,resolution}:
