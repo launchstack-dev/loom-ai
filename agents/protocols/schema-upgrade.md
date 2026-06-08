@@ -485,7 +485,7 @@ requiredHooks[N]{event,matcher,hookCommand,timeout}:
 - For each missing hook:
   1. Find the appropriate event array (`PreToolUse` / `PostToolUse` / `Stop` / `SessionStart`) and matcher group.
   2. If the event array or matcher group doesn't exist, create it.
-  3. Append the hook entry: `{ "type": "command", "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/{hookFile}\"", "timeout": {timeout} }`
+  3. Append the hook entry: `{ "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/{hookFile}\"", "timeout": {timeout} }`. The `run-hook.sh` wrapper resolves bun → npx tsx → fail-open at exec time; this makes settings.json portable across machines with different runtimes installed. (Legacy `bun "..."` commands still work if present; Rule 9 doesn't rewrite them, just appends missing ones.)
   4. **File-existence guard (critical)**: before adding a hook entry, verify the hook source file exists at `hooks/{hookFile}`. If it doesn't, SKIP that entry — do not write a settings.json entry pointing to a missing file. Report `status: partial` for the run when any hook is skipped this way. The guard is per-hook: if `hooks/wiki-impact-warner.ts` exists but `hooks/wiki-session-status.ts` does not, the impact-warner is still registered and only the session-status entry is skipped.
 
 **Standalone wiki-hook deploy**: `scripts/register-wiki-hooks.ts` provides a deterministic, idempotent registration path for the three wiki hooks (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`) — used by `/loom-init` (greenfield), `/loom-auto` (safety-net), and `/loom-upgrade --register-hooks` (existing-repo backfill). Rule 9 calls into the script for wiki hooks; Rule 9's inline logic handles the other hooks.

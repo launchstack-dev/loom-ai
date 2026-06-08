@@ -131,10 +131,10 @@ function detectMode(settingsPath: string): "local" | "plugin" {
 }
 
 /**
- * Detect whether `bunx` is on PATH. Per project convention: prefer bun/bunx
- * when available, fall back to npm/npx otherwise. The choice is baked into
- * the settings.json command string at registration time — if the user later
- * installs bun, they can re-run --register-hooks --replace to swap runners.
+ * Detect whether `bunx` is on PATH. Used only when `--runner bunx|npx` is set
+ * explicitly. The default path uses `hooks/run-hook.sh` which does its own
+ * detection per-invocation, so users who install bun later don't need to
+ * re-register hooks to get the perf upgrade.
  */
 function detectRunner(): "bunx" | "npx" {
   try {
@@ -153,20 +153,34 @@ function runnerPrefix(runner: "bunx" | "npx"): string {
 function resolveCommandPrefix(opts: Options): {
   prefix: string;
   mode: "local" | "plugin" | "explicit";
-  runner: "bunx" | "npx" | "explicit";
+  runner: "bunx" | "npx" | "wrapper" | "explicit";
 } {
   if (opts.commandPrefixOverride !== null) {
     return { prefix: opts.commandPrefixOverride, mode: "explicit", runner: "explicit" };
   }
   const effective = opts.mode === "auto" ? detectMode(opts.settingsPath) : opts.mode;
-  const runner = opts.runner === "auto" ? detectRunner() : opts.runner;
+
+  // Default path: dispatch through hooks/run-hook.sh, which resolves bun →
+  // npx tsx → fail-open at exec time. Robust to runtime changes after install;
+  // no need to re-register hooks if the user installs/removes bun.
+  // Opt out by passing --runner bunx or --runner npx to bake a specific runtime.
+  if (opts.runner === "auto") {
+    // local: project-relative wrapper path. Claude Code sets cwd to the project
+    // root before exec, so `sh hooks/run-hook.sh hooks/<name>.ts` resolves.
+    // plugin: ${CLAUDE_PLUGIN_ROOT} expansion for hooks defined in plugin
+    // settings.json.
+    const rootPart = effective === "local" ? "" : "${CLAUDE_PLUGIN_ROOT}/";
+    return {
+      prefix: `sh ${rootPart}hooks/run-hook.sh ${rootPart}`.replace(/ $/, " "),
+      mode: effective,
+      runner: "wrapper",
+    };
+  }
+
+  const runner = opts.runner;
   const runnerPart = runnerPrefix(runner);
-  // local: project-relative path. Claude Code sets cwd to the project root
-  // before exec, so `<runner> hooks/<name>.ts` resolves correctly. No machine-
-  // specific absolute path; settings.json is portable across clones.
-  // plugin: ${CLAUDE_PLUGIN_ROOT} — Claude Code expands at hook-exec time, but
-  // ONLY for hooks defined in a plugin's own settings.json. A project-local
-  // .claude/settings.json with this prefix will fail to find the .ts files.
+  // Legacy --runner bunx|npx path: bake the chosen runtime into the command
+  // string. Re-run --register-hooks --replace to swap.
   const prefix = effective === "local"
     ? runnerPart
     : `${runnerPart} \${CLAUDE_PLUGIN_ROOT}`;

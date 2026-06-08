@@ -6,17 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/contract-lock.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/contract-lock.ts\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/file-ownership.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/file-ownership.ts\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/wiki-write-guard.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/wiki-write-guard.ts\"",
             "timeout": 10
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/deploy-guard.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/deploy-guard.ts\"",
             "timeout": 10
           }
         ]
@@ -36,12 +36,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/context-budget.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/context-budget.ts\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/budget-tracker.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/budget-tracker.ts\"",
             "timeout": 10
           }
         ]
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/typecheck-on-write.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/typecheck-on-write.ts\"",
             "timeout": 30
           }
         ]
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/context-monitor.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/context-monitor.ts\"",
             "timeout": 10
           }
         ]
@@ -75,12 +75,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/quality-gate.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/quality-gate.ts\"",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/hooks/context-monitor.ts\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/context-monitor.ts\"",
             "timeout": 10
           }
         ]
