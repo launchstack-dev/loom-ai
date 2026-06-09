@@ -151,8 +151,8 @@ Installed contracts-agent
 1. Read install-state.toon
 2. For each installed item:
    a. Fetch current source content from repo (handle missing sources gracefully)
-   b. **Symlink safety check**: if the target path is a symlink, resolve it. If the link target lives inside a Loom checkout (i.e., a directory containing both `hooks/` and `agents/protocols/` — the dev-install pattern), classify this item as `[link] {name} — symlinked to repo, no write needed` and SKIP it. Writing through a symlinked target would overwrite the dev repo's working tree with whatever `main` currently has, silently destroying in-progress work. The symlink already "sees" the latest content via its target, so no sync action is needed.
-   c. Read the installed target file (the actual file, not the symlink).
+   b. **Symlink safety check**: if the target path is a symlink (any symlink, regardless of where it points), classify this item as `[link] {name} — symlinked, no write needed` and SKIP it. Writing through a symlinked target silently overwrites whatever the link points to — could be a dev-install pointing back to a Loom repo checkout, could be a user-managed dotfiles target, could be anything. The link's existence is the signal that the user (or their tooling) is managing this path themselves; sync defers to them. Users with intentional symlinks who want sync to update them can convert via `cp --remove-destination` and re-run.
+   c. Read the installed target file.
    d. Compare source and target byte-for-byte. If they differ, the item needs updating.
 3. Report results:
 ```
