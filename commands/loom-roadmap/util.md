@@ -105,8 +105,8 @@ phases[3]{id,name,wave,status,deliverableCount,criteriaCount}:
 
 When spawning agents via `run_in_background: true` (plan-builder-agent, planning agents in `--init` Step 4, `--refine` Step 2), apply lightweight monitoring per `agent-monitoring.schema.md`:
 
-1. Include the agent's `taskId` in its prompt so it can write to `.plan-execution/progress/{taskId}.toon`
-2. Create `.plan-execution/progress/` directory if it doesn't exist
+1. Include the agent's `taskId` in its prompt so it can write to `.plan-execution/ephemeral/progress/{taskId}.toon`
+2. Create `.plan-execution/ephemeral/progress/` directory if it doesn't exist
 3. After spawning, poll every 15 seconds:
    - Read progress files for running agents
    - Classify: `reporting` (heartbeat < 90s), `silent` (no file), `stale` (heartbeat > 90s)

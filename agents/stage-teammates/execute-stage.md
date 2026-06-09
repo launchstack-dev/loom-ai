@@ -125,7 +125,7 @@ timestamp: {ISO 8601}
 
 ## Progress Reporting
 
-Write periodic progress updates to `.plan-execution/progress/{taskId}.toon` using atomic writes:
+Write periodic progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` using atomic writes:
 
 ```toon
 taskId: {taskId}

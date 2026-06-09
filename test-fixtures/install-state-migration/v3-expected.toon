@@ -1,0 +1,14 @@
+schemaVersion: 3
+protocolVersion: 3
+lastSynced: 2026-04-15T12:00:00Z
+loomCoreVersion: 0.0.0
+loomHooksVersion: 0.0.0
+catalogVersion: 2
+
+components[1]{name,version,kind,pinned,installedAt}:
+  loom-core,0.0.0,core,false,2026-06-01T00:00:00Z
+
+items[3]{name,type,source,targetPath,sha256,component,installedAt}:
+  loom-library,prompt,commands/loom-library.md,/Users/example/.claude/commands/loom-library.md,deadbeef,loom-core,2026-04-15T12:00:00Z
+  loom,prompt,commands/loom.md,/Users/example/.claude/commands/loom.md,deadbeef,loom-core,2026-04-15T12:00:00Z
+  statusline-renderer,infrastructure,hooks/statusline-renderer.cjs,/Users/example/.claude/statusline-renderer.cjs,deadbeef,loom-core,2026-04-15T12:00:00Z

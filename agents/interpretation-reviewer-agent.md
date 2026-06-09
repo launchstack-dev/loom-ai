@@ -146,25 +146,88 @@ Severity assignment:
 - `warning` -- test covers behavior the plan does not mention (possible scope creep)
 - `info` -- test is a reasonable defensive addition not in the plan
 
+## Step 5.5: Contract-Conflict Detection (escalation)
+
+This step is **opposite in direction** to the wiki-resolution logic in Step 1. Wiki resolutions on `decision-*` / `pattern-*` pages **reduce** flagged conflict severity (the wiki has prior judgment that calms a finding). Contract pages do the inverse: when a plan AC's described shape contradicts a `contract-*` page's `shape` field, we **escalate** the finding, because a contract is a hard commitment to consumers — silently violating it is more dangerous than disagreeing about an unwritten norm.
+
+Make this directional asymmetry explicit when reasoning about findings: **contract pages escalate; decision/pattern pages de-escalate.**
+
+### 5.5a. Identify Shape-Bearing ACs
+
+Walk the plan's acceptance criteria and proposed deliverables. For each criterion that describes a shape — that is, an API response, an event payload, a function signature, a database record, or any structured data envelope — mark it as a shape-bearing AC.
+
+### 5.5b. Match to Contract Pages
+
+For each shape-bearing AC, attempt to resolve a `contract-*` page:
+
+1. **Explicit reference.** The criterion names a contract pageId directly (e.g., "matches `contract-user-record`"). Use that page.
+2. **Fuzzy title match.** No explicit reference: match the criterion's subject (e.g., "User record", "PaymentEvent payload") against `contract-*` page titles via case-insensitive substring or normalized-token overlap. Choose the highest-scoring match if any.
+3. **No match.** If no contract page matches, skip — this AC is outside contract coverage and is handled by the regular conflict / coverage-gap logic in Steps 4 and 5.
+
+### 5.5c. Compare Shapes and Emit `contractConflicts[]`
+
+For each matched (AC, contract) pair:
+
+1. Read the contract page's `shape` field (the authoritative shape definition or its summary).
+2. Compare against the AC's described shape.
+3. If the shapes are compatible (the AC's shape is a subset, equal, or strictly additive to the contract's shape under that contract's policy), do nothing.
+4. If the AC's shape **contradicts** the contract's shape (renamed field, removed field, changed type, changed semantics), emit a `contractConflicts[]` entry.
+
+### 5.5d. Severity Escalation by `compatibilityPolicy`
+
+The contract's `compatibilityPolicy` (read from the wiki page frontmatter, per `wiki-page.schema.md`) determines severity:
+
+| `compatibilityPolicy` | Severity | Rationale |
+|-----------------------|----------|-----------|
+| `backward-compatible` | `blocking` | Any non-additive change breaks existing consumers. The plan must be revised or the contract version-bumped explicitly. |
+| `additive-only`       | `blocking` | Only additions allowed; the AC is requesting a change that violates this hard rule. |
+| `full-semver`         | `warning` | Allowed if semver discipline is followed; the reviewer must verify breaking-change signaling (`breakingChanges[]`, version bump) before convergence. |
+| `none`                | `info`    | No commitment to preserve; record for visibility but do not block. |
+
+### 5.5e. `contractConflicts[]` Schema
+
+Append a new typed array to the report (sibling to `wikiResolutions[]`, NOT a replacement):
+
+```
+contractConflicts[N]{contractId,planLocation,planShape,contractShape,severity}:
+  contract-user-record,"AC-04 (Phase 2)","{id, name, email}","{id, name, email, createdAt}",blocking
+  contract-payment-event,"AC-12 (Phase 3)","{amount: string}","{amount: number}",blocking
+```
+
+Columns:
+- `contractId` — pageId of the matched `contract-*` page
+- `planLocation` — where in the plan the conflict appears (AC ID + phase, or deliverable ref)
+- `planShape` — the shape as described in the plan (compact representation)
+- `contractShape` — the shape as defined in the contract page (compact representation)
+- `severity` — escalated per the policy table above (`blocking` / `warning` / `info`)
+
+### 5.5f. Preserve Existing Logic
+
+- `wikiResolutions[]` continues to function as before for `decision-*` / `pattern-*` pages: it **reduces** severity for matched conflict patterns (Step 6, rule 2).
+- `contractConflicts[]` is additive and lives alongside `conflicts[]`, `coverageGaps[]`, and `wikiResolutions[]` in the report. It is NOT folded into the existing arrays — downstream agents discriminate by array.
+- The de-escalation rule in Step 6 (rule 2) does NOT apply to `contractConflicts[]`. Contract conflicts escalate based on `compatibilityPolicy` and stay at that severity.
+
 ## Step 6: Severity Calibration
 
 Review all conflicts and gaps together. Apply these rules:
 
-1. **At most 30% blocking.** If more than 30% of findings are `blocking`, re-evaluate whether some are truly convergence-breaking or just coverage concerns (downgrade to `warning`).
-2. **Prior resolutions reduce severity.** If a wiki resolution exists for a conflict pattern, reduce severity by one level (blocking -> warning, warning -> info) unless the resolution explicitly says otherwise.
+1. **At most 30% blocking.** If more than 30% of findings are `blocking`, re-evaluate whether some are truly convergence-breaking or just coverage concerns (downgrade to `warning`). **Exclude `contractConflicts[]` from this 30% calculation** — contract conflicts are policy-driven, not budget-driven, and must not be downgraded to fit a quota.
+2. **Prior resolutions reduce severity.** If a wiki resolution exists for a conflict pattern in `conflicts[]`, reduce severity by one level (blocking -> warning, warning -> info) unless the resolution explicitly says otherwise. **This rule does NOT apply to `contractConflicts[]`.** Contract pages are commitments, not advisories — they escalate; they do not de-escalate.
 3. **Test-only gaps are never blocking.** Extra test coverage does not block convergence; it is advisory.
 4. **Acceptance criteria gaps are always blocking.** A plan acceptance criterion with no test is always `blocking` severity.
+5. **Contract conflicts follow the policy table.** Severity for entries in `contractConflicts[]` is determined exclusively by the matched contract's `compatibilityPolicy` (see Step 5.5d). Do not adjust based on calibration heuristics.
 
 ## Step 7: Produce interpretation-report.toon
 
 Write the report conforming to `interpretation-report.schema.md`:
 
 1. Set header fields (schemaVersion, createdAt, updatedAt, reviewedAt, agent, agentModel, planSource, criteriaSource)
-2. Compute summary counts
+2. Compute summary counts (include a `contractConflicts` count alongside existing counts)
 3. Write `conflicts[N]` typed array with all InterpretationConflict entries
 4. Write `coverageGaps[N]` typed array with all CoverageGap entries
 5. Write `wikiResolutions[N]` typed array with any prior resolutions applied
-6. Validate summary counts match array lengths
+6. Write `contractConflicts[N]{contractId,planLocation,planShape,contractShape,severity}` typed array with all contract-conflict escalations from Step 5.5 (additive — sibling to `wikiResolutions[]`, never merged with `conflicts[]`)
+7. Validate summary counts match array lengths
 
 Output path: `.plan-execution/conflicts/interpretation-report.toon`
 
@@ -176,7 +239,7 @@ Return a standard AgentResult envelope (per `agent-result.schema.md`) with:
 - `status: success` if report was produced (even if conflicts exist)
 - `status: partial` if inputs were incomplete (e.g., no criteria-plan.toon found)
 - `filesCreated`: the interpretation-report.toon path
-- `integrationNotes`: summary of conflict and gap counts, blocking items highlighted
+- `integrationNotes`: summary of conflict and gap counts, blocking items highlighted, **and a separate count of `contractConflicts[]` with severity breakdown** so downstream agents (and the convergence-driver) see contract-driven blockers as a distinct signal from conflict-driven blockers
 - `verificationStatus: verified` after confirming report validates against schema
 - `diagnoseLog`: narrative of what was cross-referenced and key findings
 
@@ -194,3 +257,4 @@ Return a standard AgentResult envelope (per `agent-result.schema.md`) with:
 8. **Do not suppress real conflicts.** Wiki resolutions annotate; they do not hide blocking issues unless the resolution is definitive.
 9. **Atomic file writes.** Write to `.tmp` then rename, per execution conventions.
 10. **Report is always produced.** Even if zero conflicts and zero gaps, produce the report with empty arrays and zero counts.
+11. **Contract pages escalate; decision/pattern pages de-escalate.** When a plan AC's shape contradicts a `contract-*` page's `shape`, emit a `contractConflicts[]` entry with severity driven by the contract's `compatibilityPolicy` (`backward-compatible` / `additive-only` -> `blocking`; `full-semver` -> `warning`; `none` -> `info`). This logic is OPPOSITE in direction to `wikiResolutions[]`, which reduces severity. Never fold `contractConflicts[]` into `conflicts[]`, and never apply the 30%-blocking budget or the wiki-resolution de-escalation rule to `contractConflicts[]` entries.

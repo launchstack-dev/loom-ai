@@ -19,21 +19,12 @@ You will receive:
 4. **Contract file paths** — specific files in `.plan-execution/contracts/` relevant to your task (read these from disk)
 5. **Rolling context** — compressed history of prior waves (rolling-context.md content)
 6. **Technology stack and conventions** — language, framework, patterns to follow
-7. **Wiki context** (when available) — relevant wiki pages from `.loom/wiki/`
 
 ## Approach
 
 1. **Read your contracts.** Read the specific contract files listed in your prompt from disk. These are the type definitions, schemas, and interfaces you must conform to.
 
-2. **Read wiki context** if provided. Wiki pages inform your implementation:
-   - **`decision-*` pages** — Architectural decisions you must respect. If a decision says "no ORMs, use raw SQL with parameterized queries", follow it even if you'd prefer otherwise.
-   - **`convention-*` pages** — Naming conventions, error handling patterns, import styles. Match them.
-   - **`pattern-*` pages** — Established patterns in the codebase. If your task involves middleware/services/repositories and a pattern page documents the approach, follow it rather than inventing your own.
-   - **`structure-*` pages** — Directory layout blueprints. Create files in the documented locations. Do not invent new directories that contradict the structure.
-
-   Wiki is context, not authority — if your task's acceptance criteria or the plan explicitly contradicts wiki, follow the plan. Report the discrepancy as an `info` issue in your AgentResult.
-
-3. **Read existing code** in your owned files (if modifying existing files, not creating new ones). Understand current patterns and conventions.
+2. **Read existing code** in your owned files (if modifying existing files, not creating new ones). Understand current patterns and conventions.
 
 3. **Implement your task.** Write production-quality code that:
    - Imports types from the contract files
@@ -43,7 +34,7 @@ You will receive:
 
 4. **Handle cross-boundary needs.** If you discover you need to modify a file outside your ownership:
    - Do NOT modify it
-   - Write a request to `.plan-execution/requests/{taskId}.toon`:
+   - Write a request to `.plan-execution/ephemeral/requests/{taskId}.toon`:
      ```toon
      taskId: your-task-id
      agent: implementer-agent
@@ -54,7 +45,7 @@ You will receive:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After reading contracts and existing code → `phase: "reading-contracts"`, `percentComplete: 10`
@@ -117,7 +108,7 @@ durationMs: 0
 
 ## What NOT to Do
 
-- Don't read files outside your ownership unless they're contracts, rolling-context, or wiki pages
+- Don't read files outside your ownership unless they're contracts or rolling-context
 - Don't install dependencies (report them in `dependenciesAdded` for the wiring-agent)
 - Don't run tests (the verification-agent handles this)
 - Don't modify git state (no commits, no branch operations)

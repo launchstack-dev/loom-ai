@@ -42,7 +42,7 @@ Some content here.
 note2: Consider caching
 `);
 
-    writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+    writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: complete
 updatedAt: 2026-04-09T10:00:00Z
 `);
@@ -120,7 +120,7 @@ note3: Third note
   });
 
   it("reads lastResult as 'failed' when phase is failed", () => {
-    writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+    writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: failed
 updatedAt: 2026-04-09T10:00:00Z
 `);
@@ -132,7 +132,7 @@ updatedAt: 2026-04-09T10:00:00Z
   });
 
   it("returns null lastResult when phase is not terminal", () => {
-    writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+    writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: implementing
 updatedAt: 2026-04-09T10:00:00Z
 `);

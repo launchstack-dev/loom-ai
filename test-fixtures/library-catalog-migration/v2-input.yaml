@@ -1,0 +1,27 @@
+catalog_version: 2
+repo: https://github.com/launchstack-dev/loom-ai
+
+default_dirs:
+  skills:
+    - default: .claude/skills/
+    - global: ~/.claude/skills/
+  agents:
+    - default: .claude/agents/
+    - global: ~/.claude/agents/
+  prompts:
+    - default: .claude/commands/
+    - global: ~/.claude/commands/
+
+library:
+  skills: []
+  agents: []
+  prompts: []
+
+kits:
+  - name: data-engineering
+    description: Data pipeline quality gates
+    version: 1.1.0
+    minLoomVersion: 3
+    includes:
+      - data-schema-reviewer
+    command: loom-data.md

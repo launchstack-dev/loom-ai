@@ -16,11 +16,12 @@ Shared rules that all wiki agents and wiki-aware orchestrators follow. Reference
       decision-*.md                     # Architectural/design decisions with rationale
       pattern-*.md                      # Recurring patterns and best practices
       convention-*.md                   # Project conventions and coding standards
-      structure-*.md                    # Directory layout blueprints and file organization
       api-surface-*.md                  # API endpoint groups and integration surfaces
       tech-debt-*.md                    # Known tech debt and improvement opportunities
       external-*.md                     # External integrations, services, dependencies
       execution-record-*.md             # Records of specific execution events/outcomes
+      flow-*.md                         # Ordered processes — user journeys, system pipelines, lifecycles
+      contract-*.md                     # Persistent shape contracts — API, event, schema, DB-table
 ```
 
 ## Page File Format
@@ -200,6 +201,48 @@ Not every file or concept deserves a wiki page. The wiki-ingest-agent uses these
 5. **External integration**: File connects to an external service
 
 Trivial utilities, test helpers, and single-use internal functions should NOT get their own pages. They may be mentioned within a parent component's page.
+
+### Flow significance
+
+A flow is significant if any of:
+
+1. **End-user exposed**: HTTP route handler with side effects, CLI command, scheduled job that produces visible output
+2. **Cross-cutting**: spans 3+ components or files
+3. **Multi-outcome**: has multiple exit states (success + ≥1 named failure mode)
+4. **Cited externally**: referenced by name in CONTEXT.md, README.md, or roadmap acceptance criteria
+
+Flow ingestion is **opt-in** in the first iteration — `wiki-ingest-agent` does NOT auto-create flow pages during `full` ingest. Flows are created by:
+- `/loom-wiki ingest --flow <entry-point>` — explicit extraction from a named route, command, or function
+- `wiki-maintainer-agent` after `/loom-auto` completes a feature whose acceptance criteria are framed as user-facing behavior (proposes flow pages as `info` issues; does NOT auto-create)
+
+This prevents flooding brownfield projects with low-value auto-extracted flows.
+
+### Contract significance
+
+A contract is significant if any of:
+
+1. **Cross-module type/schema export** referenced by 2+ consumers
+2. **HTTP route handler** with documented request/response shape (even if implicit — auto-create one `contract-*` per significant route group)
+3. **Event/message payload definition** consumed by a separate subsystem (queue, webhook, pubsub)
+4. **DB schema** with NOT NULL or unique constraints that application logic relies on
+5. **CLI argument parsers / RPC stubs** that cross process boundaries
+
+Contract ingestion **is auto-enabled** in `full` ingest — `wiki-ingest-agent` creates `contract-*` pages alongside `api-surface-*` pages. The two are distinct: `api-surface-*` describes *what endpoints exist*; `contract-*` describes *what shape they enforce*. A `contract-*` page may also be created via `/loom-wiki ingest --contract <file-or-route>` for targeted extraction from a single file.
+
+### Required H2 sections per category
+
+Lint W-026 enforces the presence of required H2 sections in each page's body. The required set varies by category:
+
+| Category | Required H2 sections |
+|----------|----------------------|
+| `component-*` | `## Summary`, `## Dependencies`, `## Key Behaviors` |
+| `flow-*` | `## Summary`, `## Trigger Context`, `## Step Details` |
+| `contract-*` | `## Summary`, `## Shape`, `## Invariants` |
+| `decision-*` | `## Summary`, `## Rationale`, `## Alternatives Considered` |
+| `pattern-*`, `convention-*` | `## Summary`, `## Examples` |
+| All other categories | `## Summary` only |
+
+The `bodySections[]` frontmatter field MUST mirror every required H2 actually present in the body. This enables the orchestrator to extract one section cheaply (read only the matching H2 block) rather than reading the whole body — feeding the rolling-context summary-first packing strategy. See `wiki-page.schema.md` for the field reference.
 
 ## Page Archiving
 

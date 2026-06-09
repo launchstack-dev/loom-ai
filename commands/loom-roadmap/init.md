@@ -287,14 +287,9 @@ Continue looping until the user approves (option 1).
      ```
    - Create `.plan-history/snapshots/` directory
 3. Display roadmap summary + suggest next steps:
-   ```
-   Context tip: run /clear before the next command for fresh context.
-
-   Next steps:
-     /loom-roadmap review         4-agent roadmap review
-     /loom-roadmap approve        Mark as approved
-     /loom-plan create            Generate PLAN.md from the approved roadmap
-   ```
+   - `/loom-roadmap review` for 4-agent roadmap review
+   - `/loom-roadmap approve` to mark as approved
+   - `/loom-plan create` to generate PLAN.md from the approved roadmap
 
 ### Step 5.5: Wiki Update (non-blocking)
 

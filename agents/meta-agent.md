@@ -50,7 +50,9 @@ You are a meta-agent that builds other Claude Code agents, skills, and commands.
    - `## Output Format` — expected structure of the result
 
 6. **Write the file.** Place it in the correct location:
-   - Commands: create in the current project's `.claude/commands/` directory
+   - Agents: the project's `agents/` directory (e.g., `.claude/agents/<name>.md`)
+   - Skills: the project's `skills/` directory (e.g., `.claude/skills/<name>/SKILL.md`)
+   - Commands: the project's `.claude/commands/` directory
 
 7. **Verify.** After writing, read the file back and confirm:
    - Frontmatter parses correctly (name, description, model)

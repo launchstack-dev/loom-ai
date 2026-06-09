@@ -34,7 +34,7 @@ You will receive:
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. Starting verification → `phase: "initializing"`, `percentComplete: 5`

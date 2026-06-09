@@ -1,0 +1,7 @@
+schemaVersion: 2
+lastSynced: 2026-04-15T12:00:00Z
+
+items[3]{name,type,source,targetPath,installedAt}:
+  loom-library,prompt,commands/loom-library.md,/Users/example/.claude/commands/loom-library.md,2026-04-15T12:00:00Z
+  loom,prompt,commands/loom.md,/Users/example/.claude/commands/loom.md,2026-04-15T12:00:00Z
+  statusline-renderer,infrastructure,hooks/statusline-renderer.cjs,/Users/example/.claude/statusline-renderer.cjs,2026-04-15T12:00:00Z

@@ -89,7 +89,7 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 
 ## 5. Cross-Boundary Request Validation
 
-When processing `.plan-execution/requests/{taskId}.toon`:
+When processing `.plan-execution/ephemeral/requests/{taskId}.toon`:
 
 1. **Source agent exists**: The `agent` field must match an agent that ran in the current wave
 2. **Requested files are valid**: Each `file` in `requests[]` must be a real path (or a path that will exist after wiring)
@@ -230,8 +230,7 @@ If any **blocking** error is found, the pipeline halts. **Warning**-level issues
 | Required frontmatter fields | blocking | `roadmapVersion`, `name`, `status`, `created`, `totalFeatures`, `totalMilestones` must all be present and non-null |
 | Title matches name | blocking | `# Roadmap: {name}` must match `frontmatter.name` |
 | Required sections present | blocking | Vision, Success Metrics, Constraints & Decisions, Tech Stack, Features, Data Model (Conceptual), Milestones, Risks & Mitigations, Out of Scope must all exist |
-| Section order | blocking | Required sections must appear in the order specified by roadmap.schema.md. The optional Architecture section, if present, must appear between Tech Stack and Features. |
-| Architecture non-empty | blocking | If an Architecture section is present, it must contain at least one `###` subsection (Pipelines, Domain Models, Component Mapping, Integration Patterns, or UX Contracts). An empty Architecture section is a structural error. |
+| Section order | blocking | Required sections must appear in the order specified by roadmap.schema.md |
 | Feature count matches | warning | `totalFeatures` in frontmatter should match actual feature count |
 | Milestone count matches | warning | `totalMilestones` in frontmatter should match actual milestone count |
 
@@ -298,26 +297,6 @@ For `planVersion: 2` plans, these additional checks run after the standard Stage
 | Foreign key without cascade behavior | warning | Every foreign key should have ON DELETE / ON UPDATE behavior defined |
 | Unreachable state | warning | A state with no inbound transition (other than initial) in a state machine |
 | Dead-end state without terminal marking | warning | A non-terminal state with no outbound transitions |
-
-### Stage 8: Convergence Target Coverage — BLOCKING / WARNING
-
-**Applies to all plan versions** (not only v2). This stage is placed in the v2 section for organizational proximity to Stage 7, but `create.md` runs Stage 8 unconditionally.
-
-Validates that phases with deterministic outputs define structured convergence targets, and that those targets have both SOURCE and TARGET sides defined.
-
-**Deterministic criterion classification heuristic:** A criterion is deterministic if it contains any of: an HTTP method + path (e.g., "GET /api/users returns 200"), a file path or output path, a CLI exit code, a specific response shape or JSON structure, a rendered page reference, or a database query result. A criterion is NOT deterministic if it describes code quality, naming conventions, architecture decisions, or uses subjective language ("good", "clean", "proper"). If classification is ambiguous, emit a **warning** (not blocking) asking the user to classify it.
-
-| Check | Severity | Description |
-|-------|----------|-------------|
-| Deterministic criterion without target | blocking | An acceptance criterion that describes a deterministic output (API response, file content, CLI exit code) must have a corresponding entry in the phase's `convergenceTargets` block |
-| Target missing capture method | blocking | Every convergence target must specify a `capture` method (the SOURCE side — how to obtain current output) |
-| Target missing golden source | blocking | Every convergence target must specify a `goldenSource` (the TARGET side — where expected output comes from) |
-| Target missing comparison method | blocking | Every convergence target must specify a `method` (how to compare source vs target) |
-| Malformed target block | blocking | The `convergenceTargets` block must be valid TOON with all required columns: `id`, `name`, `category`, `method`, `tolerance`, `capture`, `goldenSource`, `ignoreFields` |
-| Tolerance out of range | warning | Tolerance must be between 0.0 and 1.0 inclusive |
-| Method/category mismatch | warning | Comparison method should match category (e.g., `json-deep-equal` for `api`, not `pixel-diff`) |
-| Phase with deliverables but no targets | warning | A phase that creates files or endpoints but has no convergence targets section — may be intentional (wiring, refactoring) but flag for review |
-| Duplicate target IDs | blocking | All target IDs across all phases must be unique |
 
 ## 9. Scope Coverage Validation
 

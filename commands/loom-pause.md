@@ -29,7 +29,7 @@ Scan for active workflow state by checking these files in order:
 1. `.plan-execution/pipeline-state.toon` -- `/loom-auto` pipeline state
 2. `.plan-execution/state.toon` -- `/loom-plan execute` execution state
 3. `.plan-execution/convergence-state.toon` -- `/loom-converge` convergence state
-4. `.plan-execution/status.toon` -- general status (any command)
+4. `.plan-execution/ephemeral/status.toon` -- general status (any command)
 
 For each file found, read its contents and extract:
 - `command` or `mode` -- which command is running

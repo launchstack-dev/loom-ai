@@ -106,7 +106,7 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 |---------|-------------|
 | `/loom-pause` | Snapshot workflow state for session handoff |
 | `/loom-resume` | Restore context from paused session |
-| `/loom-do "text"` | Smart routing to the right Loom command |
+| `/loom do "text"` | Smart routing to the right Loom command |
 | `/loom-next` | State-aware next step suggestion |
 | `/loom-profile [name]` | View or switch model cost profile |
 | `/loom-status` | Project status overview |
@@ -387,7 +387,7 @@ Human approval gate: review criteria + test stubs
 Final: convergence report (pass/fail per criterion, frozen conflicts)
 ```
 
-Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/progress/{taskId}.toon` -- the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
+Each agent returns a structured `AgentResult`. State is tracked in `.plan-execution/state.toon`. Cross-wave context is compressed into HOT/WARM/COLD tiers to stay under 10k tokens. Background agents report progress via `.plan-execution/ephemeral/progress/{taskId}.toon` -- the orchestrator polls these files to render a live dashboard, detect stale/hung agents, and escalate via SendMessage. Orchestrators use the **lean pattern**: agents read their own `.md` instructions from disk instead of having them embedded in the prompt (see `execution-conventions.md`).
 
 ### File Structure (during execution)
 

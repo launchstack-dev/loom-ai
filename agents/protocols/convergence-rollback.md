@@ -206,7 +206,7 @@ The orchestrator presents the user with these options:
 1. **Retry convergence** (`/loom-converge --retry`) -- Re-run convergence from scratch with the same or modified plan. The rollback archive provides context for adjusting the convergence plan (e.g., increasing `maxIterations`, relaxing criteria, quarantining known flaky tests before starting).
 2. **Skip convergence** (`/loom-converge --skip`) -- Accept the pre-convergence state and continue to the next wave. Unresolved criteria are logged as warnings.
 3. **Manual fix** -- The user fixes the code manually, then runs `/loom-converge` to re-attempt convergence with the manual fixes as a starting point.
-4. **Abort execution** (`/loom-plan execute --abort`) -- Stop the entire execution pipeline. All progress is preserved in `.plan-history/`.
+4. **Abort execution** (`/loom plan execute --abort`) -- Stop the entire execution pipeline. All progress is preserved in `.plan-history/`.
 
 ---
 

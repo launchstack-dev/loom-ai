@@ -86,7 +86,7 @@ describe("statusline-command.sh", () => {
 
   describe("active mode", () => {
     it("renders active output when status.toon has a fresh updatedAt", () => {
-      writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: implementing
 wave: 2
 totalWaves: 4
@@ -107,7 +107,7 @@ updatedAt: ${freshTimestamp()}
     });
 
     it("includes FAIL count when agentsFailed > 0", () => {
-      writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: wiring
 wave: 2
 totalWaves: 4
@@ -125,7 +125,7 @@ updatedAt: ${freshTimestamp()}
     });
 
     it("includes findings count when findings > 0", () => {
-      writeFixture(tmpDir, ".plan-execution/status.toon", `command: review-code
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: review-code
 phase: reviewing
 wave: 1
 totalWaves: 1
@@ -143,7 +143,7 @@ updatedAt: ${freshTimestamp()}
     });
 
     it("produces Loom line under 120 chars", () => {
-      writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: implementing
 wave: 2
 totalWaves: 4
@@ -164,7 +164,7 @@ updatedAt: ${freshTimestamp()}
 
   describe("idle mode", () => {
     it("renders idle output when status.toon has a stale updatedAt", () => {
-      writeFixture(tmpDir, ".plan-execution/status.toon", `command: execute-plan
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `command: execute-plan
 phase: complete
 updatedAt: ${staleTimestamp()}
 `);
@@ -260,7 +260,7 @@ note3: Review docs
 
     it("falls back to idle mode when active mode fields are incomplete", () => {
       // status.toon is fresh but missing required command/phase fields
-      writeFixture(tmpDir, ".plan-execution/status.toon", `updatedAt: ${freshTimestamp()}
+      writeFixture(tmpDir, ".plan-execution/ephemeral/status.toon", `updatedAt: ${freshTimestamp()}
 `);
 
       writeFixture(tmpDir, "PLAN.md", `---

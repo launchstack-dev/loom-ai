@@ -100,16 +100,34 @@ Route to the appropriate mode section below.
 Read `CLAUDE.md` if it exists. Scan the project structure and relevant source files to understand the codebase context needed for the task.
 
 **Wiki context.** If `.loom/wiki/` exists:
-1. Read `.loom/wiki/index.toon`
-2. Find pages relevant to the task (match module names, component names, keywords from description)
-3. Read up to 3 most relevant pages for context — understand architecture decisions, conventions, and dependencies before making changes
-4. Record consulted page IDs as `wikiContext` for the log
+1. Read `.loom/wiki/index.toon`.
+2. **User-facing-language keying (run BEFORE component matching).** When the task description is framed in user-facing terms, match `flow-*` page titles FIRST, then resolve flows to the components they exercise via `crossRefs`. Prefer a flow title hit over a component-name hit — flow titles describe user-visible behavior, component titles describe code topology, and a user-framed task is more likely shaped by the flow's success path than by an arbitrary code-named module.
+
+   a. **Detect user-facing language in the task description.** Apply these patterns (case-insensitive). If any pattern matches, set `userFacingMode: true`. Keep the pattern set conservative — these patterns will over-match if broadened (calibration risk, same principle as Hook B):
+
+      - `/user(s)? (can'?t|cannot|fails? to|are? unable to|is unable to) \w+/i`
+      - `/(checkout|signup|sign-up|login|sign-in|password reset|onboarding|payment|subscription|dashboard) (broken|fails?|doesn'?t work|hangs?|times? out|returns? \d+)/i`
+      - `/(error|crash|hang|timeout) (when|while|during|after) \w+/i`
+      - `/(can'?t|cannot|unable to) (check ?out|sign ?up|sign ?in|log ?in|reset|submit|complete)/i`
+      - `/(button|form|page|screen) (returns?|throws?|shows?) \d+/i`
+
+   b. **If `userFacingMode` is true:**
+      - Scan `index.toon` for `flow-*` pages whose `title` or `summary` fuzzy-matches tokens from the task description (lowercase, strip punctuation, drop stopwords; a match is any non-stopword token of length >=4 appearing in the title or summary).
+      - For each matched flow page, read its body and add all `crossRefs` entries where `relationship: exercises` to the wiki-lookup candidate set — these are the components the flow touches.
+      - Record matched flow pageIds as `matchedFlows[]` (passed to the implementer so it knows which user-facing behaviors to preserve; also logged in the QuickTaskLog `wikiContext` block).
+      - Continue with the existing component-matching logic below as a fallback in case no flow matches.
+
+3. **Component matching (existing logic, runs whether or not flows matched).** Find pages relevant to the task (match module names, component names, keywords from description). Prefer flow-derived components from step 2b when ranking candidates.
+4. Read up to 3 most relevant pages for context — understand architecture decisions, conventions, and dependencies before making changes. When `matchedFlows[]` is non-empty, prioritize the matched flow pages and their `exercises` components in this top-3.
+5. Record consulted page IDs as `wikiContext` for the log. If `matchedFlows[]` is non-empty, also record it in the log so downstream analysis (impact assessment, wiki update prompt) can preserve the user-facing framing.
 
 **Prior task/fix check.** If `.loom/fix-archive/index.toon` exists, scan for prior fixes in the same area. If `.plan-history/quick-tasks/` has recent entries touching the same files, note them. This prevents repeating past mistakes or duplicating recent work.
 
 **3b. Execute the task.**
 
 Implement the described task. Write or modify code as needed. Stay focused on exactly what the user described -- no scope creep. Respect any conventions or architectural decisions found in wiki context.
+
+If `matchedFlows[]` from step 3a is non-empty, treat the listed flows' `exitStates` as user-facing behaviors that must be preserved across the change. When making edits that touch a component the flow exercises, verify the flow's success exits still hold (per `agents/protocols/wiki-page.schema.md`, `flow-*` pages declare `exitStates` as the success criteria).
 
 **3c. Continue to Step 4 (Post-Execution).**
 
@@ -288,6 +306,8 @@ completedAt: {ISO-8601 timestamp from when post-execution finished}
 filesChanged[N]: {list of files created, modified, or deleted}
 
 wikiContext[N]: {page IDs consulted during context gathering, or empty}
+matchedFlows[N]: {flow-* pageIds matched via user-facing-language keying, or empty}
+userFacingMode: {true|false — whether user-facing-language detection fired during wiki keying}
 
 verificationResult: {pass|fail|skipped}
 verificationOutput:
@@ -333,6 +353,41 @@ Update wiki with /loom-wiki ingest --diff? (y/n)
 ```
 
 If confirmed, invoke `/loom-wiki ingest --diff`. If wiki is not available or no overlap, skip silently.
+
+##### 4e.1. Contract-Page Quick-Archive (added by PLAN-spec-upgrades.md Phase 6)
+
+**When this step runs.** Only when the project has `contract-*` wiki pages. Detect by checking for any file matching `.loom/wiki/pages/contract-*.md`. If none exist, skip this step entirely — `/loom-quick` behavior is unchanged for projects without contract pages.
+
+**When this step runs and verification passed.** If `verificationResult` is `fail`, skip — the work hasn't converged yet and stamping a retroactive contract-page archive against failing code would lock in bad state.
+
+**What it does.** If contract pages exist AND verification passed (or was skipped via `--no-verify`), `/loom-quick` invokes `scripts/loom-change/quick-archive.ts` to capture the work as a retroactive change proposal and archive it into the relevant contract page(s). The full atomicity, conflict-detection, and supersession-scan machinery from `/loom-change archive` runs — no shortcuts.
+
+**Step-by-step:**
+
+1. **Identify affected domains.** Scan `filesChanged[]` from the task. For each changed file, check whether any `contract-*` page's `sourceRefs[]` lists it. Collect the unique set of affected domains (the `{domain}` portion of each matching `contract-{domain}` page).
+
+2. **If no domains matched, skip** — the work touched no files referenced by any contract page, so no archive is needed.
+
+3. **Compose the deltas payload.** For each affected domain, derive a minimal `QuickArchiveDelta` object:
+   - `domain` = the contract page's domain
+   - `addedRequirements[]`, `modifiedRequirements[]`, `removedRequirements[]`, `addedScenarios[]`, `modifiedScenarios[]`, `removedScenarios[]` — populated based on what the task actually changed. For purely structural code changes that introduced no new requirements, all six arrays may be empty (the archive will still record the rationale in History).
+   - `breakingChange: false` (unless the change is known-breaking — then set `true` and include `migrationNote`).
+   - `migrationNote: null`.
+   - `rationale` — derived from the task description plus the impact assessment summary (must be at least 30 chars).
+
+4. **Invoke quick-archive.** Call `scripts/loom-change/quick-archive.ts` via `bunx tsx` (or `npx tsx` fallback) with the deltas payload. The script:
+   - Generates a `chg-{YYYYMMDD}-{slug}` directory from the task description.
+   - Synthesizes a retroactive `proposal.md` with `reviewedBy: loom-quick` and `approvedBy: loom-quick`.
+   - Runs the full archive path (pre-flight validation, conflict scan, atomic per-domain commit, supersession scan, wiki index refresh).
+
+5. **Record the changeId in the log.** Add `quickArchive.changeId` to the QuickTaskLog frontmatter so the audit trail links the quick task to its change proposal.
+
+6. **Surface failure modes:**
+   - If pre-flight validation fails (e.g., the user manually edited the contract page before running quick), surface the error and tell the user to run `/loom-change recover` or `/loom-change init` manually.
+   - If a conflict is detected with another in-flight change, surface both change IDs and the conflicting requirement/scenario IDs.
+   - If mid-archive rollback occurs, surface the path to the rollback log.
+
+**Behavior when contract pages are absent.** When no `contract-*` pages exist (the project hasn't materialized them yet), `/loom-quick` behaves exactly as before — no quick-archive invocation, no log addition. This keeps the ceremony free for projects that haven't opted into the change lifecycle.
 
 ##### 4f. Print Summary
 

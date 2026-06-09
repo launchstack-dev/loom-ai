@@ -201,6 +201,16 @@ archiveThresholdMultiplier = 3  # pages stale for stalenessDays * this value are
 autoLint = true                 # run lint checks automatically
 lintSchedule = "post-wave"      # "post-wave" | "post-execution" | "manual"
 
+# Wiki hook behavior (consumed by hooks/wiki-session-status.ts,
+# hooks/wiki-impact-warner.ts, hooks/wiki-commit-ledger.ts).
+# All defaults are conservative: noise-controlled, non-blocking, fail-open.
+# Set the env var LOOM_WIKI_HOOKS=0 to silence every wiki hook for a session.
+sessionStatusEnabled = true     # set false to suppress the SessionStart status line entirely
+sessionContext = "minimal"      # "off" | "minimal" | "full" — SessionStart context-loading tier
+impactAck = "notify"            # "notify" | "require" — impact-warner escalation: emit info vs. request user confirmation
+impactDedup = true              # per-file-per-session dedup on wiki-impact-warner; set false to fire every edit
+sessionThrottle = true          # collapse to "+N additional signals" when 2+ wiki signals fired in last 5 min
+
 # ─────────────────────────────────────────────────────────────
 # Domain — abstraction layer for non-code projects
 # ─────────────────────────────────────────────────────────────

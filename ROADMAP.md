@@ -3,10 +3,10 @@ roadmapVersion: 1
 name: "Loom Convergence Testing & Planning Taxonomy"
 status: approved
 created: 2026-04-18
-lastReviewed: 2026-04-18
+lastReviewed: 2026-05-01
 targetDate: null
-totalFeatures: 8
-totalMilestones: 4
+totalFeatures: 10
+totalMilestones: 6
 ---
 
 # Roadmap: Loom Convergence Testing & Planning Taxonomy
@@ -73,11 +73,24 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 **Alternatives considered:** Full Superpowers adoption (rejected — significant overlap with existing Loom capabilities)
 **Impact:** medium
 
-### C-07: Bowser Patterns Adopted
-**Decision:** Adopt three patterns from Bowser: YAML user stories for e2e specs, named session isolation for parallel e2e, step-level screenshot audit trails with console capture on failure. Do not adopt Justfile, their orchestration, or `--dangerously-skip-permissions`.
-**Rationale:** These are proven e2e testing patterns. YAML stories are human-writable, named sessions prevent state leakage, screenshots provide visual proof of convergence.
-**Alternatives considered:** Full Bowser adoption (rejected — their orchestration is stateless single-pass, ours is iterative convergence)
+### C-07: E2E Story + Session + Audit-Trail Conventions
+**Decision:** E2E tests are authored as YAML user stories, executed with named Playwright browser contexts (one context per `sessionName`) for parallel isolation in headless mode and as tabbed sessions in Chrome MCP mode for OAuth/SSO flows. Each step writes screenshots and console dumps to a per-session subdirectory under `.plan-execution/convergence/e2e/`.
+**Rationale:** YAML stories are human-writable and machine-discoverable via glob. Playwright's named browser contexts give cookie/storage/cache isolation for free, which lets e2e stories run in parallel without state leakage. Step-level screenshots + console dumps make failures visually diffable across convergence iterations. No third-party wrapper or framework dependency — Playwright is called directly.
+**Alternatives considered:** Wrap Playwright in a framework layer (rejected — adds coupling for features Playwright already provides natively); per-test ephemeral contexts without named identifiers (rejected — loses the per-story audit-trail path scheme that enables iteration-to-iteration diffs)
 **Impact:** medium
+
+### C-08: Cross-Platform Strategy — Narrow and Deep
+**Decision:** OpenCode is the primary second platform (native Task tool + full hooks + TypeScript plugins). Pi is the third platform (richer extension API, extension-based subagents). Goose and Codex CLI are degraded-mode targets (commands only). Do not build a lowest-common-denominator abstraction layer.
+**Rationale:** GSD went wide and shallow (deploy-everywhere, degrade-gracefully) — their orchestration "kinda sucks" as a result. Loom should go narrow and deep: near-full capability on OpenCode, tool registration on Pi, commands-only elsewhere. The user hits Claude Code usage limits and needs cheaper model augmentation (OpenCode's 75+ providers). Work machine runs Claude API + Codex CLI and needs a unified tool.
+**Alternatives considered:** Full abstraction layer across all platforms (rejected — GSD trap, testing matrix explosion on a one-person project), Claude Code-only forever (rejected — user has active personal need for multi-provider support)
+**Impact:** medium
+**Constraint:** OpenCode support does NOT ship with the open-source launch. Convergence ships first. OpenCode ships when issue anomalyco/opencode#5894 (hooks don't intercept subagent tool calls) is resolved.
+
+### C-09: Platform-Agnostic Data Layer
+**Decision:** TOON artifacts, wiki pages, .plan-execution/ state, and .plan-history/ are platform-agnostic by design. No platform-specific data formats. Sessions can resume across platforms via on-disk state.
+**Rationale:** Even without full cross-platform support, the data layer should never couple to a specific host tool. This means Loom state survives platform switches without migration.
+**Alternatives considered:** Embed platform-specific metadata in state files (rejected — creates unnecessary coupling)
+**Impact:** low (already true today — formalizing as a constraint)
 
 ## Tech Stack
 
@@ -175,7 +188,7 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 **Priority:** P0
 <!-- Applied: SF-01 — F-04 moves to M-02b -->
 **Milestone:** M-02b
-**Description:** New agent that converts acceptance-criteria-agent e2e specs into runnable Playwright test files and YAML user stories. Adopts Bowser's YAML story format (name, url, workflow steps) for human-writable e2e specs. Generates Playwright test code for automated execution. Stories are discovered via glob in the e2e stories directory.
+**Description:** New agent that converts acceptance-criteria-agent e2e specs into runnable Playwright test files and YAML user stories. Story format is human-writable (name, url, workflow steps) and machine-discoverable via glob in the e2e stories directory. Generates Playwright test code for automated execution.
 
 **Entities involved:** E2EStory, PlaywrightTest, CriteriaPlan
 
@@ -281,6 +294,58 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - Wiki-query protocol formalized: targeted queries scoped to feature/phase being worked on, results injected as rolling-context section `## Project Knowledge [WIKI]`
 - Rolling-context wiki injection is default-on for all execution agents (implementers, reviewers, fixers) — opt-out via `--no-wiki-context`
 
+### F-09: Cross-Platform Support (OpenCode + Pi)
+
+**Priority:** P1
+**Milestone:** M-04
+**Description:** Make Loom work on OpenCode (primary) and Pi (secondary) in addition to Claude Code. OpenCode gets near-full capability via its native Task tool, full hook lifecycle (tool.execute.before/after, stop), and TypeScript plugin system. Pi gets tool registration via registerTool() and its 25-event extension API. Goose and Codex CLI get degraded-mode support (commands and skills only, no hooks or orchestration). Convergence loop runs sequentially on platforms without parallel subagent support — functionally complete, just slower.
+
+**Entities involved:** PlatformAdapter, HookContract, PluginManifest
+
+**Key behaviors:**
+- Hook-contract spec defines mapping: every Loom hook → OpenCode/Pi equivalent, with gap documentation
+- OpenCode plugin: tool.execute.before (budget, ownership, contract lock), tool.execute.after (status), stop (debrief), experimental.chat.system.transform (rolling-context injection), experimental.session.compacting (state preservation)
+- Pi extension: registerTool() for loom-converge/execute/debate as first-class tools, tool_call/tool_result/session_shutdown events for hooks, SKILL.md for commands
+- install.sh gains --platform flag (opencode, pi, goose, codex) — writes to platform-specific config dirs
+- Runtime detection via LOOM_RUNTIME env var or filesystem probe (GSD pattern)
+- All hooks parameterize config paths — no hardcoded ~/.claude/
+- Commands installed via Agent Skills standard (SKILL.md) — already portable to all platforms
+- npm distribution: @launchstack/loom-opencode, @launchstack/loom-pi
+- Sequential degradation documented: on platforms without parallel subagents, orchestration patterns collapse to sequential inline execution
+- Known gap: OpenCode plugin hooks don't intercept subagent tool calls (anomalyco/opencode#5894) — budget tracking and file ownership enforcement won't protect subagent actions. Blocked until resolved.
+
+**Convergence targets:**
+- Loom hooks execute correctly on OpenCode (tool.execute.before blocks unauthorized writes)
+- Commands discoverable via Agent Skills on OpenCode and Pi
+- Convergence loop completes (sequentially) on OpenCode
+- Cross-platform session resume: start on Claude Code, continue on OpenCode via TOON state files
+
+### F-10: Repo Map (Aider-Style Proactive Context Pack)
+
+**Priority:** P2
+**Milestone:** M-05
+**Description:** Port Aider's RepoMap pattern to Loom as a deterministic, platform-agnostic proactive-context layer. Tree-sitter extracts symbols, a directed graph captures references between files, personalized PageRank ranks importance, and a token-budgeted symbol pack is injected into agent prompts before they begin work. Proactive sibling to Serena's reactive query MCP — pre-populates the agent with the symbols closest to the current plan-phase File Ownership instead of waiting for the agent to ask. Replaces the deferred `wiki-context-suggester` from PLAN-wiki-flows-contracts (its regex-based fuzzy matching was brittle). Strategic property preserved from Aider: no embedding model, no vector store, no model-version pinning — fits Loom's everything-is-files ethos and the C-09 platform-agnostic constraint.
+
+**Entities involved:** RepoMap, RepoMapSymbol, RankingConfig, StageContext
+
+**Key behaviors:**
+- Tree-sitter parses TS/JS/Markdown in v1; other languages fail gracefully (log + skip)
+- Reference graph: directed edge from file A → file B when A references a symbol defined in B; queries are tree-sitter, not regex
+- Personalized PageRank: damping 0.85, personalization weight 100, convergence ε<1e-6 within 100 iterations on a 1k-file graph
+- Token-budgeted pack: hard cap (default 8000), never exceeded, fills as much as possible; estimation via `hooks/lib/token-estimator.ts`
+- Personalization seed composition: orchestrator hint > current plan-phase File Ownership > recent `git diff HEAD~1..HEAD` files
+- `agent-prompt-builder.ts` injects the rendered pack into agent prompts under `## Repo Map (auto-generated)`; respects per-agent context cap (shrinks map before base prompt)
+- `/loom-repo-map build` produces the map on demand; `/loom-repo-map inspect --file <path>` shows PageRank + inbound/outbound refs for debugging
+- `wiki-context-suggester` hook (UserPromptSubmit) injects a top-10 symbol pack into ad-hoc prompts seeded by extracted keywords + git-diff context
+- Wiki bridge: high-rank symbols without a corresponding `component-*` wiki page surface as documentation gaps the wiki-maintainer-agent can ingest
+- Determinism: identical seed + identical disk state produces byte-identical output
+
+**Convergence targets:**
+- `buildRepoMap()` on the loom-ai repo produces a token-budgeted (≤8k tokens) symbol pack in <5 seconds
+- Personalization measurably re-ranks: seeding with `scenario.schema.md` vs `loom-plan/execute.md` produces distinct top-20s
+- `wiki-context-suggester` UserPromptSubmit hook fires without exceeding the conversation budget
+- At least one structurally-important function in loom-ai without a `component-*` wiki page is surfaced as a documentation gap by the wiki bridge
+
 ## Data Model (Conceptual)
 
 ### Entities
@@ -321,9 +386,10 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 
 ## Milestones
 
-### M-01: Planning Foundation
+### M-01: Planning Foundation -- COMPLETE
 
 **Features:** F-01, F-02, F-06
+**Status:** Complete -- all artifacts shipped (taxonomy.md, criteria-planner-agent, interpretation-reviewer-agent, parallel spawn in loom-plan create)
 **Depends on:** None
 **Acceptance:** Taxonomy is formalized, dual-track planning runs in parallel, interpretation-reviewer catches known ambiguities in test fixture plans.
 **Effort:** L
@@ -336,16 +402,18 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 <!-- Applied: SF-01 — split M-02 into M-02a (F-03 + F-07) and M-02b (F-04 + F-05) -->
 <!-- Applied: ST-01 — threaded F-07 (behavioral hardening) into M-02a -->
 
-### M-02a: 4-Tier Convergence Engine + Behavioral Hardening
+### M-02a: 4-Tier Convergence Engine + Behavioral Hardening -- COMPLETE
 
 **Features:** F-03, F-07
+**Status:** Complete -- convergence-tier.schema.md, convergence-driver.md, behavioral-guidelines.md, AgentResult verificationStatus + diagnoseLog all shipped
 **Depends on:** M-01
 **Acceptance:** All 4 tiers execute at their correct hierarchy levels, unit tests gate waves, red-green TDD gate enforced by implementer, fixer diagnoses before fixing, AgentResult requires verification status.
 **Effort:** XL
 
-### M-02b: E2E Pipeline
+### M-02b: E2E Pipeline -- COMPLETE
 
 **Features:** F-04, F-05
+**Status:** Complete -- e2e-test-writer-agent.md, e2e-runner-agent.md, e2e-story.schema.md all shipped. Playwright headless + Chrome MCP modes.
 **Depends on:** M-02a
 **Acceptance:** E2E test writer produces Playwright tests from YAML stories, e2e runner executes with screenshot audit trail, `/loom-converge --e2e` works in manual mode and mid-execution.
 **Effort:** L
@@ -354,12 +422,44 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 <!-- Applied: SF-04 — effort changed from L to XL -->
 <!-- Applied: SF-07 — M-03 depends on M-02b which includes the threaded behavioral patterns -->
 
-### M-03: Cross-System Integration
+### M-03: Cross-System Integration -- COMPLETE
 
 **Features:** F-08
+**Status:** Complete -- wiki-maintainer-triggers.md (5 triggers including execution-debrief), execution-log.schema.md (15+ event types), statusline-contract.md (test metrics, convergence segments), rolling-context wiki injection all shipped
 **Depends on:** M-02b
 **Acceptance:** Wiki captures test decisions and quality history, context budget holds for all test agents, statusline shows test metrics, execution-log records all test events.
 **Effort:** XL
+
+### M-04: Cross-Platform Support -- BLOCKED
+
+**Features:** F-09
+**Status:** Blocked -- awaiting anomalyco/opencode#5894 resolution. Hook-contract spec not yet written.
+**Depends on:** M-01 (convergence foundation must be proven before multi-platform)
+**Acceptance:** Loom hooks execute on OpenCode (budget, ownership, contract lock). Commands and skills are discoverable on OpenCode and Pi via Agent Skills. Convergence loop completes sequentially on OpenCode. Cross-platform session resume works via TOON state files.
+**Effort:** L (OpenCode: ~1 week, Pi: ~1 week)
+**Constraint:** Blocked until anomalyco/opencode#5894 resolves. Hook-contract spec must be written and locked before implementation begins. Hard kick-off date set at spec completion, not a floating condition.
+
+#### Phasing
+
+1. **Spec phase (this week):** Write hook-contract spec — map every Loom hook to OpenCode/Pi equivalents, document gaps, define acceptance criteria
+2. **OpenCode phase (post-#5894):** Build OpenCode plugin, install.sh --platform opencode, npm package
+3. **Pi phase (after OpenCode ships):** Build Pi extension with registerTool(), npm package
+4. **Degraded targets (opportunistic):** Goose recipe adapter, Codex CLI commands — only if demand exists
+
+### M-05: Repo Map Integration -- NOT STARTED
+
+**Features:** F-10
+**Status:** Not started -- PLAN-repo-map.md drafted 2026-05-30 (4 phases / 4 waves / 2 sub-milestones). No code yet. Supersedes the archived context-mode exploration (see `.plan-history/explorations/2026-05-01-context-mode-vs-repo-map.md`) on the platform-agnostic principle.
+**Depends on:** None for core (M-01). Wiki bridge (Phase 3) benefits from but does not require contract-page materialization (M-02b spec-upgrades, already complete).
+**Acceptance:** `buildRepoMap()` produces a deterministic, token-budgeted, personalizable symbol pack against the loom-ai repo. Orchestrators inject the pack into agent prompts. `wiki-context-suggester` hook fires on UserPromptSubmit. High-rank symbols without `component-*` wiki coverage surface as documentation gaps.
+**Effort:** M (tree-sitter + graph + PageRank + render + orchestrator wiring; pure TypeScript, no external services)
+
+#### Phasing
+
+1. **Schema contracts (Phase 0, Wave 0):** `repo-map.schema.md`, `ranking-config.schema.md` — rendered-pack format, tuning knobs, defaults.
+2. **Core algorithm (Phase 1, Wave 1):** Tree-sitter extraction, reference graph build, personalized PageRank, token-budgeted render. ≥15 vitest cases covering 3 languages, graph correctness, PageRank convergence, budget invariants, determinism.
+3. **Orchestrator integration (Phase 2, Wave 2):** `repo-map-seeder.ts`, `agent-prompt-builder.ts`, `/loom-repo-map build|inspect` CLI. Independently shippable (M-01 sub-milestone).
+4. **Wiki bridge (Phase 3, Wave 3):** `wiki-context-suggester.ts` UserPromptSubmit hook replaces the deferred fuzzy-regex variant. `wiki-maintainer-agent` documents how high-rank symbols without wiki pages become ingestion candidates.
 
 ## Risks & Mitigations
 
@@ -371,10 +471,18 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 | Interpretation-reviewer produces false positive conflicts | low | medium | Severity levels (blocking/warning/info) let users triage. Only blocking conflicts halt the pipeline. False positives are info-level. |
 | Context budget pressure from 4 tiers of test agents | high | medium | Each tier's agents are context-efficient: unit runner reads only test stubs + changed files, QA reviewers get only their dimensions, e2e runner reads YAML stories only. HOT/WARM/COLD compression for test history. |
 | Chrome MCP mode is single-instance (no parallel) | low | high | Document limitation. Parallel e2e uses Playwright headless. Chrome mode is for authenticated flow debugging only. |
+| OpenCode hooks don't intercept subagent tool calls (#5894) | high | high | Blocked until resolved. Budget and ownership enforcement has a real gap on OpenCode subagents. Do not ship until fixed. |
+| OpenCode experimental APIs (chat.system.transform, session.compacting) may break | medium | medium | Pin to specific OpenCode version. Thin adapter isolates breaking changes. These features are used for rolling-context injection and compaction state — degraded without them but not fatal. |
+| Cross-platform maintenance tax slows convergence development | medium | medium | OpenCode and Pi are separate npm packages with isolated adapters. Core Loom code never branches on platform. Testing: core logic in vitest (zero platform dep) + one smoke test per platform. |
+| GSD trap: wide and shallow multi-platform degrades orchestration quality | medium | low | Constraint C-08 explicitly rejects lowest-common-denominator. OpenCode gets near-full capability (native Task tool). Sequential degradation is documented, not hidden. |
+| Tree-sitter grammar maintenance across languages | medium | medium | Ship TS/JS/Markdown only in v1. Document the failure-mode-is-skip contract so adding a language is purely additive — a project with mostly-unsupported languages degrades to empty pack, not a crash. |
+| PageRank perf on large repos (>10k files) | medium | low | v1 measures on loom-ai (~600 files). Cache strategy D-01 has file-watcher invalidation as escape hatch if needed. Projects >5k files surface a warning. |
+| Token-budgeted pack drops critical symbols on overflow | medium | medium | `agent-prompt-builder.ts` shrinks the map before truncating the base prompt. Deterministic ordering means dropped symbols are always the lowest-rank ones. Orchestrators pass a higher `tokenBudget` for phases that need broader context. |
+| Repo map drifts from wiki contract pages | high | low | Repo map is **derived** (never authored); wiki contract pages are **authored**. Repo map never overrides wiki — it can only flag gaps for the maintainer to consider. |
 
 ## Out of Scope
 
-- Full Bowser framework adoption (orchestration, Justfile, agent layer — we only adopt patterns)
+- Third-party e2e framework wrappers — Playwright is called directly; no orchestration layer between Loom and the browser
 - Visual regression testing / pixel-diff comparisons (fragile, high maintenance)
 - Performance benchmarking as a convergence criterion (non-deterministic across runs)
 - Mobile app testing or native platform testing
@@ -402,3 +510,5 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 | delta-analyzer | haiku | Structured gap analysis — correct as-is |
 | verification-agent | haiku | Runs commands, checks outputs — correct as-is |
 | auto-dispatcher | sonnet | Lean lead, reads summaries only — correct as-is |
+| platform-adapter (OpenCode) | N/A | TypeScript plugin — no model, runs as hook/tool |
+| platform-adapter (Pi) | N/A | TypeScript extension — no model, runs in-process |

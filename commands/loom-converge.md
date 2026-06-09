@@ -54,22 +54,9 @@ Parse arguments after `converge`:
 
 ### Instructions
 
-#### Step 0: Read Protocols, Resolve Models, and Gather Wiki Context
+#### Step 0: Read Protocols and Resolve Models
 
-**Model Resolution (for each agent spawn):**
-
-Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility.
-
-1. Read `.claude/orchestration.toml` once (cache the result).
-2. If orchestration.toml exists AND has a `modelProfile`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:`. Use that value. This step is NOT optional.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
-5. Pass `model: "{resolved}"` on each Agent tool call.
-
-**Wiki Context:** If `.loom/wiki/` exists, read `index.toon` and gather relevant pages:
-- **Target mode (`--plan` or `--target`):** collect `api-surface-*` pages (convergence target seeds), `decision-*` pages (method constraints), `convention-*` pages (naming/routing patterns), `pattern-*` pages (additional target signals). Cap at 8 pages.
-- **Criteria mode (`--criteria`):** collect `decision-*` pages (architectural constraints for criteria), `convention-*` pages (reviewer dimensions), `pattern-*` pages (test generation guidance), `structure-*` pages (file ownership validation). Also collect quality history entries (tagged `quality`, `bug`, `regression`). Cap at 8 pages.
-- Record as `wikiContext` for injection into convergence-planner-agent or criteria-planner-agent prompts.
+**Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
 
 Read convergence-related protocols:
 - `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
@@ -221,9 +208,6 @@ Examples:
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary from project scanning}
     {if --target provided: 'Seed target: ' + targetPath}
-    {if wikiContext gathered: <file-content path="wiki-context">
-    {concatenated wiki page contents, each prefixed with its pageId}
-    </file-content>}
     Write plan to: .plan-execution/convergence-plan.toon"
    ```
 
@@ -266,9 +250,6 @@ This path replaces Steps 1.5 through 4 for criteria mode. It uses criteria-plann
     {if --no-hard: 'Soft criteria only (no test generation)'}
     Scope contract path: scope-contract.toon (if exists)
     Codebase context: {tech stack summary}
-    {if wikiContext gathered: <file-content path="wiki-context">
-    {concatenated wiki page contents, each prefixed with its pageId}
-    </file-content>}
     Write plan to: .plan-execution/criteria-plan.toon
     Write tests to: .plan-execution/convergence/criteria/tests/"
    ```
@@ -556,7 +537,7 @@ Wait for user response:
        Iter 3: {n3}/{total} passing  (blocking: {b3} failing, conflicts: {c3})
    ```
 
-6. Update `.plan-execution/status.toon` at each progress check.
+6. Update `.plan-execution/ephemeral/status.toon` at each progress check.
 
 #### Step 5.5: Convergence Context Checkpoint (every 3 iterations)
 
@@ -620,7 +601,6 @@ When the convergence-driver completes, read the final `.plan-execution/convergen
 - Budget remaining: {budget - N}
 
 ### Next Steps
-Context tip: run /clear before the next command for fresh context.
 {contextual recommendations based on final status}
 ```
 
@@ -655,7 +635,6 @@ Context tip: run /clear before the next command for fresh context.
 - Budget remaining: {budget - N}
 
 ### Next Steps
-Context tip: run /clear before the next command for fresh context.
 {contextual recommendations -- same status-based logic, plus:
  - If frozen conflicts exist: "Review frozen conflicts above. These represent reviewer disagreements that cannot be resolved automatically."
  - converged with frozen: "All blocking criteria pass. {N} frozen conflicts remain for human review."}
@@ -696,7 +675,7 @@ Context tip: run /clear before the next command for fresh context.
    completedAt: {ISO timestamp}
    ```
 
-3. Update final `.plan-execution/status.toon`.
+3. Update final `.plan-execution/ephemeral/status.toon`.
 
 ### Error Handling
 
@@ -713,7 +692,7 @@ Context tip: run /clear before the next command for fresh context.
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` at every phase transition:
+Write `.plan-execution/ephemeral/status.toon` at every phase transition:
 ```toon
 command: converge
 phase: {parsing-targets | building-harness | approval-gate | converging | complete}

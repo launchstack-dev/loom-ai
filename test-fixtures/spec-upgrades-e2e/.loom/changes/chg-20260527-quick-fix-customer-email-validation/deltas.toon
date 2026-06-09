@@ -1,0 +1,3 @@
+# deltas.toon mirror — written by /loom-change quick-archive.
+deltas[1]{domain,breakingChange,addedReqCount,modifiedReqCount,removedReqCount,addedScenarioCount,modifiedScenarioCount,removedScenarioCount}:
+  customers,false,1,0,0,1,0,0

@@ -7,7 +7,7 @@
 export const STALENESS_THRESHOLD_SECONDS = 300;
 
 /**
- * Active execution state, read from `.plan-execution/status.toon`.
+ * Active execution state, read from `.plan-execution/ephemeral/status.toon`.
  * Present only while an orchestrator command is running.
  */
 export interface ActiveState {

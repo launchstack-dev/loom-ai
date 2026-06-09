@@ -56,6 +56,6 @@ runHook("file-ownership", async (input) => {
   return block(
     `File "${path.basename(absPath)}" is not in your file ownership boundary. ` +
       `Owned files: [${ownedList}]. ` +
-      `If you need this file, write a request to .plan-execution/requests/.`
+      `If you need this file, write a request to .plan-execution/ephemeral/requests/.`
   );
 });

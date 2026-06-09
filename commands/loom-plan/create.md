@@ -36,18 +36,7 @@ Parse remaining arguments:
 
 4. **Check for pending notes.** Read `.plan-execution/notes.toon` if it exists. Filter for pending notes tagged `architecture`, `decision`, `security`, `perf`. Include them as advisory context for the plan builder.
 
-5. **Gather wiki context** if `.loom/wiki/` exists:
-   - Read `.loom/wiki/index.toon`
-   - Collect pages in these categories that are relevant to the project being planned:
-     - `decision-*` — architectural decisions (ALL decision pages, these are binding constraints)
-     - `convention-*` — coding conventions (ALL convention pages)
-     - `pattern-*` — established patterns (filter to patterns relevant to the tech stack and features)
-     - `structure-*` — directory layout blueprints (ALL structure pages)
-     - `tech-debt-*` — known debt in areas the plan will touch (filter by keyword match)
-   - Read the selected pages (cap at 10 pages to stay within context budget)
-   - Record as `wikiContext` for injection into agent prompts
-
-6. **Read scope contract** if `scope-contract.toon` exists:
+5. **Read scope contract** if `scope-contract.toon` exists:
    - Contract decisions → architecture constraints for the plan builder
    - Contract success criteria → acceptance criteria seeds
    - Contract tech context → file ownership hints and tech stack confirmation
@@ -59,7 +48,7 @@ Parse remaining arguments:
 If `--estimate` is set:
 
 1. Compute the token estimate for the dual-track plan creation pipeline using the `characters / 4` heuristic (see `agents/protocols/context-budget.md`):
-   - **plan-builder-agent prompt:** roadmap text + codebase context + wiki context (estimate 3000 tokens if `.loom/wiki/` has decision/convention/pattern/structure pages, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
+   - **plan-builder-agent prompt:** roadmap text + codebase context + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **criteria-planner-agent prompt:** roadmap text + wiki quality history (estimate 2000 tokens if `.loom/wiki/` exists, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **interpretation-reviewer-agent prompt:** estimated plan output (use 8000 tokens as a conservative default) + estimated criteria-plan output (use 4000 tokens as a conservative default) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **Fixed overhead per agent:** 5000 tokens (system prompt, tool definitions, formatting)
@@ -107,10 +96,6 @@ Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent t
 
  {If merging existing plan: <file-content path="PLAN.md">
  {existing PLAN.md text}
- </file-content>}
-
- {If wikiContext gathered in Step 0: <file-content path="wiki-context">
- {concatenated wiki page contents, each prefixed with its pageId}
  </file-content>}"
 ```
 
@@ -226,15 +211,9 @@ Save the conflict report to `.plan-execution/conflicts/interpretation-report.too
    - Error code consistency: error codes referenced in API specs exist in error catalog
    - Index coverage: foreign keys and query patterns have corresponding indexes
 
-3. **Always run Stage 8** (convergence target coverage):
-   - Every deterministic acceptance criterion has a corresponding convergence target
-   - Every convergence target has capture method (SOURCE), golden source (TARGET), and comparison method
-   - Target blocks are valid TOON with all required columns
-   - No duplicate target IDs across phases
+3. **If validation passes** (0 blocking errors): proceed to Step 3.
 
-4. **If validation passes** (0 blocking errors): proceed to Step 3.
-
-5. **If validation fails**:
+4. **If validation fails**:
    - Compile errors into a structured report
    - Re-spawn plan-builder-agent with: the plan + the validation report + "Fix these validation errors. Do not change unrelated sections."
    - Re-validate. If still fails after 2 retries: present plan + errors to user for manual decision.
@@ -304,8 +283,6 @@ Continue looping until the user approves.
    Criteria plan written to .plan-execution/criteria-plan.toon.
    {If conflicts: Interpretation conflicts saved to .plan-execution/conflicts/interpretation-report.toon.}
 
-   Context tip: run /clear before the next command for fresh context.
-
    Next steps:
      /loom-plan review                    -- 6 agents analyze the plan in parallel
      /loom-plan create --review-integrate -- apply review findings to PLAN.md
@@ -340,7 +317,7 @@ Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
    - Current PLAN.md contents
    - Filtered review findings
    - Instruction: "Apply these approved review recommendations. Do not change unrelated sections. Annotate each change with the finding that motivated it."
-5. Run validation on the result (stages 1-4, Stage 7 for v2 plans, and Stage 8 convergence coverage)
+5. Run validation on the result (stages 1-4, plus Stage 7 for v2 plans)
 6. Show proposed changes for user approval (or auto-apply if `--auto`)
 7. On approval: write plan, snapshot old version to `.plan-history/snapshots/`, update changelog
 
@@ -353,7 +330,7 @@ Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
 
 ### Status Line Updates
 
-Write `.plan-execution/status.toon` at every phase transition:
+Write `.plan-execution/ephemeral/status.toon` at every phase transition:
 ```toon
 command: plan-create
 phase: {context-gathering | generating | conflict-review | validating | reviewing | writing | complete}

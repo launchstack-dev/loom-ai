@@ -9,7 +9,7 @@ This schema references the `InterpretationConflict` and `CoverageGap` schemas de
 ## Schema
 
 ```toon
-schemaVersion: 1
+schemaVersion: 2
 createdAt: 2026-04-18T10:00:00Z
 updatedAt: 2026-04-18T10:15:00Z
 reviewedAt: 2026-04-18T10:00:00Z
@@ -23,15 +23,16 @@ summary:
   blocking: 1
   warning: 1
   info: 1
+  scenarioLevelConflicts: 2
   totalGaps: 2
   planOnlyGaps: 1
   testOnlyGaps: 1
   priorResolutionsApplied: 1
 
-conflicts[N]{id,source,planInterpretation,testInterpretation,severity,status,resolution,resolvedAt,featureRef,phaseRef}:
-  IC-001,dual-track,"Plan says return all user fields","Test only checks id and email fields",warning,open,,,F-01,Phase 2
-  IC-002,semantic-mismatch,"Plan says 401 for expired tokens","Test expects 403 for expired tokens",blocking,open,,,F-03,Phase 4
-  IC-003,coverage-gap,"Plan requires pagination on list endpoint","Test asserts unbounded array response",info,open,,,F-02,Phase 3
+conflicts[N]{id,source,planInterpretation,testInterpretation,severity,status,resolution,resolvedAt,featureRef,phaseRef,scenarioRef}:
+  IC-001,dual-track,"Plan says return all user fields","Test only checks id and email fields",warning,open,,,F-01,Phase 2,Phase 2.S-01
+  IC-002,semantic-mismatch,"Plan says 401 for expired tokens","Test expects 403 for expired tokens",blocking,open,,,F-03,Phase 4,Phase 4.S-03
+  IC-003,coverage-gap,"Plan requires pagination on list endpoint","Test asserts unbounded array response",info,open,,,F-02,Phase 3,
 
 coverageGaps[N]{id,source,description,planRef,testRef,severity,resolvedAt,resolutionRef}:
   CG-001,plan-only,"Rate limiting on login endpoint not tested",Phase 3 AC-4,,blocking,,
@@ -49,7 +50,7 @@ wikiResolutions[N]{conflictPattern,resolution,wikiRef}:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `schemaVersion` | integer | yes | Schema version. Currently `1`. |
+| `schemaVersion` | integer | yes | Schema version. Currently `2`. **v1 → v2 transition:** v2 adds the `scenarioLevelConflicts` summary key and gates Validation Rule 2's last clause on the new version. v1 documents (without `scenarioLevelConflicts`) remain valid — the new clause is skipped. Always emit `schemaVersion: 2` for any document that includes `scenarioLevelConflicts`. |
 | `createdAt` | ISO 8601 | yes | When the report was generated. |
 | `updatedAt` | ISO 8601 | yes | Last modification time. |
 | `agent` | string | yes | Always `interpretation-reviewer-agent`. |
@@ -68,6 +69,7 @@ Nested block. Aggregate counts for quick triage.
 | `blocking` | integer | Number of conflicts with severity `blocking`. |
 | `warning` | integer | Number of conflicts with severity `warning`. |
 | `info` | integer | Number of conflicts with severity `info`. |
+| `scenarioLevelConflicts` | integer | Subset of `totalConflicts` whose `scenarioRef` is non-empty (i.e., scenario-scoped rather than feature/phase-scoped). Surfaced separately for triage — scenario-level conflicts point to the exact Given/When/Then block in disagreement. |
 | `totalGaps` | integer | Total number of coverage gaps found. |
 | `planOnlyGaps` | integer | Gaps where the plan has coverage but tests do not. |
 | `testOnlyGaps` | integer | Gaps where tests exist but the plan does not describe the behavior. |
@@ -89,6 +91,7 @@ Typed array. Each entry conforms to the `InterpretationConflict` schema defined 
 | `resolvedAt` | ISO 8601 | Timestamp of resolution. Required when status is `resolved`. |
 | `featureRef` | string | Feature reference. Format: `F-NN`. |
 | `phaseRef` | string | Phase reference. Format: `Phase N`. |
+| `scenarioRef` | string | Scenario reference. Format: `Phase {N}.S-{NN}` or `F-{NN}.S-{NN}`. Empty when the conflict scope is broader than a single scenario. |
 
 ### coverageGaps
 
@@ -120,12 +123,24 @@ Typed array. Records prior conflict resolutions found in the project wiki that w
 ## Validation Rules
 
 1. **All header fields present.** `schemaVersion`, `createdAt`, `updatedAt`, `reviewedAt`, `agent`, `agentModel`, `planSource`, `criteriaSource` must be non-empty.
-2. **Summary counts consistent.** `totalConflicts` must equal the length of `conflicts`. `totalGaps` must equal the length of `coverageGaps`. `blocking + warning + info` must equal `totalConflicts`. `planOnlyGaps + testOnlyGaps` must equal `totalGaps`.
+2. **Summary counts consistent.** `totalConflicts` must equal the length of `conflicts`. `totalGaps` must equal the length of `coverageGaps`. `blocking + warning + info` must equal `totalConflicts`. `planOnlyGaps + testOnlyGaps` must equal `totalGaps`. **For `schemaVersion: 2` documents only:** `scenarioLevelConflicts` must equal the count of `conflicts` entries with a non-empty `scenarioRef`. v1 documents (without the field) skip this clause.
 3. **Conflict entries valid.** Each conflict must conform to `InterpretationConflict` validation rules in `interpretation-conflict.schema.md`.
 4. **Coverage gap entries valid.** Each gap must conform to `CoverageGap` validation rules in `interpretation-conflict.schema.md`.
 5. **Severity enum.** All severity values must be one of: `blocking`, `warning`, `info`.
 6. **Unique IDs.** All `id` values across conflicts and coverage gaps must be unique.
 7. **Wiki resolutions optional.** The `wikiResolutions` array may be empty if no wiki exists or no prior resolutions matched.
+8. **Scenario-level conflicts grouped.** When the report is rendered for human review, conflicts MUST be grouped first by `scenarioRef` (when present), then by `phaseRef`, then by `featureRef`. Scenario-scoped findings are the most precise and SHOULD be surfaced first.
+
+---
+
+## Surfacing Scenario-Level Conflicts
+
+When the interpretation-reviewer-agent emits a report, scenario-scoped conflicts (those with `scenarioRef` non-empty) MUST be surfaced as distinct findings rather than aggregated into a broader feature/phase finding. Concretely:
+
+1. **One conflict per disagreeing scenario.** If plan scenario `Phase 2.S-01` says "Response status MUST be 409" and the test for the same scenario asserts 400, that produces one `IC-NNN` entry with `scenarioRef: Phase 2.S-01`, even if the surrounding phase has other scenarios that agree.
+2. **Scenario-level conflicts take precedence.** When a broader feature-level conflict would have been emitted, but the disagreement actually reduces to a single scenario, the reviewer MUST emit the scenario-level conflict instead — it points to the exact Given/When/Then block to repair.
+3. **Coverage gaps may also be scenario-level.** A `CoverageGap` whose `planRef` cites a specific scenario (e.g., `planRef: Phase 2.S-03`) is a scenario-level gap; report renderers SHOULD list these under their parent scenario in the human-readable output.
+4. **`scenarioLevelConflicts` in the summary block** lets triage tools count scenario-scoped issues at a glance and route them to the appropriate scenario authors.
 
 ---
 
@@ -136,3 +151,4 @@ Typed array. Records prior conflict resolutions found in the project wiki that w
 - **criteria-plan.schema.md** -- The criteria plan is one of the two inputs cross-referenced by this report.
 - **agent-result.schema.md** -- The interpretation-reviewer-agent returns this report inside its AgentResult envelope.
 - **convergence-tier.schema.md** -- Blocking conflicts gate convergence at the feature or milestone tier.
+- **scenario.schema.md** -- Defines the scenarios cited by `conflicts[].scenarioRef`. Scenario-level conflicts are the most precise finding the reviewer emits.

@@ -6,7 +6,7 @@ All orchestrators (`/loom-execute-plan`, `/loom-roadmap`) and all execution agen
 
 ## Progress File
 
-Each agent writes periodic updates to `.plan-execution/progress/{taskId}.toon`.
+Each agent writes periodic updates to `.plan-execution/ephemeral/progress/{taskId}.toon`.
 
 ```toon
 taskId: task-003
@@ -134,7 +134,7 @@ AgentProgress is **INFORMATIONAL** during execution. AgentResult is **AUTHORITAT
 
 ## Cleanup
 
-The `.plan-execution/progress/` directory is:
+The `.plan-execution/ephemeral/progress/` directory is:
 
 1. **Created** by the orchestrator at wave initialization.
 2. **Cleared** at the start of each wave (remove all `{taskId}.toon` files).

@@ -142,48 +142,7 @@ Languages, frameworks, databases, and key dependencies. This is a strategic choi
 - Version can be "latest" or a specific version constraint
 - Purpose column helps reviewers understand why each choice was made
 
-### 6. Architecture *(optional)*
-
-```markdown
-## Architecture
-```
-
-Structural documentation of how constraints, tech stack choices, and domain models compose into a system design. This section is for projects with complex domain models or multi-component architectures where the shape of the system matters for planning.
-
-**When to include:** Projects with 3+ interacting components, complex data pipelines, multi-layer architectures, or non-trivial integration patterns. Simple CRUD apps and single-service projects can skip this.
-
-**Distinction from Constraints & Decisions:** C-XX entries are locked choices ("we use PostgreSQL", "JWT for auth"). Architecture documents how those choices compose structurally ("the auth middleware sits between the API gateway and service layer, validating JWTs before routing to handlers").
-
-Supports these subsections (all optional, use `###` headings):
-
-```markdown
-### Pipelines
-Data flow pipelines — ingest → transform → store → serve. Describe stages, handoff points, and failure boundaries.
-
-### Domain Models
-Domain-driven design concepts: aggregates, bounded contexts, value objects. Goes beyond the Data Model section (which lists entities) to document how entities compose into domain concepts.
-
-### Component Mapping
-How logical components map to physical code organization. Service boundaries, module ownership, deployment units.
-
-### Integration Patterns
-How components communicate: sync (HTTP, gRPC), async (queues, events), shared state (database, cache). Include failure modes and retry strategies.
-
-### UX Contracts
-User-facing interaction contracts: page flows, state transitions, error surfaces. What the user sees at each step and what guarantees the system makes.
-```
-
-**Rules:**
-- At least one subsection required if the Architecture section is present (empty Architecture section is a structural error)
-- Subsections use `###` level headings
-- Content is prose + diagrams (ASCII/Mermaid) — not tables or TOON
-
-**Consumption:**
-- `plan-builder-agent` reads Architecture to constrain phase design (component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring-agent instructions)
-- Architecture review agent evaluates this section during `/loom-roadmap review`
-- Wiki `decision-*` and `structure-*` pages may reference Architecture subsections as their source
-
-### 7. Features
+### 6. Features
 
 ```markdown
 ## Features
@@ -191,7 +150,7 @@ User-facing interaction contracts: page flows, state transitions, error surfaces
 
 The core of the roadmap. Each feature is a subsection with a unique ID.
 
-```markdown
+````markdown
 ### F-01: {Feature Name}
 
 **Priority:** P0 | P1 | P2
@@ -208,9 +167,24 @@ The core of the roadmap. Each feature is a subsection with a unique ID.
 **Convergence targets:** *(optional — deterministic outputs to verify)*
 - {verifiable output derived from key behaviors, e.g., "POST /api/teams returns 201 with team JSON (ignore: timestamps, id)"}
 
+**Scenarios:** *(optional — Given/When/Then blocks per `scenario.schema.md`)*
+
+```toon
+id: S-01
+title: Create team with valid payload
+given[1]: The teams endpoint is reachable
+when: A client POSTs to /api/teams with a valid payload
+whenTriggerType: api-call
+then[2]: Response status MUST be 201, Response body MUST contain id and name fields
+stateRef:
+tags[1]: happy-path
+testTier: integration
+automatable: true
+```
+
 **Open questions:** *(optional — for interactive discussion)*
 - {question that needs user input before plan generation}
-```
+````
 
 **Rules:**
 - Feature IDs are sequential: F-01, F-02, etc.
@@ -219,11 +193,12 @@ The core of the roadmap. Each feature is a subsection with a unique ID.
 - Every feature must be assigned to exactly one milestone
 - Key behaviors must be concrete and observable (not "handles errors gracefully")
 - Convergence targets are optional free-text bullets listing outputs that can be verified deterministically (API responses, generated files, CLI exit codes, rendered pages). The convergence-planner-agent reads these as high-confidence seeds during target discovery. Only include targets that are capturable and deterministic — skip subjective or timing-dependent behaviors.
+- The optional **Scenarios** subsection holds one or more scenario blocks per `scenario.schema.md`. Scenarios are the canonical leaf-level testable unit and SHOULD accompany Key behaviors with concrete Given/When/Then formalizations. Scenario `id`s MUST be unique within the feature. When present, the `plan-builder-agent` derives plan-phase scenarios from these per the propagation rules below.
 - Open questions are resolved during the interactive discussion phase before plan generation
 - At least 2 features required (a single feature is likely too coarse-grained)
 - Description should focus on user value, not implementation details
 
-### 8. Data Model (Conceptual)
+### 7. Data Model (Conceptual)
 
 ```markdown
 ## Data Model (Conceptual)
@@ -255,7 +230,7 @@ Entity names, their relationships, and key fields at the **conceptual** level. T
 - Relationships must use standard cardinality notation: 1:1, 1:N, M:N
 - During plan generation, this conceptual model is expanded into fully typed schemas with constraints, indexes, and cascade behavior
 
-### 9. Milestones
+### 8. Milestones
 
 ```markdown
 ## Milestones
@@ -291,7 +266,7 @@ Milestones form a DAG (Directed Acyclic Graph), just like plan phases:
 
 ---
 
-### 10. Risks & Mitigations
+### 9. Risks & Mitigations
 
 ```markdown
 ## Risks & Mitigations
@@ -311,7 +286,7 @@ Known risks with planned mitigations.
 - At least 1 risk required (every project has risks; claiming zero risks suggests insufficient analysis)
 - Mitigation must be actionable (not "we'll deal with it later")
 
-### 11. Out of Scope
+### 10. Out of Scope
 
 ```markdown
 ## Out of Scope
@@ -356,8 +331,7 @@ Orchestrators validate roadmaps through these stages. All stages are run by `/lo
 | Required frontmatter fields | blocking | `roadmapVersion`, `name`, `status`, `created`, `totalFeatures`, `totalMilestones` must all be present and non-null |
 | Title matches name | blocking | `# Roadmap: {name}` must match `frontmatter.name` |
 | Required sections present | blocking | Vision, Success Metrics, Constraints & Decisions, Tech Stack, Features, Data Model (Conceptual), Milestones, Risks & Mitigations, Out of Scope must all exist |
-| Section order | blocking | Required sections must appear in the order specified above. The optional Architecture section, if present, must appear between Tech Stack and Features. |
-| Architecture non-empty | blocking | If an Architecture section is present, it must contain at least one `###` subsection. An empty Architecture section is a structural error. |
+| Section order | blocking | Required sections must appear in the order specified above |
 | Feature count matches | warning | `totalFeatures` in frontmatter should match actual feature count |
 | Milestone count matches | warning | `totalMilestones` in frontmatter should match actual milestone count |
 
@@ -417,7 +391,6 @@ The ROADMAP.md is the **strategy** document. The PLAN.md is the **execution spec
 | Milestones → | Delivery boundaries | Wave boundaries |
 | Constraints → | Architectural decisions | Honored as invariants in every phase |
 | Tech Stack → | Strategic choices | Referenced by contracts-agent and verification-agent |
-| Architecture → | System structure (optional) | Component boundaries → file ownership, pipeline stages → wave ordering, integration patterns → wiring instructions |
 | Success Metrics → | Project-level outcomes | Feed into acceptance criteria at phase level |
 | API detail | None (features describe behaviors) | Full endpoint specs with request/response/errors |
 | Status lifecycle | draft → reviewed → approved | draft → reviewed → approved → in-progress → completed |
@@ -433,9 +406,19 @@ The ROADMAP.md is the **strategy** document. The PLAN.md is the **execution spec
    - Milestones → wave boundaries
    - Data Model → fully typed schema
    - Constraints → invariants
-   - Architecture → component boundaries, pipeline stages, integration patterns (when present)
    - Tech Stack → contracts and verification config
    - Success Metrics → final acceptance criteria
+   - Feature Scenarios → plan-phase Scenarios (planVersion: 2 only; see Scenario Derivation Rules below)
+
+### Scenario Derivation Rules
+
+When a feature carries a `Scenarios:` subsection and the target plan is `planVersion: 2`:
+
+1. **Every roadmap feature scenario MUST appear in at least one plan phase** that materializes the feature, preserving the original `id`. The plan-builder-agent inserts the scenario into the destination phase's `#### Scenarios` subsection verbatim.
+2. **Provenance preserved.** Each propagated scenario carries an implicit `derivedFrom: {featureId}.{S-NN}` linkage tracked by the builder; downstream consumers (criteria planner, e2e story generator) cite this provenance via their own `scenarioRef`/`derivedFrom[]` fields.
+3. **No silent renumbering.** The plan-builder-agent MUST NOT renumber a scenario `id` during propagation. If a collision would occur (two features contributing the same `S-NN` to one phase), the builder MUST split the phase or rename the entire feature's scenario range — never the individual scenario.
+4. **v1 plans (planVersion 1) MUST drop feature scenarios silently** (with an info-level log). v1 plans have no slot for scenarios; the roadmap retains them as the source of truth.
+5. **New plan-only scenarios are permitted.** A plan phase may add scenarios that do not appear in any roadmap feature (e.g., infrastructure or wave-0 contracts scenarios). Such additions do not back-propagate to the roadmap.
 
 ---
 
@@ -462,6 +445,7 @@ A well-structured roadmap should have clear feature decomposition, proper milest
 
 - **taxonomy.md** -- Defines the planning hierarchy where milestones and features (roadmap-level concepts) map to convergence tiers: milestones to e2e, features to integration.
 - **convergence-tier.schema.md** -- Defines the convergence tier that applies at the milestone level (e2e tier) and feature level (integration tier).
-- **criteria-plan.schema.md** -- Criteria plans generated from roadmap features include a `testTier` column for convergence tier assignment.
-- **e2e-story.schema.md** -- E2E stories reference milestones defined in the roadmap via `milestoneRef` (format: `M-NN`).
-- **interpretation-conflict.schema.md** -- Interpretation conflicts reference features (`featureRef: F-NN`) defined in the roadmap.
+- **criteria-plan.schema.md** -- Criteria plans generated from roadmap features include a `testTier` column for convergence tier assignment and a `scenarioRef` column citing the scenarios that originate each criterion.
+- **e2e-story.schema.md** -- E2E stories reference milestones defined in the roadmap via `milestoneRef` (format: `M-NN`) and MUST cite the source scenario(s) via `derivedFrom[]`.
+- **interpretation-conflict.schema.md** -- Interpretation conflicts reference features (`featureRef: F-NN`) defined in the roadmap, and may reference individual scenarios via `scenarioRef`.
+- **scenario.schema.md** -- Canonical leaf-level testable unit. Roadmap features host scenarios via the optional `Scenarios:` subsection. The plan-builder-agent propagates them into plan-phase `#### Scenarios` blocks per the Scenario Derivation Rules above.

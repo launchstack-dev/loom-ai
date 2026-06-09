@@ -22,17 +22,17 @@ Parse arguments after `do`:
 
 If no text provided after `do`:
 ```
-/loom-do <natural language description>
+/loom do <natural language description>
 
 Route freeform text to the right Loom command automatically.
 
 Examples:
-  /loom-do fix the auth bug
-  /loom-do review my code
-  /loom-do create a plan for the new feature
-  /loom-do what should I do next
-  /loom-do add a note about the caching issue
-  /loom-do show me the project status
+  /loom do fix the auth bug
+  /loom do review my code
+  /loom do create a plan for the new feature
+  /loom do what should I do next
+  /loom do add a note about the caching issue
+  /loom do show me the project status
 ```
 Stop.
 
@@ -52,7 +52,7 @@ Read project state to inform routing:
    - `.loom/wiki/` -- wiki exists
    - `.plan-history/quick-tasks/` -- prior quick tasks exist
 
-3. **Recent activity.** If `.plan-execution/status.toon` exists, read the `command` and `phase` fields to understand what was last running.
+3. **Recent activity.** If `.plan-execution/ephemeral/status.toon` exists, read the `command` and `phase` fields to understand what was last running.
 
 #### Step 3: Route Intent
 

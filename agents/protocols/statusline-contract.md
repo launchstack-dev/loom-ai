@@ -11,7 +11,7 @@ Shell output contract for the Claude Code status line integration. The statuslin
 
 ## Modes
 
-The command operates in one of two modes based on whether `.plan-execution/status.toon` exists and is fresh (updated within `STALENESS_THRESHOLD_SECONDS`, default 300s).
+The command operates in one of two modes based on whether `.plan-execution/ephemeral/status.toon` exists and is fresh (updated within `STALENESS_THRESHOLD_SECONDS`, default 300s).
 
 ### Active Mode
 
@@ -130,12 +130,12 @@ The statusline command must never crash or produce multi-line output. All failur
 
 | State | Source |
 |-------|--------|
-| ActiveState | `.plan-execution/status.toon` (flat key-value TOON, one key per line) |
-| ActiveState.testPass | `.plan-execution/status.toon` — aggregate pass count across all test tiers |
-| ActiveState.testFail | `.plan-execution/status.toon` — aggregate fail count across all test tiers |
-| ActiveState.qaFindings | `.plan-execution/status.toon` — count of QA review findings (all severities) |
-| ActiveState.convergenceIteration | `.plan-execution/status.toon` — current convergence outer-loop iteration number (1-based) |
-| ActiveState.convergencePassRate | `.plan-execution/status.toon` — overall pass rate as integer 0-100 (tests passed / tests total * 100) |
+| ActiveState | `.plan-execution/ephemeral/status.toon` (flat key-value TOON, one key per line) |
+| ActiveState.testPass | `.plan-execution/ephemeral/status.toon` — aggregate pass count across all test tiers |
+| ActiveState.testFail | `.plan-execution/ephemeral/status.toon` — aggregate fail count across all test tiers |
+| ActiveState.qaFindings | `.plan-execution/ephemeral/status.toon` — count of QA review findings (all severities) |
+| ActiveState.convergenceIteration | `.plan-execution/ephemeral/status.toon` — current convergence outer-loop iteration number (1-based) |
+| ActiveState.convergencePassRate | `.plan-execution/ephemeral/status.toon` — overall pass rate as integer 0-100 (tests passed / tests total * 100) |
 | AmbientState.planStatus | Plan file metadata (implementation-defined) |
 | AmbientState.planName | Plan file metadata (implementation-defined) |
 | AmbientState.pendingNotes | Count of files in `.loom-notes/` or equivalent |

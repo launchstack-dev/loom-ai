@@ -16,6 +16,7 @@ Parse the first positional argument as the subcommand:
 - `execute`: wave-by-wave plan execution with parallel agents
 - `test`: generate and run acceptance criteria, unit, and E2E tests
 - `status`: show plan progress
+- `materialize`: convert an approved roadmap + completed plan into per-domain `contract-*` wiki pages (Phase 4 of PLAN-spec-upgrades.md; D-02 trigger surface)
 
 Remaining arguments after the subcommand are passed to the subcommand handler.
 
@@ -65,12 +66,12 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 | verification-agent | verification |
 | acceptance-criteria-agent, unit-test-agent, e2e-test-agent | utility |
 
-**How to resolve (for each agent spawn):**
+**How to resolve:**
 
-1. Read `.claude/orchestration.toml` once at the start (cache the result).
-2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
+1. If `.claude/orchestration.toml` exists, read it once at the start of the subcommand.
+2. Check for `modelProfile` under `[settings]`. If set (e.g., `balanced`), read the profile definition under `[settings.profiles.balanced]` to get per-tier model assignments.
+3. For each agent spawn, look up the agent's tier in the table above, then use the profile's model for that tier.
+4. If no profile is set, read the agent's `.md` frontmatter for `model:`.
 5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
 
 ---
@@ -79,31 +80,35 @@ Before spawning any agent via the Agent tool, resolve which model it should use.
 
 If no subcommand is provided, display:
 ```
-/loom-plan -- Manage plan lifecycle: create, review, execute, test
+/loom-plan -- Manage plan lifecycle: create, review, execute, test, materialize
 
 Subcommands:
-  create     Generate PLAN.md from an approved roadmap
-  review     Launch 6 specialized agents to review a plan in parallel
-  execute    Wave-by-wave plan execution with parallel agents
-  test       Generate and run acceptance criteria, unit, and E2E tests
-  status     Show plan progress
+  create        Generate PLAN.md from an approved roadmap
+  review        Launch 6 specialized agents to review a plan in parallel
+  execute       Wave-by-wave plan execution with parallel agents
+  test          Generate and run acceptance criteria, unit, and E2E tests
+  status        Show plan progress
+  materialize   Convert approved roadmap + completed plan into contract-* wiki pages
 
 Examples:
-  /loom-plan create                    Generate plan + criteria from ROADMAP.md
-  /loom-plan create --auto             Non-interactive plan creation
-  /loom-plan create --v1               Simpler plan without API specs
-  /loom-plan create --estimate         Print token cost estimate without spawning agents
-  /loom-plan create --skip-test-gen    Create plan only, skip criteria generation
-  /loom-plan create --review-integrate Apply review findings to PLAN.md
-  /loom-plan review                    6-agent parallel plan review
-  /loom-plan execute                   Execute PLAN.md wave-by-wave
-  /loom-plan execute --dry-run         Preview wave structure
-  /loom-plan execute --resume          Resume from saved state
-  /loom-plan execute --auto            Skip human approval gates
-  /loom-plan execute --contracts-only  Run only Wave 0 contracts
-  /loom-plan test                      Generate test suite from plan
-  /loom-plan test --run                Generate AND run tests
-  /loom-plan status                    Show plan progress
+  /loom-plan create                          Generate plan + criteria from ROADMAP.md
+  /loom-plan create --auto                   Non-interactive plan creation
+  /loom-plan create --v1                     Simpler plan without API specs
+  /loom-plan create --estimate               Print token cost estimate without spawning agents
+  /loom-plan create --skip-test-gen          Create plan only, skip criteria generation
+  /loom-plan create --review-integrate       Apply review findings to PLAN.md
+  /loom-plan review                          6-agent parallel plan review
+  /loom-plan execute                         Execute PLAN.md wave-by-wave
+  /loom-plan execute --dry-run               Preview wave structure
+  /loom-plan execute --resume                Resume from saved state
+  /loom-plan execute --auto                  Skip human approval gates
+  /loom-plan execute --contracts-only        Run only Wave 0 contracts
+  /loom-plan test                            Generate test suite from plan
+  /loom-plan test --run                      Generate AND run tests
+  /loom-plan status                          Show plan progress
+  /loom-plan materialize                     Emit contract-* wiki pages from approved roadmap+plan
+  /loom-plan materialize --dry-run           Print materialization plan without writing
+  /loom-plan materialize --propose-partition Scaffold contract-partition.toon from entities
 ```
 
 Otherwise, read the corresponding instruction file and follow it:
@@ -115,5 +120,6 @@ Otherwise, read the corresponding instruction file and follow it:
 | `execute` | Read `~/.claude/commands/loom-plan/execute.md` |
 | `test` | Read `~/.claude/commands/loom-plan/test.md` |
 | `status` | Read `~/.claude/commands/loom-plan/status.md` |
+| `materialize` | Read `~/.claude/commands/loom-plan/materialize.md` |
 
 Read the file for the matched subcommand, then follow its instructions. Pass all remaining arguments (after the subcommand name) to the subcommand handler.

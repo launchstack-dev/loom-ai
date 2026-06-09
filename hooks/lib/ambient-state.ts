@@ -5,6 +5,7 @@
  */
 
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { parseToon } from "./toon-reader.js";
@@ -22,7 +23,23 @@ export function gatherAmbientState(projectDir: string): AmbientState {
     lastCommand: readLastCommand(projectDir),
     lastResult: readLastResult(projectDir),
     gitBranch: readGitBranch(projectDir),
+    updateAvailable: readUpdateAvailable(),
   };
+}
+
+/**
+ * Read the loom update-check cache (~/.cache/loom/update-check.toon) and return
+ * whether `updateAvailable: true` is set. Fail-open: any error returns false.
+ */
+function readUpdateAvailable(): boolean {
+  try {
+    const cacheFile = path.join(os.homedir(), ".cache", "loom", "update-check.toon");
+    if (!fs.existsSync(cacheFile)) return false;
+    const parsed = parseToon(fs.readFileSync(cacheFile, "utf-8"));
+    return String(parsed["updateAvailable"]).toLowerCase() === "true";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -80,11 +97,11 @@ function countNotes(projectDir: string): number {
 }
 
 /**
- * Read the last orchestrator command from .plan-execution/status.toon.
+ * Read the last orchestrator command from .plan-execution/ephemeral/status.toon.
  */
 function readLastCommand(projectDir: string): string | null {
   try {
-    const statusPath = path.join(projectDir, ".plan-execution", "status.toon");
+    const statusPath = path.join(projectDir, ".plan-execution", "ephemeral", "status.toon");
     const content = fs.readFileSync(statusPath, "utf-8");
     const parsed = parseToon(content);
     const command = parsed["command"];
@@ -100,7 +117,7 @@ function readLastCommand(projectDir: string): string | null {
  */
 function readLastResult(projectDir: string): "ok" | "failed" | null {
   try {
-    const statusPath = path.join(projectDir, ".plan-execution", "status.toon");
+    const statusPath = path.join(projectDir, ".plan-execution", "ephemeral", "status.toon");
     const content = fs.readFileSync(statusPath, "utf-8");
     const parsed = parseToon(content);
 
@@ -124,7 +141,8 @@ function readGitBranch(projectDir: string): string | null {
   try {
     const result = execSync("git rev-parse --abbrev-ref HEAD", {
       cwd: projectDir,
-      timeout: 100,
+      // 500ms — normally <50ms; tolerate spikes under parallel load.
+      timeout: 500,
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "ignore"],
     });

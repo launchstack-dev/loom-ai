@@ -259,7 +259,7 @@ export interface PlanValidationResult {
 }
 
 // ---------------------------------------------------------------------------
-// Agent monitoring — .plan-execution/progress/{taskId}.toon
+// Agent monitoring — .plan-execution/ephemeral/progress/{taskId}.toon
 // ---------------------------------------------------------------------------
 
 export type AgentPhase =

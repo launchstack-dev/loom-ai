@@ -1,0 +1,111 @@
+# Phase 0 spike: confirm cosign keyless signing works in this repo.
+#
+# Goal: prove the OIDC-backed signing flow works end-to-end before committing the
+# release pipeline (Phase 1) to it. If this workflow fails, fall back to GPG-signed
+# releases.
+#
+# Run manually via "Actions → cosign-spike → Run workflow" on the launchstack-dev/loom-ai repo.
+# Expected runtime: <2 minutes. No artifacts published; verification happens in-workflow.
+
+name: cosign-spike
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Mock tag for the spike (e.g. v0.0.0-spike). No actual release is created.'
+        required: false
+        default: 'v0.0.0-spike'
+
+permissions:
+  contents: read
+  id-token: write   # required for cosign keyless OIDC token exchange
+
+jobs:
+  sign-and-verify:
+    name: Sign + verify a fixture tarball
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Print cosign version (sanity check)
+        run: cosign version
+
+      - name: Build fixture tarball
+        id: build
+        run: |
+          set -euo pipefail
+          mkdir -p _spike
+          # Use stable, repo-existing files so the tarball content is deterministic.
+          tar -czf _spike/loom-core-${{ github.event.inputs.tag_name }}.tar.gz \
+            LICENSE \
+            README.md
+          ls -la _spike/
+          # Capture digest for verification.
+          DIGEST=$(shasum -a 256 _spike/loom-core-${{ github.event.inputs.tag_name }}.tar.gz | awk '{print $1}')
+          echo "tarball_path=_spike/loom-core-${{ github.event.inputs.tag_name }}.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "tarball_sha256=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "Tarball SHA256: ${DIGEST}"
+
+      - name: Sign tarball with cosign (keyless, OIDC-backed)
+        id: sign
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          # --yes auto-confirms the OIDC consent prompt in CI
+          # --output-signature writes the .sig file
+          # --output-certificate writes the .crt file (for verify step)
+          cosign sign-blob \
+            --yes \
+            --output-signature "${{ steps.build.outputs.tarball_path }}.sig" \
+            --output-certificate "${{ steps.build.outputs.tarball_path }}.crt" \
+            "${{ steps.build.outputs.tarball_path }}"
+          ls -la _spike/
+
+      - name: Verify signature with cosign
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          # Verify the signature ties back to this repo's OIDC identity.
+          # certificate-identity-regexp pins the workflow file path so a stolen token from
+          # another workflow can't impersonate this one.
+          cosign verify-blob \
+            --signature "${{ steps.build.outputs.tarball_path }}.sig" \
+            --certificate "${{ steps.build.outputs.tarball_path }}.crt" \
+            --certificate-identity-regexp "^https://github\\.com/${{ github.repository }}/\\.github/workflows/cosign-spike\\.yml@" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${{ steps.build.outputs.tarball_path }}"
+          echo "Verification PASSED"
+
+      - name: Print signing summary
+        run: |
+          echo "===== Cosign Spike Results ====="
+          echo "Repo:      ${{ github.repository }}"
+          echo "Workflow:  ${{ github.workflow }}"
+          echo "Run ID:    ${{ github.run_id }}"
+          echo "Tarball:   ${{ steps.build.outputs.tarball_path }}"
+          echo "SHA256:    ${{ steps.build.outputs.tarball_sha256 }}"
+          echo ""
+          echo "If this step is reached without earlier failure:"
+          echo "  - cosign keyless signing works in launchstack-dev/loom-ai"
+          echo "  - OIDC token issuance from GitHub Actions is functional"
+          echo "  - certificate-identity-regexp scoping is enforceable"
+          echo ""
+          echo "Phase 1 release workflow can proceed with cosign as the trust anchor."
+
+      - name: Upload spike artifacts (for offline inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosign-spike-${{ github.run_id }}
+          path: _spike/
+          retention-days: 7

@@ -22,6 +22,7 @@ declare -a INFRA_FILES=(
   "hooks/statusline-renderer.cjs:${CLAUDE_DIR}/statusline-renderer.cjs"
   "hooks/statusline-command.sh:${CLAUDE_DIR}/statusline-command.sh"
   "hooks/loom-update-checker.cjs:${CLAUDE_DIR}/loom-update-checker.cjs"
+  "hooks/run-hook.sh:${CLAUDE_DIR}/run-hook.sh"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -257,6 +258,18 @@ done
 mv "${STATE_TMP}" "${STATE_FILE}"
 echo "  OK   install-state.toon"
 
+# ── Runtime detection ──
+# Loom hooks are .ts files dispatched through hooks/run-hook.sh, which prefers
+# bun and falls back to npx tsx. Warn here if neither is available so users see
+# the gap at install time rather than as silent fail-open hook errors later.
+if command -v bun >/dev/null 2>&1; then
+  hook_runtime="bun ($(bun --version))"
+elif command -v npx >/dev/null 2>&1; then
+  hook_runtime="npx tsx (fallback; ~1-2s cold start per hook — install bun for ~50ms)"
+else
+  hook_runtime="NONE"
+fi
+
 # ── Done ──
 echo ""
 echo "Loom installed (minimal). Next steps:"
@@ -265,5 +278,13 @@ echo "  /loom-library list          see available agents and commands"
 echo "  /loom-library use <name>    install what you need"
 echo "  /loom-statusline-setup      configure the status line"
 echo "  /loom                       full reference"
+echo ""
+echo "Hook runtime: ${hook_runtime}"
+if [ "${hook_runtime}" = "NONE" ]; then
+  echo ""
+  echo "WARNING: Neither bun nor node found. Loom hooks (.ts files) will not execute."
+  echo "         Install bun (recommended): brew install bun"
+  echo "         Or install node 18+ (fallback): https://nodejs.org"
+fi
 echo ""
 echo "The status line will notify you when updates are available."

@@ -90,7 +90,7 @@ Schema conformance and referential integrity checks are always strict and cannot
 
 ## Progress Reporting
 
-Write progress updates to `.plan-execution/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
+Write progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` (path provided by orchestrator). Use atomic writes: write to `.tmp`, then rename.
 
 Update at these checkpoints:
 1. After loading contracts and overrides → `phase: "loading-contracts"`, `percentComplete: 10`

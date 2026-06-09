@@ -296,6 +296,129 @@ agent: lint-runner
 wikiInjection: false
 ```
 
+## Wiki Page Atomicity Rules
+
+When the orchestrator packs wiki content into the `## Project Knowledge [WIKI]` block of `rolling-context.md`, several structured fields on flow and contract pages MUST be treated as atomic blocks — included in full or omitted entirely, never truncated mid-block. Partial flow/contract data is worse than none: half a step list or a truncated shape misleads downstream agents into reasoning about a flow they don't actually have.
+
+### Atomic units
+
+| Field | Page category | Atomic granularity | Rule |
+|-------|---------------|--------------------|------|
+| `steps[]` | `flow-*` | One row (single step) | Drop whole rows from the tail. Never include a partial row. The smallest unit packable from a `flow-*` `steps[]` typed-array is exactly one row. |
+| `shape` | `contract-*` | The entire string | Include the full `shape` field or omit it. Never truncate mid-shape (e.g., never cut off in the middle of a request/response signature). |
+| `exitStates[]` | `flow-*` | The whole array | All terminal states or none — partial exit-state lists imply branches the flow can't actually reach. |
+| `invariants[]` | `contract-*` | The whole array | Each invariant is a named guarantee; partial lists silently weaken the contract's stated promises. |
+| `producers[]` | `contract-*` | The whole array | Identifies all components that emit the contract — partial lists falsely narrow the impact surface. |
+| `consumers[]` | `contract-*` | The whole array | Identifies all components that depend on the contract — partial lists falsely narrow downstream-impact reasoning. |
+| `shapeFiles[]` | `contract-*` | The whole array | Identifies every file collectively defining the shape — partial lists mislead the "which file to edit" decision. |
+| `summary` | All categories | The entire string | Already capped at 200 chars by lint W-026; pack as a single unit. Never partial-truncate a summary. |
+
+### Why these are atomic
+
+- **`steps[]` row-level atomicity** lets the packer drop the tail of a long flow ("steps 1-5 fit; drop 6-8") while preserving the structural integrity of every step included. Truncating a single step mid-row would corrupt the typed-array format and produce uninterpretable TOON.
+- **`shape` whole-or-nothing** preserves the contract's signature semantics. A truncated `POST /api/users { email: string, password: stri...` is worse than omitting the shape — downstream agents may treat the truncation as the actual schema.
+- **`invariants[]` / `producers[]` / `consumers[]` / `shapeFiles[]` whole-or-nothing** preserves the contract's coverage claims. Each array is a complete statement; partial lists silently understate scope.
+- **`exitStates[]` whole-or-nothing** preserves the flow's terminal-state model. A flow with `exitStates[2]: user-created, validation-error` partially packed as just `user-created` falsely implies the flow can only succeed.
+
+When the packer faces a budget shortfall on an atomic block, it drops the block entirely and either substitutes the page's `summary` (if room remains) or moves on to the next page in the ranking.
+
+## Rolling-Context Wiki Packing Strategy
+
+The orchestrator owns `rolling-context.md` generation and is the sole consumer of this strategy. Execution agents only read the resulting `[WIKI]` block — they never run the packing algorithm themselves. The ≤1k-token budget for the `[WIKI]` section is enforced at pack time.
+
+### Step 1 — Read `index.toon` only
+
+The orchestrator reads `.loom/wiki/index.toon` exclusively when making packing decisions. It does NOT read any page bodies during the ranking phase. The schemaVersion-2 index carries, per page:
+
+- `summary` — ≤200 chars, ~50 tokens, the elevator pitch
+- `estimatedTokens` — full-page token cost (frontmatter + body)
+- `subtype` — category-specific filter (flowType for flows, contractType for contracts)
+- `staleness`, `updatedAt`, `category`, `title`, `pageId` — universal index fields
+
+These fields make ranking O(1) per page. A wiki with 500 pages requires 500 in-memory comparisons, zero filesystem reads of page bodies. See `agents/protocols/wiki-index.schema.md` for the full column list.
+
+### Step 2 — Score and rank pages relevant to the current wave
+
+A page is "relevant" to the current wave when at least one of the following intersects the wave's file ownership set:
+
+- The page's `sourceRefs[]`
+- A flow page's `steps[].touches`
+- A contract page's `producers[]`, `consumers[]`, or `shapeFiles[]`
+
+Apply this priority order, in descending preference:
+
+1. **Flow pages** where `steps[].touches` intersects the wave's files. Within this tier:
+   - Prefer `subtype: user-journey` (user-facing impact is highest signal for execution agents).
+   - Lower priority for `subtype: system-pipeline`, `scheduled-job`, `event-driven`, `lifecycle`.
+2. **Contract pages** where `producers[]`, `consumers[]`, or `shapeFiles[]` intersect the wave's files. Within this tier:
+   - Prefer `compatibilityPolicy: backward-compatible` or `additive-only` (these mark the breaking-risk surface — agents need to know not to violate them).
+   - Lower priority for `compatibilityPolicy: full-semver` or `none`.
+3. **Decision pages** referenced by the ranked flows/contracts via `implements` cross-refs. These provide rationale for the constraints the flow/contract enforces.
+4. **Component pages** for the wave's files (existing pre-flows/contracts behavior — preserved as a fallback tier).
+5. **Convention/pattern pages** matching the wave's domain. Lowest priority; included only when budget remains.
+
+Ties within a tier break on `staleness` (fresh > aging > stale), then `updatedAt` descending.
+
+### Step 3 — Pack `summary` strings first
+
+For the ranked list, pack every relevant page's `summary` first. Each summary is ≤200 chars (~50 tokens by the characters / 4 heuristic). Within a 1k-token `[WIKI]` budget, the orchestrator can fit roughly **15 summaries in 750 tokens**, leaving ~250 tokens for body expansion in Step 4.
+
+Summary packing format inside the `[WIKI]` block:
+
+```
+- [flow-user-signup] User Signup: Five-step signup flow: validate, dedupe, hash, insert, queue welcome email.
+- [contract-user-create] User Create Contract: POST /api/users → 201 {id,email,name} | 400; email-unique invariant; backward-compatible.
+- [decision-auth-strategy] Auth Strategy: JWT chosen over sessions for stateless horizontal scaling.
+```
+
+### Step 4 — Expand the top-1 body per priority tier until budget exhausted
+
+After summaries pack, walk the tiers in order and try to expand exactly one body per tier:
+
+1. Read the body of the top-ranked **flow** page. If its `estimatedTokens` fits the remaining budget (subject to the atomicity rules above), include it. Otherwise fall back to summary-only for this tier and move on.
+2. Read the body of the top-ranked **contract** page if a tier-1 expansion didn't already exhaust the budget. Same fit/fallback logic.
+3. Continue through tiers 3-5 only if budget remains.
+
+When an atomic block (flow `steps[]`, contract `shape`, etc.) within the chosen body would bust the budget, drop the block per the Atomicity Rules section above — never truncate. If dropping atomic blocks leaves the body uninformative, fall back to summary-only for that page.
+
+### Step 5 — Defensive handling for legacy / pre-migration pages
+
+A page may lack `summary`, `estimatedTokens`, or `subtype` during the deployment window between `/loom-upgrade` Rule 7 migration and the next agent-driven write of that page. The packer MUST handle absence defensively:
+
+| Missing field | Fallback |
+|---------------|----------|
+| `estimatedTokens` absent | Compute inline: `Math.ceil(fs.statSync(pagePath).size / 4)`. Use byte size as a proxy for character count (matches the file-based heuristic documented in the Estimation Algorithm section). |
+| `summary` absent or equal to `"(legacy — pending refresh)"` | Substitute the page's `title` as a stub summary. Prefix the rendered line with `[stub]` so downstream agents know it's a placeholder. |
+| `subtype` absent on a flow or contract page | Skip subtype-aware ranking refinement for that page (it still ranks under its category tier, just without the within-tier preference). |
+
+Whenever a fallback fires, the orchestrator emits a warning to the orchestrator log noting `{pageId, missingField}`. Wiki-lint-agent can later surface these as candidates for a refresh-write that populates the missing field.
+
+### Why summary-first packing matters
+
+Without summary-first packing, the 1k-token `[WIKI]` budget forces a binary choice:
+
+- **Body-first**: pick ~3 full pages (each ~300 tokens) — narrow coverage, deep on three topics, blind to everything else.
+- **Title-only**: pack ~50 titles in 1k tokens — wide coverage, but each title carries almost no signal beyond "this page exists."
+
+Summary-first packing splits the difference: ~15 summaries at ~50 tokens each (~750 tokens) plus 1-2 bodies (~250 tokens) within the same budget. That is an **order-of-magnitude breadth improvement at the same cost** compared to body-first packing, and a roughly 10x signal-per-token improvement compared to title-only packing. The `summary` field exists specifically to make this trade-off possible — that is why it is required (not optional) on every wiki page and why it is mirrored into the index.
+
+### Subtype-aware ranking
+
+The `subtype` column in `index.toon` enables category-aware ranking without body reads. Examples:
+
+- Wave files include `src/queues/*.ts` → prefer flow pages with `subtype: event-driven` over `subtype: user-journey` within the flow tier.
+- Wave files include `src/routes/*.ts` → prefer contract pages with `subtype: api` over `subtype: db-table` within the contract tier.
+- Wave files include `src/db/migrations/*.sql` → prefer contract pages with `subtype: db-table` or `subtype: schema`.
+- Wave files include `src/cli/*.ts` → prefer contract pages with `subtype: cli-protocol`.
+
+Without a `subtype` column in the index, the orchestrator would have to read every flow or contract page's body (or frontmatter) to apply these refinements — defeating the O(1) packing claim and turning a single index scan into N body reads per wave. The `subtype` mirror exists explicitly to keep packing O(1) while still allowing category-aware refinement.
+
+### Cross-references
+
+- `agents/protocols/wiki-page.schema.md` — flow and contract page field definitions, including `steps[]`, `shape`, `invariants[]`, `producers[]`, `consumers[]`, `shapeFiles[]`, `exitStates[]`, `subtype`, `summary`, `estimatedTokens`, and `bodySections[]`.
+- `agents/protocols/wiki-index.schema.md` — the `pages[]` typed-array columns the packer reads (`pageId`, `title`, `category`, `subtype`, `staleness`, `updatedAt`, `summary`, `estimatedTokens`), schemaVersion 2 contract.
+- `PLAN-wiki-flows-contracts.md` — design context for the ranking heuristic, context-efficiency fields, and the rationale for adding flow/contract page categories.
+
 ## Checkpoint Behavior
 
 When an agent approaches its budget cap during execution:

@@ -184,7 +184,7 @@ timestamp: {ISO 8601}
 
 ## Progress Reporting
 
-Write frequent progress updates to `.plan-execution/progress/{taskId}.toon` — at minimum after each iteration completes. Use atomic writes.
+Write frequent progress updates to `.plan-execution/ephemeral/progress/{taskId}.toon` — at minimum after each iteration completes. Use atomic writes.
 
 ## Error Handling
 

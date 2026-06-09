@@ -22,7 +22,7 @@ runHook("typecheck-on-write", async (input) => {
   if (!isTs) return allow();
 
   try {
-    execSync("tsc --noEmit --pretty 2>&1", {
+    execSync("npx tsc --noEmit --pretty 2>&1", {
       timeout: TYPECHECK_TIMEOUT,
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],

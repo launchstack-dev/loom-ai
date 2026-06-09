@@ -17,7 +17,7 @@ Parse remaining arguments:
 
 #### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` section "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` section "Orchestration Status".
 
 #### Step 0: Read Protocols
 
@@ -95,8 +95,6 @@ Key Feedback: [2-3 most important findings]
 After the per-agent summaries, add a section highlighting findings that multiple agents flagged independently -- these are the highest-confidence issues.
 
 #### Step 5: Offer Next Steps
-
-Display: "Context tip: run `/clear` before the next command for fresh context."
 
 Ask the user if they want to:
 - Apply the recommendations to the plan automatically

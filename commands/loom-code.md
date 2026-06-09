@@ -18,22 +18,7 @@ Remaining arguments after the subcommand are passed through as flags to that sub
 
 ## Model Resolution
 
-Before spawning any agent, resolve which model it should use. Pass the resolved model as the `model` parameter on the Agent tool call.
-
-**Tier mapping for this command's agents:**
-
-| Agent | Tier |
-|-------|------|
-| security-reviewer, architecture-reviewer, plan-compliance-reviewer, all extended reviewers | review |
-| fixer-agent | utility |
-
-**How to resolve (for each agent spawn):**
-
-1. Read `.claude/orchestration.toml` once at the start (cache the result).
-2. If orchestration.toml exists AND has a `modelProfile` under `[settings]`, look up the agent's tier → use that tier's model. Done.
-3. **Otherwise (no orchestration.toml OR no profile):** read the agent's `.md` file frontmatter for `model:` (e.g., `model: sonnet`). Use that value. This step is NOT optional — most agents have explicit model assignments.
-4. Only if the frontmatter has no `model:` field: omit the parameter (inherits parent).
-5. Pass the resolved model on the Agent tool call: `model: "sonnet"` (or `"opus"` or `"haiku"`).
+Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: security-reviewer, architecture-reviewer, plan-compliance-reviewer, all extended reviewers = review tier. fixer-agent = utility tier. Read `.claude/orchestration.toml` once at start, check `modelProfile`, resolve per spawn. Pass `model: "{resolved}"` on each Agent tool call.
 
 ## Subcommand: (none -- help)
 
@@ -84,7 +69,7 @@ Check for `.claude/orchestration.toml` in the project root. If it exists, read t
 
 #### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` § "Orchestration Status".
 
 #### Step 0: Gather the Diff
 
@@ -318,7 +303,7 @@ Parse arguments:
 
 #### Status Line Updates
 
-Write `.plan-execution/status.toon` per `execution-conventions.md` § "Orchestration Status".
+Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` § "Orchestration Status".
 
 #### Step 1: Read and Parse Review Report
 

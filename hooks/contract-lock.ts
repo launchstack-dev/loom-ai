@@ -26,6 +26,6 @@ runHook("contract-lock", async (input) => {
   return block(
     `Contracts are locked after Wave 0. ` +
       `File "${filePath}" is in the contracts directory. ` +
-      `Request changes via .plan-execution/requests/ instead.`
+      `Request changes via .plan-execution/ephemeral/requests/ instead.`
   );
 });
