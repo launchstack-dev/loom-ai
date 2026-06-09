@@ -56,6 +56,7 @@ If NONE of these files exist:
    - Read each file listed in `stateFiles[]` to restore full state awareness.
    - Load `completedWork` to understand what's done.
    - Load `pendingDecisions` to know what needs human input.
+   - The `wikiContext[]` field is consumed by `hooks/wiki-session-status.ts` automatically on session start — no action needed here. The pages it lists were already re-injected into the prompt before this command ran. You may reference them by `pageId` if you need to consult them via `/loom-wiki query`.
 
 **If `continue-here.toon` does NOT exist but other state files do:**
 

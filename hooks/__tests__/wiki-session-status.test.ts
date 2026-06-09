@@ -205,4 +205,111 @@ describe("wiki-session-status hook", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("[wiki:attention]");
   });
+
+  describe("pause/resume Tier 3 wiki context restoration", () => {
+    function writePage(id: string, title: string, category: string) {
+      fs.mkdirSync(path.join(wikiDir, "pages"), { recursive: true });
+      fs.writeFileSync(
+        path.join(wikiDir, "pages", `${id}.md`),
+        `# ${title}\n\nBody summary.\n`,
+        "utf-8",
+      );
+    }
+
+    function writeContinueHere(wikiContextIds: string[]) {
+      fs.writeFileSync(
+        path.join(tmpDir, ".plan-execution", "continue-here.toon"),
+        `pausedAt: 2026-06-09T12:00:00Z\n` +
+          `command: execute-plan\n` +
+          `phase: wave-2\n` +
+          `wikiContext[${wikiContextIds.length}]: ${wikiContextIds.join(", ")}\n`,
+        "utf-8",
+      );
+    }
+
+    it("restores pages listed in continue-here.toon wikiContext as Tier 3", async () => {
+      // Wiki has 12 pages so the hook engages full context loading
+      const rows: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        rows.push(`p${i},Page ${i},concept,fresh`);
+        writePage(`p${i}`, `Page ${i}`, "concept");
+      }
+      writeIndex(12, rows);
+      writeLog(0);
+      writeContinueHere(["p3", "p7"]);
+      writeOrchestration(`sessionStatusEnabled = true\nsessionContext = "full"`);
+
+      const result = await runHook("wiki-session-status.ts", {}, { cwd: tmpDir });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("From resumed session:");
+      expect(result.stdout).toContain("p3");
+      expect(result.stdout).toContain("p7");
+    });
+
+    it("Tier 3 is empty when no continue-here.toon present", async () => {
+      const rows: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        rows.push(`p${i},Page ${i},concept,fresh`);
+        writePage(`p${i}`, `Page ${i}`, "concept");
+      }
+      writeIndex(12, rows);
+      writeLog(0);
+      writeOrchestration(`sessionStatusEnabled = true\nsessionContext = "full"`);
+
+      const result = await runHook("wiki-session-status.ts", {}, { cwd: tmpDir });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toContain("From resumed session:");
+    });
+
+    it("writes wiki-injected.toon marker for /loom-pause to consume", async () => {
+      const rows: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        rows.push(`p${i},Page ${i},decision,fresh`);
+        writePage(`p${i}`, `Page ${i}`, "decision");
+      }
+      writeIndex(12, rows);
+      writeLog(0);
+      writeOrchestration(`sessionStatusEnabled = true\nsessionContext = "full"`);
+
+      const result = await runHook("wiki-session-status.ts", {}, { cwd: tmpDir });
+      expect(result.exitCode).toBe(0);
+
+      const markerPath = path.join(tmpDir, ".plan-execution", "ephemeral", "wiki-injected.toon");
+      expect(fs.existsSync(markerPath)).toBe(true);
+      const marker = fs.readFileSync(markerPath, "utf-8");
+      expect(marker).toMatch(/pageIds\[\d+\]: /);
+      expect(marker).toContain("injectedAt:");
+    });
+
+    it("round-trip: marker from session A round-trips through continue-here.toon to Tier 3 of session B", async () => {
+      // Session A: hook runs, writes wiki-injected.toon
+      const rows: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        rows.push(`d${i},Decision ${i},decision,fresh`);
+        writePage(`d${i}`, `Decision ${i}`, "decision");
+      }
+      writeIndex(12, rows);
+      writeLog(0);
+      writeOrchestration(`sessionStatusEnabled = true\nsessionContext = "full"`);
+
+      const sessionA = await runHook("wiki-session-status.ts", {}, { cwd: tmpDir });
+      expect(sessionA.exitCode).toBe(0);
+
+      // Simulate /loom-pause: read marker, write continue-here.toon
+      const markerPath = path.join(tmpDir, ".plan-execution", "ephemeral", "wiki-injected.toon");
+      const marker = fs.readFileSync(markerPath, "utf-8");
+      const m = marker.match(/^pageIds\[\d+\]: (.+)$/m);
+      expect(m).not.toBeNull();
+      const pageIds = m![1].split(",").map((s) => s.trim());
+      writeContinueHere(pageIds.slice(0, 3));
+
+      // Session B: hook runs again, should see Tier 3 with those pages
+      const sessionB = await runHook("wiki-session-status.ts", {}, { cwd: tmpDir });
+      expect(sessionB.exitCode).toBe(0);
+      expect(sessionB.stdout).toContain("From resumed session:");
+      for (const id of pageIds.slice(0, 3)) {
+        expect(sessionB.stdout).toContain(id);
+      }
+    });
+  });
 });

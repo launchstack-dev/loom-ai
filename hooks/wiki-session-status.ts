@@ -21,15 +21,15 @@
  *    Tier 2 (when .plan-execution/state.toon shows active wave):
  *      Flow/contract/component summaries whose touches/producers/consumers
  *      overlap the current wave's file ownership.
- *    Tier 3 (not yet implemented):
- *      Designed to inject paused-session wiki context on resume, but
- *      `/loom-pause` never wrote the required `wikiContext[]` field to
- *      its continue-here.toon snapshot, so the original implementation
- *      was dead from wave-3 merge. Removed; restore only with a paired
- *      schema change to /loom-pause Step 3.
+ *    Tier 3 (when paused-session state present):
+ *      Pages that were injected during the previous session, recovered
+ *      via `.plan-execution/continue-here.toon` `wikiContext[N]`.
+ *      Round-trip: SessionStart writes the set of injected page IDs to
+ *      `.plan-execution/ephemeral/wiki-injected.toon`; `/loom-pause`
+ *      Step 3 copies that marker into `continue-here.toon`'s wikiContext
+ *      field; the next SessionStart reads it back here.
  *
- *    Total worst-case ~1k tokens (Tier 1 + Tier 2). Within 100k per-agent
- *    budget cap.
+ *    Total worst-case ~1.5k tokens. Within 100k per-agent budget cap.
  *
  * Also: wipes per-session dedup state for wiki-impact-warner and wiki-commit-
  * ledger; logs lint-pending marker when D>14; honors LOOM_WIKI_HOOKS=0;
@@ -266,16 +266,27 @@ function loadProjectContext(
   }
 
   // ── Tier 3 — Resumed-session pages ───────────────────────────────────────
-  // Intentionally empty. The original wave-3 design read pause snapshots from
-  // a `pause/` subdirectory under history, but `/loom-pause` writes a single
-  // `.plan-execution/continue-here.toon` file with no `wikiContext[]` field —
-  // so the regex this block used never matched anything since wave-3 merge.
-  // Removed (was dead code) rather than wiring it through continue-here.toon,
-  // which would require a schema change to /loom-pause. If the resumed-
-  // session wiki-injection feature is ever actually wanted, restore Tier 3
-  // by reading `.plan-execution/continue-here.toon` and adding a wikiContext
-  // field to commands/loom-pause.md Step 3.
-  const tier3: PageMeta[] = [];
+  // Restore wiki context the user was operating against when /loom-pause
+  // wrote .plan-execution/continue-here.toon. Source of the page IDs:
+  // /loom-pause Step 3 copies the wiki-injected.toon marker (written by
+  // THIS hook on the previous session-start) into the continue-here.toon
+  // `wikiContext[N]` field. On the next session start we read it back here.
+  let tier3: PageMeta[] = [];
+  const continueHerePath = path.join(planExecDir, "continue-here.toon");
+  if (fs.existsSync(continueHerePath)) {
+    try {
+      const content = fs.readFileSync(continueHerePath, "utf-8");
+      const m = content.match(/^wikiContext\[\d+\]:\s*(.*)$/m);
+      if (m) {
+        const pageIds = new Set(
+          m[1].split(",").map((s) => s.trim()).filter(Boolean)
+        );
+        tier3 = pages.filter((p) => pageIds.has(p.pageId)).slice(0, 4);
+      }
+    } catch {
+      // ignore — tier 3 is best-effort
+    }
+  }
 
   // Dedup across tiers.
   const seen = new Set<string>();
@@ -291,6 +302,28 @@ function loadProjectContext(
   const t1 = dedup(tier1);
 
   if (t1.length + t2.length + t3.length === 0) return "";
+
+  // Persist the union of injected page IDs to .plan-execution/ephemeral/
+  // wiki-injected.toon. /loom-pause Step 3 reads this marker and copies
+  // it into continue-here.toon `wikiContext[N]`, so the next session
+  // start can re-surface the same context via Tier 3. Best-effort —
+  // failures here never block session start.
+  try {
+    const injected = [...t1, ...t2, ...t3].map((p) => p.pageId);
+    if (injected.length > 0) {
+      const ephemeral = path.join(projectRoot, ".plan-execution", "ephemeral");
+      fs.mkdirSync(ephemeral, { recursive: true });
+      const markerPath = path.join(ephemeral, "wiki-injected.toon");
+      const body =
+        `# Written by hooks/wiki-session-status.ts on SessionStart.\n` +
+        `# Consumed by /loom-pause to snapshot the active wiki context.\n` +
+        `injectedAt: ${new Date().toISOString()}\n` +
+        `pageIds[${injected.length}]: ${injected.join(", ")}\n`;
+      writeAtomic(markerPath, body);
+    }
+  } catch {
+    // ignore — marker write is best-effort
+  }
 
   const lines: string[] = [];
   lines.push("");

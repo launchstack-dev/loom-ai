@@ -60,6 +60,8 @@ Collect all relevant state into a snapshot:
 
 6. **Capture git state.** Run `git rev-parse HEAD` to get the current commit SHA.
 
+7. **Capture active wiki context.** If `.plan-execution/ephemeral/wiki-injected.toon` exists, read its `pageIds[N]: id1, id2, ...` line. These are the wiki pages the SessionStart hook injected at the beginning of this session (union of Tier 1 architectural anchors + Tier 2 active-wave pages + Tier 3 prior-session pages). They represent the wiki context the user was operating against and should be restored on resume. If the marker is missing (no wiki, or session predated the marker), record an empty array.
+
 #### Step 3: Write continue-here.toon
 
 Write `.plan-execution/continue-here.toon` atomically (write to `.tmp`, then rename):
@@ -76,10 +78,13 @@ completedWork[N]{wave,status,filesChanged}:
   {wave-number},{complete|partial},{file-count}
 nextAction: {what was about to happen, e.g. "Run wiring-agent for wave 2", "Execute plan review"}
 context: {compressed rolling-context.md snapshot, max 2000 tokens}
+wikiContext[N]: {page IDs from Step 2 item 7 — wiki pages the paused session had injected}
 gitRef: {current HEAD sha}
 message: {user's --message text, or null}
 stateFiles[N]: {list of all .plan-execution/ state files that exist}
 ```
+
+The `wikiContext` line uses TOON-array syntax: `wikiContext[3]: decision-auth, convention-naming, contract-billing`. On the next session start, `hooks/wiki-session-status.ts` Tier 3 reads this field and re-injects the listed pages — closing the pause/resume loop for wiki state.
 
 #### Step 4: Git Commit (unless --no-commit)
 
@@ -157,12 +162,13 @@ roadmapPath: {ROADMAP.md path or null}
 resumeStep: {exact step to resume from}
 nextAction: {what was about to happen}
 context: {compressed rolling-context.md, max 2000 tokens}
+wikiContext[N]: {page IDs from .plan-execution/ephemeral/wiki-injected.toon, or empty array if marker missing}
 gitRef: {current HEAD sha}
 message: {user's --message text, or null}
 stateFiles[N]: {list of all .plan-execution/ state files that exist}
 ```
 
-Use atomic write (`.tmp` then rename).
+Use atomic write (`.tmp` then rename). The `wikiContext` field is restored by `hooks/wiki-session-status.ts` Tier 3 on the next session start — see Step 3 of the full pause flow for the round-trip explanation.
 
 **Step C5: Print resume instructions.**
 
