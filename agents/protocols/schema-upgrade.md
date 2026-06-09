@@ -677,6 +677,100 @@ kits:
 
 **Default values**: `releases: []` when no `initialRelease` is supplied. Optional kit fields `minCoreVersion` / `minHooksVersion` stay absent.
 
+### Rule 14: Plan artifact relocation — root → planning/
+
+**Trigger**: The project has planning artifacts at the repo root AND no `planning/` directory exists. Specifically:
+
+- `ROADMAP.md` at root that is NOT a stub (a stub is ≤512 bytes AND ≤10 lines AND contains the string `planning/ROADMAP.md`), OR
+- `PLAN.md` or any `PLAN-*.md` at root, OR
+- `.plan-history/` directory at root
+
+AND `planning/` directory does not exist (or exists but is empty).
+
+**Rationale**: Loom's modern layout places ROADMAP.md and PLAN files under `planning/` so they stop colliding with users' own root-level planning files and so Loom's own dogfood evidence (`planning/history/`) is namespaced. Projects that predate this convention need a one-pass relocation. Once migrated, the resolution protocol in `agents/protocols/planning-paths.md` keeps both layouts working — but new projects start in the modern layout.
+
+**Implementation**: Auto-tier (no agent). Pure filesystem operations with backup. Resolver lives in `hooks/lib/planning-paths.ts`.
+
+**Migration steps**:
+
+1. **Scan root** for relocatable artifacts:
+   - `ROADMAP.md` (skip if classified as a stub by `isRootStub()` in `planning-paths.ts`)
+   - `PLAN.md`, `PLAN-*.md` (all matches)
+   - `.plan-history/` directory
+
+2. **Create target directories** (idempotent):
+   ```
+   mkdir -p planning/plans planning/archive planning/history
+   ```
+
+3. **Relocate ROADMAP.md** (if non-stub):
+   - Source: `ROADMAP.md` at root
+   - Target: `planning/ROADMAP.md`
+   - Action: `mv` (the backup pass already copied it; this is just a move)
+   - If `planning/ROADMAP.md` already exists, do NOT overwrite — record as `conflict` and skip. The user must resolve manually.
+
+4. **Relocate PLAN files**:
+   - For each `PLAN.md` or `PLAN-*.md` at root:
+     - Read frontmatter (or fall back to header heuristics if no frontmatter).
+     - Classify status:
+       - `status: complete`, `status: archived`, or no frontmatter + last-modified > 90 days → `planning/archive/{name}`
+       - Else → `planning/plans/{name}`
+     - `mv` to the classified target. Skip with `conflict` if the target already exists.
+
+5. **Relocate `.plan-history/`**:
+   - If `planning/history/` exists, merge contents file-by-file (skip files that already exist in target; record as `conflict`).
+   - Otherwise, `mv .plan-history/ planning/history/`.
+
+6. **Write a stub at root** for GitHub home-page surfacing of the roadmap:
+   - Path: `ROADMAP.md`
+   - Content: `# ROADMAP\n\nLoom's roadmap lives at [planning/ROADMAP.md](planning/ROADMAP.md).\n`
+   - Skip this step if `planning/ROADMAP.md` does not exist (nothing to point at) or if the user passed `--no-root-stub`.
+
+7. **Write `planning/README.md`** if it does not already exist. Use a minimal template — one paragraph naming the project and pointing at this protocol.
+
+8. **Re-run detection** — must return `outdated: false`. A successful migration leaves no relocatable artifacts at root (except the stub).
+
+**Idempotency**: All steps check for target existence before writing. Running Rule 14 twice on the same project is a no-op on the second run.
+
+**Backup**: The standard pre-migration backup (Section 4 of this protocol) covers all relocated files. No special Rule 14 backup logic.
+
+**Reporting**: Each relocation produces a `migrations[]` entry in the upgrade report with one of:
+- `relocated` — successfully moved
+- `conflict` — target existed, skipped
+- `skipped` — source classified as not relocatable (e.g., stub root ROADMAP.md)
+
+**Before** (legacy layout):
+```
+my-project/
+  ROADMAP.md
+  PLAN.md
+  PLAN-feature-x.md
+  .plan-history/
+    changelog.md
+    reviews/
+```
+
+**After** (modern layout):
+```
+my-project/
+  ROADMAP.md                          # one-line stub pointer
+  planning/
+    README.md                         # newly written
+    ROADMAP.md
+    plans/
+      PLAN.md
+      PLAN-feature-x.md
+    archive/
+    history/
+      changelog.md
+      reviews/
+```
+
+**Cross-references**:
+- `agents/protocols/planning-paths.md` — resolution protocol that makes both layouts work
+- `hooks/lib/planning-paths.ts` — `isRootStub()` + write-target resolution
+- `commands/loom-upgrade.md` — orchestrator that invokes this rule
+
 ---
 
 ## Adding a New Schema Version

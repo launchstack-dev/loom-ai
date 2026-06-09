@@ -35,7 +35,7 @@ lastUpdated: 2026-06-04
 #   - "agent" kind   → path to the upgrade agent .md file
 #   - "scaffold"/"static" kinds → "—" (no executable migrator)
 
-registry[18]{schema,file,pathKind,currentVersion,migratorKind,migratorPath,rule}:
+registry[19]{schema,file,pathKind,currentVersion,migratorKind,migratorPath,rule}:
   install-state,~/.claude/skills/library/install-state.toon,home,3,module,hooks/lib/install-state-migrator.ts,12
   library-catalog,~/.claude/skills/library/library.yaml,home,3,module,hooks/lib/library-catalog-migrator.ts,13
   criteria-plan,*/criteria-plan.toon,glob,1,inline,schema-upgrade.md#rule-1,1
@@ -54,6 +54,7 @@ registry[18]{schema,file,pathKind,currentVersion,migratorKind,migratorPath,rule}
   change-proposal,.loom/changes/*/proposal.md,glob,1,static,—,—
   change-state,.loom/changes/*/state.toon,glob,1,static,—,—
   contract-page-extensions,.loom/wiki/pages/contract-*.md,glob,1,static,—,—
+  plan-artifact-layout,ROADMAP.md|PLAN*.md|.plan-history/,literal,1,inline,schema-upgrade.md#rule-14,14
 
 # When a schema's currentVersion bumps:
 #   1. Update currentVersion above.
