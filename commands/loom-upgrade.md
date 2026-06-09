@@ -177,6 +177,8 @@ Copy every file that will be modified into the backup directory, preserving rela
 
 Only files that exist AND will be modified are backed up. New files (scaffolded wiki, created orchestration.toml) have no backup since they didn't exist before.
 
+**Symlinked sources are skipped.** For each candidate file, `lstat` it first via `isSymlink()` from `hooks/lib/symlink-safety.ts`. If the source is a symlink (dev install, dotfile target, cross-machine portability shim), record it in the report with action=`skip-link` and do NOT copy. The migrate step will also skip these — see `schema-upgrade.md` § Symlink Safety.
+
 Verify the backup is complete before proceeding. If any copy fails, abort with:
 
 ```
@@ -188,6 +190,8 @@ Exit 1.
 #### Step 5: Migrate
 
 Apply migration rules from `schema-upgrade.md` in-place. Each file is written atomically (write to `{path}.tmp`, then rename to `{path}`).
+
+**Symlink safety (applies to ALL rules that write).** Before writing to any target — install-state, library-catalog, plan artifacts, or relocation destinations — call `isSymlink(target)` from `hooks/lib/symlink-safety.ts`. If the target is a symlink, skip the write, record action=`skip-link` in the report with the `symlinkSkipAdvisory()` string, and continue with the next file. Symlink skips are not failures — the migration as a whole still exits 0 if every other rule succeeds. See `agents/protocols/schema-upgrade.md` § Symlink Safety for the full rationale and the user opt-in (`cp --remove-destination`).
 
 **Execution artifact rules (always applied):**
 
@@ -264,6 +268,7 @@ upgradeReport:
   filesManualRequired: {count}
   filesFailed: {count}
   filesSkipped: {count}
+  filesSkippedLink: {count}
   backupDir: {path}
   migrations[N]{file,rule,status,details}:
     PLAN.md,Rule 3,success,Added 3 missing sections
@@ -275,19 +280,21 @@ upgradeReport:
     .claude/settings.json,Rule 9,success,Added contract-lock and file-ownership hooks
     .loom/wiki/,Rule 10,scaffolded,Created empty wiki structure; run /loom-wiki ingest
     CLAUDE.md,Rule 8,manual-required,Run /loom-init to generate from codebase analysis
+    ~/.claude/skills/library/library.yaml,Rule 13,skip-link,Symlinked target — convert with cp --remove-destination to opt in
 ```
 
 Print a human-readable summary:
 
 ```
 [loom:upgrade] Migration complete.
-  Scope:      {default | project}
-  Scanned:    {N} targets
-  Migrated:   {M} targets
-  Scaffolded: {S} targets
-  Failed:     {F} targets
-  Skipped:    {K} targets
-  Backup:     {backup-dir}
+  Scope:        {default | project}
+  Scanned:      {N} targets
+  Migrated:     {M} targets
+  Scaffolded:   {S} targets
+  Failed:       {F} targets
+  Skipped:      {K} targets
+  Symlink skip: {L} targets  (run with `cp --remove-destination` to opt in)
+  Backup:       {backup-dir}
 ```
 
 If there are `manual-required` or `partial` items, print a follow-up section:
@@ -346,6 +353,7 @@ This command uses grep-based selective file reading to stay within the 100k toke
 | Protocol source file not found | Record as `failed` — cannot copy what doesn't exist. |
 | CLAUDE.md missing (--project) | Record as `manual-required` — needs `/loom-init`. |
 | settings.json missing (--project) | Record as `manual-required` — needs manual creation. |
+| Target path is a symlink | Record as `skip-link` — skipped, not failed. Exit 0 still possible. User opts in by converting the link with `cp --remove-destination`. |
 
 ## Cross-References
 

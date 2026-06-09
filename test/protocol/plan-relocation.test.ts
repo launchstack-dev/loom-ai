@@ -12,15 +12,17 @@ import { describe, it, expect } from "vitest";
 import path from "node:path";
 
 import { isRootStub, type FsResolver } from "../../hooks/lib/planning-paths.js";
+import { isSymlink, type LstatResolver } from "../../hooks/lib/symlink-safety.js";
 
 interface VirtualFs {
   files: Set<string>;
   dirs: Set<string>;
   content: Map<string, string>;
+  symlinks: Set<string>;
 }
 
 function vfs(): VirtualFs {
-  return { files: new Set(), dirs: new Set(), content: new Map() };
+  return { files: new Set(), dirs: new Set(), content: new Map(), symlinks: new Set() };
 }
 
 function addFile(v: VirtualFs, p: string, c: string = ""): void {
@@ -37,6 +39,16 @@ function addDir(v: VirtualFs, p: string): void {
   v.dirs.add(p);
 }
 
+function addSymlink(v: VirtualFs, p: string): void {
+  v.files.add(p);
+  v.symlinks.add(p);
+  let d = path.dirname(p);
+  while (d && d !== "/" && d !== ".") {
+    v.dirs.add(d);
+    d = path.dirname(d);
+  }
+}
+
 function fsResolver(v: VirtualFs): FsResolver {
   return {
     existsSync: (p) => v.files.has(p) || v.dirs.has(p),
@@ -49,6 +61,13 @@ function fsResolver(v: VirtualFs): FsResolver {
   };
 }
 
+function lstatResolver(v: VirtualFs): LstatResolver {
+  return {
+    existsSync: (p) => v.files.has(p) || v.dirs.has(p),
+    isSymlink: (p) => v.symlinks.has(p),
+  };
+}
+
 /**
  * Rule 14 detection — returns true if the project needs relocation.
  *
@@ -56,24 +75,37 @@ function fsResolver(v: VirtualFs): FsResolver {
  *   - planning/ does NOT exist (or is empty) AND
  *   - at least one of: non-stub root ROADMAP.md, any root PLAN*.md,
  *     or root .plan-history/
+ *
+ * Symlinked sources are excluded from the "legacy artifacts" tally —
+ * they're user-managed at a separate location, the migration would
+ * skip them anyway (see Symlink Safety in schema-upgrade.md), so
+ * counting them as relocatable would falsely trigger Rule 14 on
+ * projects that have nothing to relocate.
  */
 function detectRule14Outdated(root: string, v: VirtualFs): boolean {
   const planningDir = path.join(root, "planning");
   const planningExists = v.dirs.has(planningDir);
+  const fs = fsResolver(v);
+  const lstat = lstatResolver(v);
 
   const rootRoadmap = path.join(root, "ROADMAP.md");
   const rootRoadmapExists = v.files.has(rootRoadmap);
-  const rootRoadmapIsStub = rootRoadmapExists && isRootStub(rootRoadmap, "planning/ROADMAP.md", fsResolver(v));
-  const hasLegacyRoadmap = rootRoadmapExists && !rootRoadmapIsStub;
+  const rootRoadmapIsStub = rootRoadmapExists && isRootStub(rootRoadmap, "planning/ROADMAP.md", fs);
+  const rootRoadmapIsLink = rootRoadmapExists && isSymlink(rootRoadmap, lstat);
+  const hasLegacyRoadmap = rootRoadmapExists && !rootRoadmapIsStub && !rootRoadmapIsLink;
 
   const rootPlanFiles = [...v.files].filter((p) => {
     const rel = path.relative(root, p);
-    return /^PLAN(-[^/]+)?\.md$/.test(rel);
+    if (!/^PLAN(-[^/]+)?\.md$/.test(rel)) return false;
+    if (isSymlink(p, lstat)) return false;
+    return true;
   });
   const hasLegacyPlans = rootPlanFiles.length > 0;
 
   const planHistory = path.join(root, ".plan-history");
-  const hasLegacyHistory = v.dirs.has(planHistory);
+  // .plan-history symlinked to elsewhere → user-managed, defer
+  const planHistoryIsLink = isSymlink(planHistory, lstat);
+  const hasLegacyHistory = v.dirs.has(planHistory) && !planHistoryIsLink;
 
   const hasLegacyArtifacts = hasLegacyRoadmap || hasLegacyPlans || hasLegacyHistory;
   return hasLegacyArtifacts && !planningExists;
@@ -168,6 +200,45 @@ describe("Rule 14 detection — plan artifact relocation", () => {
       "# ROADMAP\n\nMoved to [planning/ROADMAP.md](planning/ROADMAP.md).\n",
     );
 
+    expect(detectRule14Outdated(ROOT, v)).toBe(false);
+  });
+});
+
+describe("Rule 14 detection — symlink safety", () => {
+  it("does NOT flag when root ROADMAP.md is a symlink (user-managed)", () => {
+    // User has ROADMAP.md → ~/dotfiles/projects/foo/ROADMAP.md
+    const v = vfs();
+    addSymlink(v, path.join(ROOT, "ROADMAP.md"));
+    expect(detectRule14Outdated(ROOT, v)).toBe(false);
+  });
+
+  it("does NOT flag when root PLAN.md is a symlink (user-managed)", () => {
+    const v = vfs();
+    addSymlink(v, path.join(ROOT, "PLAN.md"));
+    expect(detectRule14Outdated(ROOT, v)).toBe(false);
+  });
+
+  it("does NOT flag when .plan-history/ is a symlink (e.g., to shared volume)", () => {
+    const v = vfs();
+    addSymlink(v, path.join(ROOT, ".plan-history"));
+    // Note: simulating a symlinked directory entry; the lstat resolver
+    // returns true regardless of whether the link target is a file or dir
+    expect(detectRule14Outdated(ROOT, v)).toBe(false);
+  });
+
+  it("flags only the non-symlinked artifacts in a mixed project", () => {
+    // ROADMAP.md is symlinked (user-managed), PLAN.md is a real legacy file
+    const v = vfs();
+    addSymlink(v, path.join(ROOT, "ROADMAP.md"));
+    addFile(v, path.join(ROOT, "PLAN.md"), "# Real plan\n");
+    expect(detectRule14Outdated(ROOT, v)).toBe(true);
+  });
+
+  it("does NOT flag a project where ALL legacy artifacts are symlinks", () => {
+    const v = vfs();
+    addSymlink(v, path.join(ROOT, "ROADMAP.md"));
+    addSymlink(v, path.join(ROOT, "PLAN.md"));
+    addSymlink(v, path.join(ROOT, "PLAN-feature.md"));
     expect(detectRule14Outdated(ROOT, v)).toBe(false);
   });
 });

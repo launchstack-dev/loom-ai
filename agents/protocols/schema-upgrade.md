@@ -562,6 +562,9 @@ requiredProtocols[N]{file,purpose}:
 
 ### Rule 12: install-state.toon — migrate v2 → v3
 
+**Symlink safety**: Before writing the migrated v3 file, the runtime MUST `lstat` `~/.claude/skills/library/install-state.toon` and skip with `[link]` classification if it is a symlink. See the [Symlink Safety](#symlink-safety) section. Common case: dev installs that symlink the file back to a Loom repo checkout.
+
+
 **Trigger**: `~/.claude/skills/library/install-state.toon` has `schemaVersion: 2`, or is missing `schemaVersion` entirely (pre-v2), or has `schemaVersion: 3` but is missing required v3 markers.
 
 **Implementation**: `hooks/lib/install-state-migrator.ts` exports `detectInstallStateVersion` and `migrateInstallStateV2ToV3` as pure functions. The upgrade command parses the v2 file, calls the migrator with injected `sha256Resolver` and `now`, and serializes the result back to TOON.
@@ -615,6 +618,9 @@ items[1]{name,type,source,targetPath,sha256,component,installedAt}:
 **Reset of fail-open behaviour**: After Rule 12 lands a v3 file on disk, `hooks/file-ownership.ts` must reverse its fail-open-on-unreadable-state behaviour (current line 47-49) to fail closed per the v3 contract. Tracked as a Phase 1 deliverable in `PLAN-oss-launch.md`.
 
 ### Rule 13: library.yaml — migrate v2 → v3
+
+**Symlink safety**: Before writing the migrated v3 file, the runtime MUST `lstat` `~/.claude/skills/library/library.yaml` and skip with `[link]` classification if it is a symlink. See the [Symlink Safety](#symlink-safety) section. Same defense as Rule 12 — dotfile setups and dev installs commonly symlink this path.
+
 
 **Trigger**: `~/.claude/skills/library/library.yaml` has `catalog_version: 2`, is missing `catalog_version` entirely (pre-v2), or has `catalog_version: 3` but is missing required v3 top-level fields (`loomCoreVersion`, `loomHooksVersion`, `releases`).
 
@@ -678,6 +684,8 @@ kits:
 **Default values**: `releases: []` when no `initialRelease` is supplied. Optional kit fields `minCoreVersion` / `minHooksVersion` stay absent.
 
 ### Rule 14: Plan artifact relocation — root → planning/
+
+**Symlink safety**: Before moving ANY source file, the runtime MUST `lstat` the source and skip with `[link]` classification if it is a symlink. See the [Symlink Safety](#symlink-safety) section. Common case: a user maintains `ROADMAP.md` as a symlink to a dotfiles or cross-machine target (`~/dotfiles/projects/foo/ROADMAP.md`) — `mv` through the link would silently corrupt the dotfile target. Also skip if the *target* path inside `planning/` is itself a symlink. Symlinked `.plan-history/` entries are checked per-file during the directory merge step.
 
 **Trigger**: The project has planning artifacts at the repo root AND no `planning/` directory exists. Specifically:
 
@@ -915,6 +923,41 @@ If the user skips agent migration or the agent fails, the Tier A+B patches remai
 
 These are not version-specific commands — they always produce output matching the current schema.
 
+## Symlink Safety
+
+Before writing to ANY migration target — install-state, library-catalog, plan artifacts, or backup destinations — the runtime MUST `lstat` the path and skip with `[link]` classification if the target is a symlink. Implementation lives in `hooks/lib/symlink-safety.ts`:
+
+```typescript
+import { isSymlink, classifyWriteTarget } from "hooks/lib/symlink-safety.js";
+
+// Before applying any migration:
+if (isSymlink(targetPath)) {
+  report.skipped.push({ path: targetPath, reason: "symlinked" });
+  continue;
+}
+```
+
+**Why this matters**: Loom users often dev-install Loom (symlinking `~/.claude/agents/*.md` back to a repo checkout) or maintain cross-machine portability via dotfile symlinks (e.g., `~/.claude/skills/library/library.yaml → ~/dotfiles/loom/library.yaml`). Writing through any of these silently corrupts the link's destination — the repo checkout, the dotfiles repo, or whatever else the user has wired up. The symlink's existence is the signal that the user (or their tooling) is managing the path themselves; the upgrade defers to them.
+
+**Applies to**:
+- **Rule 12**: `~/.claude/skills/library/install-state.toon` — skip if symlinked
+- **Rule 13**: `~/.claude/skills/library/library.yaml` — skip if symlinked
+- **Rule 14**: every source file being relocated (root `ROADMAP.md`, `PLAN*.md`, `.plan-history/` entries) — skip if any source is a symlink; also skip if the target dir or target file is symlinked
+- **Backup phase** (below) — skip the backup copy if the source is a symlink; the original is already user-managed, no need to duplicate it
+
+**User opt-in**: Users who explicitly want `/loom-upgrade` to update a symlinked target can convert the link to a real file first:
+
+```bash
+cp --remove-destination "$(readlink ~/.claude/skills/library/library.yaml)" ~/.claude/skills/library/library.yaml
+/loom-upgrade --project
+```
+
+After this, the path is a regular file and the migration runs normally. The dev-install pattern (where the link IS the intent) keeps working unchanged — the user just never converts.
+
+**Reporting**: Each skipped link appears in the upgrade report with action=`skip-link` and the `symlinkSkipAdvisory()` string. The migration as a whole exits 0 even if every target is skipped — symlink skips are not failures.
+
+**Same primitive as `/loom-library sync`**: This is the same defensive pattern that PR #12 added to sync. The protocol-level subsection keeps the two code paths in sync conceptually; the helper module guarantees they're in sync mechanically.
+
 ## Backup Protocol
 
 ### Directory Structure
@@ -946,6 +989,10 @@ cp .plan-execution/backups/2026-04-19T14-30-00Z/criteria-plan.toon ./criteria-pl
 ### Retention
 
 Backup directories are never automatically deleted. The user is responsible for cleanup. The `/loom-upgrade` command prints the backup path so the user can verify and remove old backups at their discretion.
+
+### Symlinked Sources
+
+Sources that are symlinks are NOT backed up (and are NOT migrated). The link's existence means the file is user-managed at a separate location — duplicating it into a `.plan-execution/backups/` snapshot would be misleading (the backup wouldn't reflect what the user actually has on disk if they later modified the link target). See the [Symlink Safety](#symlink-safety) section for the full rationale and opt-in instructions.
 
 ## Error Handling
 
