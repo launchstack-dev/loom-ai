@@ -618,6 +618,18 @@ items[1]{name,type,source,targetPath,sha256,component,installedAt}:
 **Implementation**: `hooks/lib/library-catalog-migrator.ts` exports `detectLibraryCatalogVersion` and `migrateLibraryCatalogV2ToV3`. The upgrade command parses YAML, calls the migrator with the current installed versions, and serializes the result.
 
 **Migration steps**:
+
+**Step 0 — Missing-file remediation**: If `library.yaml` does not exist on disk (e.g. failed install, manual `rm`, partial cleanup), there is no v2 input to feed the migrator. Before failing:
+
+  a. Try to fetch the current v2 catalog from a known source, in this order:
+     1. `~/.claude/skills/library/library.yaml.backup` (if any prior `/loom-upgrade` left one)
+     2. The `repo` field of the user's `install-state.toon` `items[]` (any item's `source` field hints at the upstream repo — derive the catalog URL as `{repo}/raw/main/skills/library.yaml`)
+     3. The hard-coded canonical catalog URL (`https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/skills/library.yaml`) as last resort
+  b. If a v2 catalog is recovered, write it to `~/.claude/skills/library/library.yaml` and proceed with migration as if it had been there all along.
+  c. If all recovery paths fail, report `manual-required` with guidance: `library.yaml is missing and could not be recovered. Run /loom-library sync to restore from the catalog, then re-run /loom-upgrade --project.` Exit Rule 13 without throwing.
+
+  Rationale: without this step, Phase 1's runtime would call `migrateLibraryCatalogV2ToV3()` on an undefined input and the migrator's `MigrationSchemaVersionMismatchError` would surface as a hard failure even though the situation is recoverable. The recovery cascade preserves user data when possible without forcing manual intervention.
+
 1. Parse the v2 catalog (`catalog_version: 2`, `repo`, `default_dirs`, `library`, optional `kits[]`).
 2. Build v3 object:
    - `catalog_version: 3`
