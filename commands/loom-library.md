@@ -151,8 +151,9 @@ Installed contracts-agent
 1. Read install-state.toon
 2. For each installed item:
    a. Fetch current source content from repo (handle missing sources gracefully)
-   b. Read the installed target file
-   c. Compare source and target byte-for-byte. If they differ, the item needs updating.
+   b. **Symlink safety check**: if the target path is a symlink, resolve it. If the link target lives inside a Loom checkout (i.e., a directory containing both `hooks/` and `agents/protocols/` — the dev-install pattern), classify this item as `[link] {name} — symlinked to repo, no write needed` and SKIP it. Writing through a symlinked target would overwrite the dev repo's working tree with whatever `main` currently has, silently destroying in-progress work. The symlink already "sees" the latest content via its target, so no sync action is needed.
+   c. Read the installed target file (the actual file, not the symlink).
+   d. Compare source and target byte-for-byte. If they differ, the item needs updating.
 3. Report results:
 ```
 Checking 18 installed items...
