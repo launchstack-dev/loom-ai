@@ -2,9 +2,11 @@
  * Planning artifact path resolution.
  *
  * Single source of truth for the resolution order documented in
- * `agents/protocols/planning-paths.md`. Pure functions — no fs reads
- * unless an `fsLike` resolver is provided, which lets tests stub the
- * filesystem without monkey-patching node:fs.
+ * `agents/protocols/planning-paths.md`. Every exported function
+ * defaults to a `defaultFs` resolver that calls `node:fs` directly,
+ * so the production caller gets real filesystem reads. Tests pass an
+ * injected `FsResolver` to stub the filesystem without monkey-patching
+ * node:fs — pure with the injection, impure without it.
  *
  * Resolution model:
  *   - Reads: prefer `planning/` layout, fall back to legacy root

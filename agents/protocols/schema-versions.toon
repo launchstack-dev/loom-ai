@@ -28,6 +28,9 @@ lastUpdated: 2026-06-04
 #   - "literal"  → literal path relative to project root
 #   - "glob"     → glob pattern (e.g. *.agent-result.toon)
 #   - "dir"      → directory containing many files of this schema kind
+#   - "multi"    → multi-source union (pipe-separated paths/globs/dirs)
+#                  used when one schema-kind spans several disjoint locations
+#                  that the migration rule treats as a single concern
 #
 # `migratorPath` values:
 #   - "module" kind  → relative path to the TS migrator module
@@ -54,7 +57,7 @@ registry[19]{schema,file,pathKind,currentVersion,migratorKind,migratorPath,rule}
   change-proposal,.loom/changes/*/proposal.md,glob,1,static,—,—
   change-state,.loom/changes/*/state.toon,glob,1,static,—,—
   contract-page-extensions,.loom/wiki/pages/contract-*.md,glob,1,static,—,—
-  plan-artifact-layout,ROADMAP.md|PLAN*.md|.plan-history/,literal,1,inline,schema-upgrade.md#rule-14,14
+  plan-artifact-layout,ROADMAP.md|PLAN*.md|.plan-history/,multi,1,inline,schema-upgrade.md#rule-14,14
 
 # When a schema's currentVersion bumps:
 #   1. Update currentVersion above.

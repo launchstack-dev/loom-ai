@@ -726,17 +726,20 @@ AND `planning/` directory does not exist (or exists but is empty).
      - `mv` to the classified target. Skip with `conflict` if the target already exists.
 
 5. **Relocate `.plan-history/`**:
-   - If `planning/history/` exists, merge contents file-by-file (skip files that already exist in target; record as `conflict`).
-   - Otherwise, `mv .plan-history/ planning/history/`.
+   - If `planning/history/` does NOT exist, `mv .plan-history/ planning/history/` — the simple path.
+   - If `planning/history/` already exists, perform a file-by-file merge: for each source file under `.plan-history/`, compute its destination under `planning/history/` preserving the relative path; `mv` the file if the destination is absent, or record `conflict` and skip it if the destination already exists. Remove `.plan-history/` only after every file has been processed (so a partial run leaves the source in place, never half-moved). Write atomically per `agents/protocols/symlink-safety.ts` rules.
 
 6. **Write a stub at root** for GitHub home-page surfacing of the roadmap:
    - Path: `ROADMAP.md`
    - Content: `# ROADMAP\n\nLoom's roadmap lives at [planning/ROADMAP.md](planning/ROADMAP.md).\n`
+   - Write atomically (write to `ROADMAP.md.tmp`, then rename).
    - Skip this step if `planning/ROADMAP.md` does not exist (nothing to point at) or if the user passed `--no-root-stub`.
 
-7. **Write `planning/README.md`** if it does not already exist. Use a minimal template — one paragraph naming the project and pointing at this protocol.
+7. **Write `planning/README.md`** if it does not already exist. Use a minimal template — one paragraph naming the project and pointing at this protocol. Write atomically (`.tmp` + rename).
 
 8. **Re-run detection** — must return `outdated: false`. A successful migration leaves no relocatable artifacts at root (except the stub).
+
+**Runtime wiring status**: The rule's detection (`detectRule14Outdated`) and the file-by-file merge helper for Step 5 are NOT yet exported from `hooks/lib/planning-paths.ts` — both are scoped to Phase 1 of the OSS launch (F-12). The spec + tests in this PR lock in the behavior; the imperative caller comes when Phase 1 wires `/loom-upgrade --project` end-to-end against `install.sh`-signed releases. Until then, the relocation can be performed manually by following Steps 1–8 with shell commands.
 
 **Idempotency**: All steps check for target existence before writing. Running Rule 14 twice on the same project is a no-op on the second run.
 

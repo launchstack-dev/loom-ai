@@ -84,6 +84,18 @@ describe("symlinkSkipAdvisory", () => {
     // No embedded newlines (status-line + stderr collectors hate multi-line)
     expect(advisory.includes("\n")).toBe(false);
   });
+
+  it("safely quotes paths containing spaces in the readlink subshell", () => {
+    // Regression: the readlink invocation must double-quote its argument so
+    // paths with whitespace produce a single-token argument, not a word-split
+    // explosion. Both occurrences of the path inside the cp command must be
+    // double-quoted — the readlink argument and the destination.
+    const advisory = symlinkSkipAdvisory("/home/jane doe/.claude/skills/library/library.yaml");
+    expect(advisory).toContain('readlink "/home/jane doe/.claude/skills/library/library.yaml"');
+    expect(advisory).toContain('"/home/jane doe/.claude/skills/library/library.yaml"');
+    // Negative assertion: the broken form (unquoted readlink arg) must not appear
+    expect(advisory).not.toMatch(/readlink \/home\/jane doe/);
+  });
 });
 
 describe("real-world scenarios", () => {

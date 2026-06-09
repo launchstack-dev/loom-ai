@@ -105,7 +105,7 @@ export function symlinkSkipAdvisory(target: string): string {
   return (
     `[link] ${target} — symlinked, skipped. ` +
     `If you want /loom-upgrade to update this path, convert it to a real file first: ` +
-    `\`cp --remove-destination "$(readlink ${target})" "${target}"\` ` +
+    `\`cp --remove-destination "$(readlink "${target}")" "${target}"\` ` +
     `and re-run /loom-upgrade.`
   );
 }

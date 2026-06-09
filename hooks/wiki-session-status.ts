@@ -21,10 +21,15 @@
  *    Tier 2 (when .plan-execution/state.toon shows active wave):
  *      Flow/contract/component summaries whose touches/producers/consumers
  *      overlap the current wave's file ownership.
- *    Tier 3 (when paused-session state present):
- *      Pages that were live in the resumed session's rolling-context.
+ *    Tier 3 (not yet implemented):
+ *      Designed to inject paused-session wiki context on resume, but
+ *      `/loom-pause` never wrote the required `wikiContext[]` field to
+ *      its continue-here.toon snapshot, so the original implementation
+ *      was dead from wave-3 merge. Removed; restore only with a paired
+ *      schema change to /loom-pause Step 3.
  *
- *    Total worst-case ~1.5k tokens. Within 100k per-agent budget cap.
+ *    Total worst-case ~1k tokens (Tier 1 + Tier 2). Within 100k per-agent
+ *    budget cap.
  *
  * Also: wipes per-session dedup state for wiki-impact-warner and wiki-commit-
  * ledger; logs lint-pending marker when D>14; honors LOOM_WIKI_HOOKS=0;
@@ -261,29 +266,16 @@ function loadProjectContext(
   }
 
   // ── Tier 3 — Resumed-session pages ───────────────────────────────────────
-  let tier3: PageMeta[] = [];
-  const pauseDir = path.join(projectRoot, "planning", "history", "pause");
-  if (fs.existsSync(pauseDir)) {
-    try {
-      const pauseFiles = fs
-        .readdirSync(pauseDir)
-        .filter((f) => f.endsWith(".toon"));
-      if (pauseFiles.length > 0) {
-        pauseFiles.sort();
-        const latestPath = path.join(pauseDir, pauseFiles[pauseFiles.length - 1]);
-        const pauseContent = fs.readFileSync(latestPath, "utf-8");
-        const m = pauseContent.match(/^wikiContext\[\d+\]:\s*(.*)$/m);
-        if (m) {
-          const pageIds = new Set(
-            m[1].split(",").map((s) => s.trim()).filter(Boolean)
-          );
-          tier3 = pages.filter((p) => pageIds.has(p.pageId)).slice(0, 4);
-        }
-      }
-    } catch {
-      // ignore — tier 3 is best-effort
-    }
-  }
+  // Intentionally empty. The original wave-3 design read pause snapshots from
+  // a `pause/` subdirectory under history, but `/loom-pause` writes a single
+  // `.plan-execution/continue-here.toon` file with no `wikiContext[]` field —
+  // so the regex this block used never matched anything since wave-3 merge.
+  // Removed (was dead code) rather than wiring it through continue-here.toon,
+  // which would require a schema change to /loom-pause. If the resumed-
+  // session wiki-injection feature is ever actually wanted, restore Tier 3
+  // by reading `.plan-execution/continue-here.toon` and adding a wikiContext
+  // field to commands/loom-pause.md Step 3.
+  const tier3: PageMeta[] = [];
 
   // Dedup across tiers.
   const seen = new Set<string>();
