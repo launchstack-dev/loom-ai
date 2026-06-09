@@ -274,7 +274,10 @@ Continue looping until the user approves (option 1).
 
 ### Step 5: Write and Initialize
 
-1. Write the validated roadmap to `ROADMAP.md`
+1. Write the validated roadmap. Resolve target per `agents/protocols/planning-paths.md`:
+   - Default: `planning/ROADMAP.md` (create `planning/` if absent, mkdir -p)
+   - Legacy projects with existing root `ROADMAP.md` and no `planning/`: update at root (don't silently relocate — that's Rule 14's job in `/loom-upgrade`)
+   - User-specified path via flag (if any): use verbatim
 2. Initialize `planning/history/` if it doesn't exist:
    - Create `planning/history/changelog.md`:
      ```markdown

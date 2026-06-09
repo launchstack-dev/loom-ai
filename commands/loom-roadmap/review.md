@@ -20,7 +20,7 @@ Read `~/.claude/agents/protocols/validation-rules.md` for roadmap validation rul
 
 ### Step R1: Find the roadmap
 
-Locate the roadmap document — check for ROADMAP.md, roadmap.md, or whatever the user specified. Read it to confirm it exists and has content.
+Resolve the roadmap document per `agents/protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then the user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer. Read the resolved file to confirm content.
 
 ### Step R1a: Structural pre-check
 

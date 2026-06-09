@@ -9,7 +9,7 @@ This subcommand reviews a PLAN.md (or equivalent planning document) by spawning 
 ### Arguments
 
 Parse remaining arguments:
-- No args: look for a PLAN.md in the current working directory
+- No args: resolve plan per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root)
 - `<path>`: use that file instead
 - `--full`: run all agents with extended analysis (default behavior)
 
@@ -25,7 +25,7 @@ Read `~/.claude/agents/protocols/validation-rules.md` for AgentResult validation
 
 #### Step 1: Find the Plan
 
-Locate the planning document -- check for PLAN.md, plan.md, or whatever the user specified. Read it to confirm it exists and has content.
+Resolve the planning document per `agents/protocols/planning-paths.md`: check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then the user-specified path. Read it to confirm it exists and has content.
 
 #### Step 1a: Structural Pre-check
 

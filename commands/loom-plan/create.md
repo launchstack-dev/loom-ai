@@ -5,11 +5,12 @@ You create a PLAN.md (v2, spec-driven) from an approved ROADMAP.md. The roadmap 
 ### Arguments
 
 Parse remaining arguments:
-- No args: create PLAN.md from ROADMAP.md in current directory
+- No args: create plan from the resolved ROADMAP (see `agents/protocols/planning-paths.md`); write to `planning/plans/PLAN.md` (legacy projects without `planning/` write to root `PLAN.md`)
 - `<path>`: use a specific roadmap file as source
 - `--auto`: accept defaults without interactive prompting
 - `--v1`: generate a v1 plan (simpler, no API specs or state machines)
-- `--output <path>`: write plan to a custom path (default: `PLAN.md`)
+- `--output <path>`: write plan to a custom path (default: `planning/plans/PLAN.md` if `planning/` exists, else `PLAN.md`)
+- `--name <slug>`: write to `planning/plans/PLAN-{slug}.md` (multi-plan portfolio support)
 - `--review-integrate`: apply plan review findings to PLAN.md (skips generation, goes directly to Step R)
 - `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
 - `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
@@ -18,8 +19,8 @@ Parse remaining arguments:
 
 #### Step 0: Gather Context
 
-1. **Find the roadmap.** Read ROADMAP.md (or user-specified path).
-   - If it doesn't exist: "No roadmap found. Run `/loom-roadmap init` to create one first." Stop.
+1. **Find the roadmap.** Resolve per `agents/protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path.
+   - If none exists: "No roadmap found. Run `/loom-roadmap init` to create one first." Stop.
    - If frontmatter `status` is not `approved`: "Roadmap status is '{status}'. Approve it first with `/loom-roadmap approve`, or pass `--force` to proceed anyway."
 
 2. **Scan the codebase** for context (same scan as `/loom-roadmap init` Step 1):
@@ -255,7 +256,11 @@ Continue looping until the user approves.
 
 #### Step 4: Write and Initialize
 
-1. Write the validated plan to `PLAN.md` (or `--output` path).
+1. Write the validated plan to its target path. Resolve target per `agents/protocols/planning-paths.md`:
+   - If `--output <path>` was passed: use it verbatim
+   - Else if `--name <slug>` was passed: write to `planning/plans/PLAN-{slug}.md` (mkdir -p as needed)
+   - Else if `planning/` exists OR `planning/plans/` exists: write to `planning/plans/PLAN.md`
+   - Else (legacy project): write to `PLAN.md` at repo root
 
 1b. Write `criteria-plan.toon` to `.plan-execution/criteria-plan.toon` (always generated during plan creation, not gated behind `--converge-criteria`). This is the output from criteria-planner-agent in Step 1, potentially updated by conflict resolutions from Step 1.5.
 

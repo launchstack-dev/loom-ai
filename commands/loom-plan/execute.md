@@ -100,7 +100,7 @@ kitHalts: 0
 4. Write the file and stop
 
 **If `--dry-run`:**
-1. Read the plan file
+1. Resolve and read the plan file per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified)
 2. Analyze it and propose a wave structure:
    - Wave 0: What contracts to create
    - Wave 1-N: What implementation tasks, with file ownership assignments
@@ -135,7 +135,7 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
 
 #### Step 1: Initialize
 
-1. Read the plan file. Confirm it exists and has content.
+1. Resolve and read the plan file per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified). Confirm it exists and has content.
 
 2. **Validation gate.** Before creating `.plan-execution/`, run plan validation stages 1-4 from `validation-rules.md` Section 6:
    - **Stage 1 (Structure):** Verify frontmatter, required sections, Phase 0 existence and contracts-agent assignment

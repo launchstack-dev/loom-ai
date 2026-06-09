@@ -4,9 +4,11 @@ Pure data synthesis — no agents spawned. Read all sources and render a unified
 
 ### Step 1: Read All Sources
 
+Resolve roadmap and plan paths per `agents/protocols/planning-paths.md` before reading (planning/ first, root legacy fallback).
+
 ```
-1. ROADMAP.md → parse features, milestones, status (draft/reviewed/approved)
-2. PLAN.md → parse phases, dependencies, deliverables, acceptance criteria, planVersion
+1. ROADMAP.md (resolved) → parse features, milestones, status (draft/reviewed/approved)
+2. PLAN.md (resolved)    → parse phases, dependencies, deliverables, acceptance criteria, planVersion
 3. .plan-execution/state.toon → wave statuses, task completions, verification results
 4. planning/history/roadmap.toon → milestone tracking
 5. planning/history/changelog.md → recent entries

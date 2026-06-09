@@ -99,8 +99,8 @@ When a pattern flag is present:
 
 Before any subcommand, gather available state:
 
-1. **Find the roadmap file**: check for `ROADMAP.md`, `roadmap.md`, or user-specified path. Note if it exists and its status (draft/reviewed/approved).
-2. **Find the plan file**: check for `PLAN.md`, `plan.md`, or user-specified path. Note if it exists and its planVersion (1 or 2).
+1. **Find the roadmap file**: follow `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer, not the source. Note status (draft/reviewed/approved).
+2. **Find the plan file**: follow `agents/protocols/planning-paths.md` — check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then user-specified path. Note planVersion (1 or 2).
 3. **Check execution state**: read `.plan-execution/state.toon` if it exists → extract wave statuses, task completions.
 4. **Check plan history**: read `planning/history/roadmap.toon`, `planning/history/changelog.md` if they exist.
 5. **Check project config**: read `.claude/orchestration.toml` if it exists for custom agents and model profile.

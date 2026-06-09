@@ -4,7 +4,7 @@ Show plan progress by reading execution state.
 
 ### Instructions
 
-1. Check for `PLAN.md` -- if missing, report "No plan found."
+1. Resolve plan per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root) -- if none found, report "No plan found."
 2. Check for `.plan-execution/state.toon` -- if missing, report "Plan exists but execution has not started."
 3. If state exists, display:
    - Current wave and total waves

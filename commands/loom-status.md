@@ -20,14 +20,16 @@ Parse arguments after `status`:
 
 #### Step 1: Check for Roadmap
 
-If `ROADMAP.md` exists:
+Resolve roadmap per `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy). Treat a short root stub that references `planning/ROADMAP.md` as a pointer.
+
+If a roadmap exists:
 - Delegate to `/loom-roadmap status` logic. This shows the full unified status view (roadmap + plan + milestones + progress).
 - After delegation, render the Wiki Health block (Step 3 below) if `.loom/wiki/` exists.
 - Stop.
 
 #### Step 2: Basic Project Info (no roadmap)
 
-If no `ROADMAP.md` exists, display a basic project overview:
+If no roadmap exists in either modern or legacy location, display a basic project overview. Plan resolution also follows `agents/protocols/planning-paths.md` — display `found at {path}` when matched, `not found` when missing.
 
 ```
 ## Project Status
@@ -36,7 +38,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
   CLAUDE.md:           {found (N lines) | not found}
   CONTEXT.md:          {found (N lines) | not found}
   ROADMAP.md:          not found
-  PLAN.md:             {found | not found}
+  PLAN.md:             {found at planning/plans/PLAN.md | found at PLAN.md (legacy) | not found}
   orchestration.toml:  {found | not found}
   Wiki (.loom/wiki/):  {found (N pages) | not found}
 
