@@ -5,8 +5,8 @@ status: approved
 created: 2026-04-18
 lastReviewed: 2026-05-01
 targetDate: null
-totalFeatures: 10
-totalMilestones: 6
+totalFeatures: 14
+totalMilestones: 7
 ---
 
 # Roadmap: Loom Convergence Testing & Planning Taxonomy
@@ -346,6 +346,93 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - `wiki-context-suggester` UserPromptSubmit hook fires without exceeding the conversation budget
 - At least one structurally-important function in loom-ai without a `component-*` wiki page is surfaced as a documentation gap by the wiki bridge
 
+### F-11: Scenarios Layer + Change-Proposal Lifecycle
+
+**Priority:** P0
+**Milestone:** M-06 (incorporates work shipped under M-02b and M-03)
+**Status:** Code merged 2026-05-23 (PR ports + spec-upgrades branch); publicly released as part of OSS launch.
+**Description:** Two coupled upgrades that elevate Loom from "tests after plans" to "scenarios as enforcement gates." Upgrade A: scenarios are first-class plan artifacts — Given/When/Then statements typed by domain shape (api, ui, data, agent, lifecycle) that bind to convergence tiers and gate wave exits. Upgrade B: change proposals (OpenSpec-style init → review → approve → run → archive lifecycle) are the canonical authoring path for non-trivial roadmap and plan deltas. Together they close two gaps in M-01 through M-03: scenarios were implicit in criteria-plan.toon rather than authored, and ad-hoc roadmap mutations bypassed review/approval.
+
+**Entities involved:** Scenario, ChangeProposal, ScenarioBinding, ContractPage
+
+**Key behaviors:**
+- Scenarios are typed (api, ui, data, agent, lifecycle) and bind 1:N to convergence-tier criteria via `scenarioRef` in criteria-plan.toon
+- `scenarios-author-agent` produces scenarios in parallel with plan-builder during dual-track planning (M-01 pattern extended)
+- Change-proposal lifecycle: `/loom-roadmap mutate --propose` writes `.loom/changes/{id}/proposal.md`; review/approve/archive transition the proposal through a state machine
+- ContractPage materializer converts approved proposals into wiki contract pages with cross-refs to scenarios
+- Scenarios materialize into convergence-tier criteria automatically — no double-bookkeeping
+
+**Convergence targets:**
+- Plan creation with `--scenarios` flag produces at least 1 scenario per phase, bound to a convergence tier
+- A proposal flows init → review → approve → run → archive without manual file manipulation
+- Materializer produces a contract page from an approved proposal with all `producers/consumers/touches` populated
+- Unapproved proposals do not appear in ROADMAP.md or PLAN-*.md (gated)
+
+### F-12: OSS Launch Distribution
+
+**Priority:** P0
+**Milestone:** M-06
+**Status:** Phase 0 IN-FLIGHT (4 of 6 deliverables shipped: schemas v3, version cadence, verify-release, cosign spike workflow). Two gates remain before Phase 1: cosign keyless workflow_dispatch verification (~2 hours) and the 5-stranger cold-install demand test (gate; if 4+/5 bounce, plan halts pending re-scoping). Phase 1 (release workflow + install-state v3 runtime) is the next mile.
+**Description:** Public launch tooling for `launchstack-dev/loom-ai`: cosign-signed releases (keyless OIDC + Sigstore transparency log), version-pinned installer (`install.sh --ref vX.Y.Z`), atomic file-scoped rollback, checksum manifests, and the schema-versioned migration runtime (Rules 12-14). The installer fetches from `main` in alpha; signed-tarball flow ships at Phase 1. See `planning/plans/PLAN-oss-launch.md`.
+
+**Entities involved:** Release, ChecksumManifest, VersionedCatalog, MigrationRule
+
+**Key behaviors:**
+- Releases tagged with semver; `releases[]` entry includes cosign signature URL, transparency-log entry, install-state-version, hooks-version
+- `install.sh` validates fetched files against `checksums.sha256` (alpha) and against cosign signatures (Phase 1+)
+- Catalog (`library.yaml`) ships `loomCoreVersion`, `loomHooksVersion`, `releases[]` (Rule 13 v3 schema)
+- `/loom-upgrade --project` migrates user state to current versions via the chained migration walker
+
+**Convergence targets:**
+- 5-stranger cold-install test: ≥1/5 successful first-try install end-to-end
+- Cosign workflow_dispatch produces a verifiable signature on a tagged release
+- `/loom-library update` self-bumps catalog and re-pulls changed items idempotently
+- `install.sh --ref v0.0.X` pins to a tag and verifies the checksum manifest
+
+### F-13: Schema Migration Foundation
+
+**Priority:** P0
+**Milestone:** M-06
+**Status:** Spec + migrators COMPLETE (PR #11 merged 2026-06-04); runtime wiring pending Phase 1 of F-12.
+**Description:** Forward-compatible schema migration runtime for Loom's on-disk artifacts. Pure-function migrators (no I/O) with injected `sha256Resolver`, `now()`, and `onWarning` callbacks. Chained walker pattern (`migrateToLatest(input, fromVersion, opts, targetVersion?)`) walks every step in a frozen `MIGRATIONS` map — a user upgrading from v2 directly to v5 gets v2→v3→v4→v5 executed in sequence. Structured error subclasses (`MigrationError`, `MissingMigrationStepError`, `MigrationDowngradeError`, etc.) classify failure modes. Schema versions registry (`schema-versions.toon`) is the single source of truth for "what version is current" — `/loom-upgrade` reads it to drive detection and migration.
+
+**Entities involved:** SchemaVersion, MigrationRule, MigrationError, InstallStateV3, LibraryCatalogV3
+
+**Key behaviors:**
+- Per-schema `detectXVersion(content)` returns `{detected: N, current: M, outdated: boolean}`
+- Per-schema `migrateXvAtoB(input, opts)` is a pure function — no fs, no network
+- Walker pattern: `MIGRATIONS["v2->v3"]`, `MIGRATIONS["v3->v4"]`, etc. — registry-driven; new versions are additive
+- Object.freeze on the MIGRATIONS map prevents prototype pollution / runtime mutation (CWE-913 mitigation)
+- URL validation (https-only, allowlist) and semver regex on synthesized `releases[]` entries
+- Detection regex is line-anchored to defeat string-smuggling attacks
+
+**Convergence targets:**
+- `migrateToLatest()` v2→v3 walks one step; placeholder v3→v4 walks two steps; both produce valid output
+- `detectInstallStateVersion()` and `detectLibraryCatalogVersion()` correctly classify pre-v2, v2, v3, and tampered fixtures
+- Structured error subclasses thrown on missing steps, downgrade attempts, and validation failures
+- Pure-function migrators run identically with synthetic and real fixtures (test fixture parity passes)
+
+### F-14: Hook Runtime Wrapper + Symlink Safety
+
+**Priority:** P1
+**Milestone:** M-06
+**Status:** Code merged (PR #11 + PR #12); publicly released with OSS launch.
+**Description:** Two distribution-hardening fixes surfaced during dogfooding. (1) Hook runtime wrapper: `hooks/run-hook.sh` is a POSIX shell wrapper that resolves the JavaScript runtime in order — `bun` → `npx tsx` → fail-open — so Loom hooks run on machines that don't have `bun` installed. `.claude/settings.json` references the wrapper, not bun directly. (2) Symlink-aware sync: `/loom-library sync` and `/loom-upgrade` skip targets that are symlinks (any symlink, regardless of destination) to prevent silent overwrites of dev installs, user dotfiles, or any other symlinked target. Surfaces the link with `[link]` classification rather than writing through.
+
+**Entities involved:** HookRuntime, SyncTarget, SymlinkClassification
+
+**Key behaviors:**
+- `hooks/run-hook.sh` returns 0 (fail-open) when no runtime is available; stderr warns but never blocks Claude Code
+- All 10 hooks in `.claude/settings.json` invoke `sh "$wrapper" "$path"` instead of `bun "$path"` directly
+- Sync/upgrade lstat the target; symlinks → `[link]` classification, skipped
+- Stale `pipeline-state.toon` (>7 days mtime, non-terminal stage) auto-skips with a one-line stderr advisory
+- Rule 12/13 missing-file recovery: bootstrap empty v3 install-state if missing; fetch canonical library.yaml on miss
+
+**Convergence targets:**
+- Hooks fire on a machine with only Node (no bun) — no errors, just stderr advisory
+- `/loom-library sync` on a Loom-dogfood install (where `~/.claude/agents/*` symlinks back to the repo) does not corrupt the repo
+- A 2-month-old stale pipeline-state does not block `/stop` events
+
 ## Data Model (Conceptual)
 
 ### Entities
@@ -385,6 +472,8 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 | ExecutionLog | StageContext | 1:N | Log events reference stage completions |
 
 ## Milestones
+
+> **Status legend:** `COMPLETE` = code merged to `main` and exercised in dogfooding. `RELEASED` = signed public release tagged and published. `COMPLETE` does not imply `RELEASED` — the public OSS launch (M-06) is the gating event for the latter. Pre-launch, every milestone status reads as `COMPLETE (unreleased)` from a public-distribution perspective.
 
 ### M-01: Planning Foundation -- COMPLETE
 
@@ -460,6 +549,20 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 2. **Core algorithm (Phase 1, Wave 1):** Tree-sitter extraction, reference graph build, personalized PageRank, token-budgeted render. ≥15 vitest cases covering 3 languages, graph correctness, PageRank convergence, budget invariants, determinism.
 3. **Orchestrator integration (Phase 2, Wave 2):** `repo-map-seeder.ts`, `agent-prompt-builder.ts`, `/loom-repo-map build|inspect` CLI. Independently shippable (M-01 sub-milestone).
 4. **Wiki bridge (Phase 3, Wave 3):** `wiki-context-suggester.ts` UserPromptSubmit hook replaces the deferred fuzzy-regex variant. `wiki-maintainer-agent` documents how high-rank symbols without wiki pages become ingestion candidates.
+
+### M-06: OSS Launch -- IN-FLIGHT
+
+**Features:** F-11, F-12, F-13, F-14
+**Status:** In-flight. F-11 (scenarios + change-proposal) merged 2026-05-23. F-13 (schema migration foundation) merged 2026-06-04. F-14 (hook runtime wrapper + symlink safety) merged through PR #11 and PR #12. F-12 (OSS launch distribution) is the gating stream: Phase 0 has 4 of 6 deliverables shipped; remaining gates are the cosign workflow_dispatch verification and the 5-stranger cold-install demand test. Phase 1 (release workflow + install-state v3 runtime) begins once both gates clear.
+**Depends on:** M-01, M-02a, M-02b, M-03 (the convergence story is what gets launched)
+**Acceptance:** Public repo `launchstack-dev/loom-ai` reaches v0.1.0 with cosign-signed releases, version-pinned `install.sh`, schema migration runtime wired through `/loom-upgrade`, 5-stranger cold-install test ≥1/5, and a launch announcement post.
+**Effort:** M (Phase 0: 6 deliverables; Phase 1: release workflow + v3 runtime wiring)
+
+#### Phasing
+
+1. **Phase 0 (alpha foundation):** Schemas v3, version cadence doc, verify-release script, cosign spike workflow, run-hook.sh + symlink-safety, checksum manifest. 4 of 6 shipped; gates: cosign workflow_dispatch + 5-stranger demand test.
+2. **Phase 1 (signed release):** Release tagging workflow, cosign signing in CI, install.sh `--ref vX.Y.Z` pinning, atomic file-scoped rollback, install-state v3 runtime wiring (Rule 12), library-catalog v3 runtime wiring (Rule 13), plan-artifact relocation (Rule 14).
+3. **Phase 2 (launch):** Public announcement, demand validation, post-launch iteration.
 
 ## Risks & Mitigations
 
