@@ -93,8 +93,8 @@ Ask the user if they want to:
 
 ### Step R7: Save Findings
 
-1. Create `.plan-history/reviews/` if it doesn't exist
-2. Save the synthesized report to `.plan-history/reviews/YYYY-MM-DD-roadmap-review.toon` using TOON format:
+1. Create `planning/history/reviews/` if it doesn't exist
+2. Save the synthesized report to `planning/history/reviews/YYYY-MM-DD-roadmap-review.toon` using TOON format:
 
 ```toon
 type: roadmap-review
@@ -127,7 +127,7 @@ Use the structured summary format from Step R3, followed by cross-cutting themes
 
 ## Command: `review-integrate`
 
-1. Read the most recent roadmap review file in `.plan-history/reviews/` (files matching `*-roadmap-review.toon`)
+1. Read the most recent roadmap review file in `planning/history/reviews/` (files matching `*-roadmap-review.toon`)
 2. Parse findings by severity (blocking → warning → info)
 3. Filter to actionable findings
 4. Spawn `roadmap-builder-agent` (general-purpose) with:

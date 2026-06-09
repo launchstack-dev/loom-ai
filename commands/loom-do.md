@@ -50,7 +50,7 @@ Read project state to inform routing:
    - `.plan-execution/continue-here.toon` -- paused session exists
    - `.plan-execution/review-report.md` -- review findings exist
    - `.loom/wiki/` -- wiki exists
-   - `.plan-history/quick-tasks/` -- prior quick tasks exist
+   - `planning/history/quick-tasks/` -- prior quick tasks exist
 
 3. **Recent activity.** If `.plan-execution/ephemeral/status.toon` exists, read the `command` and `phase` fields to understand what was last running.
 

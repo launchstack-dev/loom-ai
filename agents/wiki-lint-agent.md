@@ -109,7 +109,7 @@ Skip if `.plan-execution/` does not exist.
 - **E-001 (Contract drift):** Read contracts from `.plan-execution/contracts/`, compare against wiki pages referencing those files
 - **E-002 (Plan-reality divergence):** Read PLAN.md phase statuses, compare against wiki page content
 - **E-003 (Orphaned exports):** Read wave summaries, find exports not referenced by any wiki page
-- **E-004 (Unaddressed review findings):** Read `.plan-history/reviews/`, check for critical/warning findings without corresponding wiki decision pages
+- **E-004 (Unaddressed review findings):** Read `planning/history/reviews/`, check for critical/warning findings without corresponding wiki decision pages
 - **E-005 (Stale rolling context):** Read `rolling-context.md`, check for contradictions with wiki pages
 - **E-006 (Unresolved cross-boundary requests):** Read `.plan-execution/ephemeral/requests/`, check for unresolved entries
 
@@ -157,7 +157,7 @@ findings[N]{id,severity,category,description,file,suggestion}:
   W-001,warning,orphaned-page,Page tech-debt-old-migrations not in index.toon,.loom/wiki/pages/tech-debt-old-migrations.md,Add to index.toon or delete page
   W-004,warning,broken-crossref,component-auth-middleware references decision-old-auth which does not exist,.loom/wiki/pages/component-auth-middleware.md,Update crossRef to decision-auth-strategy or remove
   W-013,info,source-ref-stale,component-user-service sourceRef src/services/user.ts modified after page,.loom/wiki/pages/component-user-service.md,Re-run /loom-ingest --source src/services/user.ts
-  E-004,warning,unaddressed-finding,Critical security finding sec-003 has no wiki decision page,.plan-history/reviews/2026-04-12-review.toon,Create decision page documenting resolution
+  E-004,warning,unaddressed-finding,Critical security finding sec-003 has no wiki decision page,planning/history/reviews/2026-04-12-review.toon,Create decision page documenting resolution
 
 summary:
   blocking: 0

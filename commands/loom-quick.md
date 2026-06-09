@@ -121,7 +121,7 @@ Read `CLAUDE.md` if it exists. Scan the project structure and relevant source fi
 4. Read up to 3 most relevant pages for context — understand architecture decisions, conventions, and dependencies before making changes. When `matchedFlows[]` is non-empty, prioritize the matched flow pages and their `exercises` components in this top-3.
 5. Record consulted page IDs as `wikiContext` for the log. If `matchedFlows[]` is non-empty, also record it in the log so downstream analysis (impact assessment, wiki update prompt) can preserve the user-facing framing.
 
-**Prior task/fix check.** If `.loom/fix-archive/index.toon` exists, scan for prior fixes in the same area. If `.plan-history/quick-tasks/` has recent entries touching the same files, note them. This prevents repeating past mistakes or duplicating recent work.
+**Prior task/fix check.** If `.loom/fix-archive/index.toon` exists, scan for prior fixes in the same area. If `planning/history/quick-tasks/` has recent entries touching the same files, note them. This prevents repeating past mistakes or duplicating recent work.
 
 **3b. Execute the task.**
 
@@ -287,9 +287,9 @@ Generate the log file path and taskId:
 5. Collapse consecutive hyphens into one, trim leading/trailing hyphens.
 6. Truncate to 50 characters (at the last complete hyphen-delimited segment within the limit).
 
-Path: `.plan-history/quick-tasks/{YYYY-MM-DD}-{slug}.toon`
+Path: `planning/history/quick-tasks/{YYYY-MM-DD}-{slug}.toon`
 
-Create the `.plan-history/quick-tasks/` directory if it does not exist.
+Create the `planning/history/quick-tasks/` directory if it does not exist.
 
 If a file with the same name already exists, append `-2`, `-3`, etc. before `.toon`.
 

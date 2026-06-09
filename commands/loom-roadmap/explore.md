@@ -480,7 +480,7 @@ If the answer is "not yet" specify what needs to happen first.}
 
 3. **Save exploration to disk** in TOON format:
 
-Create `.plan-history/explorations/` directory if it doesn't exist. Save to `.plan-history/explorations/{date}-{slug}.toon`:
+Create `planning/history/explorations/` directory if it doesn't exist. Save to `planning/history/explorations/{date}-{slug}.toon`:
 
 ```toon
 type: exploration
@@ -526,7 +526,7 @@ Exploration complete. What would you like to do next?
 1. [add to roadmap]  → Add "{topic}" to ROADMAP.md with surfaced requirements as acceptance criteria
 2. [debate]          → Deep-dive debate on: "{key decision point from synthesis}"
 3. [explore more]    → Run another exploration round with different personas or focus
-4. [save & exit]     → Exploration saved to .plan-history/explorations/{file}. Done.
+4. [save & exit]     → Exploration saved to planning/history/explorations/{file}. Done.
 ```
 
 **If `--add` was passed** (or user selects option 1): Run `/loom-roadmap add "{topic}"` and include the surfaced requirements as acceptance criteria context. Pass the MVP scope as the initial feature description. Pass risks as notes in the phase entry.
@@ -579,7 +579,7 @@ This is fire-and-forget — do not block the exploration output on wiki completi
 
 - **No ROADMAP.md:** Exploration still works — it just won't reference existing features or constraints. Note this at the start: `Note: No ROADMAP.md found. Exploring without existing roadmap context. Feature references will be generic.`
 
-- **User aborts mid-round** (Ctrl+C or explicit abort): Save partial exploration to `.plan-history/explorations/{date}-{slug}.toon` with `status: partial` and include whatever rounds completed. Display: `Partial exploration saved. Resume with: /loom-roadmap explore "{topic}" --depth {depth}`
+- **User aborts mid-round** (Ctrl+C or explicit abort): Save partial exploration to `planning/history/explorations/{date}-{slug}.toon` with `status: partial` and include whatever rounds completed. Display: `Partial exploration saved. Resume with: /loom-roadmap explore "{topic}" --depth {depth}`
 
 ---
 

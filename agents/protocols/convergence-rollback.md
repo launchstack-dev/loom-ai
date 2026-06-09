@@ -172,7 +172,7 @@ The following artifacts are preserved across rollback for post-mortem analysis:
 | Wiki pages | `.loom/wiki/` | Wiki is a persistent knowledge base. Pages created during failed convergence may contain valid architectural insights. Wiki maintenance is additive (see `execution-conventions.md` wiki integration). |
 | Conflict resolutions | `.plan-execution/conflicts/` | Interpretation conflicts resolved during convergence iterations represent agent consensus. Deleting them would force re-resolution in future attempts. |
 | Execution log entries | `.loom/wiki/execution-log.toon` | Convergence events (stalls, regressions, rollback) are appended to the execution log. These entries are never removed -- they form the project's execution history. |
-| `.plan-history/` artifacts | `.plan-history/` | Wave summaries, review findings, and decision records in `.plan-history/` are committed to git and are not part of the convergence working set. Rollback does not touch this directory. |
+| `planning/history/` artifacts | `planning/history/` | Wave summaries, review findings, and decision records in `planning/history/` are committed to git and are not part of the convergence working set. Rollback does not touch this directory. |
 
 ### Destroyed by Rollback (Expected)
 
@@ -206,7 +206,7 @@ The orchestrator presents the user with these options:
 1. **Retry convergence** (`/loom-converge --retry`) -- Re-run convergence from scratch with the same or modified plan. The rollback archive provides context for adjusting the convergence plan (e.g., increasing `maxIterations`, relaxing criteria, quarantining known flaky tests before starting).
 2. **Skip convergence** (`/loom-converge --skip`) -- Accept the pre-convergence state and continue to the next wave. Unresolved criteria are logged as warnings.
 3. **Manual fix** -- The user fixes the code manually, then runs `/loom-converge` to re-attempt convergence with the manual fixes as a starting point.
-4. **Abort execution** (`/loom plan execute --abort`) -- Stop the entire execution pipeline. All progress is preserved in `.plan-history/`.
+4. **Abort execution** (`/loom plan execute --abort`) -- Stop the entire execution pipeline. All progress is preserved in `planning/history/`.
 
 ---
 

@@ -78,13 +78,13 @@ Read these files for context on Loom conventions:
    ```bash
    git rev-parse --is-inside-work-tree 2>/dev/null && echo "GIT" || echo "NO_GIT"
    ```
-   If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (.plan-history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
+   If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (planning/history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
 
    If `GIT`: check for old `.plan-execution/` layout — if `.plan-execution/.gitignore` exists and contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom-upgrade` first to migrate." Continue with the gitignore check.
 
    Verify that the project's `.gitignore` does not exclude Loom's persistent directories:
    ```bash
-   git check-ignore -q .plan-history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q planning/history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
    ```
@@ -94,7 +94,7 @@ Read these files for context on Loom conventions:
    ## Gitignore Conflict Detected
 
    Your .gitignore excludes Loom's persistent directories:
-     .plan-history/    -- BLOCKED (execution history will be lost)
+     planning/history/    -- BLOCKED (execution history will be lost)
      .loom/            -- BLOCKED (wiki knowledge will be lost)
      .plan-execution/  -- BLOCKED (execution state will be lost across sessions)
 
@@ -107,7 +107,7 @@ Read these files for context on Loom conventions:
    If user confirms, append to `.gitignore`:
    ```
    # Loom persistent directories — do not ignore
-   !.plan-history/
+   !planning/history/
    !.loom/
    !.plan-execution/
    .plan-execution/ephemeral/

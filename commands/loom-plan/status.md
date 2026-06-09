@@ -12,5 +12,5 @@ Show plan progress by reading execution state.
    - Agent counts (running / done / failed)
    - Last activity timestamp
    - Scope coverage summary (if `scope-coverage.toon` exists)
-4. If `.plan-history/reviews/` has review files, show last review date and finding count.
+4. If `planning/history/reviews/` has review files, show last review date and finding count.
 5. If `.plan-execution/test-report.md` exists, show test summary.

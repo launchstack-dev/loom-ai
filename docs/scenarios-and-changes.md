@@ -1,6 +1,6 @@
 # Scenarios and Changes — End-to-End Walkthrough
 
-A complete guide to the two upgrades introduced by `PLAN-spec-upgrades.md`:
+A complete guide to the two upgrades introduced by `planning/archive/PLAN-spec-upgrades.md`:
 
 - **Scenarios (M-01)** — first-class Given/When/Then blocks under roadmap features and plan phases.
 - **Change lifecycle (M-02)** — OpenSpec-style change proposals over per-domain `contract-*` wiki pages.
@@ -293,7 +293,7 @@ The future implementation path:
 2. Re-applies the missing deltas in order.
 3. Updates `contentChecksum` and emits a successful archive entry.
 
-Track progress in `PLAN-spec-upgrades.md` follow-ups.
+Track progress in `planning/archive/PLAN-spec-upgrades.md` follow-ups.
 
 ### Path C — Revert to the snapshot (`.bak`)
 
@@ -341,7 +341,7 @@ The conflict scan is intentionally conservative — it blocks rather than silent
 
 ## Field-Lock Note
 
-The following field names are **LOCKED** as of Phase 0 of `PLAN-spec-upgrades.md`. Do not rename them, even in your own forks — downstream agents, validators, and the materializer depend on the exact spellings.
+The following field names are **LOCKED** as of Phase 0 of `planning/archive/PLAN-spec-upgrades.md`. Do not rename them, even in your own forks — downstream agents, validators, and the materializer depend on the exact spellings.
 
 **Scenario:** `id, title, given, when, whenTriggerType, then, stateRef, tags, testTier, automatable`
 
@@ -374,7 +374,7 @@ Severity follows `agents/protocols/validation-rules.md`: drift is **blocking**, 
 ## See Also
 
 - [`docs/scenarios-authoring-template.md`](./scenarios-authoring-template.md) — how to write good scenarios
-- [`PLAN-spec-upgrades.md`](../PLAN-spec-upgrades.md) — the source-of-truth plan for these features
+- [`planning/archive/PLAN-spec-upgrades.md`](../planning/archive/PLAN-spec-upgrades.md) — the source-of-truth plan for these features
 - `agents/protocols/scenario.schema.md` — scenario validator rules
 - `agents/protocols/change-proposal.schema.md` — proposal directory layout
 - `agents/protocols/contract-page-extensions.schema.md` — contract-page body shape

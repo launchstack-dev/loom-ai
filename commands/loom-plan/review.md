@@ -103,8 +103,8 @@ Ask the user if they want to:
 
 #### Step 6: Save Findings
 
-1. Create `.plan-history/reviews/` if it doesn't exist
-2. Save the synthesized report to `.plan-history/reviews/YYYY-MM-DD-review.toon` using TOON format
+1. Create `planning/history/reviews/` if it doesn't exist
+2. Save the synthesized report to `planning/history/reviews/YYYY-MM-DD-review.toon` using TOON format
 3. This enables `/loom-plan create --review-integrate` to read findings from disk in autonomous pipelines
 
 ### Output Format

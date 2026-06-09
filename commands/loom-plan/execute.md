@@ -206,7 +206,7 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
    - Instruction to return an AgentResult as the last block of output
 
 5. Parse the AgentResult from the agent's return value
-6. Write `wave-0-summary.toon` and `wave-0-summary.md` to `.plan-execution/`. Also copy `wave-0-summary.toon` to `.plan-history/executions/wave-0-summary.toon` for persistence (see `execution-conventions.md` § Persistence).
+6. Write `wave-0-summary.toon` and `wave-0-summary.md` to `.plan-execution/`. Also copy `wave-0-summary.toon` to `planning/history/executions/wave-0-summary.toon` for persistence (see `execution-conventions.md` § Persistence).
 7. Update `rolling-context.md` with Wave 0 as HOT entry
 8. Update state.toon: wave 0 tasks complete
 
@@ -249,7 +249,7 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
 If verification passed (Step 3):
 1. Read `wave-0-summary.toon` to get `filesCreated` and `filesModified`.
 2. Stage those files: `git add {filesCreated} {filesModified}`.
-3. Also stage `.plan-history/executions/wave-0-summary.toon` if it was written.
+3. Also stage `planning/history/executions/wave-0-summary.toon` if it was written.
 4. Create commit:
    ```
    git commit -m "feat(wave-0): contracts — {entity list from wave summary}"
@@ -367,7 +367,7 @@ If not `--auto` and blocking conflicts found, report to user and ask how to proc
    - Wave index
    - Project conventions
 3. Parse wiring AgentResult
-4. Write `wave-N-summary.toon` and `wave-N-summary.md` to `.plan-execution/`. Also copy `wave-N-summary.toon` to `.plan-history/executions/wave-N-summary.toon` for persistence.
+4. Write `wave-N-summary.toon` and `wave-N-summary.md` to `.plan-execution/`. Also copy `wave-N-summary.toon` to `planning/history/executions/wave-N-summary.toon` for persistence.
 
 #### Step 8: Verify Wave N
 
@@ -402,7 +402,7 @@ After verification completes, **write stage context.** Write `.plan-execution/st
 If verification passed (Step 8):
 1. Read `wave-N-summary.toon` to get `filesCreated` and `filesModified`.
 2. Stage those files: `git add {filesCreated} {filesModified}`.
-3. Also stage `.plan-history/executions/wave-N-summary.toon` if it was written.
+3. Also stage `planning/history/executions/wave-N-summary.toon` if it was written.
 4. Determine commit prefix:
    - If `filesCreated` is non-empty → `feat`
    - If `filesCreated` is empty (all modifications) → `refactor`

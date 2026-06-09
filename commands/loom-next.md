@@ -31,7 +31,7 @@ Scan for all relevant project artifacts:
    - `.plan-execution/pipeline-state.toon` -- exists? Read `currentStage`.
    - `.plan-execution/continue-here.toon` -- exists? (paused session)
    - `.plan-execution/review-report.md` -- exists? Read finding counts.
-   - `.plan-history/reviews/` -- any review files? Check dates.
+   - `planning/history/reviews/` -- any review files? Check dates.
    - `.loom/wiki/` -- exists?
 
 2. **Test state:**
@@ -54,10 +54,10 @@ Walk through the Loom workflow stages in order. The first incomplete stage is th
 | `state.toon` exists with `status == in-progress` | `/loom-plan execute --resume` | "Plan execution is in progress at wave {currentWave}." |
 | No `CLAUDE.md` and no `ROADMAP.md` | `/loom-init` | "No Loom artifacts found. Start with project onboarding." |
 | `CLAUDE.md` exists but no `ROADMAP.md` | `/loom-roadmap init --brownfield` | "Project is onboarded but has no roadmap. Create one." |
-| `ROADMAP.md` exists, no reviews in `.plan-history/reviews/*roadmap*` | `/loom-roadmap review` | "Roadmap exists but hasn't been reviewed." |
+| `ROADMAP.md` exists, no reviews in `planning/history/reviews/*roadmap*` | `/loom-roadmap review` | "Roadmap exists but hasn't been reviewed." |
 | `ROADMAP.md` exists, reviewed, but `status != approved` | `/loom-roadmap approve` | "Roadmap has been reviewed. Approve it to unlock plan generation." |
 | `ROADMAP.md` approved, no `PLAN.md` | `/loom-plan create` | "Roadmap is approved. Generate a plan." |
-| `PLAN.md` exists, no reviews in `.plan-history/reviews/*review*` (non-roadmap) | `/loom-plan review` | "Plan exists but hasn't been reviewed." |
+| `PLAN.md` exists, no reviews in `planning/history/reviews/*review*` (non-roadmap) | `/loom-plan review` | "Plan exists but hasn't been reviewed." |
 | `PLAN.md` exists, reviewed, no execution state | `/loom-plan execute` | "Plan is reviewed and ready for execution." |
 | Execution completed (`state.toon` with `status == completed`), no test results | `/loom-plan test --run` | "Execution complete. Run tests." |
 | Tests exist/ran, no `review-report.md` | `/loom-code review` | "Tests done. Run code review." |

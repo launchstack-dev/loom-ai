@@ -50,8 +50,8 @@ If the roadmap contains phase definitions (sections like `### Phase N`):
 ### Step A5: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `.plan-history/` directory exists (create if not).
-3. Append to `.plan-history/changelog.md`:
+2. Ensure `planning/history/` directory exists (create if not).
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature added: {description}
    - Feature ID: {F-XX}
@@ -133,8 +133,8 @@ Validate:
 ### Step I6: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `.plan-history/` directory exists.
-3. Append to `.plan-history/changelog.md`:
+2. Ensure `planning/history/` directory exists.
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature inserted: {description}
    - Phase: {position.X} (inserted after Phase {position})
@@ -212,7 +212,7 @@ If no dependents exist, proceed without prompting.
 ### Step R6: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Append to `.plan-history/changelog.md`:
+2. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phase removed: Phase {N} ({slug})
    - Description: {phase name/description}
@@ -338,7 +338,7 @@ If "no", display "Reorder cancelled." and stop.
 
 1. Rewrite the phase sections in `ROADMAP.md` in the new order (atomic: write to `.tmp`, rename).
    - **Important**: only the document order of phase sections changes. Phase numbers, slugs, dependency lists, and all other content remain unchanged.
-2. Append to `.plan-history/changelog.md`:
+2. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phases reordered
    - Moves: {list of "Phase N moved after Phase M"}

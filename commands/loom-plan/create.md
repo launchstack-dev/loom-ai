@@ -259,7 +259,7 @@ Continue looping until the user approves.
 
 1b. Write `criteria-plan.toon` to `.plan-execution/criteria-plan.toon` (always generated during plan creation, not gated behind `--converge-criteria`). This is the output from criteria-planner-agent in Step 1, potentially updated by conflict resolutions from Step 1.5.
 
-2. Append to `.plan-history/changelog.md`:
+2. Append to `planning/history/changelog.md`:
    ```markdown
    ## YYYY-MM-DD -- Plan created from roadmap
    - Generated via /loom-plan create
@@ -273,7 +273,7 @@ Continue looping until the user approves.
    - Interpretation conflicts: {N} blocking, {M} warning, {K} info
    ```
 
-3. Create `.plan-history/roadmap.toon` with milestones mapped from ROADMAP.md (if it doesn't exist).
+3. Create `planning/history/roadmap.toon` with milestones mapped from ROADMAP.md (if it doesn't exist).
 
 4. If pending notes were included, mark them as `assimilated` in `notes.toon` with `assimilatedTo: PLAN.md`.
 
@@ -309,7 +309,7 @@ Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md`
 
 Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
 
-1. Read the most recent plan review file in `.plan-history/reviews/` (files matching `*-review.toon`, excluding `*-roadmap-review.toon`). If none found: "No plan review found. Run `/loom-plan review` first." Stop.
+1. Read the most recent plan review file in `planning/history/reviews/` (files matching `*-review.toon`, excluding `*-roadmap-review.toon`). If none found: "No plan review found. Run `/loom-plan review` first." Stop.
 2. Parse findings by severity (blocking -> warning -> info)
 3. Filter to actionable findings (skip pure observations)
 4. Spawn `plan-builder-agent` (general-purpose) with:
@@ -319,7 +319,7 @@ Skips Steps 0-4. Applies plan review findings directly to an existing PLAN.md.
    - Instruction: "Apply these approved review recommendations. Do not change unrelated sections. Annotate each change with the finding that motivated it."
 5. Run validation on the result (stages 1-4, plus Stage 7 for v2 plans)
 6. Show proposed changes for user approval (or auto-apply if `--auto`)
-7. On approval: write plan, snapshot old version to `.plan-history/snapshots/`, update changelog
+7. On approval: write plan, snapshot old version to `planning/history/snapshots/`, update changelog
 
 ### Error Handling
 

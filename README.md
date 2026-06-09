@@ -2,7 +2,7 @@
 
 A discipline layer on top of Claude Code. Loom turns loose prompts into locked scope contracts, plans into Given/When/Then scenarios that drive convergence, and ongoing maintenance into validated change proposals over per-domain contract pages — with deterministic enforcement at the tool-call level.
 
-> **Status: alpha — `v0.0.x`.** Schemas may evolve with migrations. The convergence engine, scenarios layer, and change-proposal lifecycle are shipped and exercised; the installer/distribution polish (signed releases, Homebrew formula, version-compat machinery) is in flight. See [PLAN-oss-launch.md](PLAN-oss-launch.md) for the launch roadmap.
+> **Status: alpha — `v0.0.x`.** Schemas may evolve with migrations. The convergence engine, scenarios layer, and change-proposal lifecycle are shipped and exercised; the installer/distribution polish (signed releases, Homebrew formula, version-compat machinery) is in flight. See [planning/plans/PLAN-oss-launch.md](planning/plans/PLAN-oss-launch.md) for the launch roadmap.
 
 ## What's different
 
@@ -59,7 +59,7 @@ Platforms tested: macOS (Apple Silicon + Intel), Ubuntu 22.04+. Windows is not s
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
-This is a **minimal bootstrap**. It fetches a small set of core commands plus infrastructure from `main`, validated against `checksums.sha256` (currently from the same branch — signed-tarball release flow is in flight; see PLAN-oss-launch.md).
+This is a **minimal bootstrap**. It fetches a small set of core commands plus infrastructure from `main`, validated against `checksums.sha256` (currently from the same branch — signed-tarball release flow is in flight; see planning/plans/PLAN-oss-launch.md).
 
 ### What gets installed
 
@@ -161,7 +161,7 @@ curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/instal
 
 ### Signed-release path (in flight)
 
-The current installer fetches files directly from `main` and validates against a same-branch checksum manifest. The cosign + Sigstore signed-tarball flow (keyless, OIDC-backed) plus version pinning (`--ref vX.Y.Z`) and atomic file-scoped rollback land with the OSS launch. See PLAN-oss-launch.md for the launch roadmap.
+The current installer fetches files directly from `main` and validates against a same-branch checksum manifest. The cosign + Sigstore signed-tarball flow (keyless, OIDC-backed) plus version pinning (`--ref vX.Y.Z`) and atomic file-scoped rollback land with the OSS launch. See planning/plans/PLAN-oss-launch.md for the launch roadmap.
 
 ## Pre-flight Scope Contract
 
@@ -485,7 +485,7 @@ These are the projects Loom most resembles or borrows patterns from. Loom is not
 
 **Borrowed patterns** (Loom does not redistribute these projects — it adopts shapes):
 
-- **OpenSpec** — the `init → review → approve → run → archive` change-proposal shape (PLAN-spec-upgrades.md, Upgrade B). Loom departs by making scenarios enforcement gates rather than documentation.
+- **OpenSpec** — the `init → review → approve → run → archive` change-proposal shape (planning/archive/PLAN-spec-upgrades.md, Upgrade B). Loom departs by making scenarios enforcement gates rather than documentation.
 - **Superpowers** — strict red-green TDD gate, diagnose-before-fix, hard verification gate in `AgentResult` (ROADMAP C-06 / F-07). Loom does not adopt Superpowers' orchestration, planning, or dispatch.
 - **BMAD** — change-management *shape*, but Loom is explicitly tool-driven (validation gates only), not role-driven (no human approval queues).
 
@@ -771,7 +771,7 @@ Manual: `/loom-wiki ingest`, `/loom-wiki lint`, `/loom-wiki query "question"`.
 - `.loom/wiki/` — persistent knowledge base: wiki pages (including `contract-*`, `assumption-*`), index, operation log (git-tracked)
 - `.loom/changes/` — per-change-proposal directories (git-tracked)
 - `.plan-execution/` — execution state, scope contract, stage summaries (selectively git-tracked; `ephemeral/` is gitignored)
-- `.plan-history/` — reviews, decisions, explorations, wave summaries, milestones (git-tracked)
+- `planning/history/` — reviews, decisions, explorations, wave summaries, milestones (git-tracked)
 
 ## Tests
 

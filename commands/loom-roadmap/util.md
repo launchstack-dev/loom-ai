@@ -13,7 +13,7 @@
 
 ## Command: `diff`
 
-1. Find the most recent snapshot in `.plan-history/snapshots/`
+1. Find the most recent snapshot in `planning/history/snapshots/`
 2. If no snapshots exist, check git history: `git log --oneline -1 -- PLAN.md`
 3. Compare current `PLAN.md` against the snapshot
 4. Show a structured diff (not raw text diff):
@@ -27,9 +27,9 @@
 
 ## Command: `history`
 
-Read and display `.plan-history/changelog.md`. Format each entry clearly with date, action, and details.
+Read and display `planning/history/changelog.md`. Format each entry clearly with date, action, and details.
 
-If `.plan-history/changelog.md` doesn't exist, scan git log for plan file changes and reconstruct:
+If `planning/history/changelog.md` doesn't exist, scan git log for plan file changes and reconstruct:
 ```bash
 git log --oneline --follow -- PLAN.md
 ```
@@ -38,7 +38,7 @@ git log --oneline --follow -- PLAN.md
 
 ## Command: `milestone`
 
-Manage milestones in `.plan-history/roadmap.toon`.
+Manage milestones in `planning/history/roadmap.toon`.
 
 ### `milestone add "name"`
 1. Ask: target phase, dependencies (other milestone names), description
@@ -69,7 +69,7 @@ Manage milestones in `.plan-history/roadmap.toon`.
 
 ## Command: `snapshot`
 
-1. Copy `PLAN.md` to `.plan-history/snapshots/YYYY-MM-DD-plan.md`
+1. Copy `PLAN.md` to `planning/history/snapshots/YYYY-MM-DD-plan.md`
 2. If `.plan-execution/state.toon` exists, save execution summary alongside
 3. Append to changelog: "Snapshot saved: YYYY-MM-DD"
 
@@ -79,7 +79,7 @@ Manage milestones in `.plan-history/roadmap.toon`.
 
 ## Roadmap TOON Format
 
-`.plan-history/roadmap.toon`:
+`planning/history/roadmap.toon`:
 
 ```toon
 planFile: PLAN.md
@@ -122,7 +122,7 @@ This is additive — if agents don't support progress reporting, the orchestrato
 ## Error Handling
 
 - **No plan exists**: suggest `init` to create one
-- **No .plan-history/**: create it on first write operation (any command that writes)
+- **No planning/history/**: create it on first write operation (any command that writes)
 - **No execution state**: show plan-derived status (all phases pending)
 - **Stale roadmap.toon**: reconcile against actual plan file, warn about drift
 - **Review files not found**: skip review integration, note it
@@ -132,7 +132,7 @@ This is additive — if agents don't support progress reporting, the orchestrato
 
 ## Integration Points
 
-- `/loom-plan review` → writes findings to `.plan-history/reviews/`
+- `/loom-plan review` → writes findings to `planning/history/reviews/`
 - `/loom-plan execute` → reads plan (validates stages 1-4 as gate), updates state.toon
 - `/loom-plan test` → acceptance criteria from plan phases feed test spec generation
 - `refine` → consumes review findings + agent analysis → updated plan

@@ -262,7 +262,7 @@ function loadProjectContext(
 
   // ── Tier 3 — Resumed-session pages ───────────────────────────────────────
   let tier3: PageMeta[] = [];
-  const pauseDir = path.join(projectRoot, ".plan-history", "pause");
+  const pauseDir = path.join(projectRoot, "planning", "history", "pause");
   if (fs.existsSync(pauseDir)) {
     try {
       const pauseFiles = fs

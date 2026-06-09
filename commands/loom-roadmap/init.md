@@ -275,8 +275,8 @@ Continue looping until the user approves (option 1).
 ### Step 5: Write and Initialize
 
 1. Write the validated roadmap to `ROADMAP.md`
-2. Initialize `.plan-history/` if it doesn't exist:
-   - Create `.plan-history/changelog.md`:
+2. Initialize `planning/history/` if it doesn't exist:
+   - Create `planning/history/changelog.md`:
      ```markdown
      # Plan Changelog
 
@@ -285,7 +285,7 @@ Continue looping until the user approves (option 1).
      - Features: N, Milestones: N
      - Validation: passed (0 errors, N warnings)
      ```
-   - Create `.plan-history/snapshots/` directory
+   - Create `planning/history/snapshots/` directory
 3. Display roadmap summary + suggest next steps:
    - `/loom-roadmap review` for 4-agent roadmap review
    - `/loom-roadmap approve` to mark as approved

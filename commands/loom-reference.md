@@ -434,7 +434,7 @@ Each agent returns a structured `AgentResult`. State is tracked in `.plan-execut
       converge.config     -- Criteria harness config
   continue-here.toon      -- Session pause/resume snapshot
 
-.plan-history/                -- Persistent (git-tracked)
+planning/history/                -- Persistent (git-tracked)
   reviews/                -- Review findings (roadmap + plan)
     YYYY-MM-DD-roadmap-review.toon
     YYYY-MM-DD-review.toon

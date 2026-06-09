@@ -48,7 +48,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
 
   {if pipeline state is stale (mtime > 7 days, currentStage not in {complete,escalated}):}
     → Stale pipeline-state.toon ({N} days, stage: {currentStage}). Run:
-        mv .plan-execution/pipeline-state.toon .plan-history/abandoned/
+        mv .plan-execution/pipeline-state.toon planning/history/abandoned/
       (or wait — quality-gate hook auto-skips after 7 days of inactivity.)
 
 ### Recent Activity
@@ -56,7 +56,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
   Last updated:        {from status.toon or "unknown"}
 
 ### Quick Tasks
-  Total:               {count of .toon files in .plan-history/quick-tasks/}
+  Total:               {count of .toon files in planning/history/quick-tasks/}
   Recent:              {last 3 task descriptions with dates}
 
 ### Model Profile

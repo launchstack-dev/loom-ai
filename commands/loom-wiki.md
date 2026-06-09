@@ -335,7 +335,7 @@ Run the E-* checks inline (these are structural comparisons, not agent work):
 1. **E-001 (Contract drift):** Read `contracts/manifest.toon`, check if contract files differ from wiki page `sourceRefs` timestamps.
 2. **E-002 (Plan-reality divergence):** Read PLAN.md phase statuses, cross-reference with wiki pages.
 3. **E-003 (Orphaned exports):** Read wave summaries, check export coverage in wiki.
-4. **E-004 (Unaddressed review findings):** Read `.plan-history/reviews/`, check for decision pages.
+4. **E-004 (Unaddressed review findings):** Read `planning/history/reviews/`, check for decision pages.
 5. **E-005 (Stale rolling context):** Check rolling-context.md against wiki content.
 6. **E-006 (Unresolved requests):** Check `.plan-execution/ephemeral/requests/` for open entries.
 
