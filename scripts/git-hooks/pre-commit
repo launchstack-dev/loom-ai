@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# pre-commit — auto-regenerate checksums.sha256 when tracked files stage.
+#
+# Loom's install.sh validates downloaded files against checksums.sha256
+# on cold install. When a contributor edits a tracked file (anything
+# listed in the manifest) without regenerating, install.sh starts
+# rejecting the download and cold installs break. This hook closes the
+# regression window.
+#
+# Behavior:
+#   - Inspect the staged paths (added/modified/renamed)
+#   - If any staged path appears in checksums.sha256, run the
+#     regenerator, stage the updated manifest, and continue
+#   - If no tracked files staged, the hook is a no-op
+#   - Always fail-open: a hook crash never blocks the commit
+#
+# Install once per checkout:
+#   scripts/install-hooks.sh
+# (sets `git config core.hooksPath scripts/git-hooks`)
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "${REPO_ROOT}" ]; then
+  # Not in a git repo — let git handle whatever weirdness this is.
+  exit 0
+fi
+
+MANIFEST="${REPO_ROOT}/checksums.sha256"
+GENERATOR="${REPO_ROOT}/scripts/generate-checksums.sh"
+
+# If the manifest or the generator aren't present, do nothing.
+[ -f "${MANIFEST}" ] || exit 0
+[ -x "${GENERATOR}" ] || exit 0
+
+# ── Find staged paths that are tracked by the manifest ────────────────
+# `git diff --cached --name-only` lists staged paths (added/modified/
+# renamed/deleted). Compare against the path column of the manifest.
+TRACKED_PATHS=$(awk 'NF == 2 && $1 !~ /^#/ { print $2 }' "${MANIFEST}" | sort -u)
+STAGED_PATHS=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | sort -u)
+
+# Intersection. `comm -12` shows lines common to both, requires sorted input.
+TOUCHED=$(comm -12 <(echo "${TRACKED_PATHS}") <(echo "${STAGED_PATHS}"))
+
+if [ -z "${TOUCHED}" ]; then
+  # No tracked file in this commit. Manifest can't have drifted via this commit.
+  exit 0
+fi
+
+echo "[checksums] regenerating manifest (tracked files staged):"
+echo "${TOUCHED}" | sed 's/^/  /'
+
+if ! "${GENERATOR}"; then
+  echo "[checksums] ERROR: regeneration failed — commit aborted." >&2
+  echo "[checksums] Inspect the error above, then re-stage and retry." >&2
+  exit 1
+fi
+
+# Re-stage the manifest if it changed.
+if ! git diff --quiet -- "${MANIFEST}"; then
+  git add -- "${MANIFEST}"
+  echo "[checksums] checksums.sha256 updated and re-staged"
+fi

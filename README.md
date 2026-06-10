@@ -786,6 +786,23 @@ cd hooks && npm install && npx vitest run
 npx vitest run
 ```
 
+## Contributing
+
+After cloning, run once to enable the integrity-protection git hooks:
+
+```bash
+scripts/install-hooks.sh
+```
+
+This sets `core.hooksPath = scripts/git-hooks`. The pre-commit hook auto-regenerates `checksums.sha256` whenever you stage a file the manifest tracks (`hooks/*`, `commands/*`, `config/*`, `skills/library.yaml`). `install.sh` validates downloaded files against this manifest on cold install — drift would break every fresh install on `main`. The hook closes that window locally; the `checksums` CI workflow is the safety net for contributors who skip the install step.
+
+To regenerate manually:
+
+```bash
+scripts/generate-checksums.sh        # rewrite checksums.sha256 in place
+scripts/verify-checksums.sh          # exit 1 if drift; suggests the fix
+```
+
 ## Acknowledgments
 
 The wiki system and behavioral-guidelines draw from Andrej Karpathy's observations on LLM failure patterns. The change-proposal lifecycle is inspired by OpenSpec; Loom departs from it by treating scenarios as enforcement gates rather than documentation. See [docs/design-philosophy.md](docs/design-philosophy.md).
