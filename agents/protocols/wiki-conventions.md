@@ -155,14 +155,14 @@ The wiki and execution state are separate persistence layers:
 |-------|----------|-----------|-------------|
 | **Wiki** | `.loom/wiki/` | Persistent across executions | Yes |
 | **Execution** | `.plan-execution/` | Ephemeral per execution run | No |
-| **History** | `.plan-history/` | Persistent execution records | Yes |
+| **History** | `planning/history/` | Persistent execution records | Yes |
 
 The **wiki-maintainer-agent** bridges these layers:
 - Reads execution results from `.plan-execution/` (wave summaries, AgentResults, review reports)
 - Updates wiki pages in `.loom/wiki/pages/`
 - Records narrative entries in `.loom/wiki/execution-log.toon`
 
-Wiki agents NEVER write to `.plan-execution/` or `.plan-history/`. Execution agents NEVER write to `.loom/wiki/` (enforced by `wiki-write-guard` hook).
+Wiki agents NEVER write to `.plan-execution/` or `planning/history/`. Execution agents NEVER write to `.loom/wiki/` (enforced by `wiki-write-guard` hook).
 
 ## Wiki in Rolling Context
 

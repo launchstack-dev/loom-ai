@@ -32,14 +32,14 @@ These checks apply to the wiki structure in `.loom/wiki/`.
 
 ## Execution/Project Checks
 
-These checks detect drift between wiki knowledge and actual project state. They require reading files from `.plan-execution/`, `.plan-history/`, and the codebase.
+These checks detect drift between wiki knowledge and actual project state. They require reading files from `.plan-execution/`, `planning/history/`, and the codebase.
 
 | ID | Check | Severity | Description | Auto-fixable |
 |----|-------|----------|-------------|-------------|
 | E-001 | Contract drift | blocking | Contract files in `.plan-execution/contracts/` have been modified since Wave 0 completed, but no wiki page reflects the changes | No — contracts should be immutable |
 | E-002 | Plan-reality divergence | warning | PLAN.md phases marked `completed` but wiki pages reference components described as unimplemented or pending | No — requires investigation |
 | E-003 | Orphaned exports | warning | Exports listed in wave summaries (`.plan-execution/wave-N-summary.toon`) are not referenced by any wiki page | Yes — create stub pages |
-| E-004 | Unaddressed review findings | warning | Review findings in `.plan-history/reviews/` with severity `critical` or `warning` have no corresponding wiki decision page explaining resolution | No — requires human decision |
+| E-004 | Unaddressed review findings | warning | Review findings in `planning/history/reviews/` with severity `critical` or `warning` have no corresponding wiki decision page explaining resolution | No — requires human decision |
 | E-005 | Stale rolling context | info | `rolling-context.md` references waves older than cold tier threshold with information that contradicts wiki pages | No — requires context rebuild |
 | E-006 | Unresolved cross-boundary requests | warning | Request files in `.plan-execution/ephemeral/requests/` have no corresponding resolution in wave summaries or wiki pages | No — requires investigation |
 
@@ -76,7 +76,7 @@ These checks detect drift between wiki knowledge and actual project state. They 
 1. Check if `.plan-execution/` exists (skip all E-* checks if not)
 2. Read `state.toon` for wave status and file hashes
 3. Read wave summaries for export lists
-4. Read `.plan-history/reviews/` for unaddressed findings
+4. Read `planning/history/reviews/` for unaddressed findings
 5. Cross-reference against wiki pages
 
 ## Output Format

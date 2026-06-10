@@ -25,7 +25,7 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
 
 #### Step 0: Gather Context
 
-1. Read the plan file
+1. Resolve and read the plan file per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified)
 1b. Check for `.claude/orchestration.toml` in the project root. If it exists, read the `testing:` section to discover app-specific testing agents. These declare a `phase` (post-criteria, post-unit, post-e2e) and are spawned at the appropriate step alongside the built-in agents. Use `subagent_type: "general-purpose"` -- instruct each agent to read its own `.md` file from the path declared in `orchestration.toml`.
 2. Check for existing test infrastructure:
    - Is vitest/jest installed? Check `package.json`

@@ -459,13 +459,13 @@ unfixable[N]{runDate,tag,file,line,reason}:
 
 The `tag:file:line` triple is the content key used for dedup -- it uniquely identifies a finding regardless of sequential ID assignment.
 
-3. **Archive the review report** to `.plan-history/`:
-   - Create `.plan-history/reviews/` if it doesn't exist
-   - Copy `.plan-execution/review-report.md` to `.plan-history/reviews/YYYY-MM-DD-review.md`
+3. **Archive the review report** to `planning/history/`:
+   - Create `planning/history/reviews/` if it doesn't exist
+   - Copy `.plan-execution/review-report.md` to `planning/history/reviews/YYYY-MM-DD-review.md`
    - If ALL findings from the report are now resolved (applied + unfixable across all runs), delete `.plan-execution/review-report.md`
    - If unresolved findings remain (e.g., info-level not yet addressed), keep the report in place for future `/loom-code fix` runs
 
-4. **Append to changelog** if `.plan-history/changelog.md` exists:
+4. **Append to changelog** if `planning/history/changelog.md` exists:
    ```
    ## YYYY-MM-DD -- Code fixes applied
    - Source: {report path}

@@ -55,7 +55,7 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 2. **Blockers run before synthesis**: In `/loom-review-plan`, blockers must complete and pass before the synthesis step
 3. **Blockers run before proceeding**: In `/loom-execute-plan`, a blocker in the `pre-contracts` phase must pass before contracts-agent runs
 4. **Blocker failure reporting**: When a blocker fails, display its issues prominently with a clear "BLOCKED" label and ask the user how to proceed (fix and retry / override / abort)
-5. **Override tracking**: If the user overrides a blocker, log this decision to `.plan-history/decisions/` with the reason
+5. **Override tracking**: If the user overrides a blocker, log this decision to `planning/history/decisions/` with the reason
 
 ### Example blocker flow
 ```
@@ -71,7 +71,7 @@ Project-specific agents with `outputRole: "blocker"` have special semantics.
 
    Options: (fix and re-run / override with reason / abort)
 
-6. If user overrides: log to .plan-history/decisions/NNN-blocker-override.md
+6. If user overrides: log to planning/history/decisions/NNN-blocker-override.md
 7. Continue pipeline
 ```
 

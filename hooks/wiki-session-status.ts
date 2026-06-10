@@ -22,7 +22,12 @@
  *      Flow/contract/component summaries whose touches/producers/consumers
  *      overlap the current wave's file ownership.
  *    Tier 3 (when paused-session state present):
- *      Pages that were live in the resumed session's rolling-context.
+ *      Pages that were injected during the previous session, recovered
+ *      via `.plan-execution/continue-here.toon` `wikiContext[N]`.
+ *      Round-trip: SessionStart writes the set of injected page IDs to
+ *      `.plan-execution/ephemeral/wiki-injected.toon`; `/loom-pause`
+ *      Step 3 copies that marker into `continue-here.toon`'s wikiContext
+ *      field; the next SessionStart reads it back here.
  *
  *    Total worst-case ~1.5k tokens. Within 100k per-agent budget cap.
  *
@@ -261,24 +266,22 @@ function loadProjectContext(
   }
 
   // ── Tier 3 — Resumed-session pages ───────────────────────────────────────
+  // Restore wiki context the user was operating against when /loom-pause
+  // wrote .plan-execution/continue-here.toon. Source of the page IDs:
+  // /loom-pause Step 3 copies the wiki-injected.toon marker (written by
+  // THIS hook on the previous session-start) into the continue-here.toon
+  // `wikiContext[N]` field. On the next session start we read it back here.
   let tier3: PageMeta[] = [];
-  const pauseDir = path.join(projectRoot, ".plan-history", "pause");
-  if (fs.existsSync(pauseDir)) {
+  const continueHerePath = path.join(planExecDir, "continue-here.toon");
+  if (fs.existsSync(continueHerePath)) {
     try {
-      const pauseFiles = fs
-        .readdirSync(pauseDir)
-        .filter((f) => f.endsWith(".toon"));
-      if (pauseFiles.length > 0) {
-        pauseFiles.sort();
-        const latestPath = path.join(pauseDir, pauseFiles[pauseFiles.length - 1]);
-        const pauseContent = fs.readFileSync(latestPath, "utf-8");
-        const m = pauseContent.match(/^wikiContext\[\d+\]:\s*(.*)$/m);
-        if (m) {
-          const pageIds = new Set(
-            m[1].split(",").map((s) => s.trim()).filter(Boolean)
-          );
-          tier3 = pages.filter((p) => pageIds.has(p.pageId)).slice(0, 4);
-        }
+      const content = fs.readFileSync(continueHerePath, "utf-8");
+      const m = content.match(/^wikiContext\[\d+\]:\s*(.*)$/m);
+      if (m) {
+        const pageIds = new Set(
+          m[1].split(",").map((s) => s.trim()).filter(Boolean)
+        );
+        tier3 = pages.filter((p) => pageIds.has(p.pageId)).slice(0, 4);
       }
     } catch {
       // ignore — tier 3 is best-effort
@@ -299,6 +302,28 @@ function loadProjectContext(
   const t1 = dedup(tier1);
 
   if (t1.length + t2.length + t3.length === 0) return "";
+
+  // Persist the union of injected page IDs to .plan-execution/ephemeral/
+  // wiki-injected.toon. /loom-pause Step 3 reads this marker and copies
+  // it into continue-here.toon `wikiContext[N]`, so the next session
+  // start can re-surface the same context via Tier 3. Best-effort —
+  // failures here never block session start.
+  try {
+    const injected = [...t1, ...t2, ...t3].map((p) => p.pageId);
+    if (injected.length > 0) {
+      const ephemeral = path.join(projectRoot, ".plan-execution", "ephemeral");
+      fs.mkdirSync(ephemeral, { recursive: true });
+      const markerPath = path.join(ephemeral, "wiki-injected.toon");
+      const body =
+        `# Written by hooks/wiki-session-status.ts on SessionStart.\n` +
+        `# Consumed by /loom-pause to snapshot the active wiki context.\n` +
+        `injectedAt: ${new Date().toISOString()}\n` +
+        `pageIds[${injected.length}]: ${injected.join(", ")}\n`;
+      writeAtomic(markerPath, body);
+    }
+  } catch {
+    // ignore — marker write is best-effort
+  }
 
   const lines: string[] = [];
   lines.push("");

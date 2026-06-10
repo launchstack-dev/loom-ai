@@ -20,14 +20,16 @@ Parse arguments after `status`:
 
 #### Step 1: Check for Roadmap
 
-If `ROADMAP.md` exists:
+Resolve roadmap per `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy). Treat a short root stub that references `planning/ROADMAP.md` as a pointer.
+
+If a roadmap exists:
 - Delegate to `/loom-roadmap status` logic. This shows the full unified status view (roadmap + plan + milestones + progress).
 - After delegation, render the Wiki Health block (Step 3 below) if `.loom/wiki/` exists.
 - Stop.
 
 #### Step 2: Basic Project Info (no roadmap)
 
-If no `ROADMAP.md` exists, display a basic project overview:
+If no roadmap exists in either modern or legacy location, display a basic project overview. Plan resolution also follows `agents/protocols/planning-paths.md` — display `found at {path}` when matched, `not found` when missing.
 
 ```
 ## Project Status
@@ -36,7 +38,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
   CLAUDE.md:           {found (N lines) | not found}
   CONTEXT.md:          {found (N lines) | not found}
   ROADMAP.md:          not found
-  PLAN.md:             {found | not found}
+  PLAN.md:             {found at planning/plans/PLAN.md | found at PLAN.md (legacy) | not found}
   orchestration.toml:  {found | not found}
   Wiki (.loom/wiki/):  {found (N pages) | not found}
 
@@ -48,7 +50,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
 
   {if pipeline state is stale (mtime > 7 days, currentStage not in {complete,escalated}):}
     → Stale pipeline-state.toon ({N} days, stage: {currentStage}). Run:
-        mv .plan-execution/pipeline-state.toon .plan-history/abandoned/
+        mv .plan-execution/pipeline-state.toon planning/history/abandoned/
       (or wait — quality-gate hook auto-skips after 7 days of inactivity.)
 
 ### Recent Activity
@@ -56,7 +58,7 @@ If no `ROADMAP.md` exists, display a basic project overview:
   Last updated:        {from status.toon or "unknown"}
 
 ### Quick Tasks
-  Total:               {count of .toon files in .plan-history/quick-tasks/}
+  Total:               {count of .toon files in planning/history/quick-tasks/}
   Recent:              {last 3 task descriptions with dates}
 
 ### Model Profile

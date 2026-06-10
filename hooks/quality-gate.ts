@@ -68,7 +68,7 @@ runHook("quality-gate", async (_input) => {
         `[loom:quality-gate] pipeline-state.toon hasn't been touched in ` +
           `${Math.floor(ageMs / (24 * 60 * 60 * 1000))}d (> ${STALE_PIPELINE_DAYS}d threshold) — ` +
           `treating as abandoned. Archive with: ` +
-          `mv .plan-execution/pipeline-state.toon .plan-history/abandoned/\n`
+          `mv .plan-execution/pipeline-state.toon planning/history/abandoned/\n`
       );
       return allow();
     }
@@ -80,7 +80,7 @@ runHook("quality-gate", async (_input) => {
   return block(
     `Pipeline stage "${stageName}" (iteration ${pipeline.outerIteration}) is not complete. ` +
       `Continue execution. The pipeline will signal completion by setting currentStage to "complete" or "escalated". ` +
-      `(If this run is actually abandoned, archive .plan-execution/pipeline-state.toon to .plan-history/abandoned/ — ` +
+      `(If this run is actually abandoned, archive .plan-execution/pipeline-state.toon to planning/history/abandoned/ — ` +
       `automatic after ${STALE_PIPELINE_DAYS} days of inactivity.)`
   );
 });

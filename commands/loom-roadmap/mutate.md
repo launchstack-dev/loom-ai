@@ -9,7 +9,7 @@ Appends a new feature and phase to ROADMAP.md without regenerating the entire do
 
 ### Step A1: Read and Validate Roadmap
 
-1. Read `ROADMAP.md`. If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve `ROADMAP.md` per `agents/protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
 2. Parse the existing feature list, milestone list, and phase list from the roadmap.
 
 ### Step A2: Parse Arguments
@@ -50,8 +50,8 @@ If the roadmap contains phase definitions (sections like `### Phase N`):
 ### Step A5: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `.plan-history/` directory exists (create if not).
-3. Append to `.plan-history/changelog.md`:
+2. Ensure `planning/history/` directory exists (create if not).
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature added: {description}
    - Feature ID: {F-XX}
@@ -91,7 +91,7 @@ Inserts a new feature/phase at a specific position using decimal numbering (e.g.
 
 ### Step I1: Read and Validate Roadmap
 
-1. Read `ROADMAP.md`. If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve `ROADMAP.md` per `agents/protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
 2. Parse all phases with their numbers, dependencies, and statuses.
 
 ### Step I2: Parse Arguments
@@ -133,8 +133,8 @@ Validate:
 ### Step I6: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `.plan-history/` directory exists.
-3. Append to `.plan-history/changelog.md`:
+2. Ensure `planning/history/` directory exists.
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature inserted: {description}
    - Phase: {position.X} (inserted after Phase {position})
@@ -170,7 +170,7 @@ Removes a phase from the roadmap by phase number or slug. Checks for dependent p
 
 ### Step R1: Read and Validate Roadmap
 
-1. Read `ROADMAP.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve `ROADMAP.md` per `agents/protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
 2. Parse all phases with their numbers, slugs, names, dependencies, and statuses.
 
 ### Step R2: Find the Target Phase
@@ -212,7 +212,7 @@ If no dependents exist, proceed without prompting.
 ### Step R6: Write and Log
 
 1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Append to `.plan-history/changelog.md`:
+2. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phase removed: Phase {N} ({slug})
    - Description: {phase name/description}
@@ -249,7 +249,7 @@ Moves phases to new positions in the roadmap. Validates that the move does not c
 
 ### Step O1: Read and Parse
 
-1. Read `ROADMAP.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve `ROADMAP.md` per `agents/protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
 2. Extract all phases with their numbers, names, slugs, and dependency lists.
 3. Build the dependency adjacency list (same format as `deps` subcommand Step 1).
 
@@ -338,7 +338,7 @@ If "no", display "Reorder cancelled." and stop.
 
 1. Rewrite the phase sections in `ROADMAP.md` in the new order (atomic: write to `.tmp`, rename).
    - **Important**: only the document order of phase sections changes. Phase numbers, slugs, dependency lists, and all other content remain unchanged.
-2. Append to `.plan-history/changelog.md`:
+2. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phases reordered
    - Moves: {list of "Phase N moved after Phase M"}

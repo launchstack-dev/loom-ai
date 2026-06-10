@@ -49,7 +49,7 @@ PLAN.md                             → plan artifact
 agents/protocols/*.md               → protocol artifacts
 ```
 
-**Additionally scan when `--project` is set** (project infrastructure — Rules 6-13):
+**Additionally scan when `--project` is set** (project infrastructure — Rules 6-14):
 
 ```
 .claude/orchestration.toml                          → orchestration config
@@ -60,6 +60,7 @@ CLAUDE.md                                           → Loom conventions
 agents/protocols/                                   → protocol file completeness
 ~/.claude/skills/library/install-state.toon         → install-state v3
 ~/.claude/skills/library/library.yaml               → library catalog v3
+ROADMAP.md, PLAN*.md, .plan-history/ (at root)      → plan artifact layout (Rule 14)
 ```
 
 For each target found, run the appropriate version detection logic defined in `schema-upgrade.md`:
@@ -80,6 +81,7 @@ For each target found, run the appropriate version detection logic defined in `s
 - **protocols**: Check `agents/protocols/` for missing required protocol files (13 files minimum).
 - **install-state**: Check `~/.claude/skills/library/install-state.toon`. Outdated if `schemaVersion < 3`, missing entirely (treat as pre-v2), or v3 declared but missing `protocolVersion` / `loomCoreVersion` / `loomHooksVersion` / `catalogVersion` / `components[]`. Detection via `detectInstallStateVersion()` in `hooks/lib/install-state-migrator.ts`.
 - **library-catalog**: Check `~/.claude/skills/library/library.yaml`. Outdated if `catalog_version < 3` or v3 declared but missing top-level `loomCoreVersion` / `loomHooksVersion` / `releases`. Detection via `detectLibraryCatalogVersion()` in `hooks/lib/library-catalog-migrator.ts`.
+- **plan-artifact-layout (Rule 14)**: Check whether legacy planning artifacts live at the repo root and `planning/` is absent. Outdated if any of: (a) non-stub `ROADMAP.md` at root (stub detection via `isRootStub()` in `hooks/lib/planning-paths.ts` — ≤512 bytes AND ≤10 lines AND references `planning/ROADMAP.md`), (b) `PLAN.md` or `PLAN-*.md` at root, (c) `.plan-history/` directory at root — AND `planning/` does not exist (or is empty). Relocation logic in `hooks/lib/planning-paths.ts` resolvers.
 
 Collect all files that report `outdated: true` into a migration manifest.
 
@@ -175,6 +177,8 @@ Copy every file that will be modified into the backup directory, preserving rela
 
 Only files that exist AND will be modified are backed up. New files (scaffolded wiki, created orchestration.toml) have no backup since they didn't exist before.
 
+**Symlinked sources are skipped.** For each candidate file, `lstat` it first via `isSymlink()` from `hooks/lib/symlink-safety.ts`. If the source is a symlink (dev install, dotfile target, cross-machine portability shim), record it in the report with action=`skip-link` and do NOT copy. The migrate step will also skip these — see `schema-upgrade.md` § Symlink Safety.
+
 Verify the backup is complete before proceeding. If any copy fails, abort with:
 
 ```
@@ -186,6 +190,8 @@ Exit 1.
 #### Step 5: Migrate
 
 Apply migration rules from `schema-upgrade.md` in-place. Each file is written atomically (write to `{path}.tmp`, then rename to `{path}`).
+
+**Symlink safety (applies to ALL rules that write).** Before writing to any target — install-state, library-catalog, plan artifacts, or relocation destinations — call `isSymlink(target)` from `hooks/lib/symlink-safety.ts`. If the target is a symlink, skip the write, record action=`skip-link` in the report with the `symlinkSkipAdvisory()` string, and continue with the next file. Symlink skips are not failures — the migration as a whole still exits 0 if every other rule succeeds. See `agents/protocols/schema-upgrade.md` § Symlink Safety for the full rationale and the user opt-in (`cp --remove-destination`).
 
 **Execution artifact rules (always applied):**
 
@@ -210,8 +216,9 @@ Apply migration rules from `schema-upgrade.md` in-place. Each file is written at
 - **Rule 11 (protocols)**: Copy missing protocol files from the Loom source directory. Never overwrite existing protocols.
 - **Rule 12 (install-state v2 → v3)**: Migrate `~/.claude/skills/library/install-state.toon` via `migrateInstallStateV2ToV3()` from `hooks/lib/install-state-migrator.ts`. Supply a `sha256Resolver` that reads each `targetPath` and computes its hash. Items with unreadable files get `sha256: ""` and a warning. Writes a single `loom-core` component with version `0.0.0` (real version refreshed by the next post-migration upgrade).
 - **Rule 13 (library-catalog v2 → v3)**: Migrate `~/.claude/skills/library/library.yaml` via `migrateLibraryCatalogV2ToV3()` from `hooks/lib/library-catalog-migrator.ts`. Reads `loomCoreVersion` and `loomHooksVersion` from the freshly-written install-state.toon (Rule 12 runs first). Synthesizes a single `releases[]` entry derived from the catalog `repo` URL when an `initialRelease` is configured; otherwise emits `releases: []`. Existing kit entries are preserved untouched — v3 fields `minCoreVersion`/`minHooksVersion` are optional and left absent.
+- **Rule 14 (plan artifact relocation)**: Move legacy root-level planning artifacts (`ROADMAP.md`, `PLAN.md`, `PLAN-*.md`, `.plan-history/`) into the modern `planning/` layout. Uses `hooks/lib/planning-paths.ts` `isRootStub()` to skip files that are already stub pointers. PLAN files are classified into `planning/plans/` (active) or `planning/archive/` (status: complete, status: archived, or mtime > 90 days). Writes a one-line `ROADMAP.md` stub at root pointing to `planning/ROADMAP.md` for GitHub home-page discoverability. Idempotent — running twice is a no-op. Conflicts (target already exists) are recorded but never overwritten.
 
-**Migration order**: Rules are applied in numeric order (1-13). Within each rule, files are processed alphabetically. Rule 12 MUST run before Rule 13 within a single pass (Rule 13 reads versions written by Rule 12).
+**Migration order**: Rules are applied in numeric order (1-14). Within each rule, files are processed alphabetically. Rule 12 MUST run before Rule 13 within a single pass (Rule 13 reads versions written by Rule 12). Rule 14 runs last in a single pass — it touches filesystem layout, so we let all content migrations finish first.
 
 If a migration rule fails for a specific file (parse error, unexpected format, write failure):
 1. Delete the `.tmp` file if it exists.
@@ -261,6 +268,7 @@ upgradeReport:
   filesManualRequired: {count}
   filesFailed: {count}
   filesSkipped: {count}
+  filesSkippedLink: {count}
   backupDir: {path}
   migrations[N]{file,rule,status,details}:
     PLAN.md,Rule 3,success,Added 3 missing sections
@@ -272,19 +280,21 @@ upgradeReport:
     .claude/settings.json,Rule 9,success,Added contract-lock and file-ownership hooks
     .loom/wiki/,Rule 10,scaffolded,Created empty wiki structure; run /loom-wiki ingest
     CLAUDE.md,Rule 8,manual-required,Run /loom-init to generate from codebase analysis
+    ~/.claude/skills/library/library.yaml,Rule 13,skip-link,Symlinked target — convert with cp --remove-destination to opt in
 ```
 
 Print a human-readable summary:
 
 ```
 [loom:upgrade] Migration complete.
-  Scope:      {default | project}
-  Scanned:    {N} targets
-  Migrated:   {M} targets
-  Scaffolded: {S} targets
-  Failed:     {F} targets
-  Skipped:    {K} targets
-  Backup:     {backup-dir}
+  Scope:        {default | project}
+  Scanned:      {N} targets
+  Migrated:     {M} targets
+  Scaffolded:   {S} targets
+  Failed:       {F} targets
+  Skipped:      {K} targets
+  Symlink skip: {L} targets  (run with `cp --remove-destination` to opt in)
+  Backup:       {backup-dir}
 ```
 
 If there are `manual-required` or `partial` items, print a follow-up section:
@@ -343,6 +353,7 @@ This command uses grep-based selective file reading to stay within the 100k toke
 | Protocol source file not found | Record as `failed` — cannot copy what doesn't exist. |
 | CLAUDE.md missing (--project) | Record as `manual-required` — needs `/loom-init`. |
 | settings.json missing (--project) | Record as `manual-required` — needs manual creation. |
+| Target path is a symlink | Record as `skip-link` — skipped, not failed. Exit 0 still possible. User opts in by converting the link with `cp --remove-destination`. |
 
 ## Cross-References
 

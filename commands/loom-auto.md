@@ -165,7 +165,7 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
 
    Verify the project's `.gitignore` does not exclude Loom's persistent directories:
    ```bash
-   git check-ignore -q .plan-history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q planning/history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
    ```
@@ -261,7 +261,7 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
 1b. **Review roadmap.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-roadmap.md first.
-    Review the roadmap at {roadmapFile}. Save findings to .plan-history/reviews/.
+    Review the roadmap at {roadmapFile}. Save findings to planning/history/reviews/.
     Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: roadmap-review`.
@@ -462,7 +462,7 @@ Record agents spawned. Save the conflict report to `.plan-execution/conflicts/in
 2b. **Review plan.** Spawn a general-purpose agent:
    ```
    "Read your instructions from ~/.claude/commands/loom-review-plan.md first.
-    Review the plan at {planFile}. Save findings to .plan-history/reviews/.
+    Review the plan at {planFile}. Save findings to planning/history/reviews/.
     Your AgentResult MUST include verificationStatus."
    ```
    Record agents spawned. Update `currentStage: plan-review`.

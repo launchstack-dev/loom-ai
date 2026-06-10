@@ -10,7 +10,7 @@ Projects declare a `.claude/orchestration.toml` at the project root to register 
 [settings]
 maxParallelAgents = 6       # cap concurrent agent spawns
 defaultModel = "sonnet"     # default model for app-specific agents
-persistHistory = true       # auto-write to .plan-history/
+persistHistory = true       # auto-write to planning/history/
 dataFormat = "toon"         # "toon" | "json" for inter-agent data
 
 # ─────────────────────────────────────────────────────────────

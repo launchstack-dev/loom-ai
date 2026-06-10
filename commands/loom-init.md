@@ -34,8 +34,9 @@ Read these files for context on Loom conventions:
 1a. Check what already exists:
    - `CLAUDE.md` -- project guidance
    - `CONTEXT.md` -- locked decisions and context
-   - `ROADMAP.md` -- existing roadmap
-   - `PLAN.md` -- existing plan
+   - `planning/ROADMAP.md` then `ROADMAP.md` at root -- existing roadmap (per `agents/protocols/planning-paths.md`)
+   - `planning/plans/PLAN.md` then `PLAN.md` at root -- existing plan
+   - `planning/` directory -- modern planning layout (if present, brownfield additions go here)
    - `.claude/orchestration.toml` -- project-specific agent config
    - `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `Gemfile` -- manifest files
    - `README.md` -- existing docs
@@ -78,13 +79,13 @@ Read these files for context on Loom conventions:
    ```bash
    git rev-parse --is-inside-work-tree 2>/dev/null && echo "GIT" || echo "NO_GIT"
    ```
-   If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (.plan-history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
+   If `NO_GIT`: warn "This directory is not a git repository. Loom's persistent directories (planning/history/, .loom/) require git to survive across sessions. Consider running `git init` first." Continue without the gitignore check.
 
    If `GIT`: check for old `.plan-execution/` layout — if `.plan-execution/.gitignore` exists and contains `*`, warn: "Old .plan-execution/ layout detected. Run `/loom-upgrade` first to migrate." Continue with the gitignore check.
 
    Verify that the project's `.gitignore` does not exclude Loom's persistent directories:
    ```bash
-   git check-ignore -q .plan-history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
+   git check-ignore -q planning/history/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .loom/wiki/test 2>/dev/null && echo "BLOCKED" || echo "OK"
    git check-ignore -q .plan-execution/state.toon 2>/dev/null && echo "BLOCKED" || echo "OK"
    ```
@@ -94,7 +95,7 @@ Read these files for context on Loom conventions:
    ## Gitignore Conflict Detected
 
    Your .gitignore excludes Loom's persistent directories:
-     .plan-history/    -- BLOCKED (execution history will be lost)
+     planning/history/    -- BLOCKED (execution history will be lost)
      .loom/            -- BLOCKED (wiki knowledge will be lost)
      .plan-execution/  -- BLOCKED (execution state will be lost across sessions)
 
@@ -107,7 +108,7 @@ Read these files for context on Loom conventions:
    If user confirms, append to `.gitignore`:
    ```
    # Loom persistent directories — do not ignore
-   !.plan-history/
+   !planning/history/
    !.loom/
    !.plan-execution/
    .plan-execution/ephemeral/
@@ -305,6 +306,18 @@ Synthesize a CONTEXT.md from all 4 agents' output:
 - `agents` format: Write AGENTS.md (tool-agnostic guidance)
 - `cursor` format: Write .cursorrules or .cursor/rules/*.mdc
 - `all`: Write all of the above
+
+##### 4d. Planning Skeleton
+
+Create the modern planning layout so subsequent `/loom-roadmap init` and `/loom-plan create` runs write to the canonical locations (per `agents/protocols/planning-paths.md`):
+
+```
+mkdir -p planning/plans planning/archive planning/history
+```
+
+Write a starter `planning/README.md` (one paragraph: "This directory holds {project name}'s planning artifacts. ROADMAP.md, PLAN-*.md, and the execution history live here. See loom-ai's planning/README.md for the layout convention.") only if `planning/README.md` does not already exist.
+
+Skip this step entirely if the legacy layout is already in use (i.e., a non-stub `ROADMAP.md` or `PLAN.md` exists at root). Migration of legacy projects is the job of `/loom-upgrade --project` Rule 14, not `/loom-init`.
 
 #### Step 4.5: Generate Wiki
 

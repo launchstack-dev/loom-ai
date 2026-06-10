@@ -4,12 +4,14 @@ Pure data synthesis — no agents spawned. Read all sources and render a unified
 
 ### Step 1: Read All Sources
 
+Resolve roadmap and plan paths per `agents/protocols/planning-paths.md` before reading (planning/ first, root legacy fallback).
+
 ```
-1. ROADMAP.md → parse features, milestones, status (draft/reviewed/approved)
-2. PLAN.md → parse phases, dependencies, deliverables, acceptance criteria, planVersion
+1. ROADMAP.md (resolved) → parse features, milestones, status (draft/reviewed/approved)
+2. PLAN.md (resolved)    → parse phases, dependencies, deliverables, acceptance criteria, planVersion
 3. .plan-execution/state.toon → wave statuses, task completions, verification results
-4. .plan-history/roadmap.toon → milestone tracking
-5. .plan-history/changelog.md → recent entries
+4. planning/history/roadmap.toon → milestone tracking
+5. planning/history/changelog.md → recent entries
 ```
 
 ### Step 2: Reconcile Plan vs Execution
@@ -159,7 +161,7 @@ Useful before `/loom-plan review` or `/loom-plan execute`.
 
 ## Command: `refine [path]`
 
-Execution-aware refinement with structured analysis and change tracking. Refines a PLAN.md by default. Use `refine --roadmap` to refine a ROADMAP.md instead (delegates to `roadmap-builder-agent` in refinement mode, using the same review findings from `.plan-history/reviews/*-roadmap-review.toon`).
+Execution-aware refinement with structured analysis and change tracking. Refines a PLAN.md by default. Use `refine --roadmap` to refine a ROADMAP.md instead (delegates to `roadmap-builder-agent` in refinement mode, using the same review findings from `planning/history/reviews/*-roadmap-review.toon`).
 
 ### Step 1: Execution State Check
 
@@ -189,7 +191,7 @@ Proceed with refinement? (yes / abort)
 
 Choose analysis source:
 
-1. Check `.plan-history/reviews/` for review findings less than 7 days old
+1. Check `planning/history/reviews/` for review findings less than 7 days old
 2. If recent findings exist: display summary and ask — "Use cached review findings, or re-run analysis?"
 3. If no recent findings or user requests fresh analysis:
    - Spawn 3 agents in parallel (single message, 3 Agent tool calls):
@@ -222,7 +224,7 @@ Phase 1 (in_progress — requires confirmation), Phase 2 (pending — freely edi
 [agentic-workflow-agent]: Phase 3 requires reading 22 files — exceeds context budget
 
 ### Changelog Context
-{recent entries from .plan-history/changelog.md}
+{recent entries from planning/history/changelog.md}
 
 ### Current Plan
 {full plan text}
@@ -265,15 +267,15 @@ Spawn `plan-builder-agent` (general-purpose) with:
 ### Step 6: User Approval
 
 Present the diff. On approval:
-1. Copy current plan to `.plan-history/snapshots/YYYY-MM-DD-plan.md`
+1. Copy current plan to `planning/history/snapshots/YYYY-MM-DD-plan.md`
 2. Write the refined plan to PLAN.md
-3. Append to `.plan-history/changelog.md`:
+3. Append to `planning/history/changelog.md`:
    ```
    ## YYYY-MM-DD — Plan refined
    - Fixed: {list of changes}
    - Source: /loom-roadmap refine {with cached findings | with fresh analysis}
    ```
-4. Update `.plan-history/roadmap.toon` with any new/changed milestones
+4. Update `planning/history/roadmap.toon` with any new/changed milestones
 
 ---
 

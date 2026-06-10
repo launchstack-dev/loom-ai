@@ -149,7 +149,7 @@ Run each discovered command sequentially. For each command:
 ### Path
 
 ```
-.plan-history/quick-tasks/{YYYY-MM-DD}-{slug}.toon
+planning/history/quick-tasks/{YYYY-MM-DD}-{slug}.toon
 ```
 
 ### Slug Generation
@@ -178,8 +178,8 @@ The `taskId` field uses the same date and slug: `{YYYY-MM-DD}-{slug}`.
 If a log file with the same name already exists, append `-2`, `-3`, etc. before the `.toon` extension:
 
 ```
-.plan-history/quick-tasks/2026-04-09-add-error-handling-to-the.toon
-.plan-history/quick-tasks/2026-04-09-add-error-handling-to-the-2.toon
+planning/history/quick-tasks/2026-04-09-add-error-handling-to-the.toon
+planning/history/quick-tasks/2026-04-09-add-error-handling-to-the-2.toon
 ```
 
 ## Flag Parsing Protocol

@@ -73,7 +73,7 @@ Existing projects using the old layout (where `.plan-execution/.gitignore` conta
 `/loom-upgrade` handles this automatically:
 
 1. Detect the old `.plan-execution/.gitignore` (contains `*`)
-2. Run a debrief on any existing artifacts (flush to `.plan-history/` and wiki)
+2. Run a debrief on any existing artifacts (flush to `planning/history/` and wiki)
 3. Delete stale contents of `.plan-execution/` (everything except the new `.gitignore`)
 4. Write the new `.plan-execution/.gitignore` (ignores only `ephemeral/`)
 5. Create the `ephemeral/` subdirectory structure
@@ -326,7 +326,7 @@ By default, the orchestrator creates a git commit after each wave completes veri
 After verification passes (Step 3 for Wave 0, Step 8 for Wave N) and before the human/auto gate:
 
 1. Stage all files created or modified by this wave's agents (from the wave summary's `filesCreated` + `filesModified`).
-2. Also stage `.plan-history/executions/wave-N-summary.toon` if it was written.
+2. Also stage `planning/history/executions/wave-N-summary.toon` if it was written.
 3. Create a commit with a conventional message derived from the wave summary:
 
 ```
@@ -417,12 +417,12 @@ Stage context files are the **structured source of truth** for stage outcomes. `
 
 ---
 
-## Persistence — .plan-history/
+## Persistence — planning/history/
 
-Ephemeral execution artifacts in `.plan-execution/` are NOT committed to git. For cross-session and cross-worktree persistence, orchestrators write key artifacts to `.plan-history/` which IS committed:
+Ephemeral execution artifacts in `.plan-execution/` are NOT committed to git. For cross-session and cross-worktree persistence, orchestrators write key artifacts to `planning/history/` which IS committed:
 
 ```
-.plan-history/
+planning/history/
 ├── reviews/
 │   └── YYYY-MM-DD-review.toon       # /loom-review-plan findings
 ├── decisions/
@@ -433,7 +433,7 @@ Ephemeral execution artifacts in `.plan-execution/` are NOT committed to git. Fo
 └── changelog.md                      # Plan revision history
 ```
 
-Orchestrators write to `.plan-history/` when:
+Orchestrators write to `planning/history/` when:
 - `/loom-review-plan` completes → saves synthesized findings
 - `/loom-execute-plan` completes a wave → saves wave summary
 - Human approves/rejects at a gate → saves decision record
@@ -445,7 +445,7 @@ This directory syncs via git, survives worktree cleanup, and is available in fut
 
 ## Mandatory Debrief Protocol
 
-Every execution — whether it succeeds, fails, stalls, or is interrupted — MUST run a debrief step before `.plan-execution/` artifacts can be cleaned up or a worktree can be destroyed. The debrief ensures that decisions, failures, and convergence history are flushed to persistent storage (wiki + `.plan-history/`) so knowledge is never silently lost.
+Every execution — whether it succeeds, fails, stalls, or is interrupted — MUST run a debrief step before `.plan-execution/` artifacts can be cleaned up or a worktree can be destroyed. The debrief ensures that decisions, failures, and convergence history are flushed to persistent storage (wiki + `planning/history/`) so knowledge is never silently lost.
 
 **The debrief is BLOCKING.** It is not optional, not non-blocking, not best-effort. If the debrief fails, the orchestrator MUST NOT clean up `.plan-execution/` or destroy the worktree. Instead, it warns the user and leaves artifacts in place for manual recovery.
 
@@ -488,16 +488,16 @@ The Stop hook fires on graceful session end, but force-kill, OOM, or power loss 
 
 The orchestrator reads `.plan-execution/` and flushes to persistent storage:
 
-#### 1. To `.plan-history/` (always)
+#### 1. To `planning/history/` (always)
 
 | Source | Destination | Condition |
 |--------|-------------|-----------|
-| `stage-context/*.toon` | `.plan-history/executions/stage-context/` | Always — copy all stage context files |
-| `wave-N-summary.toon` | `.plan-history/executions/wave-N-summary.toon` | Always — copy all wave summaries |
-| `convergence/iterations/` | `.plan-history/executions/convergence/` | If convergence ran |
-| `conflicts/` | `.plan-history/executions/conflicts/` | If conflicts exist |
-| `scope-coverage.toon` | `.plan-history/executions/scope-coverage.toon` | Always |
-| `contracts/manifest.toon` | `.plan-history/executions/contracts-manifest.toon` | If Wave 0 ran |
+| `stage-context/*.toon` | `planning/history/executions/stage-context/` | Always — copy all stage context files |
+| `wave-N-summary.toon` | `planning/history/executions/wave-N-summary.toon` | Always — copy all wave summaries |
+| `convergence/iterations/` | `planning/history/executions/convergence/` | If convergence ran |
+| `conflicts/` | `planning/history/executions/conflicts/` | If conflicts exist |
+| `scope-coverage.toon` | `planning/history/executions/scope-coverage.toon` | Always |
+| `contracts/manifest.toon` | `planning/history/executions/contracts-manifest.toon` | If Wave 0 ran |
 
 #### 2. To wiki (via wiki-maintainer-agent — BLOCKING)
 
@@ -528,7 +528,7 @@ conflictsOpen: {count of unresolved conflicts}
 conflictsResolved: {count flushed to wiki}
 convergenceIterations: {total iterations across all tiers}
 
-planHistoryFiles[N]: {list of files written to .plan-history/}
+planHistoryFiles[N]: {list of files written to planning/history/}
 wikiPagesCreated[N]: {list of wiki pages created or updated}
 
 failureReason: {if trigger is failure/stall — one-line summary}
@@ -544,7 +544,7 @@ failureReason: {if trigger is failure/stall — one-line summary}
 
 ### Debrief Execution Order
 
-1. **Copy tracked artifacts to `.plan-history/`** — file copies, atomic writes, no agent needed
+1. **Copy tracked artifacts to `planning/history/`** — file copies, atomic writes, no agent needed
 2. **Spawn wiki-maintainer-agent** with event `execution-debrief` — **BLOCKING**, wait for completion, **timeout: 120 seconds**. If the agent has not completed after 120s, treat it as a failure (see Failure Handling).
 3. **Secret scan.** Before staging any files, scan all tracked artifacts for potential secrets:
    - Pattern-match against common secret formats: API keys (`sk-`, `ghp_`, `AKIA`), tokens (`Bearer`, `token:`), connection strings, base64-encoded credentials
@@ -553,7 +553,7 @@ failureReason: {if trigger is failure/stall — one-line summary}
 4. **Write `debrief.toon`** — summary of what was captured
 5. **Commit** (unless `--no-auto-commit` is active or secret scan flagged issues):
    - Set `state.toon` status to `committed` (see § State Sentinel)
-   - `git add .plan-history/ .loom/wiki/ .plan-execution/debrief.toon .plan-execution/state.toon`
+   - `git add planning/history/ .loom/wiki/ .plan-execution/debrief.toon .plan-execution/state.toon`
    - **In a worktree:** commit to the worktree's current branch, NOT main. Defer merging to the worktree-merge step or manual merge by the user.
    - **In the main tree:** commit directly:
      ```
@@ -574,7 +574,7 @@ The `--no-auto-commit` flag (already supported by `/loom-plan execute`, `/loom-c
 
 - **Wiki-maintainer-agent fails or times out (>120s):** Retry once. If retry fails, write `.plan-execution/debrief-failed.toon` with the error, warn the user: "Debrief failed — execution artifacts preserved in .plan-execution/ for manual recovery. Run `/loom-wiki ingest --source .plan-execution/` to retry." Do NOT clean up.
 - **Secret scan finds matches:** Block the auto-commit. Warn the user with file paths and matched patterns. Debrief is otherwise complete — artifacts are copied and wiki is updated.
-- **File copy to .plan-history/ fails:** Warn and continue — the tracked files in `.plan-execution/` are still committed to git as a fallback.
+- **File copy to planning/history/ fails:** Warn and continue — the tracked files in `.plan-execution/` are still committed to git as a fallback.
 - **Worktree debrief fails:** Block worktree destruction. Warn: "Cannot destroy worktree — debrief incomplete. Artifacts may be lost."
 
 ---

@@ -17,7 +17,7 @@ Before doing anything, read these protocol files:
 - `~/.claude/agents/protocols/plan.schema.md` — the canonical PLAN.md format spec (v1 and v2)
 - `~/.claude/agents/protocols/spec.schema.md` — v2 spec section formats (API specs, state machines, etc.)
 - `~/.claude/agents/protocols/validation-rules.md` — validation stages and enforcement rules
-- `~/.claude/agents/protocols/execution-conventions.md` — .plan-history/ and .plan-execution/ structure
+- `~/.claude/agents/protocols/execution-conventions.md` — planning/history/ and .plan-execution/ structure
 - `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting and stale detection
 
 ## Model Resolution
@@ -61,7 +61,7 @@ Parse the first positional argument as the subcommand:
   - `validate --deep [path]`: run all validation stages including agent checks
 - `deps [path]`: show dependency graph, critical path, bottleneck analysis
 - `diff`: compare current plan vs last snapshot
-- `history`: show plan revision history from .plan-history/changelog.md
+- `history`: show plan revision history from planning/history/changelog.md
 - `milestone`: milestone management
   - `milestone add "name"`: add a milestone
   - `milestone complete "name"`: mark milestone complete
@@ -99,10 +99,10 @@ When a pattern flag is present:
 
 Before any subcommand, gather available state:
 
-1. **Find the roadmap file**: check for `ROADMAP.md`, `roadmap.md`, or user-specified path. Note if it exists and its status (draft/reviewed/approved).
-2. **Find the plan file**: check for `PLAN.md`, `plan.md`, or user-specified path. Note if it exists and its planVersion (1 or 2).
+1. **Find the roadmap file**: follow `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer, not the source. Note status (draft/reviewed/approved).
+2. **Find the plan file**: follow `agents/protocols/planning-paths.md` — check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then user-specified path. Note planVersion (1 or 2).
 3. **Check execution state**: read `.plan-execution/state.toon` if it exists → extract wave statuses, task completions.
-4. **Check plan history**: read `.plan-history/roadmap.toon`, `.plan-history/changelog.md` if they exist.
+4. **Check plan history**: read `planning/history/roadmap.toon`, `planning/history/changelog.md` if they exist.
 5. **Check project config**: read `.claude/orchestration.toml` if it exists for custom agents and model profile.
 6. **Check for legacy CONTEXT.md**: if it exists and no ROADMAP.md exists, note that decisions should be migrated.
 
