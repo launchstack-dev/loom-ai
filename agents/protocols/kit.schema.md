@@ -45,9 +45,71 @@ suggestedConfig: kits/data-engineering/orchestration-fragment.toml
 | description | yes | string, max 200 chars | Human-readable summary of what the kit provides. |
 | version | yes | semver | Kit version following semantic versioning. |
 | minLoomVersion | no | integer | Minimum `catalog_version` in library.yaml required to use this kit. |
-| includes | yes | string[] | Library item names (agents, commands) bundled in this kit. |
+| includes | yes | (string \| TypedInclude)[] | Library items bundled in this kit. Each entry is either a typed object `{ type, name }` (preferred, v4+) or a bare-string name (deprecated, removed in v5). See § Typed Includes (v4+). |
 | command | no | string | Kit command file (relative to commands directory). |
 | suggestedConfig | no | string | Path to an orchestration.toml fragment that projects can merge in. |
+
+## Typed Includes (v4+)
+
+The `includes:` array accepts two forms. The **typed form** is the v4-preferred shape; the **bare-name form** remains supported for backward compatibility but is deprecated and will be removed in catalog v5.
+
+### Form 1 — Typed object (preferred, v4+)
+
+Each include entry is `{ type, name }` where `type ∈ { agent, protocol, skill, prompt, infrastructure }` and `name` is the resource identifier as registered under the matching `library.<type>s` section in `library.yaml`.
+
+```yaml
+- name: python-conventions
+  description: Python ecosystem conventions
+  version: 0.1.0
+  minLoomVersion: 4
+  includes:
+    - type: skill
+      name: python-conventions
+```
+
+TOON equivalent:
+
+```toon
+name: python-conventions
+description: Python ecosystem conventions
+version: 0.1.0
+minLoomVersion: 4
+includes[1]{type,name}:
+  skill,python-conventions
+```
+
+The installer dispatches the entry to the correct target path based on `type`:
+
+| `type` | Installs to |
+|---|---|
+| `agent` | `.claude/agents/<name>.md` |
+| `prompt` | `.claude/commands/<name>.md` |
+| `protocol` | `agents/protocols/<name>.md` (or `<name>.schema.md` / `<name>.toon`) |
+| `skill` | `~/.claude/skills/<name>/SKILL.md` |
+| `infrastructure` | `hooks/` or `scripts/` per the source path |
+
+A `skill:` typed include resolves through `library.skills[]`; the installer never falls back to other resource types when the type is explicit.
+
+### Form 2 — Bare-name string (legacy, deprecated)
+
+Bare strings are still accepted for v3-era kits (e.g. the original `data-engineering` kit):
+
+```yaml
+includes:
+  - data-schema-reviewer
+  - python-conventions
+```
+
+The installer resolves bare names using the priority order `agents > protocols > skills > prompts` (locked in `hooks/lib/skill-router.ts` as `BARE_NAME_PRIORITY`). Each bare-name include emits a `DEPRECATION_WARNING` to stderr at install time; resolution still succeeds.
+
+The colon-prefixed form (`skill:python-conventions`, `agent:contracts-agent`) is treated as already-typed and does not emit a deprecation warning — the installer strips the prefix and routes by `type`.
+
+### Removal Timeline
+
+- **v4 (current):** both forms accepted; bare-name form emits `DEPRECATION_WARNING` per include.
+- **v5 (planned):** bare-name form removed. Kits MUST use typed `{ type, name }` objects (or the legacy colon-prefixed string). Catalogs containing bare-name includes will fail validation.
+
+Kits authored today should use the typed form to avoid a forced rewrite at v5.
 
 ## Insertion Points
 
