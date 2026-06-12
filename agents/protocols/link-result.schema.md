@@ -147,13 +147,13 @@ Exactly **one** of `fixHints` / `planningHints` / `outcomeHints` is populated ba
 
 Each link that computes a gate decision defines its own `gateInputs` shape. The fields above are the **verify** link's contract. Future links extend the same field with their relevant inputs:
 
-| Link | `gateInputs` purpose |
-|------|----------------------|
-| `verify` | Quality gate inputs (see schema above). |
-| `fix` | Before/after diff: `criticalBefore`, `criticalAfter`, `testsFailedBefore`, `testsFailedAfter`, `progressDetected`, `stuckDetected`. |
-| `execute` | Wave-tier gate inputs: `wavesCompleted`, `wavesFailed`, `unitGatesPassed`, `integrationGatesPassed`, `e2eGatesPassed`, `contractViolations`. |
-| `converge` | Convergence outcome: `status`, `iterations`, `passing`, `total`, `frozen`, `regression`. |
-| `planning` | Validation outcomes: `roadmapValid`, `planValid`, `interpretationConflicts`, `blockingConflicts`. |
+| Link | `gateInputs` purpose | Status |
+|------|----------------------|--------|
+| `verify` | Quality gate inputs (see schema above). | Implemented (Phase 1). |
+| `fix` | Before/after diff: `criticalBefore`, `criticalAfter`, `warningBefore`, `warningAfter`, `testsFailedBefore`, `testsFailedAfter`, `typecheckBefore`, `typecheckAfter`, `progressDetected`, `stuckDetected`, `regressionDetected`, `diagnoseLogPresent`, `fixerSelfVerified`, `fixCycleCount`, `fixMode`, `postFixHint`. | Implemented (Phase 2). |
+| `execute` | Wave + tier gate inputs: `executorStatus`, `wavesCompleted`, `wavesTotal`, `unitGatesPassed`, `unitGatesTotal`, `integrationGatesPassed`, `integrationGatesTotal`, `e2eGatesPassed`, `e2eGatesTotal`, `qaCriticalFindings`, `contractViolations`, `filesChangedCount`, `agentsSpawnedByExecutor`, `wikiUpdateStatus`, `waveDeadlockDetected`. | Implemented (Phase 3). |
+| `converge` | Convergence outcome: `status`, `iterations`, `passing`, `total`, `frozen`, `regression`. | Reserved (Phase 4). |
+| `planning` | Validation outcomes: `roadmapValid`, `planValid`, `interpretationConflicts`, `blockingConflicts`. | Reserved (Phase 5). |
 
 When a new link is introduced, its `commands/loom-auto/links/{link}.md` spec MUST document its `gateInputs` shape. This file is the index of canonical shapes.
 

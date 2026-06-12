@@ -93,7 +93,7 @@ Values `currentStage` may take. The trampoline writes the `link-complete-{name}`
 | `execute` | Execution link in progress. |
 | `converge` | Convergence link in progress. |
 | `verify` | Verify link in progress. |
-| `link-complete-{name}` | Trampoline has read the link's `link-result.toon` and is about to route on `nextLink`. Common forms: `link-complete-verify`, `link-complete-fix`. |
+| `link-complete-{name}` | Trampoline has read the link's `link-result.toon` and is about to route on `nextLink`. Common forms: `link-complete-execute`, `link-complete-verify`, `link-complete-fix`. |
 | `fix-code` | Fix link in progress. |
 | `complete` | Pipeline finished successfully. Set `nextLink: done`. |
 | `escalated` | Circuit breaker tripped or ESCALATE decision. Set `nextLink: done`. |

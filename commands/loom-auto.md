@@ -119,11 +119,11 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    6. Plan Review         -- loom-plan review
    7. Plan Integrate      -- loom-roadmap review-integrate
    8. Plan Validate       -- validation stages 1-4 (+ Stage 7 for v2)
-   9. Execution           -- loom-plan execute --auto (drift detection per wave)
-      9a. Unit gate       -- after each wave (block-wave, all-pass)
-      9b. QA review       -- after each wave (advisory, zero-critical)
-      9c. Integration     -- after each feature boundary (block-feature, all-pass)
-      9d. E2E             -- after each milestone boundary (block-milestone, zero-blocking)
+   9. Execute Link        -- single dispatched link runs loom-plan execute --auto + deferred tier gates + contract drift scan + wiki update, writes stage-context/execute.toon and link-result.toon
+      9a. Unit gate       -- after each wave (block-wave, all-pass) — handled by executor internally
+      9b. QA review       -- after each wave (advisory, zero-critical) — handled by executor
+      9c. Integration     -- after each feature boundary (block-feature, all-pass) — link runs deferred gates not covered by executor
+      9d. E2E             -- after each milestone boundary (block-milestone, zero-blocking) — link runs deferred gates not covered by executor
    10. Convergence        -- loom converge (if --converge-target, --converge-config, or --converge-criteria)
    10b. Criteria Conv.    -- loom converge --criteria --auto (if --converge-criteria, per plan phase)
    11-13. Verify Link     -- single dispatched link runs test + code review + quality gate, writes link-result.toon
@@ -504,110 +504,78 @@ Record agents spawned. Save the conflict report to `.plan-execution/conflicts/in
 
 Check circuit breakers before proceeding.
 
-#### Step 3: Execution (Phase B) -- with 4-Tier Convergence Gates
+#### Step 3: Execute Link (plan execution + tier gates + wiki update)
 
-Update `pipeline-state.toon`: `currentStage: execute`.
+**Architecture note:** Step 3 (execution + 4-tier gates) and Step 3.25 (wiki update) are bundled into a single dispatched **link** (`execute`). The orchestrator delegates to a fresh agent that wraps `/loom-plan execute --auto`, runs any deferred integration/e2e tier gates, performs the post-execution contract drift scan, updates the wiki (non-blocking), aggregates `stage-context/execute.toon`, and writes a `link-result.toon` envelope with the next-link decision. See `commands/loom-auto/links/execute.md` for the link contract.
 
-Spawn a general-purpose agent:
+##### 3a: Dispatch the execute link
+
+Increment `trampolineIteration`. Update `pipeline-state.toon`: `currentStage: execute`.
+
+Spawn one general-purpose Agent. Model: resolved via the standard priority. The link itself is treated as `tier: execution` for profile lookup (its sub-agents, including the executor and tier-gate runners, are resolved independently per their own frontmatter or the profile).
+
+Prompt:
 ```
-"Read your instructions from ~/.claude/commands/loom-execute-plan.md first.
- Execute {planFile} with --auto flag.
- {if noAutoCommit: '--no-auto-commit'}
- {if scope-contract.toon exists: 'Read scope-contract.toon from the project root. Pass relevant contract decisions to each implementer agent as prompt context.'}
- Report all AgentResults. Track agents spawned.
- All implementer agent AgentResults MUST include verificationStatus (verified, unverified, or skipped) per behavioral-guidelines.md section 7."
+"Read your instructions from ~/.claude/commands/loom-auto/links/execute.md first.
+ You are the EXECUTE link of the /loom-auto trampoline. Read pipeline-state.toon
+ and the inputs listed in your spec.
+
+ executeHints (forwarded from the trampoline):
+   resume: {true if pipeline-state.toon.currentStage was 'execute' on entry, else false}
+   waveStart: {optional — leave blank to start from state.toon's wave cursor}
+   noAutoCommit: {pipeline-state.toon.noAutoCommit}
+
+ Run /loom-plan execute --auto, run any deferred tier gates (integration at
+ feature boundaries, e2e at milestone boundaries), update the wiki if present,
+ aggregate stage-context/execute.toon from wave summaries, and write
+ .plan-execution/link-result.toon with the gate's nextLink decision.
+
+ Your AgentResult MUST include verificationStatus and a one-line summary.
+ The trampoline reads link-result.toon from disk — keep your return body short."
 ```
 
-Record agents spawned (add to `agentsSpawned`).
+Record the AgentResult; the link reports its own `agentsSpawned` total in `link-result.toon` (sum of executor + tier-gate agents + wiki agent). The trampoline does NOT separately count the executor's sub-agents — the link's accounting is authoritative.
 
-**Contract drift detection (if `scope-contract.toon` exists):** Before each wave, read `scope-contract.toon` and compare execution trajectory against contract decisions. If drift is detected (e.g., an agent used ORM when contract specified raw SQL, or an agent implemented a feature listed in `nonGoals`), log it in the wave summary as a **contract violation warning**. Do not halt execution for warnings -- record them for the review stage. Format: `contractViolation: {decisionId} -- expected {contracted}, observed {actual}`.
+##### 3b: Read link-result.toon
 
-##### 4-Tier Convergence Gates (per convergence-tier.schema.md)
+After the link returns, read `.plan-execution/link-result.toon`. Validate:
+- `link == "execute"` — sanity check
+- `schemaVersion == 1`
+- `status` is one of `complete`, `failed`, `escalated`
+- `nextLink` is one of `planning`, `converge`, `verify`, `done`
+- `trampolineIteration` matches the dispatch
 
-After execution completes (or interleaved with wave execution if the executor supports it), enforce the 4-tier convergence gate hierarchy. Read `criteria-plan.toon` (generated in Step 2) to determine which criteria map to which tiers and boundaries.
+On validation failure: write to `failureLog`, set `currentStage: escalated`, go to Step 8.
 
-**Tier 4 -- Unit tests (after each wave, gatingBehavior: block-wave):**
-
-After each wave completes, run the unit test gate before proceeding to the next wave:
-
-1. Run the project test runner (vitest by default, or the runner specified in project config):
-   ```
-   "Run unit tests for files changed in wave {waveIndex}.
-    passCondition: all-pass -- every unit test must pass.
-    Report results as an AgentResult with verificationStatus."
-   ```
-2. If any unit test fails: **block the next wave**. Record the failure in the wave summary. The executor must fix failing tests before advancing. If fix fails after 1 retry, record in failureLog and escalate to quality gate.
-
-**Tier 2 -- QA Review (after each wave, gatingBehavior: advisory):**
-
-After each wave completes (and after unit tests pass), run a QA review:
-
-1. Spawn qa-review-agent (general-purpose):
-   ```
-   "Review wave {waveIndex} deliverables against acceptance criteria from criteria-plan.toon.
-    passCondition: zero-critical -- critical findings block, warnings are advisory.
-    Report results as an AgentResult with verificationStatus."
-   ```
-2. If critical findings exist: log as blocking issue in wave summary. Advisory findings are recorded but do not block.
-
-**Tier 3 -- Integration tests (after each feature boundary, gatingBehavior: block-feature):**
-
-When a feature boundary is crossed (all phases for a feature are complete), run integration tests:
-
-1. Spawn integration-test-agent (general-purpose):
-   ```
-   "Run integration tests for feature '{featureName}'.
-    Verify cross-phase wiring within the feature.
-    passCondition: all-pass -- all integration tests must pass.
-    Report results as an AgentResult with verificationStatus."
-   ```
-2. If any integration test fails: **block the feature** from being marked complete. Record in failureLog. The executor must resolve before proceeding to the next feature.
-
-**Tier 1 -- E2E tests (after each milestone boundary, gatingBehavior: block-milestone):**
-
-When a milestone boundary is crossed (all features in a milestone are complete), run e2e tests:
-
-1. Spawn e2e-runner-agent (general-purpose):
-   ```
-   "Run end-to-end tests for milestone '{milestoneName}'.
-    Execute Playwright tests derived from E2EStory definitions in criteria-plan.toon.
-    passCondition: zero-blocking -- zero blocking failures required.
-    Report results as an AgentResult with verificationStatus."
-   ```
-2. If any blocking e2e test fails: **block the milestone** from being marked complete. Record in failureLog. The executor must resolve before proceeding.
-
-##### Execution Completion
-
-On completion, read `.plan-execution/state.toon`:
-- If status == `completed`: proceed to Step 4.
-- If status == `failed` or `paused`:
-  - Record failure context in `pipeline-state.toon` failureLog.
-  - Increment `outerIteration`.
-  - Check circuit breakers. If clear, go to Step 2 (Phase A with `--refine`).
-
-Log stage result in `stageHistory`.
-
-**Write stage context.** Write `.plan-execution/stage-context/execute.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from execution wave summaries: `stage: execute`, `wave` (last completed wave), files changed, exports added, findings, summary, key decisions, convergence tier results (unit/integration/e2e pass rates per boundary), and next-stage hints. Use atomic write.
-
-**If `--stop-after execute`:** display execution summary and stop.
-
-Check circuit breakers before proceeding.
-
-#### Step 3.25: Wiki Update (non-blocking)
-
-If `.loom/wiki/` exists, spawn wiki-maintainer-agent to update the wiki with execution results (trigger events defined in `wiki-maintainer-triggers.md`):
+##### 3c: Print between-link readout
 
 ```
-subagent_type: "general-purpose"
+─── EXECUTE (outerIter {N}, trampoline iter {M}) ─────────
+Executor:    {status} — {wavesCompleted}/{wavesTotal} waves
+Files:       {filesChangedCount} changed
+Gates:       unit {N}/{N}  integration {N}/{N}  e2e {N}/{N}
+QA:          {qaCriticalFindings} critical findings
+Contract:    {contractViolations} drift entries
+Wiki:        {wikiUpdateStatus}
+Decision:    {nextLinkReason in upper case}
+Next link:   → {nextLink}
+──────────────────────────────────────────────────────────
 ```
-Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md` first." Then provide:
-- Event type: `wave-complete`
-- Event data: all wave summaries from `.plan-execution/`
-- Wiki path: `.loom/wiki`
 
-**This step is non-blocking.** If wiki-maintainer-agent fails: (1) Record the failure in `.plan-execution/pipeline-state.toon` under `wikiUpdateStatus: failed` with the error summary, (2) Increment a `wikiConsecutiveFailures` counter in pipeline-state.toon, (3) If `wikiConsecutiveFailures >= 2`, add a visible note to the execution summary: "Wiki updates have failed for {N} consecutive waves. Run `/loom-wiki lint --wiki` to diagnose." (4) Continue to the next step. Wiki maintenance never gates the pipeline.
+Values pulled from `link-result.toon.gateInputs`. Append to `.plan-execution/trampoline-events.log`.
 
-Record agents spawned. Do NOT count wiki maintenance against circuit breaker thresholds.
+##### 3d: Route on nextLink
+
+Re-enter the trampoline routing table (Step 4-6d) with the execute link's `nextLink`. Standard arms apply:
+
+- `nextLink: converge` → run inline Step 3.5 (convergence), then dispatch verify
+- `nextLink: verify` → dispatch verify link (Step 4-6a)
+- `nextLink: planning` → increment `outerIteration` if `planningHints.incrementOuterIteration == true`, go to Step 2 (`--refine`)
+- `nextLink: done` (only with `outcome: escalated`) → Step 8 (escalation)
+
+The execute link NEVER routes to `nextLink: fix` directly — fixing only makes sense after verify identifies findings.
+
+**If `--stop-after execute`:** print the readout, then stop. Do not dispatch the next link.
 
 #### Step 3.5: Convergence (Phase B2) -- conditional
 
@@ -1062,7 +1030,8 @@ When `--resume` is passed:
    | `plan-review` | Step 2, sub-step 2b |
    | `plan-integrate` | Step 2, sub-step 2c |
    | `plan-validate` | Step 2, sub-step 2d |
-   | `execute` | Step 3 (pass `--resume` to loom-plan execute) |
+   | `execute` | Step 3 (execute link). If `link-result.toon` for this `trampolineIteration` exists with `link == execute`, skip the dispatch and route on its `nextLink` — the link is idempotent on resume per its own spec. Otherwise re-dispatch; the link's Step 0 detects existing `state.toon` and passes `--resume` to the executor sub-agent. |
+   | `link-complete-execute` | Step 3, sub-step 3d (route on the existing `link-result.toon` without re-dispatching). |
    | `converge` | Step 3.5 (pass `--resume` to loom converge) |
    | `verify` | Steps 4-6 (verify link). If `link-result.toon` already exists for the current `trampolineIteration`, skip the dispatch and route on its `nextLink` — the link is idempotent on resume per its own spec. |
    | `link-complete-verify` | Steps 4-6, sub-step 4-6d (route on the existing `link-result.toon` without re-dispatching). |
