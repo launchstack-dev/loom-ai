@@ -200,20 +200,47 @@ Update now? (yes / no / select individually)
 
 ## Command: `add <source>`
 
-1. Determine source type:
+All classification logic for this command lives in `hooks/lib/library-add-heuristic.ts`. The markdown below is the wiring + UX layer only — it MUST NOT duplicate any of the heuristic's decision rules. The heuristic's exports consumed here are: `classifyAddSource(filePath, content) -> {type, reason}`, `formatAmbiguousPrompt(filePath) -> string`, and `formatDeprecationWarning(name, resolvedType) -> string` (the latter is consumed by the installer's bare-name resolver — see Kit Operations / Error Handling — and is documented here so the installer and add-flow share one wording surface).
+
+1. Determine source location:
    - Starts with `/` or `~` -> local path
-   - Starts with `https://github.com` -> GitHub URL
+   - Starts with `https://github.com` -> GitHub URL (resolve via repo config)
    - Otherwise -> ask user to clarify
-2. Read the file content (local Read or GitHub fetch)
-3. Infer item type from content:
-   - Contains `$ARGUMENTS` with `## Instructions` -> prompt (command)
-   - Contains agent-style instructions (role/task language, file ownership) -> agent
-   - Otherwise -> skill
-4. Derive a suggested name from the filename (strip extension and path)
-4b. Validate the name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. If not, sanitize by replacing invalid characters with `-` and confirm with user.
-5. Ask user to confirm name and type
-6. Append the new entry to the appropriate section in library.yaml
-7. Ask if user wants to install immediately via `use`
+2. Read the file content (local `Read` tool or GitHub fetch). The heuristic is pure-function: the caller (this command) is responsible for the I/O. Pass both the resolved `filePath` and the in-memory `content` into the heuristic.
+3. Classify the source by calling `classifyAddSource(filePath, content)` from `hooks/lib/library-add-heuristic.ts`. The function returns `{type, reason}` where `type` is one of `skill | protocol | agent | prompt | ambiguous`.
+
+   The heuristic's signal cascade (documented here for reviewer cross-reference — the canonical implementation is in `library-add-heuristic.ts`, do NOT re-derive these rules in the markdown):
+   - YAML frontmatter `triggers:` with at least one item -> `skill` (N-07: triggers-first, NOT filename-first)
+   - `AgentResult` or `state.toon`-style schema markers (e.g. `filesCreated[N]:`) -> `protocol`
+   - `$ARGUMENTS` slash-command marker -> `prompt`
+   - Agent-style markers (`# Agent Instructions`, `You are an agent`) -> `agent`
+   - Otherwise -> `ambiguous`
+
+   Filename-only hints are NOT used. A file named `SKILL.md` WITHOUT a populated `triggers:` key is treated as `ambiguous` and falls through to step 4 (bt-4-38; CG-04). An empty `triggers: []` array is also `ambiguous` (bt-4-43). This is the explicit N-07 contract.
+
+4. If `type === 'ambiguous'`:
+   a. Call `formatAmbiguousPrompt(filePath)` from `hooks/lib/library-add-heuristic.ts` to obtain the prompt text. The returned string includes the lines `[1] skill`, `[2] protocol`, and `[q] abort`, plus the canonical one-sentence descriptions:
+      - `[1] skill` — "activates automatically on matching file patterns via Claude Code (SKILL.md format)"
+      - `[2] protocol` — "inter-agent message schema used by Loom orchestration"
+      - `[q] abort`
+   b. Display the returned prompt verbatim to the user. Do NOT reformat or rewrap — Phase 4 tests pin the exact line shapes (bt-4-45..47).
+   c. Read the user's selection. On `1` -> proceed with `type = skill`. On `2` -> proceed with `type = protocol`. On `q` (or any non-`1`/`2`) -> abort the add with a one-line notice; make no changes to `library.yaml`.
+
+5. Derive a suggested name from the filename (strip directory and extension). Validate the name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. If not, sanitize by replacing invalid characters with `-` and confirm with user.
+
+6. Confirm the final `name` and `type` with the user. Display `reason` from the `ClassificationResult` as one-line context (e.g. "frontmatter `triggers:` is present and non-empty"). The user MAY override `type`; if they choose a type that the heuristic did not return, log a one-line notice but proceed.
+
+7. Append the new entry to the appropriate section in `skills/library.yaml` (`library.skills:`, `library.protocols:`, `library.agents:`, or `library.prompts:`) per the confirmed `type`. Use typed-include form going forward — do NOT recommend bare-name includes in newly authored kits. See Kit Operations § Includes resolution for the bare-name deprecation path.
+
+8. Ask if the user wants to install immediately via `/loom-library use <name>`.
+
+### Deprecation-warning hook (cross-reference)
+
+When `/loom-library use <bare-name>` (or a kit's bare-name `includes:` entry) resolves a name via cross-section fallback, the installer calls `formatDeprecationWarning(name, resolvedType)` from `hooks/lib/library-add-heuristic.ts` to obtain the user-facing message. The wording follows the N-24 template — it references the bare name, the resolved type, the recommended typed form (e.g. `skill:python-conventions`), and explicitly states that bare-name support is removed in library catalog v5. Authors of new `library.yaml` entries SHOULD prefer the typed form (`{type: skill, name: ...}` or `skill:...`) at insert time (step 7 above) so newly added entries never trigger the deprecation surface.
+
+### Logic-location guarantee
+
+The classification rules above (triggers-first, AgentResult markers, $ARGUMENTS, agent-style markers, ambiguous fallback), the ambiguous-prompt copy, and the deprecation-warning template all live in `hooks/lib/library-add-heuristic.ts`. The markdown only wires the function calls and renders their string outputs to the user. If a future change to the rules is required, edit the .ts module and update the Phase 4 unit tests in `test/library-add-heuristic.test.ts` — never modify the rule text in this file.
 
 ## Command: `remove <name>`
 
