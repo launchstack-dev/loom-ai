@@ -1,0 +1,29 @@
+schemaVersion: 1
+wave: 6
+runId: kit-native-skills-20260612-001
+status: success
+gateMode: auto
+phases[1]: 10
+startedAt: 2026-06-13T00:22:00Z
+completedAt: 2026-06-13T00:23:00Z
+durationMs: 60000
+
+agentResults[1]{taskId,agent,status,durationMs}:
+  wave6-phase10-cross-ref,orchestrator-direct-edit,success,60000
+
+filesCreated[2]: .plan-execution/stage-context/phase-10.toon, .plan-execution/stage-context/wave-6-gate.toon
+filesModified[1]: commands/loom-agent.md
+
+crossBoundaryRequests:
+  filed: 0
+  resolved: 0
+
+verification:
+  status: pass
+  waveGateStatus: passed
+  acsAll: 5
+
+nextWave:
+  number: 7
+  phases[1]: 11
+  description: "CLAUDE.md ### Authoring Resources decision tree (M-03 terminal — N-20 two-column structure required)"
