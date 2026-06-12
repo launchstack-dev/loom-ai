@@ -126,10 +126,8 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
       9d. E2E             -- after each milestone boundary (block-milestone, zero-blocking)
    10. Convergence        -- loom converge (if --converge-target, --converge-config, or --converge-criteria)
    10b. Criteria Conv.    -- loom converge --criteria --auto (if --converge-criteria, per plan phase)
-   11. Test               -- loom-plan test --run --parallel --auto
-   12. Code Review        -- loom-code review --branch
-   13. Quality Gate       -- automated decision matrix
-   14. Fix Cycle          -- loom-code fix --auto (diagnose-before-fix, up to 2 cycles)
+   11-13. Verify Link     -- single dispatched link runs test + code review + quality gate, writes link-result.toon
+   14. Fix Link           -- single dispatched link runs fixer (diagnose-before-fix) + quick review + typecheck/tests + stuck detection, then re-dispatch verify (or converge, or planning)
 
    Pre-flight: {skipPreflight ? 'skipped' : lightPreflight ? 'light' : 'full'}
    Planning: dual-track (plan-builder + criteria-planner + interpretation-reviewer)
@@ -779,157 +777,160 @@ Run criteria convergence as an auto-mode `/loom-converge --criteria`:
 
 Check circuit breakers before proceeding.
 
-#### Step 4: Test (Phase C)
+#### Steps 4-6: Verify Link (test + code review + quality gate)
 
-Update `pipeline-state.toon`: `currentStage: test`.
+**Architecture note:** Steps 4 (Test), 5 (Code Review), and 6 (Quality Gate) are bundled into a single dispatched **link** (`verify`). The orchestrator delegates to a fresh agent that handles test, review, and gate calculation, then returns a single envelope on disk with the next-link decision. This keeps the orchestrator's context bounded as the pipeline iterates — see `commands/loom-auto/links/verify.md` for the link contract.
 
-Spawn a general-purpose agent:
+##### 4-6a: Dispatch the verify link
+
+Update `pipeline-state.toon`: `currentStage: verify`. Increment `trampolineIteration` if the field exists (introduced as part of the chained-link refactor; default 0 if missing).
+
+Spawn one general-purpose Agent. Model: resolved via the standard priority (orchestration.toml profile → frontmatter → inherit). The link itself is treated as `tier: verification` for profile lookup.
+
+Prompt:
 ```
-"Read your instructions from ~/.claude/commands/loom-test-plan.md first.
- Run tests with --run --parallel --auto flags.
- Report test results: passed count, failed count, pass rate.
- Your AgentResult MUST include verificationStatus."
-```
+"Read your instructions from ~/.claude/commands/loom-auto/links/verify.md first.
+ You are the VERIFY link of the /loom-auto trampoline. Read pipeline-state.toon
+ and the stage-context files it references — do NOT read PLAN.md, ROADMAP.md,
+ or rolling-context.md.
 
-Record agents spawned. Log stage in `stageHistory`.
+ Run test (Step 1), code review (Step 2), gather gate inputs (Step 3), apply
+ the decision matrix (Step 4), and write .plan-execution/link-result.toon with
+ the gate's nextLink decision.
 
-**Write stage context.** Write `.plan-execution/stage-context/test.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from test results: `stage: test`, files changed (test files created), findings remaining (failed test count), summary of test pass rate, key decisions (test framework choices), and next-stage hints (failing test patterns for review). Use atomic write.
+ {if --stop-after test or review: pass through as a hint in the link prompt}
 
-**If `--stop-after test`:** display test results and stop.
-
-#### Step 5: Code Review
-
-Update `pipeline-state.toon`: `currentStage: review-code`.
-
-Spawn a general-purpose agent:
-```
-"Read your instructions from ~/.claude/commands/loom-review-code.md first.
- Review the current branch. Write findings to .plan-execution/review-report.md.
- Your AgentResult MUST include verificationStatus."
+ Your AgentResult MUST include verificationStatus and a one-line summary.
+ The trampoline reads link-result.toon from disk — keep your return body short."
 ```
 
-Record agents spawned. Log stage in `stageHistory`.
+Record agents spawned (count whatever the link reports in `link-result.toon.agentsSpawned`, typically 2). Do NOT increment `agentsSpawned` based on your own observation of sub-agents — the link is responsible for its own accounting and reports the total.
 
-**Write stage context.** Write `.plan-execution/stage-context/review.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from review-report.md: `stage: review`, findings remaining (critical + warning count), summary of review outcome, key decisions (flagged blocking issues), and next-stage hints (priority fixes for fix cycle). Use atomic write.
+**Optional sub-stop handling.** If `--stop-after test` or `--stop-after review` is set, pass it through in the link prompt. The link respects these by stopping after the relevant step and writing `link-result.toon` with `status: stopped-early` and `nextLink: done`. The trampoline still reads the envelope and prints the stopped-early summary.
 
-**If `--stop-after review`:** display review summary and stop.
+##### 4-6b: Read link-result.toon
 
-Proceed to the Pipeline Quality Gate.
+After the link agent returns, read `.plan-execution/link-result.toon`. This is the source of truth — the agent's return text is just an acknowledgment.
 
-#### Step 6: Pipeline Quality Gate
+Validate the envelope:
+- `link == "verify"` — sanity check
+- `schemaVersion == 1` — schema check
+- `status` is one of `complete`, `failed`, `escalated`, `stopped-early`
+- `nextLink` is one of `done`, `fix`, `planning`
 
-Parse the outputs from Steps 3.5, 4, and 5:
+If validation fails, treat it as a corrupted link: write to `failureLog`, set `currentStage: escalated`, go to Step 8 (Escalation).
+
+##### 4-6c: Print between-link readout
+
+Print a compact summary to the terminal so the user sees the gate decision without scrolling tool results:
 
 ```
-criticalCount    = count of findings where severity == "critical" in review-report.md
-warningCount     = count of findings where severity == "warning" in review-report.md
-testsPassed      = passed test count from Step 4
-testsFailed      = failed test count from Step 4
-testPassRate     = testsPassed / (testsPassed + testsFailed)
-typecheckPass    = run project typecheck, read exit code (true if 0)
-convergeStatus   = status from convergence-summary.toon (or "converged" if convergence disabled)
-convergeMode     = convergenceMode from convergence-summary.toon (or "target")
-convergePassing  = if convergeMode == "criteria": criteriaPassing, else: targetsPassing (from convergence-summary.toon, or 0)
-convergeTotal    = if convergeMode == "criteria": criteriaTotal, else: targetsTotal (from convergence-summary.toon, or 0)
-convergeFrozen   = if convergeMode == "criteria": criteriaFrozen, else: 0 (from convergence-summary.toon)
-gateFailCount    = count of kit agent AgentResults where gate == "fail" AND failAction == "halt"
-gateWarnCount    = count of kit agent AgentResults where gate == "warn" OR (gate == "fail" AND failAction == "warn")
-unitGatePass     = all unit test gates passed during execution (from tier 4 results in stage context)
-integrationGatePass = all integration test gates passed during execution (from tier 3 results in stage context)
-e2eGatePass      = all e2e test gates passed during execution (from tier 1 results in stage context)
-unverifiedCount  = count of agent AgentResults where verificationStatus == "unverified"
-missingDiagnoseCount = count of fixer-agent AgentResults where diagnoseLog is empty or missing
+─── VERIFY (outerIter {N}, trampoline iter {M}) ──────────
+Tests:       {testsPassed} passed / {testsFailed} failed   typecheck: {PASS|FAIL}
+Review:      {criticalCount} critical / {warningCount} warning
+Convergence: {convergeStatus} ({convergePassing}/{convergeTotal})
+Gate tiers:  unit:{u} integration:{i} e2e:{e}
+Decision:    {nextLinkReason in upper case}
+Next link:   → {nextLink}{ extra hint if any}
+───────────────────────────────────────────────────────────
 ```
 
-Apply the decision matrix:
+All values come from `link-result.toon.gateInputs` and `link-result.toon.nextLinkReason`. The readout is mandatory — it is the user's only visibility into the gate when the orchestrator is otherwise quiet between Agent dispatches.
 
-| Condition | Action |
-|-----------|--------|
-| `criticalCount == 0` AND `testPassRate == 100%` AND `typecheckPass == true` AND `convergeStatus == "converged"` AND `unitGatePass` AND `integrationGatePass` AND `e2eGatePass` | **PROCEED** (done). If `unverifiedCount > 0`: log WARNING with count of unverified agent results. If `missingDiagnoseCount > 0`: log WARNING with count of fixer-agents missing diagnoseLog. |
-| `convergeStatus` is `stalled` or `regression` or `budget_exhausted` or `max_iterations` | **FIX-AND-RECONVERGE** (if fixCycleCount < 2) else **REVISE-PLAN** |
-| `criticalCount <= 3` AND `testPassRate >= 80%` AND `fixCycleCount < 2` | **FIX-AND-RECHECK** |
-| `criticalCount > 3` OR `testPassRate < 80%` OR systemic typecheck failures | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
-| `fixCycleCount >= 2` (already tried fixing twice) | **REVISE-PLAN** (if iterations remain) else **ESCALATE** |
-| `outerIteration > 1` AND same structural failure pattern across iterations | **REVISE-ROADMAP** (if iterations remain) else **ESCALATE** |
-| `gateFailCount > 0` AND any `failAction == "halt"` | **ESCALATE** — kit gate blocked the pipeline. Display gate agent name, insertion point, gateReason. |
-| `gateWarnCount > 0` AND all other conditions pass | **PROCEED** with warnings logged — gate warnings do not block. |
+Append the same line-by-line summary (plain text) to `.plan-execution/trampoline-events.log` for post-mortem inspection. If the file does not exist, create it; if it does, append. Atomic writes are not required for this log file — it is purely informational.
 
-**On PROCEED:** go to Step 8 (Completion).
+##### 4-6d: Route on nextLink
 
-**On FIX-AND-RECONVERGE:** go to Step 7 (Fix Cycle) with `reconverge = true`. After fixes are applied, re-run convergence (Step 3.5) before re-checking the quality gate.
+Read `link-result.toon.nextLink` and act:
 
-**On FIX-AND-RECHECK:** go to Step 7 (Fix Cycle).
+| `nextLink` | `nextLinkReason` | Action |
+|------------|------------------|--------|
+| `done` | `proceed` | Go to Step 8 (Completion — success path). |
+| `done` | `escalate-*` | Go to Step 8 (Completion — escalation path). Capture `outcomeHints.escalationReason` for the report. |
+| `fix` | `fix-and-recheck` | Go to Step 7 (Fix Link dispatch). Forward `link-result.toon.fixHints` (mode, prioritizedFindings, postFixHint) inline in the fix link's dispatch prompt. |
+| `fix` | `fix-and-reconverge` | Go to Step 7 (Fix Link dispatch). Forward `fixHints` with `postFixHint: reconverge`. The fix link will route to `nextLink: converge` on success rather than `verify`. |
+| `converge` | `fix-and-reconverge` | Re-enter inline Step 3.5 (Convergence) without redispatching the executor. After convergence completes, the trampoline returns to Step 4-6a (verify dispatch). Increment `trampolineIteration`. |
+| `planning` | `revise-plan` | If iterations remain: trampoline increments `outerIteration` (the link sets `planningHints.incrementOuterIteration: true`), go to Step 2 (Phase A with `--refine`). Else: Step 8 (Escalation). |
+| `planning` | `revise-roadmap` | If iterations remain: increment `outerIteration`, go to Step 1 (Phase R with `--refine`). Else: Step 8 (Escalation). |
 
-**On REVISE-PLAN:**
-1. Build failure context: remaining critical findings, failing tests, typecheck errors, what fix cycles attempted.
-2. Increment `outerIteration`.
-3. Check circuit breakers. If clear, go to Step 2 (Phase A with `--refine`).
+All circuit breakers (iteration limit, agent budget, identical failure, fix stall) are still enforced at the orchestrator level **before** dispatching the next link. If a breaker trips, override `nextLink` and go to Step 8 (Escalation).
 
-**On REVISE-ROADMAP:**
-1. Build failure context including root cause analysis indicating the problem is at the roadmap/scope level.
-2. Increment `outerIteration`.
-3. Check circuit breakers. If clear, go to Step 1 (Phase R with `--refine`).
+**On `--stop-after test`, `--stop-after review`, or `--stop-after verify`:** print the readout, then stop. Do not dispatch the next link.
 
-**On ESCALATE:** go to Step 8 (Escalation report).
+#### Step 7: Fix Link (apply fixes + stuck detection)
 
-#### Step 7: Fix Cycle
+**Architecture note:** The Fix Cycle is a dispatched **link** (`fix`). The orchestrator delegates to a fresh agent that runs the fixer (diagnose-before-fix), re-runs a quick review, re-runs typecheck + tests, performs stuck/regression detection, and writes a `link-result.toon` with the next-link decision. See `commands/loom-auto/links/fix.md` for the link contract.
 
-Increment `fixCycleCount`. Update `pipeline-state.toon`: `currentStage: fix-code`.
+##### 7a: Dispatch the fix link
 
-7a. **Apply fixes (diagnose-before-fix per behavioral-guidelines.md section 6).** Spawn a general-purpose agent:
-   ```
-   "Read your instructions from ~/.claude/commands/loom-fix-code.md first.
-    Read ~/.claude/agents/protocols/behavioral-guidelines.md section 6 (Diagnose Before Fix).
-    Run with --auto --severity critical,warning flags.
-    Apply fixes from .plan-execution/review-report.md.
+Increment `trampolineIteration`. Update `pipeline-state.toon`: `currentStage: fix-code`. Note: `fixCycleCount` is incremented BY the link in its Step 0, not by the trampoline — do not double-count.
 
-    MANDATORY: For every fix, follow the diagnose-before-fix protocol:
-    1. Read the finding and understand what failed
-    2. Query wiki for architectural constraints (/loom-wiki query)
-    3. Diagnose root cause before making any code change
-    4. Write diagnosis to diagnoseLog in your AgentResult BEFORE applying the fix
-    5. Apply the fix
-    6. Verify the fix
+Read the predecessor `link-result.toon` (still on disk from the verify dispatch) and extract `fixHints` for inclusion in the dispatch prompt.
 
-    Your AgentResult MUST include:
-    - verificationStatus: verified (if tests confirm fix), unverified, or skipped
-    - diagnoseLog: narrative of what was found, root cause, architectural constraints,
-      and why the fix was chosen. An empty diagnoseLog is a protocol violation."
-   ```
-   Record agents spawned.
+Spawn one general-purpose Agent. Model: resolved via the standard priority. The link itself is treated as `tier: utility` for profile lookup (it spawns its own utility + review tier sub-agents).
 
-   **Validate fixer AgentResult.** After receiving the fixer-agent's AgentResult:
-   - If `diagnoseLog` is empty or missing: log a WARNING -- `"Fixer-agent returned without diagnoseLog. This is a protocol violation per behavioral-guidelines.md section 6."`
-   - If `verificationStatus` is `unverified`: log a WARNING -- `"Fixer-agent did not verify its fixes. Prioritize for verification-agent review."`
+Prompt:
+```
+"Read your instructions from ~/.claude/commands/loom-auto/links/fix.md first.
+ You are the FIX link of the /loom-auto trampoline. Read pipeline-state.toon
+ and the inputs listed in your spec — do NOT read PLAN.md, ROADMAP.md,
+ or rolling-context.md.
 
-7b. **Convergence detection.** Compare before/after:
-   - Did `criticalCount` decrease? (progress)
-   - Did `testPassRate` increase? (progress)
-   - Are the SAME findings still present (same tag:file:line)? (stuck)
+ fixHints (forwarded from the verify link):
+   fixMode: {standard | aggressive | targeted}
+   postFixHint: {none | reconverge}
+   prioritizedFindings[N]: {finding ids}
 
-   If stuck (same findings, same failures after fix cycle):
-   - Skip directly to REVISE-PLAN. The failure is structural.
-   - Do not burn another fix cycle.
+ Run the fix cycle: snapshot review-report.md, apply fixes (diagnose-before-fix),
+ re-run quick review, re-run typecheck + tests, detect progress/stuck/regression,
+ write .plan-execution/link-result.toon with the gate's nextLink decision.
 
-7c. **Re-run quick review.** Spawn a general-purpose agent:
-   ```
-   "Read your instructions from ~/.claude/commands/loom-review-code.md first.
-    Run a quick review (code style + security only).
-    Write updated findings to .plan-execution/review-report.md.
-    Your AgentResult MUST include verificationStatus."
-   ```
+ Your AgentResult MUST include verificationStatus and a one-line summary.
+ The trampoline reads link-result.toon from disk — keep your return body short."
+```
 
-7d. **Re-run verification.** Run typecheck + existing tests.
+If the verify `link-result.toon` is missing or corrupted on entry, fall through with default `fixHints` (mode: standard, postFixHint: none, no prioritized findings) and log a warning. The fix link's Step 0 will record the issue in its `notes`.
 
-7e. **Re-run convergence (if `reconverge == true`).** Return to Step 3.5 to re-run the convergence loop. The convergence-driver will resume from the existing `convergence-state.toon`, re-running the harness against the now-fixed code.
+##### 7b: Read link-result.toon
 
-7f. **Return to Step 6** (Pipeline Quality Gate) with updated results.
+After the link returns, read `.plan-execution/link-result.toon`. Validate:
+- `link == "fix"` — sanity check
+- `schemaVersion == 1`
+- `status` is one of `complete`, `failed`, `escalated`
+- `nextLink` is one of `verify`, `converge`, `planning`
+- `trampolineIteration` matches the dispatch
 
-Log stage in `stageHistory`.
+On validation failure: write to `failureLog`, set `currentStage: escalated`, go to Step 8.
 
-**Write stage context.** Write `.plan-execution/stage-context/fix.toon` per `StageContext` schema (`stage-context.schema.md`). Populate from fix cycle results: `stage: fix`, files changed (files modified by fixers), findings resolved/remaining (before vs after counts), summary of what was fixed, key decisions (fix strategies chosen), and next-stage hints (remaining issues for quality gate). Use atomic write.
+##### 7c: Print between-link readout
 
-**If `--stop-after fix`:** display fix results and stop.
+Print the fix-link readout to stdout (analogous to Step 4-6c for verify):
+
+```
+─── FIX (outerIter {N}, trampoline iter {M}, cycle {fixCycleCount}) ──────
+Critical:    {criticalBefore} → {criticalAfter}
+Warnings:    {warningBefore} → {warningAfter}
+Tests:       {testsFailedBefore} → {testsFailedAfter} failing
+Detection:   progress={bool} stuck={bool} regression={bool}
+Diagnose log: {present|MISSING}    Self-verified: {true|false}
+Decision:    {nextLinkReason in upper case}
+Next link:   → {nextLink}{ extra hint if any}
+──────────────────────────────────────────────────────────────────────────
+```
+
+Values are pulled from `link-result.toon.gateInputs`. Append the same block to `.plan-execution/trampoline-events.log`.
+
+##### 7d: Route on nextLink
+
+Re-enter the trampoline routing table (Step 4-6d) with the fix link's `nextLink`. The standard arms apply:
+
+- `nextLink: verify` → dispatch verify link again (Step 4-6a)
+- `nextLink: converge` → re-enter inline Step 3.5, then dispatch verify
+- `nextLink: planning` → increment `outerIteration` if `planningHints.incrementOuterIteration == true`, then go to Step 2 (`--refine`)
+
+The fix link NEVER routes to `nextLink: done` directly — even success paths go back through verify to re-confirm the gate.
+
+**If `--stop-after fix`:** print the readout, then stop. Do not dispatch the next link.
 
 #### Step 8: Completion
 
@@ -1063,9 +1064,10 @@ When `--resume` is passed:
    | `plan-validate` | Step 2, sub-step 2d |
    | `execute` | Step 3 (pass `--resume` to loom-plan execute) |
    | `converge` | Step 3.5 (pass `--resume` to loom converge) |
-   | `test` | Step 4 |
-   | `review-code` | Step 5 |
-   | `fix-code` | Step 7 |
+   | `verify` | Steps 4-6 (verify link). If `link-result.toon` already exists for the current `trampolineIteration`, skip the dispatch and route on its `nextLink` — the link is idempotent on resume per its own spec. |
+   | `link-complete-verify` | Steps 4-6, sub-step 4-6d (route on the existing `link-result.toon` without re-dispatching). |
+   | `fix-code` | Step 7 (fix link). If `link-result.toon` for this `trampolineIteration` exists with `link == fix`, skip the dispatch and route on its `nextLink` — the fix link is idempotent on resume per its own spec. Otherwise re-dispatch the fix link; its Step 0 will detect the existing snapshot at `review-report.before-fix-{iter}.md` and resume mid-link. |
+   | `link-complete-fix` | Step 7, sub-step 7d (route on the existing `link-result.toon` without re-dispatching). |
 
 6. Restore all state variables from `pipeline-state.toon`: `outerIteration`, `agentsSpawned`, `fixCycleCount`, `maxIterations`, `maxAgents`, `noAutoCommit`.
 7. Continue the loop from the re-entry point.
