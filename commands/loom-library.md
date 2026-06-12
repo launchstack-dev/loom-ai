@@ -34,11 +34,14 @@ lastSynced: 2026-04-13T18:00:00Z
 items[N]{name,type,source,targetPath,installedAt}:
   implementer-agent,agent,agents/implementer-agent.md,~/.claude/agents/implementer-agent.md,2026-04-06T10:00:00Z
   loom-plan,prompt,commands/loom-plan.md,~/.claude/commands/loom-plan.md,2026-04-13T18:00:00Z
+  python-conventions,skill,skills/python-conventions/SKILL.md,~/.claude/skills/python-conventions/SKILL.md,2026-06-12T23:30:00Z
 ```
 
 If install-state.toon does not exist, create it with `schemaVersion: 2`, current timestamp for `lastSynced`, and `items[0]{name,type,source,targetPath,installedAt}:` (empty).
 
 **Migration from v1:** If `schemaVersion: 1` is found (has `contentHash` column), read it normally but ignore the `contentHash` field. On next write, output `schemaVersion: 2` format (without `contentHash`). No manual migration needed.
+
+**Supported `type` values** (open string per `install-state-audit.toon`; no schema bump for adding `skill`): `agent`, `protocol`, `prompt`, `skill`, `infrastructure`. The router in `hooks/lib/skill-router.ts` emits `type: skill` rows via `buildSkillInstallRecord(name, sha256, opts)` — record the value verbatim into the items[] row.
 
 ## Source Resolution
 
@@ -66,14 +69,23 @@ If a source starts with `/` or `~`, read it directly with the Read tool. No API 
 ### Source Validation
 
 **Name validation:**
-Before constructing any target path, validate that the item name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Reject names containing `/`, `..`, or null bytes. After resolving the full target path, verify it starts with `~/.claude/`.
+Before constructing any target path, validate that the item name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Reject names containing `/`, `..`, or null bytes.
+
+**Target-path prefix validation (delegated to `hooks/lib/skill-router.ts`):**
+After resolving the full target path, validate it via `validateInstallPath(targetPath)` from `hooks/lib/skill-router.ts`. The function returns `{ valid: boolean, reason?: string }` and is the single source of truth for which prefixes are allowed. The current allow-list is exposed as the `ALLOWED_INSTALL_PREFIXES` const in the same module:
+
+- `~/.claude/skills/` — native Claude Code skills (`type: skill` items, written to `<dir>/SKILL.md`)
+- `~/.claude/agents/` — Loom agents, prompts/commands (`~/.claude/commands/`) routed via the agent allow-list
+
+If `validateInstallPath` returns `{ valid: false }`, abort the install BEFORE writing any file and emit a `SOURCE_VALIDATION_ERROR` envelope (see Error Handling) using `reason` as the `details` field. Do NOT inline a duplicate prefix list in this markdown — always re-read the const from `skill-router.ts` so the validator and this command never drift.
 
 ## Target Paths by Type
 
 When installing, place files based on their type in library.yaml:
 - `agents` items -> `~/.claude/agents/<name>.md`
 - `prompts` items -> `~/.claude/commands/<name>.md`
-- `skills` items -> `~/.claude/agents/protocols/<name>.md`
+- `protocols` items -> `~/.claude/agents/protocols/<name>.md` (legacy `library.skills` items, post-v4 rename per `library-catalog-migrator.ts` v3→v4)
+- `skill` items (native Claude Code skill, v4 `library.skills:` section) -> `~/.claude/skills/<name>/SKILL.md` — compute via `buildSkillTargetPath(name)` from `hooks/lib/skill-router.ts`. **The filename MUST literally be `SKILL.md`** (uppercase, no `.md` substitution per item name) — Claude Code's skill activation is keyed off this exact filename, so it is a hard contract, not a suggestion. Do not append `<name>.md`; do not lowercase. The skill body content goes into `<name>/SKILL.md`; siblings (e.g. resource scripts) live in the same directory.
 - `infrastructure` items -> use the explicit `target` path from the catalog entry (e.g. `~/.claude/statusline-renderer.cjs`). Expand `~` to the user's home directory. Infrastructure items are NOT `.md` files — preserve the original file extension from the source.
 
 ## Dependency Resolution
@@ -123,17 +135,28 @@ Use a checkmark for installed items and an x-mark for uninstalled ones.
 
 ## Command: `use <name>`
 
-1. Find `<name>` in library.yaml across all type sections (agents, prompts, skills)
-2. If the item has `deprecated: true` and a `redirectsTo` field, print: "Note: `{name}` is deprecated. Installing `{redirectsTo}` instead." Then install the redirected item.
-3. If not found, search for similar names (substring match) and suggest them. Stop.
-4. Resolve dependencies recursively with cycle detection
+1. Find `<name>` in library.yaml across all type sections (`library.agents`, `library.prompts`, `library.protocols`, `library.skills`, `library.infrastructure`) and in `kits:`.
+2. **NOT_IN_CATALOG:** If `<name>` is not found in any section, emit a `NOT_IN_CATALOG` error envelope (see Error Handling) with the exact message:
+   ```
+   No kit or skill named <name> found in library.yaml. Run /loom-library list to see available entries.
+   ```
+   Exit code 1. (Substring suggestions may also be printed as a friendly hint, but the structured envelope is the contract.)
+3. If the item has `deprecated: true` and a `redirectsTo` field, print: "Note: `{name}` is deprecated. Installing `{redirectsTo}` instead." Then install the redirected item.
+4. Resolve dependencies recursively with cycle detection.
 5. For each item to install (dependencies first, then the target):
    a. Fetch source content (via `gh api` or local Read)
-   b. Determine target path from the type (see Target Paths by Type above)
-   c. Write content to target path using the Write tool
-   d. Add entry to install-state.toon (update the items array and count)
-6. Update `lastSynced` timestamp in install-state.toon
-7. Display summary:
+   b. Determine target path from the type (see Target Paths by Type above). For `type: skill` items, use `buildSkillTargetPath(name)` from `hooks/lib/skill-router.ts`.
+   c. Run `validateInstallPath(targetPath)` (see Source Validation). If invalid, abort BEFORE writing.
+   d. Write content to target path using the Write tool. For skill items, ensure the parent directory `~/.claude/skills/<name>/` exists first.
+   e. Compute the file `sha256` from the on-disk content. For `type: skill` items, build the install-state row via `buildSkillInstallRecord(name, sha256, { installedAt: new Date().toISOString(), source: 'skills/<name>/SKILL.md' })` from `hooks/lib/skill-router.ts` — this returns the canonical `{ name, type: 'skill', source, targetPath, sha256, component, installedAt }` shape. For non-skill items, build the row in-place as before.
+   f. Add entry to install-state.toon (update the items array and count). The `type` field is recorded verbatim — `skill`, `agent`, `prompt`, `protocol`, `infrastructure`.
+6. Update `lastSynced` timestamp in install-state.toon.
+7. **Post-install session-restart notice (skill items only).** After every successful `type: skill` install, print this notice to stdout — verbatim, one line, exactly as written here so harness/test scrapers can grep for it:
+   ```
+   Skill <name> installed. Restart your Claude Code session for trigger activation to take effect.
+   ```
+   Substitute `<name>` with the actual skill name. This notice is required because Claude Code only scans `~/.claude/skills/` at session start; a freshly installed `SKILL.md` is dormant until the session restarts.
+8. Display summary:
 ```
 Installed contracts-agent
   Dependencies: execution-protocols (already installed)
@@ -206,9 +229,16 @@ Cannot remove execution-protocols -- required by:
 Remove anyway? (yes / no)
 ```
 4. If confirmed (or no dependents):
-   a. Delete the target file via Bash `rm`
-   b. Remove the entry from install-state.toon (update items array and count)
-   c. Report what was removed
+   a. **For `type: skill` items**, compute the remove plan via `buildSkillRemovePlan(name)` from `hooks/lib/skill-router.ts`. The plan is:
+      ```
+      { skillMdPath: '~/.claude/skills/<name>/SKILL.md',
+        parentDir:   '~/.claude/skills/<name>/',
+        pruneIfEmpty: true }
+      ```
+      Delete `skillMdPath` via Bash `rm`. Then, because `pruneIfEmpty` is true, the orchestrator MUST also remove the parent directory if it contains no remaining files (use `rmdir` — never `rm -rf`, so siblings the user added by hand are preserved). If the parent directory still has siblings, leave it in place and log a one-line notice (`Parent dir kept — N sibling files remain`).
+   b. **For non-skill items**, delete the target file via Bash `rm` as before.
+   c. Remove the entry from install-state.toon (update items array and count)
+   d. Report what was removed
 
 ## Command: `update`
 
@@ -253,11 +283,51 @@ Process user choices: update changed items and/or install selected new items usi
 **Step 3 — Clear update cache:**
 After successfully applying updates, delete `~/.cache/loom/update-check.toon` via Bash `rm -f ~/.cache/loom/update-check.toon`. This resets the statusline update indicator.
 
+## Command: `status`
+
+Read-only inventory of installed resources, grouped by the kit that pulled them in. Exit code is always 0 — `status` never modifies state.
+
+1. Read `~/.claude/skills/library/install-state.toon` (treat missing file as empty inventory)
+2. Read `~/.claude/skills/library/library.yaml`
+3. For each `items[]` entry in install-state.toon, look up which kit(s) in `library.yaml` `kits:` reference it via `includes:` (entry may be a typed `{type, name}` or a legacy bare-name string — see Kit Operations § Includes resolution). An item not referenced by any kit is grouped under the synthetic kit name `(standalone)`.
+4. For each `type: skill` row, also look up the matching `library.skills[]` entry by name and read its `triggers:` array (introduced by the v4 catalog schema). If `triggers` is absent or empty, display `(description-based)` in the triggers column — Claude Code falls back to the skill's description when no explicit triggers are declared.
+5. For non-skill rows, leave the triggers column blank (`—`).
+6. Render the table (one row per installed resource, grouped by kit, sorted by kit then by name):
+
+```
+KIT                 RESOURCE                 TYPE     TARGET PATH                                              TRIGGERS
+data-engineering    data-schema-reviewer     agent    ~/.claude/agents/data-schema-reviewer.md                 —
+data-engineering    data-quality-gate        agent    ~/.claude/agents/data-quality-gate.md                    —
+loom-core           contracts-agent          agent    ~/.claude/agents/contracts-agent.md                      —
+loom-core           loom-plan                prompt   ~/.claude/commands/loom-plan.md                          —
+loom-core           execution-protocols      protocol ~/.claude/agents/protocols/execution-protocols.md        —
+python-kit          python-conventions       skill    ~/.claude/skills/python-conventions/SKILL.md             "polars", "pyproject.toml", "uv"
+(standalone)        my-local-skill           skill    ~/.claude/skills/my-local-skill/SKILL.md                 (description-based)
+```
+
+7. After the table, print a one-line footer with totals:
+```
+6 items installed across 3 kits + 1 standalone.
+```
+
+Exit code: **0** (always — read-only command).
+
 ---
 
 ## Kit Operations
 
-Kits are named bundles of related items defined in the `kits:` section of library.yaml. Each kit entry has: `name`, `description`, `version`, `minLoomVersion`, and `includes` (a list of item references like `agent:contracts-agent`, `skill:execution-protocols`, `prompt:loom-plan`).
+Kits are named bundles of related items defined in the `kits:` section of library.yaml. Each kit entry has: `name`, `description`, `version`, `minLoomVersion`, and `includes` (a list of item references — see Includes resolution below).
+
+### Includes resolution (typed form + legacy bare-name)
+
+Each entry in a kit's `includes:` list is parsed via `parseIncludeEntry(entry)` from `hooks/lib/skill-router.ts`, which returns `{ type, name, bare }`:
+
+- **Typed form** (preferred, required in v5): `{type: skill, name: python-conventions}` or `{type: agent, name: contracts-agent}` — `bare: false`. Route directly to `library.<type>[]` for source lookup and target-path resolution. No warning emitted.
+- **Bare-name form** (legacy, deprecated): a plain string like `python-conventions` or `agent:contracts-agent`. `parseIncludeEntry` returns `bare: true` for plain strings. The installer then calls `resolveBareNameInclude(name, catalog)` (also in `skill-router.ts`) which walks sections in priority order — `BARE_NAME_PRIORITY = [agent, protocol, skill, prompt]` — and returns the first hit as `{ type, name }` (or `null`). When resolution succeeds, the installer MUST emit a `DEPRECATION_WARNING` (see Error Handling) using the N-24 template before continuing the install. When resolution returns `null`, raise `NOT_IN_CATALOG`.
+
+`BARE_NAME_PRIORITY` is the single source of truth for the resolution order — do not re-encode it in this markdown. Re-read it from `hooks/lib/skill-router.ts` if you need to confirm.
+
+The colon-prefixed legacy form (`agent:name`, `skill:name`) is still accepted for backward compatibility; the parser strips the prefix and treats the result as typed. Pure bare names with no prefix trigger the cross-section walk.
 
 ### `use <kit-name>` (when name matches a kit)
 
@@ -332,3 +402,22 @@ Show ONLY the Kits section (skip Agents, Commands, Skills).
 - **Network errors**: Report the error, skip the item, continue with others. Never block the entire command on a single fetch failure.
 - **Write failures**: Report the target path and error. Do not update install-state for that item.
 - **Corrupt install-state.toon**: If the file exists but cannot be parsed, back it up as `install-state.toon.corrupt`, create a fresh empty state, and warn: "Install state was corrupt and has been reset. Run `/loom-library sync` to rebuild."
+- **`NOT_IN_CATALOG`**: emitted when `/loom-library use <name>` references a name that does not exist in any `library.<resource>:` section or in `kits:`, OR when a bare-name include in a kit cannot be resolved via `resolveBareNameInclude` (every section walked, no hit).
+  Message template (exact):
+  ```
+  No kit or skill named <name> found in library.yaml. Run /loom-library list to see available entries.
+  ```
+  TOON envelope:
+  ```toon
+  status: error
+  code: NOT_IN_CATALOG
+  message: "No kit or skill named <name> found in library.yaml. Run /loom-library list to see available entries."
+  details: checkedName: <name>, suggestedCommand: /loom-library list
+  ```
+  Exit code: **1**. Not retryable — fix the name or run `/loom-library list`.
+- **`SOURCE_VALIDATION_ERROR`**: emitted when `validateInstallPath(targetPath)` (from `hooks/lib/skill-router.ts`) returns `{ valid: false }`. Use the returned `reason` as the `details` field of the TOON envelope. Abort BEFORE writing any file. Exit code: **1**. Not retryable — fix the kit definition.
+- **`DEPRECATION_WARNING`** (warning, not thrown): emitted when a kit's `includes:` entry is a legacy bare-name string that `resolveBareNameInclude` successfully resolved via the cross-section fallback. The installer continues — this is informational, not fatal. The exact template message (per N-24, single source of truth lives in `formatDeprecationWarning(name, resolvedType)` in `hooks/lib/library-add-heuristic.ts`):
+  ```
+  DEPRECATION WARNING: bare-name include '<name>' resolved to <type>:<name> via cross-section fallback. Update your kit to use the typed form (e.g. <type>:<name>) before v5. Bare-name support will be removed in library catalog v5.
+  ```
+  Substitute `<name>` with the include name and `<type>` with the resolved type (e.g. `agent`, `skill`, `protocol`, `prompt`). Log to stderr; do not affect exit code.

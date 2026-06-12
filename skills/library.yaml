@@ -164,7 +164,14 @@ library:
       source: agents/protocols/entity-domain-partition.schema.md
 
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
-  skills: []
+  skills:
+    - name: python-conventions
+      description: Python ecosystem conventions — Polars-first for new code, uv/ruff/pytest, atomic writes, type hints, TOON output for Loom artifacts.
+      source: skills/python-conventions/SKILL.md
+      triggers:
+        - "**/*.py"
+        - "**/pyproject.toml"
+        - "**/requirements.txt"
 
   infrastructure:
     - name: statusline-renderer
@@ -519,4 +526,12 @@ kits:
       - data-quality-gate
       - loom-data
     command: loom-data.md
+
+  - name: python-conventions
+    description: Python ecosystem conventions skill — registers triggers and conventions for new Python code in this project.
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: python-conventions
 

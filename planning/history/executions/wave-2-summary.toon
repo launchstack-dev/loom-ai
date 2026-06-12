@@ -1,18 +1,51 @@
+schemaVersion: 1
 wave: 2
-phases[N]: 4, 7
+runId: kit-native-skills-20260612-001
 status: success
+gateMode: auto
+phases[3]: 3, 4, 5
+startedAt: 2026-06-12T23:20:00Z
+completedAt: 2026-06-12T23:45:00Z
+durationMs: 1500000
 
-agentResults[N]{taskId,agent,status,filesModified,filesCreated}:
-  w2-phase4,implementer-agent,success,"agents/convergence-driver.md agents/convergence-planner-agent.md commands/loom-converge.md",""
-  w2-phase7,implementer-agent,success,"","agents/protocols/flaky-test.schema.md agents/protocols/convergence-rollback.md"
+agentResults[3]{taskId,agent,status,durationMs}:
+  wave2-phase3-installer-routing,implementer-agent,success,1320000
+  wave2-phase4-installer-tests,implementer-agent,success,420000
+  wave2-phase5-python-conventions-kit,implementer-agent,success,240000
 
-filesCreated[N]: agents/protocols/flaky-test.schema.md, agents/protocols/convergence-rollback.md
-filesModified[N]: agents/convergence-driver.md, agents/convergence-planner-agent.md, commands/loom-converge.md
+filesCreated[5]: skills/python-conventions/SKILL.md, .plan-execution/stage-context/phase-3.toon, .plan-execution/stage-context/phase-4.toon, .plan-execution/stage-context/phase-5.toon, .plan-execution/stage-context/wave-2-gate.toon
+filesModified[6]: commands/loom-library.md, test/installer-skill-routing.test.ts, test/wizard-interview.test.ts, test/library-add-heuristic.test.ts, skills/library.yaml, hooks/lib/wizard-interview.ts
+filesRegenerated[1]: checksums.sha256
+filesIncidentallyFixed[1]: scripts/validate-library-catalog.js
 
-exportsAdded[N]{name,file,kind}:
+exportsAdded: 0
+exportsRetargeted[0]:
 
-unresolvedIssues[N]:
-verificationResult: pass
-kitGates[0]{agent,insertionPoint,gate,gateReason}:
-kitWarnings: 0
-kitHalts: 0
+catalogChanges:
+  librarySkillsAdded[1]: python-conventions
+  kitsAdded[1]: python-conventions (typed includes form)
+
+testCounts:
+  installerSkillRouting: 24->27
+  wizardInterview: 32->34
+  libraryAddHeuristic: 21->22
+  totalNewTests: 6
+  totalPassing: 83
+  totalFailing: 0
+
+crossBoundaryRequests:
+  filed: 0
+  resolved: 0
+
+verification:
+  status: pass
+  waveGateStatus: passed
+  fullSuiteStatus: 1-deferred-pre-existing
+  preExistingFailures[1]: "vi.resetModules infra in test/loom-change/lifecycle.test.ts (pre-Wave-1; unrelated)"
+
+releaseConstraint: "F-010: Wave 1 + Wave 2 NOW form the merged release candidate. Wave 3 (Phase 6 — schema docs) may begin."
+
+nextWave:
+  number: 3
+  phases[1]: 6
+  description: "Schema docs, DeltaBlock seed, loom-upgrade v4 awareness"

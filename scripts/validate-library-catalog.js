@@ -373,9 +373,26 @@ function main() {
         const includes = kit.includes;
         if (!Array.isArray(includes)) continue;
         for (const inc of includes) {
-          if (!allKnownNames.has(inc)) {
+          // v4 typed-include form: { type: 'skill'|'agent'|'protocol'|'prompt'|'infrastructure', name: '...' }
+          // Legacy bare-name form: plain string resolved via cross-section lookup.
+          let incName;
+          let incTypeSet;
+          if (typeof inc === "string") {
+            incName = inc;
+            incTypeSet = allKnownNames;
+          } else if (inc && typeof inc === "object" && typeof inc.type === "string" && typeof inc.name === "string") {
+            incName = inc.name;
+            const expectSection = inc.type === "infrastructure" ? "infrastructure" : `${inc.type}s`;
+            incTypeSet = sectionNames.get(expectSection) ?? new Set();
+          } else {
             warnings.push(
-              `kit '${kit.name ?? "<unnamed>"}' includes '${inc}' which is not a registered catalog entry`
+              `kit '${kit.name ?? "<unnamed>"}' includes malformed entry ${JSON.stringify(inc)} — expected string or { type, name }`
+            );
+            continue;
+          }
+          if (!incTypeSet.has(incName)) {
+            warnings.push(
+              `kit '${kit.name ?? "<unnamed>"}' includes '${typeof inc === "string" ? inc : `${inc.type}:${inc.name}`}' which is not a registered catalog entry`
             );
           }
         }
