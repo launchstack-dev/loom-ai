@@ -1,15 +1,46 @@
+schemaVersion: 1
 wave: 1
-phases[N]: 1, 2, 3
+runId: kit-native-skills-20260612-001
 status: success
+phases[2]: 1, 2
+startedAt: 2026-06-12T22:50:00Z
+completedAt: 2026-06-12T23:10:00Z
+durationMs: 1200000
 
-agentResults[N]{taskId,agent,status,filesModified}:
-  w1-phase1,implementer-agent,success,"agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md"
-  w1-phase2,implementer-agent,success,"commands/loom-plan.md, agents/criteria-planner-agent.md"
-  w1-phase3,implementer-agent,success,"hooks/context-budget-test.ts, agents/protocols/context-budget.md"
+agentResults[3]{taskId,agent,status,durationMs}:
+  wave1-phase1-migrator,implementer-agent,success,1200000
+  wave1-phase2-tests,implementer-agent,success,720000
+  wave1-wiring,wiring-agent,success,240000
 
-filesChanged[N]: agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md, commands/loom-plan.md, agents/criteria-planner-agent.md, hooks/context-budget-test.ts, agents/protocols/context-budget.md
-exportsAdded[N]{file,name,kind}:
-  hooks/context-budget-test.ts,detectConvergenceTier,function
-  hooks/context-budget-test.ts,getEffectiveBudgetCap,function
-unresolvedIssues[N]:
-verificationResult: pass
+filesCreated[3]: .plan-execution/stage-context/phase-1.toon, .plan-execution/stage-context/phase-2.toon, .plan-execution/stage-context/wave-1-gate.toon
+filesModified[6]: hooks/lib/library-catalog-migrator.ts, agents/protocols/schema-versions.toon, skills/library.yaml, test/library-catalog-v3-to-v4.test.ts, test/protocol/schema-upgrade-v3.test.ts, scripts/validate-library-catalog.js
+filesRegenerated[1]: checksums.sha256
+
+exportsAdded: 0
+exportsRetargeted[1]: 'MIGRATIONS["3->4"]' rewired from no-op passthrough to migrateLibraryCatalogV3ToV4
+
+versionBump:
+  CURRENT_VERSION: "3 -> 4"
+  schemaVersionsRow: "library-catalog currentVersion 3 -> 4"
+  liveLibraryYaml: "catalog_version 2 -> 4 (chained v2->v3->v4)"
+
+crossBoundaryRequests:
+  filed: 4
+  resolved: 4
+  resolver: wiring-agent
+
+verification:
+  status: pass
+  waveGateStatus: passed
+  fullSuiteStatus: 2-deferred-pre-existing
+  preExistingFailures[2]: detectExistingSkill regex bug (Phase 0 -> defer to Phase 8), vi.resetModules infra (unrelated)
+
+f002RewriteApplied: true
+f002RewriteScope: 54 agent entries; first verified entry contracts-agent.requires now ['protocol:execution-protocols']
+
+releaseConstraint: "F-010: Wave 1 + Wave 2 MUST ship as single merged release. Do NOT merge Wave 1 alone."
+
+nextWave:
+  number: 2
+  phases[3]: 3, 4, 5
+  description: "Installer routing for native skills + installer test suite + python-conventions sample skill kit"

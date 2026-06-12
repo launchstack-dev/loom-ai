@@ -8,7 +8,7 @@
  *   2. Every entry under library.{skills,agents,prompts} has name, description, source.
  *   3. Every `source` resolves to an existing file relative to the repo root.
  *   4. Every entry in `requires` resolves to another catalog entry of the
- *      correct kind (skill:foo, agent:foo, or prompt:foo).
+ *      correct kind (skill:foo, agent:foo, prompt:foo, protocol:foo, or infrastructure:foo).
  *   5. No duplicate names within a single section.
  *   6. Kit `includes[]` entries map to a real catalog entry (warning only —
  *      data-engineering kit is an optional add-on).
@@ -290,7 +290,7 @@ function main() {
       errors.push(`'library' must be an object with skills/agents/prompts sections`);
     }
   } else {
-    const sections = ["skills", "agents", "prompts"];
+    const sections = ["skills", "agents", "prompts", "protocols", "infrastructure"];
     const sectionNames = new Map();
     for (const section of sections) {
       sectionNames.set(section, new Set());
@@ -344,15 +344,15 @@ function main() {
             );
             continue;
           }
-          const m = /^(skill|agent|prompt):(.+)$/.exec(req);
+          const m = /^(skill|agent|prompt|protocol|infrastructure):(.+)$/.exec(req);
           if (!m) {
             errors.push(
-              `library.${section}[name=${entry.name}].requires entry '${req}' must use 'skill:name', 'agent:name', or 'prompt:name' form`
+              `library.${section}[name=${entry.name}].requires entry '${req}' must use 'skill:name', 'agent:name', 'prompt:name', 'protocol:name', or 'infrastructure:name' form`
             );
             continue;
           }
           const [, kind, depName] = m;
-          const expectSection = `${kind}s`;
+          const expectSection = kind === "infrastructure" ? "infrastructure" : `${kind}s`;
           const target = sectionNames.get(expectSection);
           if (!target || !target.has(depName)) {
             errors.push(

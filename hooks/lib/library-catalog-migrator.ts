@@ -92,6 +92,116 @@ export interface KitEntry {
   [key: string]: unknown;
 }
 
+// ---------------------------------------------------------------------------
+// v4 interfaces (Phase 0 — contracts only; v3→v4 migration body lands in Phase 1)
+// ---------------------------------------------------------------------------
+//
+// v4 splits the v3 `library.skills:` section into two:
+//   - `library.protocols:` — formerly v3's `library.skills:` (inter-agent
+//     protocol files; renamed verbatim during the v3→v4 migration)
+//   - `library.skills:` — NEW: Claude Code native skills (SKILL.md format)
+//
+// `Kit.includes:` accepts both legacy bare-name strings and typed
+// `{ type, name }` forms; bare strings emit a DEPRECATION_WARNING at install
+// time and are removed in v5.
+//
+// See planning/plans/PLAN-kit-native-skills.md § Schema / Type Definitions
+// for the canonical field reference.
+
+/** A protocol entry — formerly a v3 `library.skills` item. Inter-agent message schema files. */
+export interface ProtocolEntry {
+  /** Slug, e.g. "execution-protocols". */
+  name: string;
+  /** Human-readable summary surfaced by `/loom-library list`. */
+  description: string;
+  /** Repo-relative path to the source markdown. */
+  source: string;
+}
+
+/**
+ * A Claude Code native skill entry. New in v4.
+ *
+ * Triggers are OPTIONAL: when present, the installer validates each entry as a
+ * glob. When absent, Claude Code activates the skill via description-based
+ * matching (see F-020 in PLAN-kit-native-skills.md).
+ */
+export interface SkillEntry {
+  /** Slug; must match `[a-z][a-z0-9-]*` and the directory name under `~/.claude/skills/`. */
+  name: string;
+  /** Required, non-empty. Surfaced in description-based activation when `triggers` is absent. */
+  description: string;
+  /** Repo-relative path to the SKILL.md source. */
+  source: string;
+  /**
+   * Optional glob patterns. When present and non-empty, Claude Code activates
+   * on file pattern match. Empty array (`[]`) is treated as "no triggers" —
+   * not auto-classified as a skill by `/loom-library add` (see CG-04).
+   */
+  triggers?: string[];
+  /** F-028: mirrors the existing agent/prompt deprecation flag. */
+  deprecated?: boolean;
+  /** F-028: slug of the replacement skill; only meaningful when `deprecated: true`. */
+  redirectsTo?: string;
+}
+
+/**
+ * v4 kit `includes:` entry. Supports two forms:
+ *   1. Typed object: `{ type: "skill", name: "python-conventions" }` — preferred
+ *   2. Legacy bare name: `"python-conventions"` — deprecated, removed in v5
+ *
+ * Resolution priority for bare names: agents → protocols → skills → prompts.
+ * The installer logs a DEPRECATION_WARNING on every bare-name match.
+ */
+export type TypedInclude =
+  | { type: "agent" | "protocol" | "skill" | "prompt" | "infrastructure"; name: string }
+  | string;
+
+/** v4 kit entry with typed `includes:` array. Field set is a superset of v3 `KitEntry`. */
+export interface KitV4Entry {
+  name: string;
+  description: string;
+  version: string;
+  minLoomVersion?: number;
+  minCoreVersion?: string;
+  minHooksVersion?: string;
+  /** Required; ≥1 entry. Each item is either a typed object or a legacy bare name (deprecated). */
+  includes: TypedInclude[];
+  /** Optional kit dependency list; cycle-detected before install. */
+  requires?: string[];
+  /** Optional filename of the command to register under `~/.claude/commands/`. */
+  command?: string;
+  /** Free-form per-kit configuration emitted into orchestration.toml. */
+  suggestedConfig?: unknown;
+}
+
+/**
+ * v4 catalog shape. The `library` block is now typed (no longer `unknown` like
+ * v2/v3) because the migrator owns the rename of `library.skills` → `library.protocols`
+ * and the initialization of the new `library.skills: []` field.
+ */
+export interface LibraryCatalogV4 {
+  catalog_version: 4;
+  repo: string;
+  loomCoreVersion: string;
+  loomHooksVersion: string;
+  releases: ReleaseEntry[];
+  default_dirs: unknown;
+  library: {
+    /** Renamed from v3 `library.skills:` — inter-agent protocol files. */
+    protocols: ProtocolEntry[];
+    /** NEW in v4 — Claude Code native skills. Initialized empty at migration. */
+    skills: SkillEntry[];
+    /**
+     * Agent entries. Per F-002, any `requires:` arrays containing `skill:`-prefixed
+     * items are rewritten to `protocol:`-prefixed during the v3→v4 migration.
+     */
+    agents?: unknown[];
+    prompts?: unknown[];
+    infrastructure?: unknown[];
+  };
+  kits: KitV4Entry[];
+}
+
 export interface ReleaseEntry {
   version: string;
   coreTarball: string;
@@ -102,7 +212,7 @@ export interface ReleaseEntry {
 }
 
 export interface LibraryCatalogDetectionResult {
-  version: 2 | 3 | "unknown";
+  version: 2 | 3 | 4 | "unknown";
   outdated: boolean;
   reason: string | null;
 }
@@ -127,8 +237,16 @@ const V3_TOP_LEVEL_MARKERS = [
 ] as const;
 
 /**
- * Detect whether raw library.yaml content (string) is v1, v2, or v3.
- * Heuristic: explicit `catalog_version` field plus presence of v3 markers.
+ * v4 introduces `library.protocols:` (renamed from v3 `library.skills:`) and a
+ * new empty `library.skills: []` block for Claude Code native skills. Both
+ * markers must appear inside the `library:` block for a v4 catalog to be
+ * considered well-formed.
+ */
+const V4_LIBRARY_MARKERS = ["protocols:", "skills:"] as const;
+
+/**
+ * Detect whether raw library.yaml content (string) is v1, v2, v3, or v4.
+ * Heuristic: explicit `catalog_version` field plus presence of version markers.
  */
 export function detectLibraryCatalogVersion(content: string): DetectionResult {
   // Line-anchored + end-anchored to reject `catalog_version: 3.9` (which previously
@@ -146,6 +264,27 @@ export function detectLibraryCatalogVersion(content: string): DetectionResult {
   }
 
   const v = parseInt(match[1], 10);
+  if (v === 4) {
+    // v4 inherits v3's top-level fields (loomCoreVersion / loomHooksVersion /
+    // releases) and adds the library.protocols + library.skills split.
+    const missingTopLevel = V3_TOP_LEVEL_MARKERS.filter((m) => !content.includes(m));
+    if (missingTopLevel.length > 0) {
+      return {
+        version: 4,
+        outdated: true,
+        reason: `v4 declared but missing top-level fields: ${missingTopLevel.join(", ")}`,
+      };
+    }
+    const missingLibrary = V4_LIBRARY_MARKERS.filter((m) => !content.includes(m));
+    if (missingLibrary.length > 0) {
+      return {
+        version: 4,
+        outdated: true,
+        reason: `v4 declared but missing library.${missingLibrary.join("/library.")} markers`,
+      };
+    }
+    return { version: 4, outdated: false, reason: null };
+  }
   if (v === 3) {
     const missing = V3_TOP_LEVEL_MARKERS.filter((m) => !content.includes(m));
     if (missing.length > 0) {
@@ -155,7 +294,7 @@ export function detectLibraryCatalogVersion(content: string): DetectionResult {
         reason: `v3 declared but missing top-level fields: ${missing.join(", ")}`,
       };
     }
-    return { version: 3, outdated: false, reason: null };
+    return { version: 3, outdated: true, reason: "catalog_version: 3 — migrate to v4 via Rule 13" };
   }
   if (v === 2) {
     return {
@@ -244,20 +383,135 @@ function synthesizeRelease(
 // opts through every step; future migrations that don't need these fields
 // simply ignore them.
 
-export type AnyLibraryCatalog = LibraryCatalogV2 | LibraryCatalogV3;
+export type AnyLibraryCatalog = LibraryCatalogV2 | LibraryCatalogV3 | LibraryCatalogV4;
 
 export type MigrationStep = (input: AnyLibraryCatalog, opts: MigrationOptions) => AnyLibraryCatalog;
 
 export type MigrationRegistry = Readonly<Record<string, MigrationStep>>;
 
-/** Frozen built-in registry. Tests inject stubs by passing a separate registry. */
+/**
+ * v3→v4 migrator. Pure function — no I/O, no input mutation.
+ *
+ * Transforms:
+ *   1. `catalog_version: 3` → `catalog_version: 4`
+ *   2. `library.skills:` → `library.protocols:` (rename, preserve order)
+ *   3. NEW `library.skills: []` (Claude Code native skills, empty at migration)
+ *   4. F-002: agent entries' `requires:` items matching `/^skill:(.+)$/` are
+ *      rewritten to `protocol:$1`. All other `requires:` entries are preserved.
+ *
+ * All other top-level fields (repo, loomCoreVersion, loomHooksVersion, releases,
+ * default_dirs, kits) are copied verbatim.
+ *
+ * @param v3 — A parsed v3 catalog object. `library` is typed `unknown` in v3;
+ *             this function narrows it at runtime via safe Array/typeof checks.
+ *             Missing optional sections (agents/prompts/infrastructure) are
+ *             preserved as-is (undefined stays undefined; arrays stay arrays).
+ * @param _opts — Reserved for future migrations; v3→v4 needs no extra config.
+ *                The walker forwards opts through every step.
+ */
+export function migrateLibraryCatalogV3ToV4(
+  v3: LibraryCatalogV3,
+  _opts: MigrationOptions
+): LibraryCatalogV4 {
+  if (v3 == null || (v3 as { catalog_version?: unknown }).catalog_version !== 3) {
+    throw new MigrationSchemaVersionMismatchError(
+      3,
+      v3 == null ? v3 : (v3 as { catalog_version?: unknown }).catalog_version
+    );
+  }
+
+  // Narrow `library` (typed `unknown` in v3) with safe runtime checks. Missing
+  // sections are tolerated: a v3 catalog with only `library.skills:` and no
+  // `agents:` still migrates cleanly.
+  const v3Library = (v3.library ?? {}) as Record<string, unknown>;
+
+  const protocols: ProtocolEntry[] = Array.isArray(v3Library.skills)
+    ? (v3Library.skills as ProtocolEntry[]).map((entry) => ({ ...entry }))
+    : [];
+
+  // F-002: rewrite skill: → protocol: in agent.requires entries.
+  const v3Agents = Array.isArray(v3Library.agents) ? (v3Library.agents as unknown[]) : undefined;
+  const agents: unknown[] | undefined = v3Agents
+    ? v3Agents.map((agent) => rewriteAgentRequires(agent))
+    : undefined;
+
+  const prompts = Array.isArray(v3Library.prompts)
+    ? (v3Library.prompts as unknown[]).map((p) => p)
+    : undefined;
+
+  const infrastructure = Array.isArray(v3Library.infrastructure)
+    ? (v3Library.infrastructure as unknown[]).map((p) => p)
+    : undefined;
+
+  const library: LibraryCatalogV4["library"] = {
+    protocols,
+    skills: [],
+  };
+  if (agents !== undefined) library.agents = agents;
+  if (prompts !== undefined) library.prompts = prompts;
+  if (infrastructure !== undefined) library.infrastructure = infrastructure;
+
+  return {
+    catalog_version: 4,
+    repo: v3.repo,
+    loomCoreVersion: v3.loomCoreVersion,
+    loomHooksVersion: v3.loomHooksVersion,
+    // Releases array: shallow-copy entries so callers can't mutate v3 via the v4 ref.
+    releases: v3.releases.map((r) => ({ ...r })),
+    default_dirs: v3.default_dirs,
+    library,
+    // KitEntry → KitV4Entry is a structural superset; v3 kits flow through.
+    // Per F-002 the bare-string `includes:` form is still legal in v4 (deprecated).
+    kits: (v3.kits ?? []).map((k) => ({ ...k })) as unknown as KitV4Entry[],
+  };
+}
+
+const SKILL_PREFIX_RE = /^skill:(.+)$/;
+
+/**
+ * Rewrite an agent entry's `requires:` array, replacing any `skill:foo` token
+ * with `protocol:foo`. Non-matching entries are preserved verbatim. Agents
+ * without a `requires:` array are returned unchanged (shallow copy).
+ *
+ * Treats input as readonly — does not mutate the original object.
+ */
+function rewriteAgentRequires(agent: unknown): unknown {
+  if (agent == null || typeof agent !== "object") return agent;
+  const a = agent as Record<string, unknown>;
+  if (!Array.isArray(a.requires)) return { ...a };
+  const requires = (a.requires as unknown[]).map((item) => {
+    if (typeof item !== "string") return item;
+    const m = SKILL_PREFIX_RE.exec(item);
+    return m ? `protocol:${m[1]}` : item;
+  });
+  return { ...a, requires };
+}
+
+/**
+ * Frozen built-in registry. Tests inject stubs by passing a separate registry.
+ *
+ * The `"3->4"` step rewrites the `library.skills` block into `library.protocols`,
+ * introduces an empty `library.skills:` block for Claude Code native skills,
+ * and rewrites agent `requires:` `skill:*` tokens to `protocol:*` (F-002).
+ * See `migrateLibraryCatalogV3ToV4` above for the full transform.
+ */
 export const MIGRATIONS: MigrationRegistry = Object.freeze({
   "2->3": (input: AnyLibraryCatalog, opts: MigrationOptions) =>
     migrateLibraryCatalogV2ToV3(input as LibraryCatalogV2, opts),
+  "3->4": (input: AnyLibraryCatalog, opts: MigrationOptions) =>
+    migrateLibraryCatalogV3ToV4(input as LibraryCatalogV3, opts),
 });
 
-/** Current schema version targeted by `migrateToLatest`. Mirror of registry. */
-export const CURRENT_VERSION = 3;
+/**
+ * Current schema version targeted by `migrateToLatest`. Mirror of registry.
+ *
+ * Bumped from 3 → 4 in Phase 1 of PLAN-kit-native-skills.md, simultaneously
+ * with the real `"3->4"` migrator landing above and `library-catalog.currentVersion`
+ * in `agents/protocols/schema-versions.toon` bumping to 4. The parity test in
+ * `test/protocol/schema-upgrade-v3.test.ts` guards against drift between the
+ * three sites.
+ */
+export const CURRENT_VERSION = 4;
 
 /**
  * Walk the migration chain from `fromVersion` to `targetVersion`. Production
