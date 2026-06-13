@@ -184,3 +184,244 @@ describe("real repo manifest", () => {
     expect(result.status).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// IterationSnapshot writer — covers checksum embedding + atomic write +
+// retry-on-transient-failure per agents/protocols/iteration-snapshot.schema.md.
+//
+// Validates locked decisions W-01 (ms-precision ISO 8601), W-02 (slug rule
+// for multi-dot + extension-less filenames), and C-07 (keep all snapshots
+// forever; no overwrite).
+// ---------------------------------------------------------------------------
+
+import {
+  writeIterationSnapshot,
+  deriveSlug,
+  SnapshotWriteFailed,
+  type WriteFileImpl,
+} from "../../hooks/lib/iteration-snapshot.js";
+
+describe("writeIterationSnapshot (iteration-snapshot.ts)", () => {
+  let repoRoot: string;
+  let snapshotDir: string;
+
+  beforeEach(() => {
+    repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "loom-snapshot-"));
+    snapshotDir = path.join(repoRoot, "planning", "history", "snapshots");
+  });
+
+  afterEach(() => {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  function writeSubject(relPath: string, body: string): string {
+    const abs = path.join(repoRoot, relPath);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, body);
+    return relPath;
+  }
+
+  function parseToon(text: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const line of text.split("\n")) {
+      const idx = line.indexOf(":");
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      if (!key) continue;
+      out[key] = line.slice(idx + 1).trim();
+    }
+    return out;
+  }
+
+  it("happy path: writes copy + metadata; checksum matches sha256 of copy; iteration + slug + timestamp shape correct", async () => {
+    const body = "# Plan\nIteration 2 content\n";
+    const subject = writeSubject(
+      "planning/PLAN-convergence-generalization.md",
+      body,
+    );
+
+    const record = await writeIterationSnapshot({
+      subject,
+      iteration: 2,
+      snapshotDir,
+      repoRoot,
+    });
+
+    // Both files exist side-by-side under snapshotDir.
+    const copyPath = path.join(
+      snapshotDir,
+      "PLAN-convergence-generalization-pass-2.md",
+    );
+    const metaPath = path.join(
+      snapshotDir,
+      "PLAN-convergence-generalization-pass-2.toon",
+    );
+    expect(fs.existsSync(copyPath)).toBe(true);
+    expect(fs.existsSync(metaPath)).toBe(true);
+
+    // Copy is byte-identical to source.
+    expect(fs.readFileSync(copyPath, "utf-8")).toBe(body);
+
+    // Checksum in metadata matches sha256 of the copy.
+    const expected = `sha256:${sha256(body)}`;
+    expect(record.snapshotChecksum).toBe(expected);
+
+    const meta = parseToon(fs.readFileSync(metaPath, "utf-8"));
+    expect(meta.snapshotChecksum).toBe(expected);
+    expect(meta.iteration).toBe("2");
+    expect(meta.slug).toBe("PLAN-convergence-generalization");
+    expect(meta.sourcePath).toBe("planning/PLAN-convergence-generalization.md");
+    expect(meta.snapshotPath).toBe(
+      "planning/history/snapshots/PLAN-convergence-generalization-pass-2.md",
+    );
+
+    // Timestamp is ISO 8601 with millisecond precision (locked W-01).
+    expect(meta.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+    // Record returned mirrors what's on disk.
+    expect(record.iteration).toBe(2);
+    expect(record.slug).toBe("PLAN-convergence-generalization");
+  });
+
+  it("multi-dot filename: slug is basename minus FINAL extension only (W-02)", async () => {
+    const subject = writeSubject("planning/PLAN-x.v2.md", "body\n");
+
+    const record = await writeIterationSnapshot({
+      subject,
+      iteration: 1,
+      snapshotDir,
+      repoRoot,
+    });
+
+    expect(record.slug).toBe("PLAN-x.v2");
+    expect(fs.existsSync(path.join(snapshotDir, "PLAN-x.v2-pass-1.md"))).toBe(true);
+    expect(fs.existsSync(path.join(snapshotDir, "PLAN-x.v2-pass-1.toon"))).toBe(true);
+
+    // Sanity-check the pure helper directly too.
+    const derived = deriveSlug("planning/PLAN-x.v2.md");
+    expect(derived.slug).toBe("PLAN-x.v2");
+    expect(derived.ext).toBe(".md");
+    expect(derived.basename).toBe("PLAN-x.v2.md");
+  });
+
+  it("no-extension subject: slug equals basename, copy has no extension, metadata still gets .toon", async () => {
+    const subject = writeSubject("notes", "just a note\n");
+
+    const record = await writeIterationSnapshot({
+      subject,
+      iteration: 1,
+      snapshotDir,
+      repoRoot,
+    });
+
+    expect(record.slug).toBe("notes");
+    expect(fs.existsSync(path.join(snapshotDir, "notes-pass-1"))).toBe(true);
+    expect(fs.existsSync(path.join(snapshotDir, "notes-pass-1.toon"))).toBe(true);
+
+    const derived = deriveSlug("notes");
+    expect(derived.slug).toBe("notes");
+    expect(derived.ext).toBe("");
+  });
+
+  it("source missing: throws SNAPSHOT_WRITE_FAILED after attempting once (no retry needed — pre-write check)", async () => {
+    // The source file is checked before the write loop begins, so a missing
+    // source short-circuits without consuming the retry. This confirms the
+    // helper distinguishes pre-write validation failures from transient
+    // write failures.
+    let sleepCalls = 0;
+    const sleep = async (_ms: number) => {
+      sleepCalls++;
+    };
+
+    await expect(
+      writeIterationSnapshot({
+        subject: "does/not/exist.md",
+        iteration: 1,
+        snapshotDir,
+        repoRoot,
+        sleep,
+      }),
+    ).rejects.toThrow(/^SNAPSHOT_WRITE_FAILED:/);
+    expect(sleepCalls).toBe(0);
+
+    // And the error is the expected class.
+    let thrown: unknown;
+    try {
+      await writeIterationSnapshot({
+        subject: "does/not/exist.md",
+        iteration: 1,
+        snapshotDir,
+        repoRoot,
+        sleep,
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(SnapshotWriteFailed);
+    expect((thrown as Error).name).toBe("SnapshotWriteFailed");
+  });
+
+  it("transient EIO: first write attempt fails, second succeeds; both files end up on disk", async () => {
+    const subject = writeSubject("planning/PLAN.md", "v1\n");
+
+    let attempts = 0;
+    let sleepCalls = 0;
+    const sleep = async (ms: number) => {
+      sleepCalls++;
+      // Don't actually wait 1s in tests — but assert the requested duration
+      // matches the locked 1-second backoff.
+      expect(ms).toBe(1000);
+    };
+    // Custom writer: throw on first attempt, succeed on second by delegating
+    // to the real fs primitives.
+    const flaky: WriteFileImpl = ({ copyAbsPath, copyBytes, metaAbsPath, metaBytes }) => {
+      attempts++;
+      if (attempts === 1) {
+        const err: NodeJS.ErrnoException = new Error("EIO simulated") as NodeJS.ErrnoException;
+        err.code = "EIO";
+        throw err;
+      }
+      const copyTmp = `${copyAbsPath}.tmp`;
+      fs.writeFileSync(copyTmp, copyBytes);
+      fs.renameSync(copyTmp, copyAbsPath);
+      const metaTmp = `${metaAbsPath}.tmp`;
+      fs.writeFileSync(metaTmp, metaBytes);
+      fs.renameSync(metaTmp, metaAbsPath);
+    };
+
+    const record = await writeIterationSnapshot({
+      subject,
+      iteration: 1,
+      snapshotDir,
+      repoRoot,
+      sleep,
+      _writeFileImpl: flaky,
+    });
+
+    expect(attempts).toBe(2);
+    expect(sleepCalls).toBe(1);
+    expect(record.iteration).toBe(1);
+    expect(fs.existsSync(path.join(snapshotDir, "PLAN-pass-1.md"))).toBe(true);
+    expect(fs.existsSync(path.join(snapshotDir, "PLAN-pass-1.toon"))).toBe(true);
+  });
+
+  it("keep-all-forever retention (C-07): pass-1, pass-2, pass-3 all coexist; refusing to overwrite an existing pass throws", async () => {
+    const subject = writeSubject("planning/PLAN.md", "evolving plan\n");
+
+    await writeIterationSnapshot({ subject, iteration: 1, snapshotDir, repoRoot });
+    await writeIterationSnapshot({ subject, iteration: 2, snapshotDir, repoRoot });
+    await writeIterationSnapshot({ subject, iteration: 3, snapshotDir, repoRoot });
+
+    // All 6 files (3 copies + 3 metadata) coexist after the third write.
+    for (const n of [1, 2, 3]) {
+      expect(fs.existsSync(path.join(snapshotDir, `PLAN-pass-${n}.md`))).toBe(true);
+      expect(fs.existsSync(path.join(snapshotDir, `PLAN-pass-${n}.toon`))).toBe(true);
+    }
+
+    // A caller-error second invocation for the same iteration MUST be
+    // refused — never silently overwrite a snapshot per locked C-07.
+    await expect(
+      writeIterationSnapshot({ subject, iteration: 2, snapshotDir, repoRoot }),
+    ).rejects.toThrow(/snapshot already exists/);
+  });
+});

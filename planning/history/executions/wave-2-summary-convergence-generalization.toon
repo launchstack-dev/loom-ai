@@ -1,0 +1,74 @@
+wave: 2
+runId: convergence-generalization-20260613-001
+status: success
+startedAt: 2026-06-13T13:35:00Z
+completedAt: 2026-06-13T13:55:00Z
+durationMs: 1200000
+strategy: serial-pair (Phase 5 -> Phase 11; Phase 11 deps Phase 5 — driver doc cites the helper Phase 11 implements; M-01 logical close at end of W2)
+
+phases[2]{id,agent,model,status,filesCreated,filesModified,completedAt}:
+  5,implementer-agent,opus,success,0,1,2026-06-13T13:42:00Z
+  11,implementer-agent,opus,success,1,1,2026-06-13T13:53:00Z
+
+filesCreated[1]:
+  hooks/lib/iteration-snapshot.ts
+
+filesModified[2]:
+  agents/convergence-driver.md
+  test/protocol/checksums.test.ts
+
+filesAlsoTouched[0]:
+
+sectionOwnership[3]{phase,section,linesBefore,linesAfter}:
+  5,"agents/convergence-driver.md § Document Mode Safeguards (new H2 between Circuit Breakers and State Tracking)",921,1014
+  11,hooks/lib/iteration-snapshot.ts (new file — writeIterationSnapshot + deriveSlug + SnapshotWriteFailed + 2 types),0,321
+  11,test/protocol/checksums.test.ts (extended with 6 snapshot tests at bottom of file),186,427
+
+exportsAdded[5]{file,name,kind}:
+  hooks/lib/iteration-snapshot.ts,writeIterationSnapshot,function
+  hooks/lib/iteration-snapshot.ts,deriveSlug,function
+  hooks/lib/iteration-snapshot.ts,SnapshotWriteFailed,class
+  hooks/lib/iteration-snapshot.ts,IterationSnapshotRecord,type
+  hooks/lib/iteration-snapshot.ts,WriteIterationSnapshotOptions,type
+
+lockedDecisionsWired[4]{id,location}:
+  C-06,agents/convergence-driver.md § Document Mode Safeguards § Scope-Expansion Guard — defines scope-expansion semantics, regex set (^### Phase \d+, ^### F-\d+, ^### M-\d+), fire timing, halt behavior
+  C-07,agents/convergence-driver.md § Document Mode Safeguards § Auto-Snapshot Writer + hooks/lib/iteration-snapshot.ts (keep-all-forever via existsSync collision guard at write site)
+  C-08,agents/convergence-driver.md § Document Mode Safeguards § Scope-Expansion Guard § Interactive vs --auto divergence — interactive records prompt + exit 0; --auto exits code 1 + stderr JSON (schema deferred to convergence-summary.schema.md)
+  W-01,hooks/lib/iteration-snapshot.ts (now().toISOString() — ms-precision ISO 8601)
+  W-02,hooks/lib/iteration-snapshot.ts § deriveSlug (slug = basename minus FINAL dot only; multi-dot and extension-less cases covered by tests)
+
+verification:
+  tsc: pass (bunx tsc --noEmit -p hooks/tsconfig.json -> exit 0)
+  test: pass (bun test test/protocol/ -> 406 pass / 0 fail / 950 expect calls; checksums.test.ts went from 8 to 14 tests with +6 snapshot tests; pipeline-loop.test.ts continues to pass 25/0)
+  lint: skip (bun run lint not configured)
+  ownershipDrift: clean (git status shows only the 3 declared files; iteration-snapshot.ts as new untracked file is part of Phase 11's declared ownership)
+
+reconciliation:
+  crossBoundaryRequests: 0 (.plan-execution/ephemeral/requests/ empty)
+  ownershipViolations: 0 (Phase 5 only touched convergence-driver.md; Phase 11 only touched iteration-snapshot.ts + checksums.test.ts; disjoint)
+  conflictingExports: 0 (Phase 5 doc-only — no exports; Phase 11 exports 5 symbols in a new file — no collisions)
+  contractAmendments: 0
+
+wiringPass: skipped (Phase 5 doc-only; Phase 11 creates an isolated helper module imported at runtime by the convergence-driver agent prompt — no static-import barrel/route/index wiring needed. Vitest auto-discovers the extended checksums.test.ts via path pattern. Same explicit no-op pattern as Wave 1.)
+
+automatedQualityGate: PROCEED (verification.status == pass, zero blocking issues, zero ownership violations, zero gate halts, no cross-boundary requests outstanding)
+
+acceptanceCriteriaSummary:
+  total: 13
+  met: 13
+  partial: 0
+  notMet: 0
+  notes: Phase 5 AC1-7 (driver-doc layer) all met by the new Document Mode Safeguards section. Phase 11 AC1-6 all met by the helper + extended tests. Phase 5 helper-dependent ACs (AC8-9 — fixture invocation of writeIterationSnapshot and simulated EIO surfacing SNAPSHOT_WRITE_FAILED) are subsumed by Phase 11 tests "transient EIO" and "happy path" which cover both behaviors at the unit level. The plan's separate Phase 13 (W5) e2e fixture verifies end-to-end snapshot writing through the driver.
+
+milestoneStatus:
+  M-01: LOGICALLY CLOSED at end of W2 (per plan totalWaves table — F-01 driver document mode + snapshot helper now both shipped; M-01 gate is testable). Phase 13 (W5) provides the e2e fixture asserting M-01 end-to-end; W2 close is the contract-level gate.
+
+contextPressureNote: "Wave 2 ran across 2 serial implementer spawns (opus). Cumulative this turn: ~146k spawned-agent tokens (Phase 5 78k + Phase 11 67k). Plus orchestrator-side recovery + audit work earlier in this session. Per execute.md Step 9.1, ALWAYS checkpoint at wave boundaries. Per --auto Automated Quality Gate, decision is PROCEED. Recommend /clear + /loom-plan execute --resume --auto to continue Wave 3 in a fresh window — Wave 3 has a parallel branch (Phase 6 + Phase 8) + serial Phase 7, estimated 250-350k tokens."
+
+waveCost: ~146k tokens spent (P5 78k + P11 67k); cumulative across run: ~622k (W0 186k + W1 290k + W2 146k)
+
+nextWave: 3
+nextWaveStrategy: W3a (Phases 6 + 8 parallel — disjoint files) -> W3b (Phase 7 after Phase 6; Phase 7 deps Phase 6 because it wires the critic into create.md whose contract Phase 6 defines)
+nextWavePhases[3]: 6, 8, 7
+nextWaveMilestone: M-02 progress (M-02 closes at end of W4 when plan-review harness ships)

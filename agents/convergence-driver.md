@@ -279,6 +279,99 @@ Halt-message stdout format (locked):
 
 Both the `cause` and `recovery` strings ALSO appear (verbatim) in the iteration `summary` field of the halt-iteration `iter-{N}.toon` so a fresh-context resume can recover them without re-reading the schema doc.
 
+## Document Mode Safeguards
+
+This section defines the two document-mode-only safeguards layered onto the single Convergence Loop: the **scope-expansion guard** (locked **C-06**) and the **auto-snapshot writer** (locked **C-07**). Both safeguards are inert in `target` and `criteria` modes — the driver MUST NOT evaluate the scope regex or write `IterationSnapshot` files outside `convergenceMode == document`. Per `converge.config` (see `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`), both safeguards are gated by booleans that default to `true`: `scopeGuardEnabled` arms the scope-expansion guard, `snapshotEnabled` arms the auto-snapshot writer, and `snapshotDir` (default `planning/history/snapshots/`) names the snapshot output directory.
+
+### Scope-Expansion Guard (locked C-06)
+
+**What counts as scope expansion.** Scope expansion is the addition of a NEW top-level structural section to the subject file. Concretely: a heading line of any of these three forms that is present in the post-integration subject but absent from the pre-integration subject (i.e., the snapshot taken at the start of the same iteration per § Auto-Snapshot Writer below):
+
+- `### Phase N` — a new phase heading where `N` is an integer.
+- `### F-NN` — a new feature heading where `NN` is one or more digits.
+- `### M-NN` — a new milestone heading where `NN` is one or more digits.
+
+**What does NOT count as scope expansion.** Edits inside an existing top-level section are NEVER scope expansion, regardless of size. Specifically:
+
+- Adding acceptance-criteria bullets to an existing `### Phase N`.
+- Adding deliverables to an existing `### Phase N`, `### F-NN`, or `### M-NN`.
+- Adding or modifying convergence-target bullets within existing phases/features/milestones.
+- Rewording, splitting, or reordering bullets within an existing top-level section.
+- Adding `#### H4` or deeper subheadings under an existing `### H3`.
+- Adding `## H2` or `# H1` headings (these are NOT in the regex set — only level-3 `Phase|F-|M-` headings trigger the guard).
+
+This boundary is what enables productive integrator work: an integrator MUST be able to deepen an existing phase's acceptance criteria without tripping the guard, but it MUST NOT silently grow the plan with new top-level work units.
+
+**Detection regex (line-anchored, exact heading-level 3).** The guard runs THREE regexes against the diff between the snapshot copy (`{snapshotDir}/{slug}-pass-{N}.{ext}`) and the post-integration subject. A heading line matches when it begins at column 0 (no leading whitespace) and matches one of:
+
+```
+^### Phase \d+
+^### F-\d+
+^### M-\d+
+```
+
+`\d+` is one or more ASCII decimal digits (`0-9`). The `^` anchor is line-start; the engine MUST run in multiline mode so each line of the file is tested independently. A match within a fenced code block (```` ``` ````) still counts — the driver does NOT exclude fenced regions because plan files do not legitimately contain `### Phase N`-style headings inside code blocks, and excluding them would create an evasion vector. The regex is intentionally narrow: `### Phases` (plural), `### Phase: 1` (colon), `#### Phase 1` (H4, deeper level), and `## Phase 1` (H2, shallower level) all FAIL to match and therefore do NOT trigger the guard.
+
+**When the guard fires.** The guard runs AFTER the integrator returns and BEFORE the next harness invocation — i.e., between step 7 (wait for integrator) and step 8 (re-run harness) of the Convergence Loop. This placement is load-bearing: the snapshot taken at iteration `N` is the pre-integration baseline; the post-integration subject is what the integrator just wrote; the diff between them is the scope-expansion candidate. The guard MUST NOT run before the integrator (nothing to compare yet) and MUST NOT run after the harness (then a SCOPE_EXPANSION halt would be conflated with `blockingCount` changes).
+
+The guard evaluation algorithm (document mode, `scopeGuardEnabled == true`, iteration `>= 2`):
+
+1. Read the snapshot copy at `{snapshotDir}/{slug}-pass-{N}.{ext}` (written at step 6 below for iteration `N`).
+2. Read the current subject at `converge.config.subject` (the post-integration state).
+3. Collect each set of line-anchored matches for the three regexes from BOTH files.
+4. Compute the set difference `current_matches \ snapshot_matches` — these are the NEW top-level headings introduced by the integrator on this pass.
+5. If the difference is non-empty, the guard FIRES.
+
+**Halt behavior when the guard fires.** A guard firing triggers a clean loop exit with `haltReason: SCOPE_EXPANSION`. The driver MUST:
+
+1. Leave the subject file in the post-integration state — do NOT auto-revert. Recovery (`cp` the snapshot back) is the operator's choice per the C-10 recovery string.
+2. Write `haltReason: SCOPE_EXPANSION` into the current `iter-{N}.toon` row per § Iteration Summary Uniform Shape Across Modes, populating the iteration `summary` field with the offending new heading(s) — e.g., `Scope expansion detected: integrator added ### Phase 11 to subject`.
+3. Transition through the single Terminal-State write path defined in § Terminal-State Transition: `convergence-summary.toon` (locked C-11), writing `status: halted-scope-expansion`, `haltReason: SCOPE_EXPANSION`, `finalBlockingCount: {current value, may be 0 or >0}`.
+4. Emit the C-10 halt-message block to stdout per § Halt Messages and Recovery — both the locked `cause` string (`Integrator added a new top-level Phase/Feature/Milestone (C-06)`) and the locked `recovery` string (`Approve scope OR ` + `cp` + ` snapshot back; re-invoke`). The driver MUST NOT paraphrase either string; the canonical source is `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference`.
+
+**Interactive vs `--auto` divergence (locked C-08).** The user-facing behavior at the SCOPE_EXPANSION boundary depends on whether the run was launched under `--auto`:
+
+- **Interactive (no `--auto`).** After the four steps above, the driver records a user prompt asking the operator to either (a) approve the scope expansion and re-invoke the loop with a raised plan boundary, or (b) revert the subject via `cp {snapshotDir}/{slug}-pass-{N}.{ext} {converge.config.subject}` and resume. The prompt and the operator's response are recorded; the loop does NOT continue without input. Exit code is `0` because the interactive session itself did not fail.
+- **`--auto` (locked C-08).** No prompt is recorded. The driver exits the process with **exit code 1** and writes a machine-readable JSON line to stderr in the shape specified by `agents/protocols/convergence-summary.schema.md` — the C-08 contract is normative there; this driver MUST NOT redefine or duplicate the stderr-line schema. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still happens BEFORE the process exit so downstream link consumers (`verify-link`, future `converge-link`) can read it from disk per locked C-11.
+
+The interactive and `--auto` branches share the same subject-file final state (post-integration, NOT reverted) and the same `convergence-summary.toon` shape — only the prompt-vs-stderr handling and process exit code differ.
+
+### Auto-Snapshot Writer (locked C-07)
+
+**When snapshots are written.** In document mode with `snapshotEnabled == true` (the default), the driver writes an `IterationSnapshot` row to disk BEFORE every integrator spawn for iterations `>= 2`. Iteration 1 does NOT write a snapshot because there is no prior integrator-produced state worth preserving — the iteration-1 baseline is the subject file as the operator handed it to the driver, and it lives in version control (or the operator's working tree) already. From iteration 2 onward, the snapshot taken at the start of iteration `N` captures the post-integration state of iteration `N-1`, which is also the pre-integration baseline for iteration `N` — the same baseline the Scope-Expansion Guard above diffs against.
+
+The snapshot write slots into the Convergence Loop between step 5 (stall short-circuit) and step 6 (spawn integrator) — concretely, the driver MUST call the snapshot helper AFTER deciding the integrator will be spawned this iteration and BEFORE the Agent tool call that spawns it. This ordering guarantees that if the integrator hangs, crashes, or produces garbage, the snapshot of the pre-integration subject is already on disk and can be used to revert.
+
+**File layout (per `agents/protocols/iteration-snapshot.schema.md`).** Each pass writes TWO sibling files under `{converge.config.snapshotDir}` (default `planning/history/snapshots/`):
+
+- `{slug}-pass-{N}.{ext}` — the verbatim copy of the subject file at write time.
+- `{slug}-pass-{N}.toon` — the `IterationSnapshot` metadata record (sourcePath, snapshotPath, snapshotChecksum, iteration, timestamp, slug).
+
+Where `{slug}` is derived from `converge.config.subject` per the locked W-02 slug rule (basename minus its FINAL extension only) and `{ext}` preserves the subject's trailing extension verbatim. The integer `N` in `pass-{N}` MUST equal the driver's `currentIteration` at write time and MUST equal the `iteration` field of the sibling `.toon` record. All snapshots are retained forever per C-07 — the driver does NOT GC, cap, or rotate snapshot files.
+
+**Helper call (Phase 11 deliverable).** The driver invokes `writeIterationSnapshot(...)` exported from `hooks/lib/iteration-snapshot.ts` (helper lands in Phase 11 of this plan; this driver doc cites the call site, the Phase 11 implementer wires the helper). The helper is the SOLE writer of `IterationSnapshot` files — the driver MUST NOT inline the slug derivation, sha256 computation, or atomic-write sequence; it MUST call through the helper so the on-disk format stays consistent with the schema. The helper handles atomic writes per `agents/protocols/iteration-snapshot.schema.md § File Locations` (write copy to `{path}.{ext}.tmp`, rename; write metadata to `{path}.toon.tmp`, rename; verify checksum).
+
+**Error handling: `SNAPSHOT_WRITE_FAILED` is warn-and-continue.** Per the Error Handling table above and `agents/protocols/iteration-snapshot.schema.md § Error Codes`, a snapshot-write failure (disk full, permissions, missing source, checksum mismatch) does NOT halt the convergence loop. The helper performs a single retry with 1-second backoff; if the retry also fails, the helper returns `SNAPSHOT_WRITE_FAILED` and the driver MUST:
+
+1. Log a warning to stderr identifying the failed snapshot path and the underlying error.
+2. Set `snapshotRef: null` in the current iteration's `iter-{N}.toon` row (per § Iteration Summary Uniform Shape Across Modes invariant 2 — `snapshotRef` is `null` when the snapshot is unavailable).
+3. PROCEED to the integrator spawn at step 6 without aborting the loop. A missing snapshot is a degraded mode, not a fatal condition — the loop is still allowed to converge. The consequence is that REGRESSION or SCOPE_EXPANSION recovery for THIS iteration will require the operator to use their own backup (git, editor history) rather than the snapshot.
+
+This warn-and-continue posture is intentional: snapshot writing is a safety-net feature, and an unwritable snapshot directory MUST NOT block a plan-quality convergence run that is otherwise making progress. The user-visible signal is the stderr warning plus the `snapshotRef: null` on the iteration row.
+
+**Resume safety.** Per `iteration-snapshot.schema.md § Lifecycle and Retention`, `/loom-converge --resume` does NOT re-write any existing snapshot file. It only writes `pass-{currentIteration}` on the next NEW iteration after resume. The driver MUST NOT overwrite a snapshot whose `pass-{N}` integer matches an already-completed iteration, even if the file appears stale.
+
+### Cross-References
+
+- **Locked decision C-06** — Scope-expansion guard semantics and the regex set; this section is the driver-side implementation contract.
+- **Locked decision C-07** — Auto-snapshot writes before every integrator spawn (iteration `>= 2`); see `agents/protocols/iteration-snapshot.schema.md` for the schema and retention policy.
+- **Locked decision C-08** — `--auto` + SCOPE_EXPANSION exits with code 1 and a machine-readable stderr line; the exact JSON shape is normative in `agents/protocols/convergence-summary.schema.md`. This section MUST NOT duplicate that schema.
+- **Locked decision C-09** — Stdout progress format; see § Output Format § Stdout Progress (locked C-09) for the per-iteration line emitted at step 13 of the Convergence Loop. The SCOPE_EXPANSION halt line at step 10 is the C-10 halt-message block (cause + recovery), NOT a C-09 progress line.
+- **Locked decision C-10** — Halt-message format (cause + recovery + machine-readable `haltReason`); see § Circuit Breakers § Halt Messages and Recovery (locked C-10) for the full enum and the locked strings. The SCOPE_EXPANSION row of the C-10 table is the canonical source for the cause and recovery strings emitted on a guard firing.
+- **`agents/protocols/iteration-snapshot.schema.md`** — Snapshot record schema, slug derivation (W-02), `SNAPSHOT_WRITE_FAILED` warn-and-continue behavior, retention policy.
+- **`agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`** — `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` configuration fields and their defaults.
+- **`hooks/lib/iteration-snapshot.ts`** — Phase 11 deliverable that exports `writeIterationSnapshot(...)`; sole writer of `IterationSnapshot` files; implementation reference for slug rule, sha256 algorithm, and atomic-write sequence.
+
 ## State Tracking
 
 Write `.plan-execution/convergence-state.toon` after each iteration:
