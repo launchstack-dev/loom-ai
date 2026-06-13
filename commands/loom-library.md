@@ -69,7 +69,7 @@ If a source starts with `/` or `~`, read it directly with the Read tool. No API 
 ### Source Validation
 
 **Name validation:**
-Before constructing any target path, validate that the item name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Reject names containing `/`, `..`, or null bytes.
+Before constructing any target path, validate `name` via the canonical slug rules in `hooks/lib/wizard-interview.ts`'s `validateSkillSlug` (single source of truth: lowercase kebab-case, `[a-z][a-z0-9-]*`). Reject names containing `/`, `..`, or null bytes.
 
 **Target-path prefix validation (delegated to `hooks/lib/skill-router.ts`):**
 After resolving the full target path, validate it via `validateInstallPath(targetPath)` from `hooks/lib/skill-router.ts`. The function returns `{ valid: boolean, reason?: string }` and is the single source of truth for which prefixes are allowed. The current allow-list is exposed as the `ALLOWED_INSTALL_PREFIXES` const in the same module:
@@ -209,14 +209,7 @@ All classification logic for this command lives in `hooks/lib/library-add-heuris
 2. Read the file content (local `Read` tool or GitHub fetch). The heuristic is pure-function: the caller (this command) is responsible for the I/O. Pass both the resolved `filePath` and the in-memory `content` into the heuristic.
 3. Classify the source by calling `classifyAddSource(filePath, content)` from `hooks/lib/library-add-heuristic.ts`. The function returns `{type, reason}` where `type` is one of `skill | protocol | agent | prompt | ambiguous`.
 
-   The heuristic's signal cascade (documented here for reviewer cross-reference — the canonical implementation is in `library-add-heuristic.ts`, do NOT re-derive these rules in the markdown):
-   - YAML frontmatter `triggers:` with at least one item -> `skill` (N-07: triggers-first, NOT filename-first)
-   - `AgentResult` or `state.toon`-style schema markers (e.g. `filesCreated[N]:`) -> `protocol`
-   - `$ARGUMENTS` slash-command marker -> `prompt`
-   - Agent-style markers (`# Agent Instructions`, `You are an agent`) -> `agent`
-   - Otherwise -> `ambiguous`
-
-   Filename-only hints are NOT used. A file named `SKILL.md` WITHOUT a populated `triggers:` key is treated as `ambiguous` and falls through to step 4 (bt-4-38; CG-04). An empty `triggers: []` array is also `ambiguous` (bt-4-43). This is the explicit N-07 contract.
+   For the canonical signal cascade and classification priorities, see `hooks/lib/library-add-heuristic.ts` — DO NOT duplicate the rules here.
 
 4. If `type === 'ambiguous'`:
    a. Call `formatAmbiguousPrompt(filePath)` from `hooks/lib/library-add-heuristic.ts` to obtain the prompt text. The returned string includes the lines `[1] skill`, `[2] protocol`, and `[q] abort`, plus the canonical one-sentence descriptions:
@@ -226,7 +219,7 @@ All classification logic for this command lives in `hooks/lib/library-add-heuris
    b. Display the returned prompt verbatim to the user. Do NOT reformat or rewrap — Phase 4 tests pin the exact line shapes (bt-4-45..47).
    c. Read the user's selection. On `1` -> proceed with `type = skill`. On `2` -> proceed with `type = protocol`. On `q` (or any non-`1`/`2`) -> abort the add with a one-line notice; make no changes to `library.yaml`.
 
-5. Derive a suggested name from the filename (strip directory and extension). Validate the name matches `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. If not, sanitize by replacing invalid characters with `-` and confirm with user.
+5. Derive a suggested name from the filename (strip directory and extension). Validate `name` via the canonical slug rules in `hooks/lib/wizard-interview.ts`'s `validateSkillSlug` (single source of truth: lowercase kebab-case, `[a-z][a-z0-9-]*`). If not valid, sanitize by replacing invalid characters with `-` and confirm with user.
 
 6. Confirm the final `name` and `type` with the user. Display `reason` from the `ClassificationResult` as one-line context (e.g. "frontmatter `triggers:` is present and non-empty"). The user MAY override `type`; if they choose a type that the heuristic did not return, log a one-line notice but proceed.
 

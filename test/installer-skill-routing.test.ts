@@ -139,6 +139,12 @@ describe("validateInstallPath", () => {
     expect(result.valid).toBe(true);
   });
 
+  it('validates "~/.claude/commands/loom-library.md" as { valid: true } (prompts install here)', () => {
+    // Finding #3: ~/.claude/commands/ added as third allowed prefix for prompt files
+    const result = validateInstallPath("~/.claude/commands/loom-library.md");
+    expect(result.valid).toBe(true);
+  });
+
   // Spec: bt-4-05 — path outside allowed prefixes returns { valid: false } without throwing
   it("returns { valid: false, reason: string } for a path outside allowed prefixes (does not throw)", () => {
     // Spec: bt-4-05
@@ -289,5 +295,32 @@ describe("buildSkillInstallRecord", () => {
       installedAt: "2026-06-12T12:00:00Z",
     });
     expect(record.installedAt).toBe("2026-06-12T12:00:00Z");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveBareNameInclude — infrastructure priority (Finding #7)
+// ---------------------------------------------------------------------------
+
+describe("resolveBareNameInclude — infrastructure resolution", () => {
+  // Finding #7: infrastructure is the 5th tier in BARE_NAME_PRIORITY.
+  // A bare name found only in library.infrastructure[] must resolve with
+  // { type: "infrastructure", name } rather than returning null.
+  it('resolves "some-hook-name" to { type: "infrastructure" } when only in infrastructure section', () => {
+    const catalog: any = {
+      catalog_version: 4,
+      library: {
+        protocols: [],
+        skills: [],
+        agents: [],
+        prompts: [],
+        infrastructure: [{ name: "some-hook-name", source: "hooks/some-hook.ts" }],
+      },
+      kits: [],
+    };
+    const result = resolveBareNameInclude("some-hook-name", catalog);
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe("infrastructure");
+    expect(result!.name).toBe("some-hook-name");
   });
 });

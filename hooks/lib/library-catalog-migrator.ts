@@ -426,7 +426,20 @@ export function migrateLibraryCatalogV3ToV4(
   const v3Library = (v3.library ?? {}) as Record<string, unknown>;
 
   const protocols: ProtocolEntry[] = Array.isArray(v3Library.skills)
-    ? (v3Library.skills as ProtocolEntry[]).map((entry) => ({ ...entry }))
+    ? (v3Library.skills as unknown[]).map((raw, idx) => {
+        const entry = raw as Record<string, unknown>;
+        if (typeof entry.name !== "string" || entry.name.length === 0) {
+          throw new Error(
+            `migrateLibraryCatalogV3ToV4: library.skills[${idx}] missing required field 'name' (name=${String(entry.name ?? "<unknown>")})`
+          );
+        }
+        if (typeof entry.source !== "string" || entry.source.length === 0) {
+          throw new Error(
+            `migrateLibraryCatalogV3ToV4: library.skills[${idx}] missing required field 'source' (name=${String(entry.name ?? "<unknown>")})`
+          );
+        }
+        return { ...(entry as unknown as ProtocolEntry) };
+      })
     : [];
 
   // F-002: rewrite skill: → protocol: in agent.requires entries.

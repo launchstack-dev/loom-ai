@@ -95,6 +95,22 @@ export interface ExistingSkillResult {
 // Functions
 // ---------------------------------------------------------------------------
 
+/**
+ * Escape a scalar value for safe emission into a YAML file as a double-quoted
+ * string. Backslashes are escaped first, then double-quotes. Newlines are
+ * rejected (they must be caught at input validation time).
+ *
+ * Usage: emit as `key: ${yamlQuoteString(value)}` — the returned string
+ * already includes the surrounding double-quote characters.
+ */
+export function yamlQuoteString(value: string): string {
+  if (/[\r\n]/.test(value)) {
+    throw new Error(`YAML value cannot contain newlines: ${value.slice(0, 40)}`);
+  }
+  const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
 /** The single source of truth for the skill-slug pattern: `[a-z][a-z0-9-]*`
  *  with no leading/trailing hyphen. P3-06 hard rule. */
 const SLUG_RE = /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$/;
@@ -257,6 +273,9 @@ export function interviewStep(state: WizardState, input: string): WizardState {
       if (trimmed.length === 0) {
         return { step: "ask-description", answers, error: "Description cannot be empty" };
       }
+      if (/[\r\n]/.test(trimmed)) {
+        return { step: "ask-description", answers, error: "Description cannot contain newlines." };
+      }
       answers.description = trimmed;
       return { step: "ask-trigger-type", answers };
     }
@@ -281,6 +300,9 @@ export function interviewStep(state: WizardState, input: string): WizardState {
     case "ask-trigger-glob": {
       if (trimmed.length === 0) {
         return { step: "ask-trigger-glob", answers, error: "Glob pattern cannot be empty" };
+      }
+      if (/[\r\n]/.test(trimmed)) {
+        return { step: "ask-trigger-glob", answers, error: "Description cannot contain newlines." };
       }
       // Support comma-separated globs in a single input line.
       const globs = trimmed
@@ -338,7 +360,7 @@ export function interviewStep(state: WizardState, input: string): WizardState {
 export function generateSkillMdContent(answers: WizardAnswers): string {
   const name = answers.name ?? "unnamed-skill";
   const description = answers.description ?? "";
-  const lines: string[] = ["---", `name: ${name}`, `description: ${description}`];
+  const lines: string[] = ["---", `name: ${name}`, `description: ${yamlQuoteString(description)}`];
 
   if (
     answers.triggerType === "file-triggered" &&
@@ -380,7 +402,7 @@ export function generateLibraryYamlEntry(answers: WizardAnswers): string {
 
   const lines: string[] = [
     `    - name: ${name}`,
-    `      description: ${description}`,
+    `      description: ${yamlQuoteString(description)}`,
     `      source: ${source}`,
   ];
 

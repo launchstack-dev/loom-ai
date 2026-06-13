@@ -215,7 +215,7 @@ link: fix
 linkVersion: 1
 runId: {from pipeline-state}
 trampolineIteration: {from pipeline-state}
-outerIteration: {from pipeline-state}
+outerIteration: 3  # convergence loop iteration number; matches execute link's envelope
 status: complete                          # complete | failed | escalated
 startedAt: {Step 0 timestamp}
 completedAt: {now}

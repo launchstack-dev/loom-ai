@@ -61,19 +61,27 @@ export interface SkillRemovePlan {
   pruneIfEmpty: boolean;
 }
 
-/** Bare-name resolution priority — locked here so callers and tests agree. */
+/**
+ * Bare-name resolution priority — locked here so callers and tests agree.
+ * Order: agents → protocols → skills → prompts → infrastructure.
+ */
 export const BARE_NAME_PRIORITY: ReadonlyArray<ResourceType> = Object.freeze([
   "agent",
   "protocol",
   "skill",
   "prompt",
+  "infrastructure",
 ]);
 
-/** Allowed install path prefixes — extended from `~/.claude/agents/` only
- *  to also accept `~/.claude/skills/` for native-skill items. */
+/**
+ * Allowed install path prefixes — `~/.claude/skills/` for native-skill items,
+ * `~/.claude/agents/` for agent definitions, and `~/.claude/commands/` for
+ * prompt (slash-command) files.
+ */
 export const ALLOWED_INSTALL_PREFIXES: ReadonlyArray<string> = Object.freeze([
   "~/.claude/skills/",
   "~/.claude/agents/",
+  "~/.claude/commands/",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -107,7 +115,8 @@ export function parseIncludeEntry(entry: TypedInclude): ParsedInclude {
 
 /**
  * Validate that a target install path is inside one of the allowed prefixes
- * (`~/.claude/skills/` or `~/.claude/agents/`). Pure check — never throws.
+ * (`~/.claude/skills/`, `~/.claude/agents/`, or `~/.claude/commands/`).
+ * Pure check — never throws.
  *
  * Returns `{ valid: false, reason }` so the caller can build a
  * `SOURCE_VALIDATION_ERROR` TOON envelope without having to interpret a

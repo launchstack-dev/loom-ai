@@ -322,6 +322,12 @@ function main() {
         }
         if (typeof entry.source === "string" && entry.source.length > 0) {
           const sourcePath = path.resolve(REPO_ROOT, entry.source);
+          if (!sourcePath.startsWith(REPO_ROOT + path.sep) && sourcePath !== REPO_ROOT) {
+            errors.push(
+              `library.${section}[${i}] source '${entry.source}' resolves outside the repository root (path traversal blocked)`
+            );
+            continue;
+          }
           if (!fs.existsSync(sourcePath)) {
             errors.push(
               `library.${section}[${i}] source '${entry.source}' does not resolve to an existing file (name=${entry.name})`
@@ -412,7 +418,9 @@ function main() {
   const totalEntries =
     ((catalog.library?.skills ?? []).length || 0) +
     ((catalog.library?.agents ?? []).length || 0) +
-    ((catalog.library?.prompts ?? []).length || 0);
+    ((catalog.library?.prompts ?? []).length || 0) +
+    ((catalog.library?.protocols ?? []).length || 0) +
+    ((catalog.library?.infrastructure ?? []).length || 0);
   process.stdout.write(
     `OK: skills/library.yaml validated (${totalEntries} entries, ${warnings.length} warning(s)).\n`
   );

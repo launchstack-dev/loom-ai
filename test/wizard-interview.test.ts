@@ -20,6 +20,7 @@ import {
   interviewStep,
   generateSkillMdContent,
   generateLibraryYamlEntry,
+  yamlQuoteString,
   type WizardState,
   type WizardAnswers,
 } from "../hooks/lib/wizard-interview.js";
@@ -339,7 +340,7 @@ describe("generateSkillMdContent", () => {
     };
     const content = generateSkillMdContent(answers);
     expect(content).toContain("name: my-skill");
-    expect(content).toContain("description: Enforces coding conventions");
+    expect(content).toContain('description: "Enforces coding conventions"');
     expect(content).toContain("triggers:");
     expect(content).toContain('- "**/*.ts"');
     // Frontmatter is delimited by leading and trailing `---`
@@ -357,7 +358,7 @@ describe("generateSkillMdContent", () => {
     };
     const content = generateSkillMdContent(answers);
     expect(content).toContain("name: my-skill");
-    expect(content).toContain("description: Enforces coding conventions");
+    expect(content).toContain('description: "Enforces coding conventions"');
     // triggers: key must be absent (not triggers: [] — fully omitted, per
     // bt-4-30 / bt-4-33). Use a non-anchored check too because the entire
     // document also must not contain a `triggers:` line anywhere.
@@ -383,7 +384,7 @@ describe("generateLibraryYamlEntry", () => {
     const entry = generateLibraryYamlEntry(answers);
     expect(typeof entry).toBe("string");
     expect(entry).toContain("name: my-skill");
-    expect(entry).toContain("description: Enforces coding conventions");
+    expect(entry).toContain('description: "Enforces coding conventions"');
     expect(entry).toContain("source: skills/my-skill/SKILL.md");
   });
 
@@ -443,5 +444,74 @@ describe("generateLibraryYamlEntry", () => {
     };
     const entry = generateLibraryYamlEntry(answers);
     expect(entry.endsWith("\n")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// yamlQuoteString — YAML escaping (Finding #4)
+// ---------------------------------------------------------------------------
+
+describe("yamlQuoteString — YAML escaping", () => {
+  it('wraps plain text in double-quotes (e.g., "Polars: faster DataFrames")', () => {
+    const answers: WizardAnswers = {
+      name: "my-skill",
+      description: "Polars: faster DataFrames",
+      triggerType: "description-activated",
+      confirmed: true,
+    };
+    const content = generateSkillMdContent(answers);
+    expect(content).toContain('description: "Polars: faster DataFrames"');
+  });
+
+  it('escapes embedded double-quote in description (she said \\"hi\\")', () => {
+    const answers: WizardAnswers = {
+      name: "my-skill",
+      description: 'she said "hi"',
+      triggerType: "description-activated",
+      confirmed: true,
+    };
+    const content = generateSkillMdContent(answers);
+    expect(content).toContain('description: "she said \\"hi\\""');
+  });
+
+  it("yamlQuoteString throws when value contains a newline character", () => {
+    expect(() => yamlQuoteString("line one\nline two")).toThrow(/newlines/i);
+  });
+
+  it("interviewStep at ask-description returns error when description contains newline", () => {
+    const state = makeState("ask-description", { name: "my-skill" });
+    const next = interviewStep(state, "bad\nvalue");
+    expect(next.step).toBe("ask-description");
+    expect(typeof next.error).toBe("string");
+    expect(next.error!.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// interviewStep coverage gaps (Finding #14)
+// ---------------------------------------------------------------------------
+
+describe("interviewStep — coverage gaps", () => {
+  // Finding #14 test 1: ask-kit-registration with "y" → finalize + registerInKit: true
+  it('at "ask-kit-registration" with input "y": transitions to finalize with answers.registerInKit === true', () => {
+    const state = makeState("ask-kit-registration", {
+      name: "my-skill",
+      description: "Enforces team conventions",
+      triggerType: "description-activated",
+      confirmed: true,
+    });
+    const next = interviewStep(state, "y");
+    expect(next.step).toBe("finalize");
+    expect(next.answers.registerInKit).toBe(true);
+  });
+
+  // Finding #14 test 2: finalize is idempotent — returns state unchanged for any input
+  it('at "finalize": interviewStep is idempotent — returns structurally equal state for any input', () => {
+    const inputState: WizardState = {
+      step: "finalize",
+      answers: { confirmed: true, name: "x", description: "y" },
+    };
+    const next = interviewStep(inputState, "anything");
+    expect(next).toEqual(inputState);
   });
 });

@@ -57,16 +57,9 @@ Parse arguments:
 
 #### Step 0: Precondition Gate
 
-Before prompting the user, verify the Phase 7 M-02 gate has passed.
+**Step 0 — Precondition gate.** If a Loom plan is currently executing on this project (i.e., `.plan-execution/state.toon` exists with `status: in-progress`), the wizard MAY run only after Phase 7 has completed — verified by `.plan-execution/stage-context/wave-4-gate.toon` existing with `status: passed`. If state.toon is in-progress and wave-4-gate.toon is absent, abort with: "Cannot author skills mid-execution before the M-02 gate. Run `/loom-plan execute --resume` first."
 
-1. Read `.plan-execution/stage-context/wave-4-gate.toon`.
-2. If the file does NOT exist, abort with:
-   ```
-   Phase 8 requires Wave 4 gate. Run /loom-plan execute first.
-   ```
-   Exit with non-zero status (e.g. exit 1). Do NOT proceed to the interview.
-
-(When invoked outside an active Loom plan execution — e.g. an end-user running `/loom-skill create` against a settled project — the gate check is informational only. If the project is not in a wave-execution mid-flight, treat the gate file's absence as "not currently in execute mode" and continue normally. The gate text above only applies when invoked as part of Phase 8 wiring.)
+If no plan is executing (`.plan-execution/state.toon` absent or `status: success-*` / `status: idle`), proceed normally — the gate is irrelevant for end-user authoring on a settled project.
 
 #### Step 1: ask-name
 

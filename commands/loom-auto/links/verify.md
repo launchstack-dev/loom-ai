@@ -192,6 +192,7 @@ link: verify
 linkVersion: 1
 runId: {from pipeline-state}
 trampolineIteration: {from pipeline-state}
+outerIteration: 3  # convergence loop iteration number; matches execute link's envelope
 status: complete                          # complete | failed | escalated
 startedAt: {ISO-8601 from Step 0}
 completedAt: {ISO-8601 now}

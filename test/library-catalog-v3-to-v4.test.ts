@@ -515,3 +515,32 @@ describe("v3→v4 migration — requires: rewrite via migrateToLatest", () => {
     expect(agentWithProtocolRequires).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// detectLibraryCatalogVersion — partial-v4 detection (Finding #15)
+// ---------------------------------------------------------------------------
+
+describe("detectLibraryCatalogVersion — partial-v4 (missing library markers)", () => {
+  // Finding #15: a string that has catalog_version: 4 plus the three v3 top-level
+  // markers (loomCoreVersion / loomHooksVersion / releases) but is missing both
+  // library.protocols: and library.skills: markers must return
+  // { version: 4, outdated: true, reason: /missing library/ }.
+  it("returns { version: 4, outdated: true } for a v4 catalog missing library.protocols: and library.skills: markers", () => {
+    const partialV4 = [
+      "catalog_version: 4",
+      "repo: https://github.com/launchstack-dev/loom-ai",
+      "loomCoreVersion: 0.1.0",
+      "loomHooksVersion: 0.1.0",
+      "releases:",
+      "  - version: 0.1.0",
+      "library:",
+      "  agents: []",
+    ].join("\n");
+
+    const result = detectLibraryCatalogVersion(partialV4);
+    expect(result.version).toBe(4);
+    expect(result.outdated).toBe(true);
+    // Reason must reference the missing library section markers.
+    expect(result.reason).toMatch(/missing library/);
+  });
+});
