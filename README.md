@@ -40,6 +40,38 @@ The four pillars:
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
 | `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
 
+<!-- TODO(Phase 6 or later): DRY up duplicate extensibility coverage —
+     the older "### Bespoke reviewers" subsection (~line 460) and
+     "## Per-Project Extensibility" section (~line 740) overlap with
+     this consolidated "## Extending Loom" block. Phase 0b is purely
+     additive; the relocation/removal of those duplicates is out of
+     scope here per wave-ownership boundaries. -->
+## Extending Loom
+
+Loom is an **extensible** platform, not a fixed methodology — every reviewer, executor, hook, schema, scenario template, and command is a swappable resource, not a hardcoded pipeline step. Tools that ship a single opinionated workflow force you to fight the framework when your domain doesn't fit; Loom hands you the same primitives its built-in agents use and lets you assemble what your project actually needs.
+
+There are two audiences for this surface: **consumers** and **authors**. To install a published skill kit, run `/loom-library use <kit>`. To author your own skill, agent, or kit, run `/loom-skill create` (wizard ships in Phase 8; `/loom-agent create` is available today). The wizards scaffold the resource, add it to `skills/library.yaml`, and register it where it belongs.
+
+Five resource types compose every Loom behavior: **agent** (`.claude/agents/`), **prompt** (`.claude/commands/`), **protocol** (`agents/protocols/`), **skill** (`~/.claude/skills/`), and **infrastructure** (`hooks/`, `scripts/`). Per-project registration lives in `.claude/orchestration.toml`.
+
+### Authoring kits
+
+A kit bundles related resources behind a single `/loom-library use` install. Use the typed `includes:` form so the installer routes each resource to the correct directory:
+
+```yaml
+kits:
+  - name: hipaa-review
+    description: HIPAA-aware code review for healthcare projects
+    version: 1.0.0
+    includes:
+      - { type: agent,    name: hipaa-reviewer }
+      - { type: protocol, name: phi-handling }
+      - { type: skill,    name: hipaa-audit-checklist }
+      - { type: prompt,   name: loom-hipaa-scan }
+```
+
+Each entry resolves against the matching block under `library:` (`library.skills:` for `type: skill`, `library.protocols:` for `type: protocol`, etc.). Bare-string entries are accepted for backwards compatibility and resolve via the priority `agent > protocol > skill > prompt`.
+
 ## Install
 
 ### Prerequisites
