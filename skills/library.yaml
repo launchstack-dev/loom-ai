@@ -1,5 +1,15 @@
-catalog_version: 2
+catalog_version: 4
 repo: https://github.com/launchstack-dev/loom-ai
+loomCoreVersion: 0.1.0
+loomHooksVersion: 0.1.0
+
+releases:
+  - version: 0.1.0
+    coreTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz
+    hooksTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-hooks-v0.1.0.tar.gz
+    cosignSignature: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz.sig
+    sha256Manifest: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/SHA256SUMS
+    releasedAt: 2026-06-01T00:00:00Z
 
 default_dirs:
   skills:
@@ -13,7 +23,8 @@ default_dirs:
     - global: ~/.claude/commands/
 
 library:
-  skills:
+  # In v4, protocols = formerly library.skills from v3 (inter-agent message schema files)
+  protocols:
     - name: execution-protocols
       description: Inter-agent protocol schemas for the Loom execution pipeline (AgentResult, state.toon, execution conventions)
       source: agents/protocols/execution-conventions.md
@@ -152,6 +163,16 @@ library:
       description: Schema for contract-partition.toon — explicit partitioning manifest mapping entities to contract-{domain} pages (used by /loom-plan materialize)
       source: agents/protocols/entity-domain-partition.schema.md
 
+  # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
+  skills:
+    - name: python-conventions
+      description: Python ecosystem conventions — Polars-first for new code, uv/ruff/pytest, atomic writes, type hints, TOON output for Loom artifacts.
+      source: skills/python-conventions/SKILL.md
+      triggers:
+        - "**/*.py"
+        - "**/pyproject.toml"
+        - "**/requirements.txt"
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -198,28 +219,28 @@ library:
     - name: contracts-agent
       description: Wave 0 specialist - creates shared types, interfaces, schemas
       source: agents/contracts-agent.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     - name: implementer-agent
       description: Parallel worker within file ownership boundaries
       source: agents/implementer-agent.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     - name: data-pipeline-agent
       description: Specialized implementer for data pipeline code — dbt, Dagster, Airflow, SQL, Bauplan
       source: agents/data-pipeline-agent.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
       kit: data-engineering
 
     - name: wiring-agent
       description: Post-wave integration - barrel files, routes, imports, deps
       source: agents/wiring-agent.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     - name: verification-agent
       description: Quality gate - typecheck, tests, lint, ownership drift
       source: agents/verification-agent.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     # Testing agents
     - name: acceptance-criteria-agent
@@ -242,7 +263,7 @@ library:
     - name: data-quality-gate
       description: Pre-execute gate agent — validates schema conformance, nullability, type coercion safety, freshness SLAs, and referential integrity against data contracts
       source: agents/data-quality-gate.md
-      requires: [skill:execution-protocols, skill:agent-result-schema]
+      requires: [protocol:execution-protocols, protocol:agent-result-schema]
       kit: data-engineering
 
     # Code review agents
@@ -262,12 +283,12 @@ library:
     - name: roadmap-builder-agent
       description: Creates ROADMAP.md files from descriptions and discussion output, supports refinement mode
       source: agents/roadmap-builder-agent.md
-      requires: [skill:roadmap-schema]
+      requires: [protocol:roadmap-schema]
 
     - name: scope-feasibility-agent
       description: Reviews roadmap scope, feature conflicts, milestone sizing, constraint compliance
       source: agents/scope-feasibility-agent.md
-      requires: [skill:roadmap-schema]
+      requires: [protocol:roadmap-schema]
 
     - name: api-explorer
       description: Brownfield API surface analyst - discovers internal endpoints, external integrations, undocumented routes
@@ -277,12 +298,12 @@ library:
     - name: api-route-creator
       description: Specialized implementer that generates internal API endpoints (routes, validation, middleware)
       source: agents/api-route-creator.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     - name: api-connector
       description: Specialized implementer that generates typed third-party API clients (auth, retry, timeout, response mapping)
       source: agents/api-connector.md
-      requires: [skill:execution-protocols]
+      requires: [protocol:execution-protocols]
 
     # Planning agents (extended)
     - name: prompt-refiner-agent
@@ -292,12 +313,12 @@ library:
     - name: questioner-agent
       description: "Scope interrogator — proposal-based decisions with code examples, acceptance criteria generation, brownfield context awareness"
       source: agents/questioner-agent.md
-      requires: [skill:execution-protocols, skill:scope-contract-schema]
+      requires: [protocol:execution-protocols, protocol:scope-contract-schema]
 
     - name: plan-builder-agent
       description: Creates v1/v2 PLAN.md files - v2 is spec-driven with API specs, state machines, error handling
       source: agents/plan-builder-agent.md
-      requires: [skill:spec-schema]
+      requires: [protocol:spec-schema]
 
     # Utility agents
     - name: meta-agent
@@ -328,7 +349,7 @@ library:
     - name: convergence-planner-agent
       description: Interactive convergence target discovery — proposes outputs to verify, comparison methods, tolerances through interview
       source: agents/convergence-planner-agent.md
-      requires: [skill:convergence-plan-schema]
+      requires: [protocol:convergence-plan-schema]
 
     # Documentation agents
     - name: project-guidance-agent
@@ -347,22 +368,22 @@ library:
     - name: wiki-maintainer-agent
       description: Maintains project wiki — updates pages, cross-references, index after execution events and code changes
       source: agents/wiki-maintainer-agent.md
-      requires: [skill:wiki-conventions, skill:wiki-page-schema]
+      requires: [protocol:wiki-conventions, protocol:wiki-page-schema]
 
     - name: wiki-ingest-agent
       description: Processes new sources into structured wiki pages with cross-references — codebase, docs, execution results, notes
       source: agents/wiki-ingest-agent.md
-      requires: [skill:wiki-conventions, skill:wiki-page-schema]
+      requires: [protocol:wiki-conventions, protocol:wiki-page-schema]
 
     - name: wiki-lint-agent
       description: Periodic wiki health check — contradictions, orphaned pages, stale content, missing cross-refs, plan-reality drift
       source: agents/wiki-lint-agent.md
-      requires: [skill:wiki-lint-rules, skill:wiki-conventions]
+      requires: [protocol:wiki-lint-rules, protocol:wiki-conventions]
 
     - name: wiki-query-agent
       description: Searches wiki and synthesizes answers from multiple pages — follows cross-references, optionally files answers back
       source: agents/wiki-query-agent.md
-      requires: [skill:wiki-conventions]
+      requires: [protocol:wiki-conventions]
 
     # Extended review agents
     - name: performance-reviewer
@@ -428,12 +449,12 @@ library:
     - name: loom-plan
       description: "Plan operations — create, review, execute, test, materialize plans via subcommands"
       source: commands/loom-plan.md
-      requires: [agent:plan-builder-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, skill:execution-protocols, skill:plan-schema, skill:spec-schema, skill:scenario-schema, skill:contract-page-extensions-schema, skill:entity-domain-partition-schema]
+      requires: [agent:plan-builder-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, protocol:execution-protocols, protocol:plan-schema, protocol:spec-schema, protocol:scenario-schema, protocol:contract-page-extensions-schema, protocol:entity-domain-partition-schema]
 
     - name: loom-change
       description: "Change-proposal lifecycle over contract-* wiki pages — list, status, diff, init, review, approve, run, archive, reject, quick-archive subcommands"
       source: commands/loom-change.md
-      requires: [skill:change-proposal-schema, skill:change-state-schema, skill:contract-page-extensions-schema, skill:scenario-schema, skill:execution-protocols, skill:validation-rules]
+      requires: [protocol:change-proposal-schema, protocol:change-state-schema, protocol:contract-page-extensions-schema, protocol:scenario-schema, protocol:execution-protocols, protocol:validation-rules]
 
     - name: loom-code
       description: "Code quality — review with 9+ agents, auto-apply fixes via subcommands"
@@ -443,12 +464,12 @@ library:
     - name: loom-bugfix
       description: "Rapid bug fixing — wiki context, impact assessment, fix archiving without full plan ceremony"
       source: commands/loom-bugfix.md
-      requires: [agent:bugfix-analyst-agent, skill:fix-archive-schema]
+      requires: [agent:bugfix-analyst-agent, protocol:fix-archive-schema]
 
     - name: loom-wiki
       description: "Wiki management — ingest, lint, query, status via subcommands"
       source: commands/loom-wiki.md
-      requires: [agent:wiki-ingest-agent, agent:wiki-maintainer-agent, agent:wiki-lint-agent, agent:wiki-query-agent, skill:wiki-conventions, skill:wiki-lint-rules]
+      requires: [agent:wiki-ingest-agent, agent:wiki-maintainer-agent, agent:wiki-lint-agent, agent:wiki-query-agent, protocol:wiki-conventions, protocol:wiki-lint-rules]
 
     - name: loom-agent
       description: "Agent management — create bespoke agents, list registered agents"
@@ -505,4 +526,12 @@ kits:
       - data-quality-gate
       - loom-data
     command: loom-data.md
+
+  - name: python-conventions
+    description: Python ecosystem conventions skill — registers triggers and conventions for new Python code in this project.
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: python-conventions
 

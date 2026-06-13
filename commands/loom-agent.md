@@ -64,6 +64,8 @@ This context informs your suggestions but do NOT dump it back to the user.
 
 #### Step 1: Determine Agent Purpose
 
+**Before interviewing:** If your goal is applying domain conventions (e.g., coding style, framework preferences, language-specific patterns) rather than orchestrating actor work in a Loom pipeline, consider `/loom-skill create` instead. Skills activate automatically on matching files (via Claude Code's native skill format) and require no pipeline-step orchestration overhead. Use `/loom-agent create` only when you need a participant in a Loom pipeline stage (review, execution, testing, planning) that produces findings or new files. Use `/loom-skill create` when you want domain knowledge that activates contextually without a pipeline call.
+
 If args provide `--pipeline` and `--role`, skip the interview and proceed to Step 2.
 
 Otherwise, ask the user ONE structured question:

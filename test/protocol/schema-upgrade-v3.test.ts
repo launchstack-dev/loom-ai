@@ -299,12 +299,12 @@ describe("detectLibraryCatalogVersion", () => {
     expect(result.reason).toMatch(/Rule 13/);
   });
 
-  it("detects a complete v3 as current", () => {
+  it("detects a complete v3 as outdated (v4 is now current)", () => {
     const v3 = loadFixture("../../test-fixtures/library-catalog-migration/v3-expected.yaml");
     const result = detectLibraryCatalogVersion(v3);
     expect(result.version).toBe(3);
-    expect(result.outdated).toBe(false);
-    expect(result.reason).toBeNull();
+    expect(result.outdated).toBe(true);
+    expect(result.reason).not.toBeNull();
   });
 
   it("flags v3 declared but missing top-level fields", () => {
@@ -551,7 +551,7 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
   }
 
   it("CURRENT_VERSION matches the schema-versions.toon registry entry", () => {
-    expect(LIBRARY_CATALOG_CURRENT_VERSION).toBe(3);
+    expect(LIBRARY_CATALOG_CURRENT_VERSION).toBe(4);
   });
 
   it("MIGRATIONS exposes 2->3 step", () => {
@@ -562,7 +562,7 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
     const result = migrateLibraryCatalogToLatest(makeV2(), 2, {
       coreVersion: "0.1.0",
       hooksVersion: "0.1.0",
-    });
+    }, 3);   // <-- explicit targetVersion: 3
     expect((result as any).catalog_version).toBe(3);
   });
 
@@ -591,7 +591,7 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
       throw new Error("expected throw");
     } catch (err) {
       expect(err).toBeInstanceOf(MissingMigrationStepError);
-      expect((err as MissingMigrationStepError).key).toBe("3->4");
+      expect((err as MissingMigrationStepError).key).toBe("4->5");
     }
   });
 
@@ -618,7 +618,6 @@ describe("migrateLibraryCatalogToLatest (chained walker)", () => {
     expect(result.catalog_version).toBe(4);
     expect(result.newOptionalField).toBe(true);
     expect(result.loomCoreVersion).toBe("0.1.0");
-    expect("3->4" in LIBRARY_CATALOG_MIGRATIONS).toBe(false);
   });
 
   it("length-0 chain (fromVersion === targetVersion) returns input unchanged", () => {

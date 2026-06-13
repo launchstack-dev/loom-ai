@@ -1,0 +1,65 @@
+schemaVersion: 1
+createdAt: 2026-06-12T20:00:00Z
+plan: planning/plans/PLAN-kit-native-skills.md
+reviewType: plan-review
+reviewers[6]: feature-coverage-agent, strategy-agent, ux-agent, phasing-agent, parallelization-agent, agentic-workflow-agent
+model: sonnet
+
+structuralPrecheck:
+  stage1: pass
+  stage2: pass
+  stage3: pass
+  stage4: pass
+  stage7: pass
+  notes: Plan validates structurally — frontmatter present, all required sections present, 8 phases / 4 waves declared, scenarios IDs unique within plan, API spec + state machines + error handling all present per spec.schema.md v2.
+
+findings[28]{id,severity,area,agent,description,suggestedAction}:
+  F-001,blocking,positioning,strategy-agent,"F-04 extensibility docs sequenced last as P1; if Wave 3 is cut under pressure the one deliverable that surfaces the platform-vs-fixed-methodology positioning never ships","Promote CLAUDE.md ## Extensibility Model section to P0 and move into Phase 0 or a standalone Phase 0b — it has no code dependencies"
+  F-002,blocking,parity,feature-coverage-agent,"requires: [skill:*] rewrite scope is ambiguous between migrator spec and state-machine table; 21 agent entries currently have requires: [skill:*] that will silently point at wrong namespace post-v4","Either explicitly add agent-level requires: rewrites to migrateLibraryCatalogV3ToV4 spec OR document the rewrite is intentionally deferred with rationale"
+  F-003,blocking,schema-consistency,feature-coverage-agent,"install-state schemaVersion: 2 in loom-library.md vs schemaVersion: 3 in plan schema table — Phase 0 closed-enum checkpoint cannot gate on the wrong version","Audit install-state-migrator.ts in Phase 0 to confirm current version. Update schema table or loom-library.md to match. Add explicit version to Phase 0 deliverable"
+  F-004,blocking,existing-skills,feature-coverage-agent,"The 3 existing routing skills (loom-bugfix-routing loom-quick-routing loom-git-routing) have no triggers: frontmatter and install to ~/.claude/agents/protocols/ — they will NOT auto-activate via Claude Code's native trigger mechanism","Either (a) add migration step that re-installs them to ~/.claude/skills/<name>/SKILL.md with frontmatter or (b) explicitly categorize them as protocol-type and exclude from library.skills:"
+  F-005,blocking,intra-wave-deps,phasing-agent,"Phase 4 (installer routing tests) declares Phase 3 dependency but Phase 3 is a markdown command file — vitest tests have no module to import","Either extract a hooks/lib/skill-router.ts helper in Phase 0 OR move Phase 4 to Wave 3 after Phase 3 completes"
+  F-006,blocking,ownership-conflicts,parallelization-agent,"Same as F-005 — Phase 4 cannot write meaningful runnable tests against a markdown command. Wave 2's three-phase parallel block partially serializes through this dependency","Extract hooks/lib/skill-router.ts in Phase 0 (or in Phase 3 with Phase 4 sequenced after)"
+  F-007,blocking,error-messaging,ux-agent,"No NOT_IN_CATALOG error code for /loom-library use <bad-name> — most common user error has no defined message or recovery path","Add NOT_IN_CATALOG error code with message: 'No kit or skill named {name} found in library.yaml. Run /loom-library list to see available entries.'"
+  F-008,blocking,states,ux-agent,"Silent activation failure on same-session install — Claude Code reads SKILL.md at session start not continuously; consumer who installs then opens .py file in same session will see no activation","Add post-install notice to /loom-library use: 'Skill {name} installed. Restart your Claude Code session for trigger activation to take effect.'"
+  F-009,warning,sequencing,phasing-agent,"Phase 5 catalog entry uses includes: [skill:...] typed form but installer ships in Phase 3 — Phase 5's automated acceptance check fails before Phase 3 completes","Add Phase 3 to Phase 5's dependency list OR split Phase 5 into 5a (author SKILL.md) and 5b (catalog entry + verification)"
+  F-010,warning,sequencing-risk,phasing-agent,"v4 catalog in the wild before installer routing lands — between Wave 1 (migrator merged) and Wave 2 (installer ships) there's an exploitable window where /loom-upgrade can promote v4 but installer can't honor skill: routing","Add skillInstaller: pending flag in v3->v4 migrator that installer checks OR merge Waves 1+2 as single gating release"
+  F-011,warning,atomic-bump,phasing-agent,"Phase 0 stub throws MissingMigrationStepError on the 3->4 entry — between Phase 0 and Phase 1 (Wave 1's other phase) bun test is red","Either (a) use no-op passthrough stub in Phase 0 OR (b) document Phase 0+1 must be one PR OR (c) move CURRENT_VERSION bump from Phase 0 to Phase 1"
+  F-012,warning,context-budget,agentic-workflow-agent,"Phase 0 file ownership claims test-fixtures/install-state-migration/** but deliverables table has no install-state fixtures — false ownership signal","Remove test-fixtures/install-state-migration/** from Phase 0 ownership OR add explicit deliverable row"
+  F-013,warning,recovery,agentic-workflow-agent,"Phase 0 -> Phase 1 transition leaves test suite red if Wave 1 fails mid-implementation; no verification gate between Wave 0 and Wave 1","Add inter-wave gate that runs bun run tsc --noEmit (passes with stub) but not bun test (would fail). Or restructure so stub lands in Phase 1 not Phase 0"
+  F-014,warning,compression,agentic-workflow-agent,"No rolling-context or stage-context write obligation for any phase — Wave 2's three parallel phases must re-read Wave 1's outputs from source","Add deliverable row to Phase 0 and last phase of each wave: .plan-execution/stage-context/{phase}.toon recording files created/modified, CURRENT_VERSION value, warnings"
+  F-015,warning,recovery,agentic-workflow-agent,"Phase 3 modifies large commands/loom-library.md markdown with six distinct behavioral changes — mid-execution failure leaves installer half-wired","Add ordered implementation sequence note: (1) source-validation, (2) typed-include parser, (3) skill routing, (4) install-state write. State Phase 3 is safely restartable from pre-modified baseline"
+  F-016,warning,criteria-density,agentic-workflow-agent,"Phase 7 /loom-upgrade --project --dry-run criterion isn't traceable to any earlier phase — no phase updates loom-upgrade.md for v4 awareness","Either add loom-upgrade.md update to Phase 6 OR remove the criterion from Phase 7 and mark as separate follow-up"
+  F-017,warning,naming-drift,agentic-workflow-agent,"Phase 2 writes tests against Phase 1's interface contract but cannot verify implementation compiles — test-to-implementation naming drift risk","Add .plan-execution/contracts/catalog-v4-exports.toon to Phase 0 deliverables listing exact exported function and type names — ~10-line artifact eliminates drift"
+  F-018,warning,differentiation,strategy-agent,"Wire-positioning paragraph in README is out of scope but exactly what platform evaluators need — two sentences in ## Extending Loom would close the gap","Add one paragraph to ## Extending Loom README section contrasting platform model against fixed-methodology alternatives — belongs in F-04 scope"
+  F-019,warning,prioritization,strategy-agent,"F-04 docs at P1 while F-03 sample kit is P0 — dependency relationship backward; CLAUDE.md extensibility section is foundation discovery surface","Swap priority: F-04 CLAUDE.md becomes P0 alongside F-01/F-02; python-conventions becomes P1"
+  F-020,warning,schema,feature-coverage-agent,"triggers? optional in SkillEntry TypeScript interface but Required in schema table — sources of truth disagree","Make triggers consistent: either required in both interface and table OR optional in both with installer skipping glob-check when absent"
+  F-021,warning,api,feature-coverage-agent,"No remove behavior spec for skill-type items — leaves orphan ~/.claude/skills/<name>/ directories after /loom-library remove","Add remove path: delete SKILL.md and remove parent directory when empty. Add convergence target and test scenario in Phase 3 or new Phase"
+  F-022,warning,schema-correctness,parallelization-agent,"Phase 5 writes to v2-format skills/library.yaml while migrator produces v4 — Phase 5's grep convergence target passes trivially on old format giving false green","Either (a) Phase 0 also bumps skills/library.yaml from v2 to v4 OR (b) state Phase 5 must detect and migrate catalog version before appending. Strengthen grep to check below library.protocols: section"
+  F-023,warning,merge-strategy,parallelization-agent,"No named reconciliation owner between Wave 1 and Wave 2 — if Phase 1 impl diverges from Phase 2's test expectations Wave 2 starts on broken baseline","Add explicit inter-wave verification step: run bun test test/library-catalog-v3-to-v4.test.ts and bun run tsc --noEmit, block Wave 2 launch until both exit 0, record gate result in .plan-execution/stage-context/wave-1-gate.toon"
+  F-024,warning,deprecation,ux-agent,"DEPRECATION_WARNING test asserts emission but message body is unspecified — implementers will write divergent freeform text","Specify deprecation warning message body in Error Handling Specification as template: 'DEPRECATION WARNING: bare-name include {name} resolved to {type}:{name} via cross-section fallback. Update your kit to use the typed form (e.g. {type}:{name}) before v5'"
+  F-025,warning,discoverability,ux-agent,"No /loom-library status or /loom-library list --installed command surfacing active skills and triggers — UX discoverability gap","Define /loom-library status (or extend list with --installed flag) outputting installed kits resource type per item targetPath and for skill items the triggers patterns from SKILL.md frontmatter"
+  F-026,info,parallelization,parallelization-agent,"Wave 3 (docs) has zero file overlap with Wave 2 — could parallelize if approximate doc wording is acceptable","Optional: fold Phase 6 into Wave 2 as fourth parallel agent to save one wave boundary. Trade-off: docs may need correction in Wave 4 if Phase 3 changes wording (e.g. DEPRECATION_WARNING text)"
+  F-027,info,wave-structure,phasing-agent,"Wave 4 (Phase 7) is too thin — its tests duplicate Phase 4 unit-level assertions","Fold Phase 7 into Wave 3 alongside Phase 6. Add integration test as Phase 6 deliverable. Full bun test becomes Wave 3 exit gate"
+  F-028,info,best-practice,feature-coverage-agent,"No deprecated?: boolean or redirectsTo?: string fields on SkillEntry — future operator cannot deprecate python-conventions without schema bump","Add deprecated?: boolean and redirectsTo?: string to SkillEntry interface now. One-line addition mirrors existing agent/prompt deprecation support in loom-library use"
+
+crossCuttingThemes[7]{id,description,flaggedBy,severity}:
+  X-01,"F-04 extensibility docs sequenced wrong — buried at P1 in Wave 3 when it's the load-bearing positioning deliverable",strategy-agent,blocking
+  X-02,"Phase 4 cannot test against a markdown command file — needs helper extraction in Phase 0 or sequential ordering. Single most material blocking finding",phasing-agent + parallelization-agent,blocking
+  X-03,"Wave 0 -> Wave 1 transition leaves test suite red because Phase 0 stub throws on the 3->4 entry while CURRENT_VERSION already bumped to 4",phasing-agent + agentic-workflow-agent,warning
+  X-04,"install-state schemaVersion 2 vs 3 mismatch between plan and live loom-library.md — Phase 0 closed-enum checkpoint cannot gate on the wrong version",feature-coverage-agent + parallelization-agent,blocking
+  X-05,"Phase 5 catalog write into v2-format library.yaml while migrator produces v4 — false-green convergence target",feature-coverage-agent + parallelization-agent,warning
+  X-06,"Existing routing skills (loom-bugfix-routing loom-quick-routing loom-git-routing) have no triggers: frontmatter; won't auto-activate post-v4",feature-coverage-agent,blocking
+  X-07,"UX-side error messages and warnings are spec-incomplete — NOT_IN_CATALOG missing DEPRECATION_WARNING body undefined silent same-session activation has no notice",ux-agent,blocking
+
+summary:
+  totalFindings: 28
+  blockingCount: 8
+  warningCount: 17
+  infoCount: 3
+  recommendation: REQUEST_CHANGES — 8 blocking findings; majority resolvable via Phase 0 expansion (helper extraction + schema audit + docs-section pull-forward + stage-context obligations). Recommend /loom-plan create --review-integrate to fold findings into PLAN.md before execution.
+
+nextSteps[3]:
+  /loom-plan create --review-integrate --name kit-native-skills — auto-apply blocking and warning findings to plan
+  /loom-plan execute --plan planning/plans/PLAN-kit-native-skills.md --dry-run — preview the (current) wave structure
+  Manual review of specific findings (e.g. F-004 routing skills decision needs human input before automated integration)

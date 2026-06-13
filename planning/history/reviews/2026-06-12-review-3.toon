@@ -1,0 +1,56 @@
+schemaVersion: 1
+createdAt: 2026-06-12T22:00:00Z
+plan: planning/plans/PLAN-kit-native-skills.md
+priorReviews[2]: planning/history/reviews/2026-06-12-review.toon, planning/history/reviews/2026-06-12-review-2.toon
+reviewType: plan-review-pass-3
+reviewers[6]: feature-coverage-agent, strategy-agent, ux-agent, phasing-agent, parallelization-agent, agentic-workflow-agent
+model: sonnet
+
+priorResolution:
+  totalPass2Findings: 25
+  resolved: 20
+  partiallyResolved: 4
+  openFromEarlierPass: 1
+  resolvedList[20]: N-01, N-04, N-06, N-07, N-08, N-09, N-10, N-11, N-12, N-13, N-14, N-15, N-16, N-17-structural, N-18, N-20, N-22, N-23, N-24, N-25, N-02
+  partiallyResolvedList[4]:
+    N-03: idempotency spec + escape hatch landed but no crash-recovery scenario covers it
+    N-17: structural fix correct but new wave-5-gate.toon gap mirrors pre-N-23 pattern
+    N-19: hard dep recorded in this plan but no Phase 7 AC verifies PLAN-oss-launch.md cross-reference
+    N-21: bump moved to Phase 1 correctly but Phase 0 Objective + File Ownership + Phase 5 Note still reference library.yaml
+  openFromEarlier:
+    F-002-F-005: python-conventions installs correctly but no scenario validates Claude Code actually activates it on a .py file
+
+newFindings[8]{id,severity,area,agent,description,suggestedAction}:
+  P3-01,warning,phase-0-header-staleness,feature-coverage-agent,"N-21 partial resolution: bump moved to Phase 1 deliverables but Phase 0 Objective line (729) and File Ownership line (732) still list skills/library.yaml; Phase 5 Note (1243) still says Phase 0 already bumped it. Execution agent reads Objective and File Ownership before deliverables table — will infer it should migrate the file in Phase 0.","Remove skills/library.yaml from Phase 0 Objective and File Ownership. Update Phase 5 Note to read 'Phase 1 already bumped this file to v4 shape.'"
+  P3-02,warning,wave-5-gate-missing,parallelization-agent,"wave-4-gate.toon write was added (N-11) but no equivalent wave-5-gate.toon exists. Phase 10 (Wave 6) depends on Phase 8 (Wave 5) with no machine-verifiable artifact to check Phase 8 completion. If Wave 5 runs multi-agent and Phase 10 launches while Phase 8 is still in progress Phase 10 reads incomplete commands/loom-skill.md. Same pattern as N-23 (wave-0-gate) which was fixed.","Add wave-5-gate.toon deliverable to whichever of Phase 8 or Phase 9 finishes last (or post-Wave-5 orchestrator step). Add Phase 10 dependency on that artifact in its AC."
+  P3-03,warning,wave-4-gate-read-guard,feature-coverage-agent,"wave-4-gate.toon is written by Phase 7 and AC verifies it's written but no downstream phase has an AC reading it as a precondition. Phase 8 and Phase 9 declare Phase 7 dependency (sequential signal) but have no read-guard. Checkpoint-resume scenario where Phase 7 gate file happens to be absent would not be caught.","Add precondition AC to Phase 8: 'ls .plan-execution/stage-context/wave-4-gate.toon must exit 0 before Phase 8 edits begin'. Mirrors the NOT_IN_CATALOG precondition pattern already used in Phase 9."
+  P3-04,warning,n03-no-scenario,ux-agent,"N-03 idempotency AC asserts 'each step is idempotent — re-running after a crash at any step does not corrupt library.yaml' but no scenario S-xx covers the crash-recovery path. S-24 only covers the happy path. Idempotency claim asserted but not testable as written.","Add scenario S-xx: 'wizard re-run after crashing post library.yaml write but pre SKILL.md write — library.yaml entry already exists wizard detects conflict offers overwrite/abort does not append duplicate'. Behavior spec already in AC; just needs the falsifiable test."
+  P3-05,warning,wave-7-strategic-risk,strategy-agent,"Wave 7 single-phase is OSS launch gate (M-03 terminal) but scoped to replacing one placeholder line in CLAUDE.md. Risks table has no entry for 'Phase 11 treated as low-priority documentation and deferred post-M-02.' Executor may ship M-02 and consider the work done.","Add risk row: 'Phase 11 deprioritized as minor doc edit — mitigated by noting M-03 = OSS launch gate and wave-4-gate.toon cannot be declared closed until Phase 11 completes.'"
+  P3-06,nice-to-have,phase-8-slug-validation,feature-coverage-agent,"Phase 8 deliverable spec mentions slug validation in step 1 but Phase 8 ACs do not assert wizard rejects invalid slug (e.g. 'My Skill' '123bad' violating [a-z][a-z0-9-]* constraint). Wizard could ship with slug validation specified in prose but not implemented; AC gate passes; uq_library_skills_name index won't catch format issues only duplicates.","Add Phase 8 AC: 'If user enters name not matching [a-z][a-z0-9-]* the wizard MUST reject with error message and re-prompt before writing any files.'"
+  P3-07,nice-to-have,stage-context-completeness,feature-coverage-agent,"Phases 1 3 4 have no stage-context writes despite project execution-conventions requiring every pipeline stage to write a StageContext summary. Phase 1 is highest-stakes (migrator impl). Phase 3 is what Phase 9 precondition grep depends on. Phase 4 is the test suite.","Add phase-1.toon phase-3.toon phase-4.toon to respective deliverables tables with minimal record content (files modified key ACs confirmed)."
+  P3-08,info,n19-cross-file-enforcement,strategy-agent,"N-19 hard dep recorded in this plan (M-03 header as OSS gate; Risks row; comment noting PLAN-oss-launch.md obligation) but no machine-verifiable step ensures PLAN-oss-launch.md was actually updated before execution. Cross-file enforcement is comment-only.","Optional: add Phase 7 (Wave 4 gate) precondition AC: 'grep -n kit-native-skills planning/plans/PLAN-oss-launch.md returns >= 1 line' before execution continues past Wave 4. Makes the obligation machine-verifiable."
+
+executorCaveats[2]:
+  E-01: "N-11 wave-4-gate.toon absence-check AC ('ls commands/loom-skill.md returns non-zero — file NOT yet present') is a pre-gate assertion. If Phase 7 is ever re-run for debugging after Phase 8 completes this AC will flip red and create false failure. Re-runnable gate ACs should check post-conditions of phases they gate not pre-conditions of future phases. Maintenance hazard worth noting for executor."
+  E-02: "F-002/F-005 sample-kit pain-proof gap remains open from pass-1: Phase 7 smoke test confirms ~/.claude/skills/python-conventions/SKILL.md exists and install-state entry correct but no scenario runs python-conventions on a real .py file and confirms Claude Code picks up the trigger and applies conventions. The plan ships a skill that is correctly installed but never validated as effective end-to-end."
+
+crossCuttingThemes[3]{id,description,flaggedBy,severity}:
+  X-01,"Gate-artifact pattern incomplete — wave-4-gate.toon write-only (no read-guard); wave-5-gate.toon missing entirely. Pattern established at Wave 0 (N-23 fix) not consistently applied.",feature-coverage-agent + parallelization-agent,warning
+  X-02,"Phase 0 + Phase 5 inconsistency after N-21 partial resolution — Objective File Ownership and Phase 5 Note still reference Phase 0 ownership of library.yaml that moved to Phase 1.",feature-coverage-agent,warning
+  X-03,"Idempotency and recovery claims asserted but not scenario-backed — N-03 claim has no S-xx; F-002/F-005 activation claim has no S-xx. Pattern: behavioral promises made in ACs without machine-verifiable scenarios.",ux-agent + strategy-agent,warning
+
+summary:
+  totalNewFindings: 8
+  blockingCount: 0
+  warningCount: 5
+  niceToHaveCount: 2
+  infoCount: 1
+  openFromEarlierPasses: 1 (F-002/F-005 sample-kit activation scenario)
+  executorCaveats: 2
+  recommendation: PLAN IS EXECUTION-READY. Zero blocking findings. The 5 warnings are tightenings (Phase 0 header cleanup, two gate-pattern completions, one scenario for idempotency, one risk-row addition). The 3 lower-tier items can ship as-is and be cleaned up post-execution.
+  trajectoryConfirmed: Pass-1 = 8 blocking. Pass-2 = 5 blocking (all on new content). Pass-3 = 0 blocking. Plan converged in 3 review cycles. Trajectory prediction held.
+
+nextSteps[3]:
+  Option A — apply pass-3 findings via /loom-plan create --review-integrate (one more cycle, ~30 min, gets to 'pristine')
+  Option B — proceed directly to /loom-plan test to extend criteria-plan.toon for Phases 8-11 (gap noted earlier)
+  Option C — start execution via /loom-plan execute --dry-run to preview 7-wave structure; apply pass-3 tightenings during execution

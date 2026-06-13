@@ -1,0 +1,37 @@
+schemaVersion: 1
+wave: 5
+runId: kit-native-skills-20260612-001
+status: success
+gateMode: auto
+phases[2]: 8, 9
+startedAt: 2026-06-13T00:10:00Z
+completedAt: 2026-06-13T00:18:00Z
+durationMs: 480000
+
+agentResults[2]{taskId,agent,status,durationMs}:
+  wave5-phase8-loom-skill-wizard,implementer-agent,success,210000
+  wave5-phase9-library-add-heuristic,implementer-agent,success,360000
+
+filesCreated[4]: commands/loom-skill.md, .plan-execution/stage-context/phase-8.toon, .plan-execution/stage-context/phase-9.toon, .plan-execution/stage-context/wave-5-gate.toon
+filesModified[1]: commands/loom-library.md
+filesRegenerated[1]: checksums.sha256
+
+authoringSurface:
+  loomSkillCreate: "302-line wizard command — wiring + UX only; all logic delegates to hooks/lib/wizard-interview.ts (validateSkillSlug, detectExistingSkill, interviewStep, generateSkillMdContent, generateLibraryYamlEntry). 12-step flow with precondition gate, step-correction confirm, idempotency detection, kit registration via typed { type: skill, name } includes."
+  loomLibraryAdd: "/loom-library add subcommand rewritten as wiring layer over hooks/lib/library-add-heuristic.ts (classifyAddSource, formatAmbiguousPrompt, formatDeprecationWarning). N-07 triggers-first classification documented; N-04 ambiguous prompt copy delegated to formatter."
+
+crossBoundaryRequests:
+  filed: 0
+  resolved: 0
+
+verification:
+  status: pass
+  waveGateStatus: passed
+  fullSuiteStatus: clean
+  acsAutomated: 12
+  acsAll: 27 (16 from Phase 8 + 11 from Phase 9)
+
+nextWave:
+  number: 6
+  phases[1]: 10
+  description: "/loom-agent create cross-reference in CLAUDE.md ### Authoring Resources"

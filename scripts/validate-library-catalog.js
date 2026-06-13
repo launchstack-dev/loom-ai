@@ -8,7 +8,7 @@
  *   2. Every entry under library.{skills,agents,prompts} has name, description, source.
  *   3. Every `source` resolves to an existing file relative to the repo root.
  *   4. Every entry in `requires` resolves to another catalog entry of the
- *      correct kind (skill:foo, agent:foo, or prompt:foo).
+ *      correct kind (skill:foo, agent:foo, prompt:foo, protocol:foo, or infrastructure:foo).
  *   5. No duplicate names within a single section.
  *   6. Kit `includes[]` entries map to a real catalog entry (warning only —
  *      data-engineering kit is an optional add-on).
@@ -290,7 +290,7 @@ function main() {
       errors.push(`'library' must be an object with skills/agents/prompts sections`);
     }
   } else {
-    const sections = ["skills", "agents", "prompts"];
+    const sections = ["skills", "agents", "prompts", "protocols", "infrastructure"];
     const sectionNames = new Map();
     for (const section of sections) {
       sectionNames.set(section, new Set());
@@ -322,6 +322,12 @@ function main() {
         }
         if (typeof entry.source === "string" && entry.source.length > 0) {
           const sourcePath = path.resolve(REPO_ROOT, entry.source);
+          if (!sourcePath.startsWith(REPO_ROOT + path.sep) && sourcePath !== REPO_ROOT) {
+            errors.push(
+              `library.${section}[${i}] source '${entry.source}' resolves outside the repository root (path traversal blocked)`
+            );
+            continue;
+          }
           if (!fs.existsSync(sourcePath)) {
             errors.push(
               `library.${section}[${i}] source '${entry.source}' does not resolve to an existing file (name=${entry.name})`
@@ -344,15 +350,15 @@ function main() {
             );
             continue;
           }
-          const m = /^(skill|agent|prompt):(.+)$/.exec(req);
+          const m = /^(skill|agent|prompt|protocol|infrastructure):(.+)$/.exec(req);
           if (!m) {
             errors.push(
-              `library.${section}[name=${entry.name}].requires entry '${req}' must use 'skill:name', 'agent:name', or 'prompt:name' form`
+              `library.${section}[name=${entry.name}].requires entry '${req}' must use 'skill:name', 'agent:name', 'prompt:name', 'protocol:name', or 'infrastructure:name' form`
             );
             continue;
           }
           const [, kind, depName] = m;
-          const expectSection = `${kind}s`;
+          const expectSection = kind === "infrastructure" ? "infrastructure" : `${kind}s`;
           const target = sectionNames.get(expectSection);
           if (!target || !target.has(depName)) {
             errors.push(
@@ -373,9 +379,26 @@ function main() {
         const includes = kit.includes;
         if (!Array.isArray(includes)) continue;
         for (const inc of includes) {
-          if (!allKnownNames.has(inc)) {
+          // v4 typed-include form: { type: 'skill'|'agent'|'protocol'|'prompt'|'infrastructure', name: '...' }
+          // Legacy bare-name form: plain string resolved via cross-section lookup.
+          let incName;
+          let incTypeSet;
+          if (typeof inc === "string") {
+            incName = inc;
+            incTypeSet = allKnownNames;
+          } else if (inc && typeof inc === "object" && typeof inc.type === "string" && typeof inc.name === "string") {
+            incName = inc.name;
+            const expectSection = inc.type === "infrastructure" ? "infrastructure" : `${inc.type}s`;
+            incTypeSet = sectionNames.get(expectSection) ?? new Set();
+          } else {
             warnings.push(
-              `kit '${kit.name ?? "<unnamed>"}' includes '${inc}' which is not a registered catalog entry`
+              `kit '${kit.name ?? "<unnamed>"}' includes malformed entry ${JSON.stringify(inc)} — expected string or { type, name }`
+            );
+            continue;
+          }
+          if (!incTypeSet.has(incName)) {
+            warnings.push(
+              `kit '${kit.name ?? "<unnamed>"}' includes '${typeof inc === "string" ? inc : `${inc.type}:${inc.name}`}' which is not a registered catalog entry`
             );
           }
         }
@@ -395,7 +418,9 @@ function main() {
   const totalEntries =
     ((catalog.library?.skills ?? []).length || 0) +
     ((catalog.library?.agents ?? []).length || 0) +
-    ((catalog.library?.prompts ?? []).length || 0);
+    ((catalog.library?.prompts ?? []).length || 0) +
+    ((catalog.library?.protocols ?? []).length || 0) +
+    ((catalog.library?.infrastructure ?? []).length || 0);
   process.stdout.write(
     `OK: skills/library.yaml validated (${totalEntries} entries, ${warnings.length} warning(s)).\n`
   );

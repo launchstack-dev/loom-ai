@@ -148,6 +148,7 @@ deltas[1]{domain,breakingChange,addedReqCount,modifiedReqCount,removedReqCount,a
 | `removedScenarios` | string[] | **Required (may be empty).** Scenario IDs (S-NN) to remove. Each MUST exist on the target page. |
 | `breakingChange` | boolean | **Required.** `true` if any `removedRequirements[]`, `modifiedRequirements[]` (with semantic change), or `removedScenarios[]` has downstream references (consumers per the page's `consumers[]`). Auto-set to `true` by validator if not explicitly set and a removal/modification is detected; explicit `false` requires reviewer override. |
 | `migrationNote` | string \| null | **Required when `breakingChange: true`, otherwise null.** Free text explaining how consumers should adapt. Logged into the target page's `## History` entry on archive. |
+| `deliverableId` | string \| null | **Optional.** Reserved for future per-deliverable approval lifecycle; safe to omit. No behavioral effect in current version — validators MUST ignore the value and downstream tooling MUST NOT branch on it. Forward-compatible placeholder so authoring agents may begin emitting deliverable correlation IDs before the lifecycle ships. |
 | `rationale` | string | **Required.** Why this delta is being made. Feeds the History section on archive. Min 30 chars. |
 
 ---

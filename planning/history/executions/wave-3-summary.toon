@@ -1,22 +1,39 @@
+schemaVersion: 1
 wave: 3
-phases[N]: 5, 6, 8
+runId: kit-native-skills-20260612-001
 status: success
+gateMode: auto
+phases[1]: 6
+startedAt: 2026-06-12T23:50:00Z
+completedAt: 2026-06-12T23:55:00Z
+durationMs: 300000
 
-agentResults[N]{taskId,agent,status,filesModified,filesCreated}:
-  w3-phase5,implementer-agent,success,"agents/e2e-test-writer-agent.md agents/e2e-runner-agent.md agents/protocols/e2e-story.schema.md",""
-  w3-phase6,implementer-agent,partial,"commands/loom.md agents/protocols/statusline-contract.md","commands/loom-upgrade.md"
-  w3-phase8,wiring-agent,success,"agents/protocols/orchestration-patterns.md agents/protocols/execution-conventions.md commands/loom-auto.md",""
+agentResults[1]{taskId,agent,status,durationMs}:
+  wave3-phase6-schema-docs,implementer-agent,success,180000
 
-filesCreated[N]: commands/loom-upgrade.md
-filesModified[N]: agents/e2e-test-writer-agent.md, agents/e2e-runner-agent.md, agents/protocols/e2e-story.schema.md, commands/loom.md, agents/protocols/statusline-contract.md, agents/protocols/orchestration-patterns.md, agents/protocols/execution-conventions.md, commands/loom-auto.md
+filesCreated[2]: .plan-execution/stage-context/phase-6.toon, .plan-execution/stage-context/wave-3-gate.toon
+filesModified[3]: agents/protocols/change-proposal.schema.md, agents/protocols/kit.schema.md, commands/loom-upgrade.md
+filesRegenerated[0]:
 
-exportsAdded[N]{name,file,kind}:
+exportsAdded: 0
 
-unresolvedIssues[N]{id,severity,description}:
-  w3-p8-i1,warning,e2e passCondition mismatch: convergence-tier.schema.md says all-pass but e2e-runner-agent.md and loom-auto.md say zero-blocking
-  w3-p8-i2,info,loom-converge.md does not reference e2e agents directly — reachable via loom-auto.md
+schemaDocChanges:
+  deltaBlockSeed: "deliverableId? optional field added with RFC 2119 'validators MUST ignore' / 'tooling MUST NOT branch on it' semantics"
+  kitIncludesType: "widened from string[] to (string | TypedInclude)[]; new ## Typed Includes (v4+) section with python-conventions example + 5-type dispatch table + v5 removal timeline"
+  loomUpgradeV4Awareness: "library-catalog detection now declares Current = catalog_version: 4 with library.protocols: + library.skills: markers. Rule 13 generalized to cover v2→v3→v4 chained walk."
 
-verificationResult: pass
-kitGates[0]{agent,insertionPoint,gate,gateReason}:
-kitWarnings: 0
-kitHalts: 0
+crossBoundaryRequests:
+  filed: 0
+  resolved: 0
+
+verification:
+  status: pass
+  waveGateStatus: passed
+  fullSuiteStatus: 1-deferred-pre-existing
+  preExistingFailures[1]: "vi.resetModules infra in test/loom-change/lifecycle.test.ts (pre-Wave-1; unrelated)"
+
+nextWave:
+  number: 4
+  phases[1]: 7
+  description: "M-02 Gate — wiring-agent runs full smoke test + install verification + /loom-upgrade dry-run + back-compat check"
+  m02GateItem: "Manual smoke test: open scratch.py in Claude Code with python-conventions installed; confirm activation on .py but not .ts"

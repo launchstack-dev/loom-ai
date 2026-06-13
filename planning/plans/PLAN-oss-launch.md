@@ -126,6 +126,10 @@ Phase 0 spike → catalog v3 schema doc → `install-state.toon` v2 schema doc �
 
 Off the critical path (can be broken at launch and tarball-direct install still works): Homebrew formula, plugin manifest, `install.sh` shim polish.
 
+## Hard prerequisite
+
+- **PLAN-kit-native-skills.md M-03 (full kit-native-skills upgrade including `/loom-skill create` wizard and python-conventions sample kit) MUST complete before OSS launch ships.** Per N-19 in PLAN-kit-native-skills.md, the OSS launch story leans on the "kit-native-skills" v4 catalog + author-experience as a load-bearing differentiator; launching without it ships a half-finished extensibility surface. Slippage on kit-native-skills slips OSS launch.
+
 ## Sibling streams (out of scope, but blocking the launch)
 
 - Repo readiness (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY / `.github/` templates / secrets sweep with gitleaks or trufflehog).
