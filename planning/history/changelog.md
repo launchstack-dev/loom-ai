@@ -1,3 +1,19 @@
+## 2026-06-13 -- Trampoline-link compat additions (convergence-generalization)
+
+- Triggered by handoff from parallel session refactoring `/loom-auto` into trampoline + dispatched-links architecture (commits 3872228, 1e1b31a). Three links shipped (verify/fix/execute); two queued (Phase 4 converge-link, Phase 5 planning-link).
+- Plan: planning/plans/PLAN-convergence-generalization.md (1370 → 1411 lines, +41 net)
+- Five additive edits + one new plan-local constraint, all non-structural:
+  - **New schema entry: ConvergenceSummary** (`.plan-execution/convergence-summary.toon`) — 11 fields including `status` enum (`converged` | `halted-stall` | `halted-regression` | `halted-budget` | `halted-max-iter` | `halted-scope-expansion`), `subject` (document mode), `harnessName`, `integratorName`, `finalBlockingCount`, `iterationsRun`. Authoritative "did we converge" signal read by verify-link today and future converge-link.
+  - **Phase 0 expanded:** adds `agents/protocols/convergence-summary.schema.md` to file ownership + deliverable row; new AC asserting the 11-field schema; schema-versions.toon registers 4 schemas (was 3).
+  - **Phase 2 AC added:** driver writes convergence-summary.toon atomically at terminal-state transition; new Convergence Target verifying status field matches actual outcome.
+  - **Phase 10 AC added:** wrapper outputs must be sufficient for fresh-context agent to derive link-result.toon envelope without orchestrator state; new Convergence Target verifying all wrapper outputs land on disk before return.
+  - **Phase 14 AC added:** fixture verifies link-extraction readiness — convergence-summary.toon has all 11 fields, status matches outcome, subject points to real file, iterationsRun matches iter-{N}.toon count. Test asserts input completeness without constructing the envelope.
+  - **New constraint C-11:** Future loom-auto link compatibility — all autoconverge outputs reconstructable from disk; convergence-summary.toon.status is source of truth; no pipeline-state.toon mutation for convergence internals; no AgentResult returns to caller; no new currentStage values mid-convergence; no inline orchestrator mutation of PLAN.md from conversational state.
+- 11 cross-references to C-11 throughout the plan body for traceability.
+- **Why additive (not restructuring):** The plan already had the right philosophy (state on disk, agents self-contained, no orchestrator-side mutation). The trampoline architecture shares this philosophy. The additions just make the existing disk-driven design explicit enough for future link extraction with zero translation.
+- **Not done:** did NOT pre-emptively refactor `--autoconverge` into its own loom-auto link (that's the planning-link's responsibility, owned by parallel session). Did NOT add link-result.toon emission to Phase 10 (planning-link reads disk and constructs its envelope, not the wrapper's job).
+- Status: reviewed; ready for execute now that state.toon is free (kit-native-skills M-02/M-03 closed earlier today).
+
 ## 2026-06-13 -- M-02 formally closed (kit-native-skills)
 
 - M-02 auto gate had passed on 2026-06-12T23:32Z (commit `159ea39`). The remaining qa-review-tier item was the live skill-activation smoke test in a fresh Claude Code session.

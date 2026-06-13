@@ -111,8 +111,13 @@ export function yamlQuoteString(value: string): string {
   return `"${escaped}"`;
 }
 
-/** The single source of truth for the skill-slug pattern: `[a-z][a-z0-9-]*`
- *  with no leading/trailing hyphen. P3-06 hard rule. */
+/**
+ * The single source of truth for the skill-slug pattern (P3-06 hard rule).
+ * Two-branch alternation:
+ *   1. `^[a-z][a-z0-9-]*[a-z0-9]$` — multi-character slug; must start with [a-z],
+ *      may contain hyphens in the middle, must end with [a-z0-9] (trailing hyphen rejected).
+ *   2. `^[a-z]$` — single-letter slug (e.g. "x"); the first branch requires ≥2 chars.
+ */
 const SLUG_RE = /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$/;
 
 /**
@@ -164,10 +169,20 @@ export function detectExistingSkill(libraryYaml: string, name: string): Existing
   // Guard against the egregiously-malformed case the test pins (line ~190):
   // "catalog_version: {\n  broken: [unclosed". We detect any unclosed flow
   // collection as a parse failure signal.
-  const openBraces = (libraryYaml.match(/\{/g) ?? []).length;
-  const closeBraces = (libraryYaml.match(/\}/g) ?? []).length;
-  const openBrackets = (libraryYaml.match(/\[/g) ?? []).length;
-  const closeBrackets = (libraryYaml.match(/\]/g) ?? []).length;
+  // Strip quoted strings FIRST, then YAML comments. Order matters: a quoted
+  // string like `"Issue #123"` contains a literal `#`; if we stripped comments
+  // first, the regex would consume the `#` plus rest of line including the
+  // closing quote, leaving an unclosed quote that then matches across newlines
+  // and swallows arbitrary YAML structure. Quote-then-comment is safe because
+  // any `#` left after quote-stripping really is a comment start.
+  const sanitized = libraryYaml
+    .replace(/"([^"\\]|\\.)*"/g, "")
+    .replace(/'([^'\\]|\\.)*'/g, "")
+    .replace(/#[^\n]*/g, "");
+  const openBraces = (sanitized.match(/\{/g) ?? []).length;
+  const closeBraces = (sanitized.match(/\}/g) ?? []).length;
+  const openBrackets = (sanitized.match(/\[/g) ?? []).length;
+  const closeBrackets = (sanitized.match(/\]/g) ?? []).length;
   if (openBraces !== closeBraces || openBrackets !== closeBrackets) {
     return { exists: false, error: "library.yaml has unbalanced flow collections" };
   }
@@ -369,7 +384,7 @@ export function generateSkillMdContent(answers: WizardAnswers): string {
   ) {
     lines.push("triggers:");
     for (const glob of answers.triggers) {
-      lines.push(`  - "${glob}"`);
+      lines.push(`  - ${yamlQuoteString(glob)}`);
     }
   }
 
@@ -413,7 +428,7 @@ export function generateLibraryYamlEntry(answers: WizardAnswers): string {
   ) {
     lines.push("      triggers:");
     for (const glob of answers.triggers) {
-      lines.push(`        - "${glob}"`);
+      lines.push(`        - ${yamlQuoteString(glob)}`);
     }
   }
 

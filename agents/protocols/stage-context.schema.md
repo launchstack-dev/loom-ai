@@ -264,8 +264,8 @@ Written to `.plan-execution/convergence/iterations/iter-{N}.toon` after each con
 ```toon
 iteration: 1
 mode: criteria
-startedAt: 2026-04-17T09:30:00Z
-completedAt: 2026-04-17T09:35:12Z
+startedAt: 2026-04-17T09:30:00.000Z
+completedAt: 2026-04-17T09:35:12.000Z
 durationMs: 312000
 harnessResult: partial
 findingsBefore: 7
@@ -285,18 +285,43 @@ summary: Fixed 3 findings (1 security, 1 error handling, 1 test failure). No reg
 | Field | Type | Description |
 |-------|------|-------------|
 | `iteration` | integer >= 1 | Iteration number (1-indexed). |
-| `mode` | enum | One of: `criteria`, `target`. |
-| `startedAt` | ISO 8601 | When the iteration began. |
-| `completedAt` | ISO 8601 | When the iteration finished. |
+| `mode` | enum | One of: `criteria`, `target`, `document`. |
+| `startedAt` | ISO 8601 (ms precision) | When the iteration began. Format `YYYY-MM-DDTHH:mm:ss.sssZ` per locked W-01. |
+| `completedAt` | ISO 8601 (ms precision) | When the iteration finished. Format `YYYY-MM-DDTHH:mm:ss.sssZ` per locked W-01. |
 | `durationMs` | integer | Wall-clock duration in milliseconds. |
 | `harnessResult` | enum | One of: `pass`, `fail`, `partial`. |
-| `findingsBefore` | integer | Finding count at the start of the iteration. |
-| `findingsAfter` | integer | Finding count after fixes applied. |
+| `findingsBefore` | integer | Finding count at the start of the iteration. In document mode, this is the `blockingCount` from the prior iteration's `findings.toon` (or 0 on iteration 1). |
+| `findingsAfter` | integer | Finding count after fixes applied. In document mode, this is the `blockingCount` from the current iteration's `findings.toon` after the integrator pass + re-harness. |
 | `findingsFixed` | string[] | Descriptions of findings resolved in this iteration. |
 | `findingsNew` | string[] | Descriptions of new findings introduced (regressions). |
-| `filesModified` | string[] | Paths of files modified by fixer agents. |
+| `filesModified` | string[] | Paths of files modified by fixer agents (or by the integrator in document mode -- typically just the `subject` path). |
 | `stalled` | boolean | `true` if no net progress was made (findingsAfter >= findingsBefore). |
 | `summary` | string | 1-2 sentence description of iteration outcome. |
+| `subject` | string (path), optional | **Document mode only**; `null` in `target`/`criteria` modes. Mirrors `converge.config.subject`. Locked addition per `findings.schema.md` and `convergence-summary.schema.md` so the iteration summary is interpretable without reading `converge.config`. |
+| `snapshotRef` | string (path), optional | **Document mode only**; `null` in `target`/`criteria` modes. Path to the `IterationSnapshot` metadata file for this iteration (e.g., `planning/history/snapshots/PLAN-x-pass-2.toon`). See `iteration-snapshot.schema.md`. |
+| `haltReason` | enum, optional | Populated when the driver halts at this iteration; `null` otherwise. One of: `STALL`, `REGRESSION`, `BUDGET_EXHAUSTED`, `MAX_ITERATIONS`, `SCOPE_EXPANSION` (and pre-flight/harness codes `INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID` when the failure occurs mid-loop). Surfaced in stdout halt message per locked C-10 and copied into `convergence-summary.toon.haltReason`. |
+| `tokensUsed` | integer (cumulative), optional | Non-blocking observability metric. Sum of agent-spawn output tokens across iterations `1..N`. Surfaces alongside spawn-count for cost telemetry; NOT used as a gate. Absent on `iter-1.toon` if not measurable. |
+
+### Uniform Shape Across Modes
+
+**Important:** the `ConvergenceIterationSummary` on-disk shape is identical across all three modes (`target`, `criteria`, `document`). The optional fields `subject`, `snapshotRef`, and `haltReason` are present but null/omitted for non-document modes. The optional field `tokensUsed` may appear in any mode when the driver can measure agent output tokens.
+
+This uniformity is load-bearing for `/loom-converge --resume` and for the future `loom-auto converge-link`: a fresh-context agent reading `iter-{N}.toon` can determine the mode and the iteration's outcome without referencing `converge.config`.
+
+| Field | target | criteria | document |
+|-------|--------|----------|----------|
+| `iteration` | required | required | required |
+| `mode` | `target` | `criteria` | `document` |
+| `startedAt` / `completedAt` / `durationMs` | required | required | required |
+| `harnessResult` | required | required | required |
+| `findingsBefore` / `findingsAfter` | required | required | required |
+| `findingsFixed` / `findingsNew` | required | required | required |
+| `filesModified` | required | required | required (typically just the subject path) |
+| `stalled` / `summary` | required | required | required |
+| `subject` | null | null | required (mirrors `converge.config.subject`) |
+| `snapshotRef` | null | null | required when `converge.config.snapshotEnabled` is true; null otherwise |
+| `haltReason` | optional (null unless halted) | optional (null unless halted) | optional (null unless halted) |
+| `tokensUsed` | optional | optional | optional |
 
 ### Additional Iteration Examples
 
@@ -305,8 +330,8 @@ summary: Fixed 3 findings (1 security, 1 error handling, 1 test failure). No reg
 ```toon
 iteration: 2
 mode: target
-startedAt: 2026-04-17T09:36:00Z
-completedAt: 2026-04-17T09:40:45Z
+startedAt: 2026-04-17T09:36:00.000Z
+completedAt: 2026-04-17T09:40:45.000Z
 durationMs: 285000
 harnessResult: pass
 findingsBefore: 3
@@ -326,8 +351,8 @@ summary: All 3 remaining targets now passing. Convergence complete.
 ```toon
 iteration: 4
 mode: criteria
-startedAt: 2026-04-17T09:50:00Z
-completedAt: 2026-04-17T09:55:30Z
+startedAt: 2026-04-17T09:50:00.000Z
+completedAt: 2026-04-17T09:55:30.000Z
 durationMs: 330000
 harnessResult: fail
 findingsBefore: 2
@@ -339,6 +364,54 @@ findingsNew[1]:
 filesModified[1]: src/validation/middleware.ts
 stalled: true
 summary: Fixed 1 finding but introduced 1 regression. Net progress zero -- stall detected.
+haltReason: STALL
+```
+
+#### Document-mode iteration (mid-loop, blocking findings remain)
+
+```toon
+iteration: 2
+mode: document
+subject: planning/PLAN-convergence-generalization.md
+snapshotRef: planning/history/snapshots/PLAN-convergence-generalization-pass-2.toon
+startedAt: 2026-06-12T15:20:00.000Z
+completedAt: 2026-06-12T15:31:14.250Z
+durationMs: 674250
+harnessResult: partial
+findingsBefore: 5
+findingsAfter: 2
+findingsFixed[3]:
+  F-01: Wave 2 has 9 deliverables (>8 limit)
+  F-02: Plan does not address C-06 scope-expansion guard
+  F-04: Two phases share src/foo/** without wiring boundary
+findingsNew[0]:
+filesModified[1]: planning/PLAN-convergence-generalization.md
+stalled: false
+summary: Integrator pass resolved 3 blocking findings; 2 remain. No regressions introduced.
+tokensUsed: 95000
+```
+
+#### Document-mode halted iteration (scope expansion under --auto)
+
+```toon
+iteration: 2
+mode: document
+subject: planning/PLAN-x.v2.md
+snapshotRef: planning/history/snapshots/PLAN-x.v2-pass-2.toon
+startedAt: 2026-06-12T16:08:00.000Z
+completedAt: 2026-06-12T16:14:02.100Z
+durationMs: 362100
+harnessResult: partial
+findingsBefore: 4
+findingsAfter: 3
+findingsFixed[1]:
+  F-01: Phase 3 has 11 deliverables (>8 limit)
+findingsNew[0]:
+filesModified[1]: planning/PLAN-x.v2.md
+stalled: false
+summary: Integrator added a new top-level Phase 16 -- scope-expansion guard tripped. Run halted under --auto.
+haltReason: SCOPE_EXPANSION
+tokensUsed: 88000
 ```
 
 ## Validation Rules
@@ -358,11 +431,15 @@ summary: Fixed 1 finding but introduced 1 regression. Net progress zero -- stall
 
 1. **Required fields.** `iteration`, `mode`, `startedAt`, `completedAt`, `durationMs`, `harnessResult`, `findingsBefore`, `findingsAfter`, `stalled`, `summary` must be present.
 2. **Iteration positive.** `iteration` must be >= 1.
-3. **Valid mode.** `mode` must be one of: `criteria`, `target`.
+3. **Valid mode.** `mode` must be one of: `criteria`, `target`, `document`.
 4. **Valid harness result.** `harnessResult` must be one of: `pass`, `fail`, `partial`.
 5. **Stall consistency.** If `stalled` is `true`, then `findingsAfter` must be >= `findingsBefore`.
 6. **Finding math.** `findingsAfter` must equal `findingsBefore - len(findingsFixed) + len(findingsNew)`.
 7. **Timestamps ordered.** `completedAt` must be after `startedAt`.
+8. **Timestamp precision (locked W-01).** `startedAt` and `completedAt` must be ISO 8601 with millisecond precision (`YYYY-MM-DDTHH:mm:ss.sssZ`).
+9. **Document-mode required optionals.** When `mode == document`, `subject` MUST be a non-null path equal to `converge.config.subject`. When `mode == document` AND `converge.config.snapshotEnabled` is true, `snapshotRef` MUST be a non-null path pointing at the corresponding `IterationSnapshot` metadata file. For `target` and `criteria` modes, `subject` and `snapshotRef` MUST be null.
+10. **`haltReason` enum.** When populated, `haltReason` MUST be one of: `STALL`, `REGRESSION`, `BUDGET_EXHAUSTED`, `MAX_ITERATIONS`, `SCOPE_EXPANSION`, `INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`. The value MUST cross-reference the per-breaker cause+recovery table in `PLAN-convergence-generalization.md` C-10.
+11. **`tokensUsed` non-negative.** When present, `tokensUsed` MUST be >= 0.
 
 ## Relationship to rolling-context.md
 

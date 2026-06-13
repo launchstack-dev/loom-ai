@@ -1,0 +1,22 @@
+[settings]
+maxParallelAgents = 6
+defaultModel = "sonnet"
+persistHistory = true
+dataFormat = "toon"
+
+[settings.contextBudget]
+contextWindow = 200000
+
+[wiki]
+enabled = true
+path = ".loom/wiki"
+maxPages = 500
+stalenessDays = 30
+archiveThresholdMultiplier = 3
+autoLint = true
+lintSchedule = "post-wave"
+
+[domain]
+type = "code"
+contractType = "type-files"
+verificationPipeline = ["tsc --noEmit", "bun run lint", "bun test"]

@@ -163,12 +163,21 @@ function hasPopulatedTriggers(content: string): boolean {
   }
 
   // Block-array form: `triggers:` followed by `  - "..."` lines.
+  // Bound the search to the triggers block only — stop at the next unindented
+  // key so a `triggers:` with an empty body followed by `requires: [- foo]`
+  // does not produce a false positive.
   const blockHeaderRe = /^triggers:\s*$/m;
   const headerMatch = blockHeaderRe.exec(block);
   if (!headerMatch) {
     return false;
   }
   const after = block.slice(headerMatch.index + headerMatch[0].length);
+  // Bound the triggers block to the next YAML key at column 0. We deliberately
+  // match `[A-Za-z0-9_-]+\s*:` rather than `^\S` so that comment lines starting
+  // with `#` at column 0 do NOT count as a key boundary — they're noise inside
+  // the triggers block, not the start of a new key.
+  const nextKeysMatch = /^[A-Za-z0-9_-]+\s*:/m.exec(after);
+  const triggersBlock = nextKeysMatch ? after.slice(0, nextKeysMatch.index) : after;
   const itemRe = /^\s+-\s+\S/m;
-  return itemRe.test(after);
+  return itemRe.test(triggersBlock);
 }

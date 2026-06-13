@@ -174,3 +174,84 @@ The resolution chain is a static, deterministic function of the scenario fields.
 - **plan.schema.md** -- Plan phases may reference convergence tiers for their verification strategy.
 - **scenario.schema.md** -- Scenarios reference tier names via `testTier`. The Scenario-to-Tier Mapping section above documents the canonical resolution chain that the validator and convergence-planner use when `testTier` is omitted.
 - **agent-result.schema.md** -- Tier runners return results in the AgentResult envelope.
+- **findings.schema.md** -- `converge.config.outputPath` (default `.plan-execution/convergence/findings.toon`) names the file every harness writes per `ConvergenceFindings` schema.
+- **convergence-summary.schema.md** -- `converge.config` parameters (mode, subject, harness, integrator, maxIterations) are mirrored in the run-end summary artifact.
+- **iteration-snapshot.schema.md** -- `converge.config.snapshotEnabled` and `snapshotDir` gate document-mode snapshot writes.
+
+---
+
+## ConvergeConfig Schema (Extended)
+
+The convergence-driver reads a per-run `converge.config` TOON file that declares mode, subject, harness, integrator, and budget. The file is the on-disk contract between `/loom-converge`, `/loom-plan create --autoconverge`, and `convergence-driver`. It is extended in plan `PLAN-convergence-generalization.md` to support `convergenceMode: document` alongside the original `target` and `criteria` modes.
+
+Backwards compatibility: existing `target` and `criteria` runs MUST continue to load unchanged configs. The new fields are optional or have backwards-compatible defaults.
+
+### Example: document-mode config
+
+```toon
+convergenceMode: document
+subject: planning/PLAN-convergence-generalization.md
+integrator: plan-builder-agent
+harness: scripts/plan-review-harness.ts
+outputPath: .plan-execution/convergence/findings.toon
+maxIterations: 3
+agentBudget: 30
+scopeGuardEnabled: true
+snapshotEnabled: true
+snapshotDir: planning/history/snapshots/
+```
+
+### Example: target-mode config (backwards compatible)
+
+```toon
+convergenceMode: target
+harness: scripts/target-runner.ts
+outputPath: .plan-execution/convergence/findings.toon
+maxIterations: 5
+agentBudget: 30
+```
+
+### Fields
+
+| Field | Type | Constraints | Default | Validation Rules |
+|-------|------|-------------|---------|------------------|
+| `convergenceMode` | enum | one of `target`, `criteria`, `document` | `target` (backwards compat) | New value `document` accepted; unknown values produce a blocking error. |
+| `subject` | string (path) | required when `convergenceMode == document`; relative to repo root | -- | MUST exist on first iteration; resolved against repo root. For `target`/`criteria` modes, omit (null). |
+| `integrator` | string (agent name) | required when `convergenceMode == document`; MUST be a known agent registered in `agents/` | `fixer-agent` for `target`/`criteria` modes (backwards compat) | MUST resolve to an `agents/{name}.md` file. Model resolution per CLAUDE.md applies (frontmatter `model:` field). Missing agent -> `INTEGRATOR_NOT_FOUND` blocking error at preflight. |
+| `harness` | string (path) | required for all modes; for document mode points to a TS script under `scripts/` or a registered harness agent | -- | MUST produce `findings.toon` at the configured `outputPath` per iteration. Missing harness -> `HARNESS_MISSING` blocking error at preflight. |
+| `outputPath` | string (path) | required | `.plan-execution/convergence/findings.toon` | Driver reads this path after each harness invocation. Atomic write required by the harness. |
+| `maxIterations` | integer | 1-10 | 5 (existing default); 3 for `--autoconverge` (per locked C-05) | Blocking error if `> 10`. |
+| `agentBudget` | integer | required; counts loop agent spawns | 30 (existing default) | Cumulative across iterations; preflight check before loop. Exceeded -> `BUDGET_EXHAUSTED` halt. |
+| `scopeGuardEnabled` | boolean | optional; document-mode only | `true` | When true, the scope-expansion guard is armed (per locked C-06). Detects top-level structural additions (new Phase, Feature, or Milestone headings) and halts with `SCOPE_EXPANSION`. Ignored in `target`/`criteria` modes. |
+| `snapshotEnabled` | boolean | optional; document-mode only | `true` | When true, an auto-snapshot per locked C-07 is written before each integrator invocation. Ignored in `target`/`criteria` modes. See `iteration-snapshot.schema.md`. |
+| `snapshotDir` | string (path) | optional | `planning/history/snapshots/` | Directory where `IterationSnapshot` files land. Slug + pass-number filename appended by the driver (`{slug}-pass-{N}.toon` + `{slug}-pass-{N}.{ext}`). Ignored when `snapshotEnabled` is false. |
+
+### Validation Rules
+
+1. **Mode enum.** `convergenceMode` MUST be one of `target`, `criteria`, `document`.
+2. **Document-mode required fields.** When `convergenceMode == document`, `subject`, `integrator`, and `harness` MUST all be present.
+3. **Document-mode missing-subject diagnostic.** A `converge.config` declaring `convergenceMode: document` without `subject` produces the user-facing message: `Document-mode config is missing required field 'subject' (path to subject file). Update converge.config or remove convergenceMode:document.` (distinct from a raw schema-validation error).
+4. **Integrator resolves.** `integrator` MUST resolve to an `agents/{name}.md` file; missing -> `INTEGRATOR_NOT_FOUND` blocking at preflight.
+5. **Harness exists.** `harness` path MUST exist; missing -> `HARNESS_MISSING` blocking at preflight.
+6. **maxIterations bounded.** `1 <= maxIterations <= 10`.
+7. **agentBudget positive.** `agentBudget > 0`.
+8. **Output path under .plan-execution.** `outputPath` SHOULD be under `.plan-execution/` to remain ephemeral; absolute paths are allowed but flagged with a warning.
+9. **Snapshot fields irrelevant outside document mode.** `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` are accepted in non-document configs but ignored; the driver does not emit warnings for their presence.
+10. **Timestamp precision (cross-schema, locked W-01).** Any timestamp field anywhere in the convergence pipeline -- including `producedAt` in `findings.toon`, `startedAt`/`completedAt` in `convergence-summary.toon` and `iter-{N}.toon`, and `timestamp` in `IterationSnapshot` -- MUST be ISO 8601 with millisecond precision (`YYYY-MM-DDTHH:mm:ss.sssZ`). This ensures stall-detection regression checks compare uniformly across iterations.
+
+### Indexes (TOON-artifact relationships)
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| primary | `configPath` | PRIMARY | One config per convergence run; identifies the loop. |
+| relation | `configPath` -> `integrator` | FOREIGN-LIKE | Driver dispatch lookup. |
+| relation | `configPath` -> `harness` | FOREIGN-LIKE | Driver harness invocation lookup. |
+
+### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| `converge.config` | `iter-{N}.toon` (per-iteration) | RETAIN | RETAIN -- iter summaries preserved for debrief |
+| `converge.config` | `findings.toon` (latest) | OVERWRITE | OVERWRITE -- only latest matters at runtime |
+| `converge.config` | `IterationSnapshot` rows (per-pass) | RETAIN | RETAIN per C-07 (keep all forever) |
+| `converge.config` | `convergence-summary.toon` | RETAIN | OVERWRITE on terminal-state re-transition (resume) |

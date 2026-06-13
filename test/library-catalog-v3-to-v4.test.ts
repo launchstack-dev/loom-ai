@@ -27,6 +27,7 @@ import {
   type AnyLibraryCatalog,
   type LibraryCatalogV3,
   type LibraryCatalogV4,
+  type MigrationStep,
 } from "../hooks/lib/library-catalog-migrator.js";
 
 import {
@@ -229,7 +230,7 @@ describe("library-catalog-migrator — Phase 1 invariants", () => {
   it('MIGRATIONS["3->4"] is the real migrator and produces v4 output', () => {
     // Spec: ct-0-07, bt-0-02, bt-1-01
     // Phase 1 replaces the Phase 0 no-op passthrough with the real implementation.
-    const step = (MIGRATIONS as Record<string, Function>)["3->4"];
+    const step = (MIGRATIONS as Record<string, MigrationStep>)["3->4"];
     expect(step).toBeTypeOf("function");
     const v3 = V3_INPUT_OBJ as unknown as LibraryCatalogV3;
     const result: any = step(v3, MOCK_OPTS);
@@ -385,7 +386,7 @@ describe("migrateToLatest — v3 → v4 golden file", () => {
 
     // Inject "3->4" step; will use real implementation after Phase 1 lands
     const registry = {
-      ...(MIGRATIONS as Record<string, Function>),
+      ...(MIGRATIONS as Record<string, MigrationStep>),
       "3->4": (input: any, opts: any) => migrateLibraryCatalogV3ToV4(input, opts),
     };
 
@@ -452,7 +453,7 @@ describe("migrateToLatest — chained walk v2 → v4", () => {
     };
 
     const registry = {
-      ...(MIGRATIONS as Record<string, Function>),
+      ...(MIGRATIONS as Record<string, MigrationStep>),
       "3->4": (input: any, opts: any) => migrateLibraryCatalogV3ToV4(input, opts),
     };
 
@@ -496,7 +497,7 @@ describe("v3→v4 migration — requires: rewrite via migrateToLatest", () => {
   it("agent requires:[skill:some-protocol] in v3-input.yaml becomes requires:[protocol:...] in v4", () => {
     // Spec: bt-2-06
     const registry = {
-      ...(MIGRATIONS as Record<string, Function>),
+      ...(MIGRATIONS as Record<string, MigrationStep>),
       "3->4": (input: any, opts: any) => migrateLibraryCatalogV3ToV4(input, opts),
     };
     const result: any = migrateToLatest(V3_INPUT_OBJ as AnyLibraryCatalog, 3, MOCK_OPTS, 4, registry as any);

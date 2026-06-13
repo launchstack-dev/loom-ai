@@ -1,0 +1,82 @@
+reviewVersion: 1
+pass: 2
+plan: planning/plans/PLAN-convergence-generalization.md (1360 lines)
+roadmap: planning/ROADMAP-convergence-generalization.md
+priorReview: planning/history/reviews/2026-06-12-convergence-generalization-review.toon
+priorSnapshot: planning/history/snapshots/2026-06-12-convergence-generalization-pass-1.md
+reviewDate: 2026-06-12
+reviewerCount: 6
+findingsTotal: 15
+
+trajectoryCheck:
+  pass0Blocking: 9
+  pass0Warning: 31
+  pass0Info: 20
+  pass2Blocking: 2
+  pass2Warning: 8
+  pass2Info: 5
+  blockingReduction: 78%
+  totalReduction: 75%
+  projection: pass-3 should hit 0 blocking after these 2 mechanical fixes + critical warnings
+
+agents[6]{name,model,blockingNew,warningNew,infoNew,verdict}:
+  feature-coverage-agent,sonnet,1,3,1,"B-01 and B-02 confirmed applied. NEW: spawn-count ceiling off-by-one (B-NEW-01); C-10 table missing CRITIQUE_TOO_LARGE + INTEGRATOR_MODE_AMBIGUOUS rows; tokensUsed schema gap; C-08 stderr capture mechanism unspecified."
+  strategy-agent,sonnet,0,1,2,"All pass-1 findings landed correctly. NEW: roadmap success-metric still says token-accounting but plan delivers spawn-count — documentation debt. M-01 split-gate clarity + spawn formula clarity (info)."
+  ux-agent,sonnet,0,3,1,"All 3 blocking UX findings (B-04/B-05/B-06) resolved cleanly. NEW: INTEGRATOR_NOT_FOUND/HARNESS_MISSING messages don't include failing value; CRITIQUE_TOO_LARGE truncation invisible; changelog format only in fixture AC."
+  phasing-agent,sonnet,1,0,1,"Phase 11 promotion verified clean. All other pass-1 phasing findings landed. NEW: M-01 Phases list contains Phase 13 which depends on M-01 complete — circular definition. Phase 12 dep chain info-only."
+  parallelization-agent,sonnet,0,0,0,"All 5 pass-1 parallelization findings confirmed fixed. Phase 11 W2 promotion has no file-ownership conflicts with Phase 5. No new findings. Clean."
+  agentic-workflow-agent,sonnet,0,1,1,"W-28/W-29 + all 4 mechanical fixes (I-16/17/18/19) confirmed. All 4 phases within token budget after +158 lines. NEW: no aggregate-findings.test.ts gate for severity mapping (W-A); Phase 4 C-10 table reference (I-A)."
+
+blockingFindings[2]{id,dimension,phaseRef,description,fix}:
+  B-NEW-01,feature-coverage,Phase 14,Spawn-count ceiling formula off-by-one: AC says (max=16 = 2 iterations × (1 critic + 6 reviewers + 1 integrator)) but per Q-02 the critic runs ONCE (initial create) not per iteration. Correct formula: 1 (critic) + N_iter × (6 reviewers + 1 integrator) = 1 + 2×7 = 15. Fixture assertion as written produces wrong gate.,One-line edit to Phase 14 AC + add formula comment
+  B-NEW-02,phasing,M-01 Phases,M-01 milestone Phases field lists [0,1,2,3,4,5,11,13]. Phase 13 depends on 'M-01 complete'. Circular reference if executor treats M-01 membership as gate. Plan summary prose at line 1313 correctly describes Phase 13 as 'fixture verification at end of Wave 5' but the Phases field contradicts this.,Remove Phase 13 from M-01 Phases list; keep prose as authoritative
+
+warningFindings[8]{id,dimension,phaseRef,description}:
+  W-NEW-01,feature-coverage,Phase 14,C-08 machine-readable stderr line has no test helper for vitest subprocess stderr capture. Spec-vs-testability gap.
+  W-NEW-02,feature-coverage,C-10 table,Halt message table claims to cover any haltReason but omits CRITIQUE_TOO_LARGE and INTEGRATOR_MODE_AMBIGUOUS rows. Table's own scope claim violated.
+  W-NEW-03,feature-coverage,Phase 14,tokensUsed field referenced in Phase 14 AC but absent from ConvergenceIterationSummary schema and convergence-state.toon shape. No schema owner.
+  W-NEW-04,strategy,Roadmap line 31,Cost-ceiling success metric in ROADMAP still says 'token accounting' but plan replaced with spawn-count. Documentation debt — roadmap and plan describe different measurement approaches for same metric.
+  W-NEW-05,ux,C-10 / Phase 1,INTEGRATOR_NOT_FOUND and HARNESS_MISSING halt messages don't include the actual unresolved value (e.g., 'integrator X not found'). C-10 recovery strings are correct but terse.
+  W-NEW-06,ux,Phase 6,CRITIQUE_TOO_LARGE truncation behavior invisible to user. No stdout warning when critic runs in degraded mode. No C-10 row.
+  W-NEW-07,ux,Phase 2/3,Changelog trajectory format defined only as Phase 14 fixture assertion. No driver-layer AC requires changelog write on every converged run.
+  W-NEW-08,agentic-workflow,Phase 9,Severity mapping has no dedicated unit-test AC. schema-validation.test.ts checks output shape; silent re-mapping (critical → warning) could still pass if blocking/advisory arithmetic stays balanced.
+
+infoFindings[5]{id,dimension,description}:
+  I-NEW-01,feature-coverage,C-09 progress line says document mode only. Target/criteria modes get no equivalent progress format — UX inconsistency across modes.
+  I-NEW-02,strategy,M-01 milestone split-gate (W2 logical close vs W5 fixture close) is coherent but should be explicitly named in M-01 definition.
+  I-NEW-03,strategy,Spawn-count formula in Phase 14 AC implicitly assumes maxIterations=2. Should be parameterized in AC comment: ceiling = maxIterations × 8 + 1 (critic).
+  I-NEW-04,ux,Phase 5 scenarios numerically out-of-order in document (S-01 S-04 S-02 S-03). Cosmetic but breaks grep readability.
+  I-NEW-05,agentic-workflow,Phase 4 AC references C-10 table but PLAN.md is not listed as files-in. Plan context is always in scope so unlikely to cause real defect.
+
+confirmedFixes[20]{id,description}:
+  CFX-01,B-01 harness field in ConvergeConfig schema — applied cleanly
+  CFX-02,B-02 /loom-converge flag table with --resume --resume-config --output-dir — applied
+  CFX-03,B-03 spawn-count ceiling replaces token-cost — applied (with B-NEW-01 arithmetic gap)
+  CFX-04,B-04 C-09 stdout progress format — applied cleanly with all edge cases
+  CFX-05,B-05 C-10 per-breaker halt table — applied (with W-NEW-02 coverage gap)
+  CFX-06,B-06 C-08 --auto + SCOPE_EXPANSION resolution — applied cleanly with S-04 scenario
+  CFX-07,B-07 Phase 13 misplaced autoconverge target — removed cleanly
+  CFX-08,CC-01 Phase 11 W4 → W2 promotion — verified no cycle no file conflicts dep enforced
+  CFX-09,CC-02 library.yaml double-write — Phase 10 explicit no-touch comment Phase 12 sole owner
+  CFX-10,W-08 'structurally equivalent' → shape check (blockingCount=0 + same phase/milestone count) — applied
+  CFX-11,W-10 critique vs findings explanation — Phase 7 AC requires user-facing doc
+  CFX-12,W-11 --skip-critic stale handling + flag matrix — Phase 7 AC explicit
+  CFX-13,W-17 Phase 8 dep contradiction resolved — M-01 only
+  CFX-14,W-20 Phase 9 reversed-causality fix — Phase 2 dep removed with rationale
+  CFX-15,W-22 Phase 13 added to M-01 — applied (though now triggers B-NEW-02 circular issue)
+  CFX-16,W-23 Phase 7+10 create.md handoff — grep gate + starting-state requirement both ways
+  CFX-17,W-24 Phase 9+10 W4 serial — declared explicitly in deps + plan summary
+  CFX-18,W-25 W1 serial chain labeling — clarified in summary + Risks
+  CFX-19,W-26 Phase 12 + Phase 9 dep — applied
+  CFX-20,W-28/W-29 Phase 9+10 TS specs — invocation hedge removed; spawn mechanism + files-in + starting state all addressed
+
+summary:
+  totalFindings: 15
+  blocking: 2
+  warning: 8
+  info: 5
+  newBlockingAreMechanical: true (both single-line fixes — B-NEW-01 is arithmetic correction 16 → 15; B-NEW-02 is removing Phase 13 from M-01 Phases list)
+  loadBearingFixesVerified: true (CC-01 Phase 11 promotion + CC-02 library.yaml — both clean)
+  regressionsDetected: 0
+  ironyNote: "Pass-2 finds 2 blocking — both mechanical. Pass-3 should hit 0 after these fixes. Trajectory mirrors kit-native-skills (8 → 5 → 0). Each pass on this plan continues to validate the autoconverge feature being planned."
+  recommendedPath: "Two paths: (a) Run --review-integrate pass-2 to apply these 15 findings — expected pass-3 clean; (b) Apply the 2 blocking findings inline as direct edits (both are <10-second fixes) plus the highest-impact warnings (W-NEW-02 add 2 rows to C-10 + W-NEW-03 add tokensUsed to schema + W-NEW-04 update roadmap metric) then accept as-is."

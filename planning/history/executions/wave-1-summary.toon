@@ -36,7 +36,7 @@ verification:
   preExistingFailures[2]: detectExistingSkill regex bug (Phase 0 -> defer to Phase 8), vi.resetModules infra (unrelated)
 
 f002RewriteApplied: true
-f002RewriteScope: 54 agent entries; first verified entry contracts-agent.requires now ['protocol:execution-protocols']
+f002RewriteScope: 54 individual skill: tokens rewritten to protocol: across all sections of the migrated catalog (counted as in-memory token substitutions during the v2->v3->v4 chained walk). On-disk diff shows ~37 requires-line modifications because some entries had multiple skill: tokens on the same line and the chained walker counts each token once. First verified entry contracts-agent.requires now ['protocol:execution-protocols']. (Clarification added 2026-06-13 in response to plan-compliance-reviewer info-7 finding.)
 
 releaseConstraint: "F-010: Wave 1 + Wave 2 MUST ship as single merged release. Do NOT merge Wave 1 alone."
 

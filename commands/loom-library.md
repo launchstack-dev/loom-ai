@@ -143,13 +143,36 @@ Use a checkmark for installed items and an x-mark for uninstalled ones.
    Exit code 1. (Substring suggestions may also be printed as a friendly hint, but the structured envelope is the contract.)
 3. If the item has `deprecated: true` and a `redirectsTo` field, print: "Note: `{name}` is deprecated. Installing `{redirectsTo}` instead." Then install the redirected item.
 4. Resolve dependencies recursively with cycle detection.
-5. For each item to install (dependencies first, then the target):
-   a. Fetch source content (via `gh api` or local Read)
-   b. Determine target path from the type (see Target Paths by Type above). For `type: skill` items, use `buildSkillTargetPath(name)` from `hooks/lib/skill-router.ts`.
-   c. Run `validateInstallPath(targetPath)` (see Source Validation). If invalid, abort BEFORE writing.
-   d. Write content to target path using the Write tool. For skill items, ensure the parent directory `~/.claude/skills/<name>/` exists first.
-   e. Compute the file `sha256` from the on-disk content. For `type: skill` items, build the install-state row via `buildSkillInstallRecord(name, sha256, { installedAt: new Date().toISOString(), source: 'skills/<name>/SKILL.md' })` from `hooks/lib/skill-router.ts` — this returns the canonical `{ name, type: 'skill', source, targetPath, sha256, component, installedAt }` shape. For non-skill items, build the row in-place as before.
-   f. Add entry to install-state.toon (update the items array and count). The `type` field is recorded verbatim — `skill`, `agent`, `prompt`, `protocol`, `infrastructure`.
+5. For each item to install (dependencies first, then the target). Each sub-step lists the explicit operation to perform — these are not abstract verbs but actual Bash / tool invocations the orchestrator MUST run:
+
+   **a. Fetch source content.**
+   - Local-path source (`source` starts with `/` or `~`): `Read` tool.
+   - Repo source: `gh api repos/{owner}/{repo}/contents/{source} --jq '.content' | base64 -d` (or curl fallback).
+   - Hold the content in memory for step d. Do NOT write yet.
+
+   **b. Determine target path.**
+   - For `type: skill` items: `targetPath = buildSkillTargetPath(name)` from `hooks/lib/skill-router.ts` → `~/.claude/skills/<name>/SKILL.md` (literal `SKILL.md`).
+   - For non-skill types: use the rules from "Target Paths by Type" above.
+
+   **c. Validate target path.**
+   - Call `validateInstallPath(targetPath)` (single source of truth in `hooks/lib/skill-router.ts`). If `{valid: false}`, emit `SOURCE_VALIDATION_ERROR` envelope (see Error Handling) and abort BEFORE any disk write. Exit code 1.
+
+   **d. Write content atomically.**
+   - For `type: skill` items: first `Bash: mkdir -p ~/.claude/skills/<name>/` to ensure the parent directory exists (Claude Code requires the literal `<name>/SKILL.md` layout).
+   - Write the in-memory content via `Write` tool. The `Write` tool is the canonical atomic writer for this command — do NOT shell out to `cat > file` or `echo > file`.
+   - For non-skill items the parent directory (`~/.claude/agents/`, `~/.claude/commands/`, etc.) is assumed to exist; no `mkdir` needed.
+
+   **e. Compute sha256 + build install-state row.**
+   - `Bash: shasum -a 256 "<targetPath>" | awk '{print $1}'` — capture the 64-char hex hash.
+   - For `type: skill` items: build the install-state row via `buildSkillInstallRecord(name, sha256, { installedAt: new Date().toISOString(), source: 'skills/<name>/SKILL.md' })` from `hooks/lib/skill-router.ts`. Returns the canonical `{ name, type: 'skill', source, targetPath, sha256, component, installedAt }` shape.
+   - For non-skill items: construct the row inline with the same fields (`type` verbatim — `agent`, `prompt`, `protocol`, `infrastructure`).
+
+   **f. Append row to `install-state.toon`.**
+   - Read `~/.claude/skills/library/install-state.toon` (TOON format, schema v3).
+   - The `items[N]{name,type,source,targetPath,sha256,component,installedAt}:` array has its element count `N` in the header. Increment `N` by 1.
+   - Append the new row beneath the existing rows, preserving 2-space indent and column order. Each field comma-separated, no trailing comma.
+   - Write back atomically: write to `install-state.toon.tmp`, then `mv install-state.toon.tmp install-state.toon`. NEVER overwrite the file in place — a partial write corrupts the entire install state.
+   - `lastSynced` field at the top of the file is updated in step 6 below.
 6. Update `lastSynced` timestamp in install-state.toon.
 7. **Post-install session-restart notice (skill items only).** After every successful `type: skill` install, print this notice to stdout — verbatim, one line, exactly as written here so harness/test scrapers can grep for it:
    ```
