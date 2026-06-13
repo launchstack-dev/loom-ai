@@ -126,6 +126,9 @@ export function validateInstallPath(targetPath: string): InstallPathValidation {
   if (typeof targetPath !== "string" || targetPath.length === 0) {
     return { valid: false, reason: "targetPath must be a non-empty string" };
   }
+  if (targetPath.split(/[\/\\]/).includes("..")) {
+    return { valid: false, reason: "targetPath must not contain path traversal segments ('..')" };
+  }
   for (const prefix of ALLOWED_INSTALL_PREFIXES) {
     if (targetPath.startsWith(prefix)) {
       return { valid: true };
@@ -141,6 +144,15 @@ export function validateInstallPath(targetPath: string): InstallPathValidation {
  * Build the install-state items[] record for a freshly installed skill.
  * The caller supplies the sha256 (computed from the on-disk file) and the
  * current ISO timestamp; this function performs no I/O.
+ *
+ * @param name - Skill slug (must match `[a-z][a-z0-9-]*`).
+ * @param sha256 - SHA-256 hex digest of the installed SKILL.md content.
+ * @param opts.component - Optional component name; defaults to `"loom-core"`.
+ * @param opts.source - Optional repo-relative source path; defaults to `skills/{name}/SKILL.md`.
+ * @param opts.installedAt - Optional ISO timestamp. WHEN OMITTED, defaults to the
+ *   Unix epoch (1970-01-01T00:00:00Z) as a sentinel value. Callers writing real
+ *   install-state rows MUST supply `new Date().toISOString()`; the epoch sentinel
+ *   is reserved for tests and dry-run scenarios.
  */
 export function buildSkillInstallRecord(
   name: string,

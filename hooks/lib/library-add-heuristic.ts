@@ -163,12 +163,17 @@ function hasPopulatedTriggers(content: string): boolean {
   }
 
   // Block-array form: `triggers:` followed by `  - "..."` lines.
+  // Bound the search to the triggers block only — stop at the next unindented
+  // key so a `triggers:` with an empty body followed by `requires: [- foo]`
+  // does not produce a false positive.
   const blockHeaderRe = /^triggers:\s*$/m;
   const headerMatch = blockHeaderRe.exec(block);
   if (!headerMatch) {
     return false;
   }
   const after = block.slice(headerMatch.index + headerMatch[0].length);
+  const nextKeysMatch = /^\S/m.exec(after);
+  const triggersBlock = nextKeysMatch ? after.slice(0, nextKeysMatch.index) : after;
   const itemRe = /^\s+-\s+\S/m;
-  return itemRe.test(after);
+  return itemRe.test(triggersBlock);
 }

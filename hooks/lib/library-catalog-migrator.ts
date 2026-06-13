@@ -438,6 +438,11 @@ export function migrateLibraryCatalogV3ToV4(
             `migrateLibraryCatalogV3ToV4: library.skills[${idx}] missing required field 'source' (name=${String(entry.name ?? "<unknown>")})`
           );
         }
+        if (typeof entry.description !== "string" || entry.description.length === 0) {
+          throw new Error(
+            `migrateLibraryCatalogV3ToV4: library.skills[${idx}] missing required field 'description' (name=${String(entry.name ?? "<unknown>")})`
+          );
+        }
         return { ...(entry as unknown as ProtocolEntry) };
       })
     : [];
@@ -449,11 +454,11 @@ export function migrateLibraryCatalogV3ToV4(
     : undefined;
 
   const prompts = Array.isArray(v3Library.prompts)
-    ? (v3Library.prompts as unknown[]).map((p) => p)
+    ? [...((v3Library.prompts ?? []) as unknown[])]
     : undefined;
 
   const infrastructure = Array.isArray(v3Library.infrastructure)
-    ? (v3Library.infrastructure as unknown[]).map((p) => p)
+    ? [...((v3Library.infrastructure ?? []) as unknown[])]
     : undefined;
 
   const library: LibraryCatalogV4["library"] = {

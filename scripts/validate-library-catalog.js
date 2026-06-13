@@ -387,6 +387,13 @@ function main() {
             incName = inc;
             incTypeSet = allKnownNames;
           } else if (inc && typeof inc === "object" && typeof inc.type === "string" && typeof inc.name === "string") {
+            const VALID_INCLUDE_TYPES = new Set(["agent", "protocol", "skill", "prompt", "infrastructure"]);
+            if (!VALID_INCLUDE_TYPES.has(inc.type)) {
+              errors.push(
+                `kit '${kit.name ?? "<unnamed>"}' includes entry with invalid type '${inc.type}' (must be one of: ${[...VALID_INCLUDE_TYPES].join(", ")})`
+              );
+              continue;
+            }
             incName = inc.name;
             const expectSection = inc.type === "infrastructure" ? "infrastructure" : `${inc.type}s`;
             incTypeSet = sectionNames.get(expectSection) ?? new Set();

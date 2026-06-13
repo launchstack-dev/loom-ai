@@ -129,8 +129,17 @@ describe("classifyAddSource — protocol detection", () => {
   // Spec: bt-4-40 — AgentResult schema marker → type: protocol (S-27)
   it('file with AgentResult schema marker → { type: "protocol" }', () => {
     // Spec: bt-4-40
-    const content = "AgentResult\nstatus: complete\nfilesCreated[]: foo.ts\n";
+    const content = "AgentResult\nstatus: complete\nfilesCreated[1]: foo.ts\n";
     const result: ClassificationResult = classifyAddSource("state.toon", content);
+    expect(result.type).toBe("protocol");
+  });
+
+  // Isolated filesCreated signal test — no AgentResult keyword.
+  // Guards against a future regex regression where the filesCreated branch is
+  // silently masked by the AgentResult match.
+  it('filesCreated[N]: signal alone (no AgentResult keyword) → { type: "protocol" }', () => {
+    const content = "filesCreated[1]: foo.ts\nstatus: done\n";
+    const result: ClassificationResult = classifyAddSource("agent-result.toon", content);
     expect(result.type).toBe("protocol");
   });
 
