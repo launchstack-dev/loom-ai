@@ -1,0 +1,69 @@
+wave: 1
+runId: convergence-generalization-20260613-001
+status: success
+startedAt: 2026-06-13T12:15:00Z
+completedAt: 2026-06-13T12:42:00Z
+durationMs: 1620000
+strategy: serial-chain (Phase 1 -> 2 -> 3 -> 4 — shared file agents/convergence-driver.md; deps enforce order)
+
+phases[4]{id,agent,model,status,filesCreated,filesModified,completedAt}:
+  1,implementer-agent,opus,success,0,1,2026-06-13T12:18:00Z
+  2,implementer-agent,opus,success,0,1,2026-06-13T12:25:00Z
+  3,implementer-agent,opus,success,0,2,2026-06-13T12:32:00Z
+  4,implementer-agent,opus,success,0,1,2026-06-13T12:37:00Z
+
+filesCreated[0]:
+
+filesModified[2]:
+  agents/convergence-driver.md
+  test/protocol/stage-context.test.ts
+
+filesAlsoTouched[0]:
+
+sectionOwnership[6]{phase,section,linesBefore,linesAfter}:
+  1,Mode Detection + Input + new Preflight Validation H2,520,first-pass-net-+87
+  2,Convergence Loop + Terminal-State Transition + Scoring Differences + Integrator Agent Management + Output Format + Stdout Progress + Convergence Success + FINDINGS_SCHEMA_INVALID,—,net-+160
+  3,State Tracking + Document Mode State + Iteration Summary Uniform Shape + Resume Path,—,net-+108
+  3,test/protocol/stage-context.test.ts ConvergenceIterationSummary suite,399,net-+test-coverage
+  4,Circuit Breakers + Identical Behavior + Document-Mode Breaker Semantics + Halt Messages (C-10),—,net-+46
+  total,agents/convergence-driver.md,520,921
+
+lockedDecisionsWired[8]{id,location}:
+  C-01,Circuit Breakers § Identical Behavior Across Modes + Convergence Loop single for-iteration block
+  C-03,Convergence Loop integrator dispatch + § Integrator Agent Management (renamed from Fixer Agent Management)
+  C-05,Circuit Breakers MAX_ITERATIONS row + Document-Mode Breaker Semantics (max-iterations default 3)
+  C-09,Output Format § Stdout Progress
+  C-10,Circuit Breakers § Halt Messages and Recovery (8-row table cross-ref to schema)
+  C-11,Convergence Loop § Terminal-State Transition convergence-summary.toon write
+  W-01,iter-{N}.toon timestamps with ms precision (validated by stage-context.test.ts)
+  W-02,Iteration snapshot slug rule referenced (snapshotRef path examples)
+
+verification:
+  tsc: pass (hooks tsc --noEmit exit 0; no schema errors in modified TS)
+  test: pass (bun test test/protocol/ -> 400 pass, 0 fail, 910 expect calls; specifically stage-context.test.ts 41 pass; schema-validation.test.ts 17 pass)
+  lint: skip (bun run lint not configured in package.json; consistent with Wave 0)
+  ownershipDrift: clean (only declared-ownership files modified: agents/convergence-driver.md + test/protocol/stage-context.test.ts; pre-existing dirty file planning/history/changelog.md unrelated to this wave)
+
+reconciliation:
+  crossBoundaryRequests: 0 (.plan-execution/ephemeral/requests/ empty)
+  ownershipViolations: 0
+  conflictingExports: 0
+  contractAmendments: 0
+
+wiringPass: skipped (all changes are documentation in agents/convergence-driver.md + test file extension — no barrel/route/import wiring needed; explicit no-op per Phase 4 nextStageHint)
+
+automatedQualityGate: PROCEED (verification.status == pass, zero blocking issues, zero ownership violations, zero gate halts)
+
+acceptanceCriteriaSummary:
+  total: 23
+  met: 23
+  partial: 0
+  notMet: 0
+  notes: AC1-6 (Phase 1) + AC1-9 (Phase 2) + AC1-4 (Phase 3) + AC1-4 (Phase 4) all met. Phase 2 plan ACs 10-11 (bun test commands) are test-execution-side, deferred to wave-level verification — both subsumed by the bun test pass shown above.
+
+contextPressureNote: "Wave 1 ran across 4 serial agent spawns (opus implementers) plus inline orchestrator verification. Cumulative this turn: ~290k spawned-agent tokens (Phase 1 73k + Phase 2 80k + Phase 3 94k + Phase 4 60k) + Wave 0 carry. Per execute.md Step 9.1, ALWAYS checkpoint at wave boundaries. Per --auto Automated Quality Gate, decision is PROCEED but context budget is hot; recommend /clear + /loom-plan execute --resume --auto to continue Wave 2 in a fresh window."
+
+waveCost: ~290k tokens spent (P1 73k + P2 80k + P3 94k + P4 60k); cumulative across run: ~476k
+
+nextWave: 2
+nextWaveStrategy: serial-pair (Phase 5 -> Phase 11; Phase 11 deps Phase 5 — M-01 logical close at end of W2)
