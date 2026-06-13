@@ -1,0 +1,53 @@
+catalog_version: 3
+repo: https://github.com/launchstack-dev/loom-ai
+loomCoreVersion: 0.1.0
+loomHooksVersion: 0.1.0
+
+releases:
+  - version: 0.1.0
+    coreTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz
+    hooksTarball: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-hooks-v0.1.0.tar.gz
+    cosignSignature: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/loom-core-v0.1.0.tar.gz.sig
+    sha256Manifest: https://github.com/launchstack-dev/loom-ai/releases/download/v0.1.0/SHA256SUMS
+    releasedAt: 2026-06-01T00:00:00Z
+
+default_dirs:
+  skills:
+    - default: .claude/skills/
+    - global: ~/.claude/skills/
+  agents:
+    - default: .claude/agents/
+    - global: ~/.claude/agents/
+  prompts:
+    - default: .claude/commands/
+    - global: ~/.claude/commands/
+
+library:
+  # In v3, "skills" means inter-agent protocol files (renamed to protocols in v4)
+  skills:
+    - name: execution-protocols
+      description: Inter-agent protocol schemas for the Loom execution pipeline
+      source: agents/protocols/execution-conventions.md
+    - name: toon-format-protocol
+      description: TOON format specification for all on-disk artifacts
+      source: agents/protocols/toon-format.md
+
+  agents:
+    - name: contracts-agent
+      description: Generates contract files and type definitions from plan specs
+      source: agents/contracts-agent.md
+      # F-002 fixture requirement: requires: entry with skill:-prefixed item
+      requires:
+        - skill:execution-protocols
+        - skill:toon-format-protocol
+
+  prompts: []
+
+kits:
+  - name: data-engineering
+    description: Data pipeline quality gates
+    version: 1.1.0
+    minLoomVersion: 3
+    includes:
+      - data-schema-reviewer
+    command: loom-data.md
