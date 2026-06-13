@@ -4,6 +4,25 @@ A discipline layer on top of Claude Code. Loom turns loose prompts into locked s
 
 > **Status: alpha — `v0.0.x`.** Schemas may evolve with migrations. The convergence engine, scenarios layer, and change-proposal lifecycle are shipped and exercised; the installer/distribution polish (signed releases, Homebrew formula, version-compat machinery) is in flight. See [planning/plans/PLAN-oss-launch.md](planning/plans/PLAN-oss-launch.md) for the launch roadmap.
 
+> **New here?** Start with [`docs/first-30-minutes.md`](docs/first-30-minutes.md) (narrated quickstart) and [`docs/concepts.md`](docs/concepts.md) (the five concepts you need before commands stop looking arbitrary). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
+
+## Quickstart
+
+After [installing](#install), in a project directory:
+
+```
+/loom-init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
+/loom-quick "<a small task>"        Zero-ceremony task with verification + impact + audit log
+```
+
+For the full pipeline on a one-line idea:
+
+```
+/loom-auto --from "add user auth with RBAC and team management"
+```
+
+Want to try it on a sandbox project first? Clone this repo and `cd examples/billing-api/` — `RUN-THIS.md` walks five commands end-to-end.
+
 ## What's different
 
 Most "multi-agent" tools rely on prompts to enforce boundaries. Loom blocks at the tool-call level: file ownership, contract locks, context budget, wiki integrity, and quality gates are Claude Code hooks, not instructions. Most BDD layers treat scenarios as documentation. Loom scenarios are the canonical leaf-level testable unit — the convergence-planner emits verification targets directly from them and the pipeline blocks until they pass. Most spec workflows stop at the initial plan. Loom adds an OpenSpec-style change-proposal lifecycle over per-domain contract pages so the spec keeps converging after launch.
@@ -132,28 +151,7 @@ If `/loom` returns "Unknown command", confirm `~/.claude/commands/loom.md` exist
 
 ### Your first run
 
-Once installed, in a project directory:
-
-```
-/loom-init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
-/loom-library use loom-plan         Pulls the plan/execution agents on demand
-/loom-roadmap init                  Creates ROADMAP.md from a guided interview
-/loom-plan create                   Generates PLAN.md (dual-track: plan + criteria)
-/loom-plan execute                  Wave-by-wave build with hook enforcement
-/loom-converge --criteria --full    Run all 4 convergence tiers
-```
-
-For a single-shot autonomous run:
-
-```
-/loom-auto --from "add user auth with RBAC and team management"
-```
-
-For a one-off task in an existing project:
-
-```
-/loom-quick "add rate limiting to /api/* endpoints"
-```
+See the [Quickstart](#quickstart) section at the top of this README, or the narrated walkthrough in [`docs/first-30-minutes.md`](docs/first-30-minutes.md).
 
 ### Pull what you need
 
@@ -496,32 +494,9 @@ See `docs/scenarios-and-changes.md` for end-to-end walkthroughs.
 
 ## How Loom compares
 
-These are the projects Loom most resembles or borrows patterns from. Loom is not a competitor to framework-level orchestrators (CrewAI, AutoGen, LangGraph) — those build agents from scratch. Loom is a discipline layer on top of Claude Code's native agents, hooks, and skills.
+Loom borrows shapes from OpenSpec (change-proposal lifecycle) and Superpowers (TDD red-green gate, diagnose-before-fix), and shares some surface with GSD. Loom is **not** in the same category as framework-level orchestrators (CrewAI, AutoGen, LangGraph) or IDE-integrated coding agents (Aider, Cursor, Cline).
 
-| Capability | **Loom** | OpenSpec | Superpowers | GSD |
-|---|---|---|---|---|
-| Primary surface | Discipline layer on Claude Code | Spec workflow | Behavioral patterns / plugin | Multi-platform discipline layer |
-| Pre-flight scope contract | Yes — prompt-refiner + scope-interrogator → locked decision manifest before code | — | — | Phase-based discussion (different shape) |
-| Scenarios (Given/When/Then) | First-class **enforcement** — convergence-planner emits targets from scenarios; pipeline blocks until they pass | First-class **documentation** | — | — |
-| Iterative convergence loop | Yes — iterate until delta = 0 or all blocking scenarios pass | — | — | Phase-by-phase, single-pass per phase |
-| Wave-based parallel execution + file ownership | Yes — wave 0 contracts → parallel implementers within ownership boundaries | — | — | Sequential by default |
-| Hook-enforced invariants (tool-call level) | 13 hooks: file-ownership, contract-lock, context-budget, quality-gate, wiki integrity, … | — | Pattern-level prompts | Prompt-level, no hook enforcement |
-| Change-proposal lifecycle (post-launch maintenance) | Tool-driven: `init → review → approve → run → archive`, validation gates only | Same shape, documentation-grade | — | — |
-| Per-domain `contract-*` wiki pages (materialized spec) | Yes — atomic per-domain delta application | Spec files (different layout) | — | Persistent docs (different model) |
-| Multi-agent orchestration patterns (debate / chain / vote / triage / converge) | Five patterns, declared in `orchestration.toml`, available as commands or flags | — | — | — |
-| Context budget discipline (per-spawn cap + stage summaries) | 100k cap, fail-closed on schema mismatch | — | — | — |
-| Multi-platform | Claude Code today; OpenCode + Pi planned (M-04, BLOCKED on opencode#5894) | Claude Code | Claude Code | Claude Code + OpenCode + Goose + Codex (wide and shallow) |
-| Approval model | Tool-driven (validators block, no human queues) | — | — | — |
-| TDD red-green gate | Yes — adopted from Superpowers (C-06) | — | **Originator** | — |
-| Diagnose-before-fix | Yes — adopted from Superpowers (C-06) | — | **Originator** | — |
-
-**Borrowed patterns** (Loom does not redistribute these projects — it adopts shapes):
-
-- **OpenSpec** — the `init → review → approve → run → archive` change-proposal shape (planning/archive/PLAN-spec-upgrades.md, Upgrade B). Loom departs by making scenarios enforcement gates rather than documentation.
-- **Superpowers** — strict red-green TDD gate, diagnose-before-fix, hard verification gate in `AgentResult` (ROADMAP C-06 / F-07). Loom does not adopt Superpowers' orchestration, planning, or dispatch.
-- **BMAD** — change-management *shape*, but Loom is explicitly tool-driven (validation gates only), not role-driven (no human approval queues).
-
-**Not in the same category:** CrewAI, AutoGen, LangGraph (frameworks for building agent systems from scratch); Aider, Cursor, Cline (IDE-integrated coding agents).
+See [`docs/comparison.md`](docs/comparison.md) for the full comparison table, borrowed-pattern attribution, and "when Loom is the wrong choice" notes.
 
 ## Architecture
 
