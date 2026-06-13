@@ -1,3 +1,21 @@
+## 2026-06-13 -- M-02 formally closed (kit-native-skills)
+
+- M-02 auto gate had passed on 2026-06-12T23:32Z (commit `159ea39`). The remaining qa-review-tier item was the live skill-activation smoke test in a fresh Claude Code session.
+- Smoke test completed 2026-06-13T10:30Z. Verdict: **PASS**.
+  - Skill installed at `~/.claude/skills/python-conventions/SKILL.md` via canonical `/loom-library use python-conventions` flow (real file copy, sha256 recorded in `install-state.toon` items[] with `component: loom-core`).
+  - Fresh session manifest lists `python-conventions: Python ecosystem conventions for new code — Polars over Pandas, uv/ruff/pytest tooling, atomic file writes, type hints on public functions, TOON format for Loom artifacts.`
+  - py-trigger fires: unprompted recommendation of Polars + uv + ruff + pytest on `/tmp/python-conventions-smoke/scratch.py`.
+  - ts-trigger suppressed: no python-conventions advice on `/tmp/python-conventions-smoke/scratch.ts` (only TS-native conventions recommended).
+- Caveats recorded in `.plan-execution/stage-context/phase-7.toon manualSmokeTestResult`:
+  - Description visibility in the manifest doesn't fully isolate trigger-glob match vs description-based activation. Either path is a PASS for M-02 scope; stronger isolation is a future kit-author-experience test.
+  - Global `~/.claude/CLAUDE.md` independently mandates Polars for new Python code. The cleaner signal is the negative case (ts-trigger suppression).
+- Side finding (non-blocking, info-level for a future review pass): `commands/loom-library.md` Step 5 documents the API surface (validateInstallPath, buildSkillTargetPath, buildSkillInstallRecord) but leaves the execution layer (Bash `mkdir -p` + `cp` + `shasum` + install-state row append) implicit. The implicit execution path was walked manually this run; the markdown should codify it.
+- One-timer fix during the smoke-test gap: removed a one-off `ln -s` symlink that had been used as a quick install hack, replaced with the canonical real-file copy + install-state.toon registration.
+
+**Both M-02 and M-03 are now CLOSED for `planning/plans/PLAN-kit-native-skills.md`. OSS launch is fully unblocked.**
+
+---
+
 ## 2026-06-13 -- Code fixes applied (kit-native-skills review)
 
 - Source: `.plan-execution/review-report.md` → archived to `planning/history/reviews/2026-06-13-review.md`
