@@ -169,13 +169,16 @@ export function detectExistingSkill(libraryYaml: string, name: string): Existing
   // Guard against the egregiously-malformed case the test pins (line ~190):
   // "catalog_version: {\n  broken: [unclosed". We detect any unclosed flow
   // collection as a parse failure signal.
-  // Strip YAML comments and quoted strings before counting braces/brackets so
-  // that descriptions containing literal `{` or `}` characters don't produce
-  // false "unbalanced" errors.
+  // Strip quoted strings FIRST, then YAML comments. Order matters: a quoted
+  // string like `"Issue #123"` contains a literal `#`; if we stripped comments
+  // first, the regex would consume the `#` plus rest of line including the
+  // closing quote, leaving an unclosed quote that then matches across newlines
+  // and swallows arbitrary YAML structure. Quote-then-comment is safe because
+  // any `#` left after quote-stripping really is a comment start.
   const sanitized = libraryYaml
-    .replace(/#[^\n]*/g, "")
     .replace(/"([^"\\]|\\.)*"/g, "")
-    .replace(/'([^'\\]|\\.)*'/g, "");
+    .replace(/'([^'\\]|\\.)*'/g, "")
+    .replace(/#[^\n]*/g, "");
   const openBraces = (sanitized.match(/\{/g) ?? []).length;
   const closeBraces = (sanitized.match(/\}/g) ?? []).length;
   const openBrackets = (sanitized.match(/\[/g) ?? []).length;
