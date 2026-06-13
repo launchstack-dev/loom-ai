@@ -14,6 +14,7 @@ Parse remaining arguments:
 - `--review-integrate`: apply plan review findings to PLAN.md (skips generation, goes directly to Step R)
 - `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
 - `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
+- `--skip-critic`: skip the `plan-critic-agent` spawn in Step 1 AND the Step 1.7 Critic Revise Pass. Falls back to legacy dual-track behavior (plan-builder + criteria-planner only). Logs a warning to stderr: `"--skip-critic active: plan-critic-agent will not run; Step 1.7 Critic Revise Pass will be skipped."` See Step 1.7 for the flag combination matrix (interactions with `--autoconverge`, `--review-integrate`, `--estimate`, `--skip-test-gen`).
 
 ### Instructions
 
@@ -68,9 +69,25 @@ If `--estimate` is set:
 
 3. Exit 0. Do not create any files or spawn any agents.
 
-#### Step 1: Dual-Track Plan Generation (parallel)
+#### Step 1: Triple-Track Plan Generation (parallel)
 
-Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent tool calls in a SINGLE message so they run concurrently. Neither agent reads the other's output.
+Spawn the **plan-builder-agent** and **criteria-planner-agent** in parallel from the same roadmap input — send BOTH Agent tool calls in a SINGLE message so they run concurrently. Neither agent reads the other's output. The **plan-critic-agent** is a third track but is NOT truly parallel with the other two: the critic reads the draft PLAN.md, so it MUST be spawned sequentially AFTER `plan-builder-agent` returns. Within Step 1, the spawn sequence is therefore: "plan-builder + criteria-planner in parallel; on plan-builder completion, plan-critic spawns reading the draft + the 6 reviewer files."
+
+**Stale critique cleanup (run before any spawn):** remove any leftover critique artifact from a prior `/loom-plan create` invocation:
+```bash
+rm -f .plan-execution/critique.toon
+```
+Rationale: a previous run invoked with `--skip-critic` (or a partial failure) may have left a stale `.plan-execution/critique.toon` on disk. Step 1.7 reads that path unconditionally when it is present, so a fresh run MUST start from a clean slate. Skipping this cleanup risks consuming a stale critique against an unrelated draft plan.
+
+**Input contracts (per agent):**
+
+| Agent | Reads | Writes |
+|---|---|---|
+| `plan-builder-agent` | ROADMAP.md, codebase context, optional notes/scope-contract, optional existing PLAN.md (merge mode) | draft `PLAN.md` (returned in AgentResult; written to disk by Step 4) |
+| `criteria-planner-agent` | ROADMAP.md, codebase context, optional scope-contract, optional wiki quality history | `criteria-plan.toon` (returned in AgentResult; written by Step 4 item 1b) |
+| `plan-critic-agent` | draft `PLAN.md` from plan-builder, six reviewer files referenced by `agents/plan-critic-checklist.md` | `.plan-execution/critique.toon` (atomic write per `agents/protocols/plan-critique.schema.md`) |
+
+`critique.toon` is an **advisory** artifact distinct from the formal-review `findings.toon` (see the "critique.toon vs findings.toon" note in Step 1.7).
 
 **Agent A: plan-builder-agent** (general-purpose):
 ```
@@ -130,7 +147,38 @@ Spawn **both** agents in parallel from the same roadmap input. Send BOTH Agent t
  </file-content>}"
 ```
 
-Both agents run independently. Collect both AgentResults before proceeding.
+Plan-builder and criteria-planner run independently. Collect both AgentResults before spawning the critic.
+
+**Agent C: plan-critic-agent** (sequential; spawned only after plan-builder returns):
+
+Skip this spawn entirely if `--skip-critic` is set. Otherwise, resolve the critic's model per `CLAUDE.md` § "Agent Conventions": read `~/.claude/agents/plan-critic-agent.md` frontmatter `model:` (which is `haiku`) and pass `model: "haiku"` on the spawn call. The critic spawn is subject to the standard token-budget preflight (`agents/protocols/context-budget.md`) like every other agent — if the estimated prompt size exceeds the haiku-tier cap, the preflight hook blocks the spawn with a suggestion to split the input or re-run with `--skip-critic`. The critic MUST NOT bypass the preflight.
+
+```
+subagent_type: "general-purpose"
+model: "haiku"
+```
+Prompt:
+```
+"Read your instructions from `~/.claude/agents/plan-critic-agent.md` first,
+ then read `~/.claude/agents/plan-critic-checklist.md` and
+ `~/.claude/agents/protocols/plan-critique.schema.md`.
+
+ You are a haiku-tier advisory critic. Predict findings that the 6 plan
+ reviewer agents are likely to raise against this draft PLAN.md. Write
+ your critique to `.plan-execution/critique.toon` atomically.
+
+ <file-content path="PLAN.md">
+ {draft PLAN.md from plan-builder-agent}
+ </file-content>
+
+ <file-content path="ROADMAP.md">
+ {full ROADMAP.md text}
+ </file-content>
+
+ {Plus the 6 reviewer files listed in plan-critic-checklist.md.}"
+```
+
+Collect the critic's AgentResult and verify `.plan-execution/critique.toon` was written. The critic's output is advisory only — it does NOT gate progression to Step 1.5. Step 1.5 (Interpretation Review) runs independently against the plan-builder + criteria-planner outputs regardless of the critic's verdict.
 
 #### Step 1.5: Interpretation Review (conflict detection)
 
@@ -197,6 +245,57 @@ Parse the interpretation-reviewer-agent's AgentResult. Extract the conflict repo
 - If only warnings/info → display summary, continue to Step 2.
 
 Save the conflict report to `.plan-execution/conflicts/interpretation-report.toon`.
+
+#### Step 1.7: Critic Revise Pass
+
+This step consumes the advisory critique produced by `plan-critic-agent` in Step 1 and asks `plan-builder-agent` to self-correct the draft PLAN.md BEFORE the validation loop and the formal review run. It is structurally analogous to Steps 1.5 and 4.5 (interstitial half-step inserts between the main steps).
+
+**Skip conditions.** Step 1.7 is skipped entirely in either of the following cases:
+
+1. **`--skip-critic` was passed.** No critic spawn ran in Step 1, so no `.plan-execution/critique.toon` exists. Log to stderr: `"--skip-critic active: Step 1.7 Critic Revise Pass skipped."` and proceed to Step 2.
+2. **`--review-integrate` was passed.** Per locked decision **Q-02**, the critic does NOT run on `--review-integrate` invocations. Rationale: `--review-integrate` is the formal integrator path that consumes `findings.toon` from a completed plan review; the critic is a pre-review heuristic and has nothing to add when the review has already run. `--review-integrate` jumps directly from Step 0 to Step R and never touches Step 1, Step 1.5, Step 1.7, or Step 2.
+
+**Procedure (default path):**
+
+1. **Read the critique.** Load `.plan-execution/critique.toon` and parse it per `agents/protocols/plan-critique.schema.md`.
+2. **Zero-blocking short-circuit.** If `predictedBlockingCount == 0`, echo to stdout: `"Critic predicted 0 blocking findings — skipping revise pass."` and proceed directly to Step 2. The plan-builder is NOT re-spawned; the draft PLAN.md from Step 1 is the input to Step 2.
+3. **Re-spawn plan-builder-agent in Integrator Mode.** If `predictedBlockingCount > 0`, re-spawn `plan-builder-agent` per the Integrator Mode contract documented in `~/.claude/agents/plan-builder-agent.md` § Integrator Mode. The critic's `critique.toon` is passed as the findings input (the integrator contract is shape-compatible with both `findings.toon` and `critique.toon` — see `plan-critique.schema.md` line 5: "`PlanCritique` mirrors the shape of `ConvergenceFindings` so plan-builder-agent can consume critic output through the same integrator contract"). The draft `PLAN.md` from Step 1 is the subject. Integrator dispatch is config-driven (locked decision **C-03**) — this command names `plan-builder-agent` as the integrator because that is what the config calls for in this context.
+4. **Atomic write.** The plan-builder Integrator Mode writes the revised PLAN.md atomically (`.tmp` + rename) per its existing contract. No additional write step is needed here.
+5. **Echo to stdout.** On revise-pass completion, echo a single line to stdout naming the critique path and the counts the critic reported, e.g.:
+   ```
+   Critic critique at .plan-execution/critique.toon: 4 predicted blocking, 9 predicted advisory. Revise pass complete.
+   ```
+   (Counts come from `predictedBlockingCount` and `predictedAdvisoryCount` in the critique.)
+
+**`critique.toon` vs `findings.toon` — distinct artifacts.** These two files are easily confused and MUST be kept separate:
+
+| Field | `.plan-execution/critique.toon` | `.plan-execution/convergence/findings.toon` |
+|---|---|---|
+| Producer | `plan-critic-agent` (haiku, advisory) | The plan-review harness (formal review aggregate; Phase 9 W4 deliverable) |
+| Schema | `PlanCritique` (`agents/protocols/plan-critique.schema.md`) | `ConvergenceFindings` (`agents/protocols/findings.schema.md`) |
+| Path | `.plan-execution/critique.toon` | `.plan-execution/convergence/findings.toon` |
+| Lifecycle | Written ONCE per `/loom-plan create` invocation (in Step 1; consumed in Step 1.7 only) | Rewritten EVERY iteration of an `--autoconverge` loop |
+| Severity | `predictedSeverity` (predictions; advisory) | `severity` (actual formal-review findings; authoritative) |
+| ID prefix | `P-` (e.g., `P-01`) | `F-` (e.g., `F-01`) |
+
+The shapes are intentionally similar so plan-builder Integrator Mode can consume both, but the filenames, paths, schemas, and lifecycles are distinct. Do not write critique data to `findings.toon` and do not write formal findings to `critique.toon`.
+
+**Flag combination matrix.** `--skip-critic` interactions with other flags:
+
+| Combination | Behavior |
+|---|---|
+| `--skip-critic` + `--autoconverge` | COMPATIBLE. The autoconverge loop still runs after Step 4; `--skip-critic` only removes the pre-review revise pass. |
+| `--skip-critic` + `--review-integrate` | NO-OP. `--review-integrate` already skips the critic by design (per Q-02); `--skip-critic` is redundant here but is NOT an error. |
+| `--skip-critic` + `--estimate` | COMPATIBLE. `--estimate` mode does not spawn any agents; the flag has no effect on the estimate output. |
+| `--skip-critic` + `--skip-test-gen` | COMPATIBLE. Both skips compose: Step 1 spawns only `plan-builder-agent`, and Step 1.7 is skipped. |
+
+**Phase 10 grep-gate anchor.** Downstream Phase 10 (Wave 4) wires the `--autoconverge` flag into this file and uses Step 1.7's header as its **structural insertion-point anchor**. Before Phase 10 edits run, it MUST assert this file is at the post-Phase-7 commit by running:
+
+```bash
+grep -q "Step 1.7" commands/loom-plan/create.md
+```
+
+If that grep returns non-zero, Phase 10 MUST halt with an error naming **Phase 7** as the missing predecessor (the Phase 7 deliverable is the Step 1.7 section you are reading right now). The gate is structural rather than commit-hash-based so it remains valid across rebases and squash-merges — Phase 10 reads create.md, locates the `#### Step 1.7:` heading, and uses it as a known landmark to anchor its own additions.
 
 #### Step 2: Validation Loop (max 2 retries)
 

@@ -242,6 +242,67 @@ Each phase follows:
 - [ ] Testable criterion 2
 ```
 
+## Integrator Mode
+
+When invoked by the convergence-driver as the integrator step of a document-mode convergence loop, you operate in **Integrator Mode** instead of authoring a plan from scratch. Your job is to revise an existing subject document (typically `planning/PLAN.md`) so that the blocking findings raised by the harness in the prior iteration are resolved.
+
+Integrator dispatch is **config-driven** (locked decision **C-03**): the convergence-driver does NOT hardcode `plan-builder-agent` as the integrator. The driver reads `converge.config.integrator` and spawns whichever agent is named there. This section applies when `plan-builder-agent` IS the configured integrator — typically for document-mode `plan-review` convergence runs over `planning/PLAN.md`.
+
+### Input Contract
+
+The orchestrator distinguishes integrator mode from full-plan generation by the **shape of the inputs**, per this disambiguation matrix:
+
+| Inputs provided | Mode | Action |
+|-----------------|------|--------|
+| Roadmap path only | Full-plan generation | Existing behavior — produce a fresh PLAN.md per the Decomposition Reasoning Framework above. |
+| `findings.toon` + current subject path | **Integrator Mode** | Revise the subject to resolve blocking findings (this section). |
+| Both (roadmap + `findings.toon` + subject) | **Integrator Mode** | Integrator wins — `findings.toon` presence is the decisive signal. The roadmap is treated as additional context (locked decisions to honor), not as a trigger for regeneration. |
+| Neither roadmap nor `findings.toon` | AMBIGUOUS | Halt — raise `INTEGRATOR_MODE_AMBIGUOUS` (see Error Handling below). |
+
+**Integrator-mode inputs you will receive:**
+- `subjectPath` — absolute or repo-relative path to the document to revise (e.g., `planning/PLAN.md`). MUST exist and be readable.
+- `findingsPath` — absolute or repo-relative path to a `findings.toon` file conforming to `~/.claude/agents/protocols/findings.schema.md` (the `ConvergenceFindings` shape). Read all `findings[]` rows; pay particular attention to `id`, `severity`, `locationPath`, `locationAnchor`, `summary`, and `suggestion`.
+- Optionally, a roadmap path and/or a list of locked decisions (`C-NN`) to honor while editing.
+
+### Output Contract
+
+You produce a **complete revised subject document** — not a diff, not a patch, not a partial edit. The driver consumes the file in full; emitting anything other than a complete document is a contract violation.
+
+1. **Write atomically.** Write the revised document to `{subjectPath}.tmp`, then `fs.renameSync` (or shell `mv`) it onto `{subjectPath}`. Never write the subject path directly.
+2. **Preserve everything not flagged.** Do not restructure unrelated phases, rename unchanged deliverables, or "improve" sections that no finding referenced. Mirror the surgical-refinement discipline of `## Refinement Mode`.
+3. **Resolve every blocking finding.** For each `findings[]` row with `severity: blocking`, edit the section identified by `locationAnchor` to address the `summary`. Use `suggestion` as a starting point but use your judgment if the suggestion is incomplete or wrong-headed.
+4. **Address warnings opportunistically.** For `severity: warning` rows, address if the fix is low-cost and contained; skip otherwise.
+5. **Optionally address info.** For `severity: info` rows, address only when trivially resolvable. Most info findings can be deferred to a later iteration or ignored.
+
+### AgentResult Reporting
+
+Your `AgentResult` envelope MUST include:
+- `filesModified[1]: {subjectPath}` (typically `planning/PLAN.md`).
+- An `integrationNotes` block listing which finding `id`s were addressed (e.g., `addressed: F-01, F-02, F-05; deferred: F-04 (warning, deferred per low-cost rule miss)`).
+- `status: success` if all blocking findings have a corresponding edit; `partial` if you addressed some but not all (with the unaddressed finding `id`s listed in `blockingIssues[]`); `failure` if the subject could not be revised at all.
+
+### Scope-Expansion Caveat
+
+Integrator Mode MAY add scope to the subject — new phases, new features, new scenarios — when a blocking finding genuinely demands it (for example, a phasing reviewer flagging that a missing wiring phase makes a plan unverifiable). However, the convergence-driver enforces a **scope-expansion guard** (locked decision **C-06**) that detects new top-level structural additions in document-mode runs and halts the loop with `haltReason: SCOPE_EXPANSION`. The guard's exact diff rules — what counts as a new `### Phase N`, `### F-NN`, or `### M-NN` heading — live in:
+
+> `agents/convergence-driver.md` § Document Mode Safeguards § Scope-Expansion Guard
+
+The integrator does NOT implement or pre-check this guard; the driver runs it after every iteration. To stay inside the guard, **prefer in-place edits to existing phases over new top-level structural additions** whenever a blocking finding can be resolved either way. If a finding truly cannot be resolved without adding a phase, add the phase and let the driver halt the loop — that halt is a signal for the operator, not a failure of the integrator.
+
+### Error Handling
+
+| Error Code | When | Action |
+|-----------|------|--------|
+| `INTEGRATOR_MODE_AMBIGUOUS` | Invoked with neither a roadmap path NOR a `findings.toon` + subject path. The inputs do not disambiguate between full-plan generation and integrator mode. | Halt immediately. Do NOT guess a mode. Return `status: failure` with a blocking `issues[]` row whose `severity: blocking` and `description` names the ambiguity (e.g., `"Cannot disambiguate mode: neither roadmap nor findings.toon provided. Caller must supply one or the other."`). The driver/orchestrator is responsible for re-invoking with proper inputs. |
+| `FINDINGS_SCHEMA_INVALID` | `findings.toon` cannot be parsed, or its `subject` field does not match the supplied `subjectPath`. | Halt. Return `status: failure` with a blocking `issues[]` row referencing `~/.claude/agents/protocols/findings.schema.md` and the specific parse error. Do NOT write a partial revision. |
+| `SUBJECT_UNREADABLE` | `subjectPath` does not exist or is not readable. | Halt. Return `status: failure` with a blocking `issues[]` row naming the path. |
+
+### Scenarios
+
+**S-01 (happy path):** The driver invokes integrator mode with `subjectPath: planning/PLAN.md` and a `findings.toon` containing 3 blocking findings (e.g., a phasing violation in Phase 3, a missing constraint cross-reference in the Overview, and an oversized acceptance-criteria list in Phase 7). The integrator reads both files, edits each flagged section in place, writes the revised `planning/PLAN.md` atomically (via `.tmp` + rename), and returns `status: success` with `integrationNotes: addressed: F-01, F-02, F-03`. The driver's next iteration re-runs the harness against the revised subject.
+
+**S-02 (ambiguous input):** The driver — or a misconfigured operator invocation — calls `plan-builder-agent` with neither a roadmap nor a `findings.toon`. The agent does NOT guess. It halts immediately, returns `status: failure`, and lists a blocking `issues[]` row with the `INTEGRATOR_MODE_AMBIGUOUS` error code so the caller knows exactly what to fix.
+
 ## Validation Correction Mode
 
 When you receive validation errors from a prior attempt:

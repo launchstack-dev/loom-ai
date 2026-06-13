@@ -1,0 +1,75 @@
+wave: 3
+runId: convergence-generalization-20260613-001
+status: success
+startedAt: 2026-06-13T14:05:00Z
+completedAt: 2026-06-13T14:30:00Z
+durationMs: 1500000
+strategy: W3a parallel (Phase 6 + Phase 8 disjoint files) -> W3b serial (Phase 7 after Phase 6; Phase 7 needs Phase 6's plan-critic-agent existing before it can wire it into create.md)
+
+phases[3]{id,agent,model,status,filesCreated,filesModified,completedAt}:
+  6,implementer-agent,opus,success,2,0,2026-06-13T14:13:00Z
+  8,implementer-agent,opus,success,0,1,2026-06-13T14:11:00Z
+  7,implementer-agent,opus,success,0,1,2026-06-13T14:28:00Z
+
+filesCreated[2]:
+  agents/plan-critic-agent.md
+  agents/plan-critic-checklist.md
+
+filesModified[2]:
+  agents/plan-builder-agent.md
+  commands/loom-plan/create.md
+
+filesAlsoTouched[0]:
+
+sectionOwnership[4]{phase,file,linesBefore,linesAfter,sectionAdded}:
+  6,agents/plan-critic-agent.md,0,147,"Full agent definition — frontmatter (model: haiku), Role, Inputs (project-relative agent paths under agents/), Operating Mode (advisory-only locked), Process (8-step), Locked Dimension Enum (6 dims), Hard Ceilings, Output (PlanCritique schema match), What the critic does NOT do, Context budget"
+  6,agents/plan-critic-checklist.md,0,45,"30 numbered concerns tagged [dimension] — 5 per locked enum value across feature-coverage/strategy/ux/phasing/parallelization/agentic-workflow"
+  8,agents/plan-builder-agent.md,290,350,"New ## Integrator Mode section before ## Validation Correction Mode — Opening prose (C-03 cross-ref), ### Input Contract (4-row disambiguation matrix), ### Output Contract (5 rules: complete document not diff + atomic write), ### AgentResult Reporting, ### Scope-Expansion Caveat (C-06 cross-ref to driver § Document Mode Safeguards), ### Error Handling (INTEGRATOR_MODE_AMBIGUOUS + FINDINGS_SCHEMA_INVALID + SUBJECT_UNREADABLE), ### Scenarios (S-01 happy + S-02 ambiguous)"
+  7,commands/loom-plan/create.md,353,452,"Arguments +--skip-critic; Step 1 renamed to Triple-Track + stale critique cleanup; Step 1.7 Critic Revise Pass (new between Step 1.5 and Step 2) — read critique.toon, short-circuit on predictedBlockingCount==0, re-spawn plan-builder integrator mode, stdout echo, critique.toon vs findings.toon table, flag combination matrix, Phase 10 grep gate, Q-02 citation"
+
+exportsAdded[0]:
+
+lockedDecisionsWired[5]{id,location}:
+  C-03,"agents/plan-builder-agent.md § Integrator Mode opening prose + commands/loom-plan/create.md Step 1.7 (config-driven integrator dispatch via converge.config.integrator)"
+  C-06,"agents/plan-builder-agent.md § Integrator Mode § Scope-Expansion Caveat — cross-references agents/convergence-driver.md § Document Mode Safeguards § Scope-Expansion Guard"
+  Q-02,"commands/loom-plan/create.md Step 1.7 skip condition #2 — critic does NOT run on --review-integrate; review-integrate is the formal integrator path consuming findings.toon"
+  6-dim-enum,"agents/plan-critic-agent.md § Locked Dimension Enum + agents/plan-critic-checklist.md — checklist items tagged [dimension] from the locked 6-dim enum exactly"
+  haiku-model-resolution,"agents/plan-critic-agent.md frontmatter (model: haiku) + commands/loom-plan/create.md Step 1 critic spawn (model: \"haiku\" per CLAUDE.md frontmatter resolution rule)"
+
+verification:
+  tsc: pass (bunx tsc --noEmit -p hooks/tsconfig.json exit 0; no TS changed but suite ran clean)
+  test: pass (bun test test/protocol/ -> 406 pass / 0 fail / 950 expect calls; no regressions from baseline; phase is markdown-only so no new tests)
+  lint: skip (bun run lint not configured)
+  ownershipDrift: clean (git status shows only the 4 declared files: 2 created + 2 modified)
+  step17GrepCount: 12 (Step 1.7 header at line 249 + 11 body cross-refs)
+  skipCriticGrepCount: 9 (Arguments + stale-cleanup + Step 1 spawn + Step 1.7 skip-cond + 4 matrix rows + matrix preamble)
+
+reconciliation:
+  crossBoundaryRequests: 0 (.plan-execution/ephemeral/requests/ empty)
+  ownershipViolations: 0 (Phase 6 only touched plan-critic-*; Phase 8 only touched plan-builder-agent.md; Phase 7 only touched commands/loom-plan/create.md; all disjoint)
+  conflictingExports: 0 (all markdown; no code exports)
+  contractAmendments: 0
+
+wiringPass: skipped (all files are markdown agent/command definitions; no static-import barrels/routes/index files to update. Same explicit no-op pattern as Waves 1 and 2.)
+
+automatedQualityGate: PROCEED (verification.status == pass, zero blocking issues, zero ownership violations, zero gate halts, no cross-boundary requests outstanding)
+
+acceptanceCriteriaSummary:
+  total: 23
+  met: 23
+  partial: 0
+  notMet: 0
+  notes: Phase 6 6/6 (plan-critic-agent.md + checklist); Phase 8 6/6 (plan-builder integrator mode); Phase 7 11/11 (create.md triple-track + Step 1.7 + --skip-critic + matrix + Phase 10 grep gate)
+
+milestoneStatus:
+  M-01: still LOGICALLY CLOSED at end of W2 (driver document mode + snapshot helper shipped; W5 Phase 13 e2e fixture is the gate)
+  M-02: in-progress — F-02 critic agent + critic wiring shipped here; F-03 (plan-review harness + --autoconverge) is W4
+
+contextPressureNote: "Wave 3 ran across 3 implementer spawns (2 parallel W3a + 1 serial W3b). Token costs this turn for spawned agents: Phase 6 ~64k + Phase 8 ~50k + Phase 7 ~63k = ~177k. Plus orchestrator-side: ~30k for reads + verification. Cumulative across run: ~799k spawned-agent tokens. Per execute.md Step 9.1, ALWAYS checkpoint at wave boundaries. Per --auto Automated Quality Gate, decision is PROCEED. Recommend /clear + --resume for Wave 4 in a fresh window — W4 estimated ~200-300k (Phase 9 is the heaviest single agent so far: creates the TS harness + aggregator + tests)."
+
+waveCost: ~177k spawned-agent tokens (Phase 6 64k + Phase 8 50k + Phase 7 63k); cumulative across run: ~799k
+
+nextWave: 4
+nextWaveStrategy: serial-pair (Phase 9 -> Phase 10; Phase 9 creates the plan-review harness + aggregator + tests, Phase 10 wraps /loom-plan create with --autoconverge driving the loop). Phase 10 reads create.md and uses the Step 1.7 anchor that Phase 7 just landed.
+nextWavePhases[2]: 9, 10
+nextWaveMilestone: M-02 closes contract-level at end of W4; e2e gate at W5 Phase 14
