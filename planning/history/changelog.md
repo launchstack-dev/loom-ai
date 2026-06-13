@@ -1,3 +1,30 @@
+## 2026-06-13 -- Wave 2 executed (convergence-generalization, --auto) — M-01 logically closed
+
+- **Wave 2:** Phase 5 → Phase 11 serial-pair. Disjoint files; Phase 11 deps Phase 5 only by contract (driver doc cites the helper Phase 11 implements).
+- **Phase 5 (implementer-agent, opus):** `agents/convergence-driver.md` +93 lines (921 → 1014). New H2 `## Document Mode Safeguards` between Circuit Breakers and State Tracking, documenting:
+  - Scope-Expansion Guard (C-06): three line-anchored regexes (`^### Phase \d+`, `^### F-\d+`, `^### M-\d+`); fires between Convergence Loop step 7 and step 8; halts with `haltReason: SCOPE_EXPANSION`.
+  - Interactive vs `--auto` divergence (C-08): interactive records prompt + exit 0; `--auto` exits code 1 with stderr JSON.
+  - Auto-Snapshot Writer (C-07): write before every integrator spawn for `iteration >= 2`; sole writer is `hooks/lib/iteration-snapshot.ts::writeIterationSnapshot`; `SNAPSHOT_WRITE_FAILED` is warn-and-continue (snapshotRef: null on iter row, loop NOT halted).
+  - 7/7 driver-doc ACs met.
+- **Phase 11 (implementer-agent, opus):** new `hooks/lib/iteration-snapshot.ts` (321 lines) + extended `test/protocol/checksums.test.ts` (+241 lines, 8 → 14 tests). Exports: `writeIterationSnapshot` (async), `deriveSlug`, `SnapshotWriteFailed`, two types. Wired locked decisions:
+  - W-01 ms-precision ISO 8601 via `now().toISOString()`.
+  - W-02 slug derivation (basename minus FINAL dot only; multi-dot + extension-less cases tested).
+  - C-07 collision guard via `existsSync` (throws `SNAPSHOT_WRITE_FAILED: snapshot already exists` rather than silently overwriting the keep-all-forever invariant).
+  - sha256 via `node:crypto` with `sha256:` prefix matching `hooks/lib/checksum.ts` convention.
+  - Atomic write order: copy `{path}.{ext}.tmp` → rename, then metadata `{path}.toon.tmp` → rename, then sha256 verify.
+  - Single try/catch retry with 1s backoff; test seam via `_writeFileImpl` + `sleep` injection options.
+  - 6 new tests: happy-path, multi-dot filename, extension-less subject, source-missing short-circuit, EIO-retry-success, keep-all-forever retention. 6/6 ACs met.
+- **Verification (orchestrator re-run on main post-commit):** `bunx tsc --noEmit -p hooks/tsconfig.json` exit 0; `bun test test/protocol/` → 406 pass / 0 fail / 950 expect calls (+6 from W2); lint skip (not configured); ownership drift clean (only the 3 declared files modified). Reconciliation: 0 cross-boundary requests, 0 ownership violations, 0 conflicting exports (Phase 5 doc-only; Phase 11 exports 5 symbols in a new module), 0 contract amendments.
+- **Wiring pass: skipped** — same explicit no-op pattern as Wave 1. iteration-snapshot.ts is a new isolated helper imported at runtime by the convergence-driver agent prompt; no static-import barrel/route/index wiring needed. Vitest auto-discovers the extended checksums.test.ts.
+- **Stage context:** `.plan-execution/stage-context/execute.toon` written atomically with 6 keyDecisions + 5 nextStageHints for Wave 3+.
+- **Auto-commit:** `2036a6c` — 4 files changed, +729/-0 lines. Tag `plan-exec-convergence-generalization-wave-2-post` set.
+- **Persistence:** `planning/history/executions/wave-2-summary-convergence-generalization.toon` (suffixed to avoid colliding with the prior kit-native-skills run's `wave-2-summary.toon` — same naming convention used for Wave 1's persistence).
+- **Automated Quality Gate decision: PROCEED.**
+- **M-01 LOGICALLY CLOSED at end of W2.** F-01 driver document mode + snapshot helper now both shipped. Phase 13 (W5) e2e fixture provides end-to-end verification.
+- **Token cost (this wave):** ~146k spawned-agent tokens (Phase 5 78k + Phase 11 67k). Cumulative across run: ~622k (W0 186k + W1 290k + W2 146k).
+- **Halt reason: context-pressure-at-wave-boundary** (Step 9.1 always-checkpoint rule). Wave 3 has 3 phases (W3a Phase 6 + Phase 8 parallel, W3b Phase 7 serial) estimated 250-350k tokens — `/clear` + `/loom-plan execute --resume --auto` for fresh window.
+- **Next:** Wave 3 = W3a parallel (Phase 6 — plan-critic-agent + checklist; Phase 8 — plan-builder integrator-mode entry point; disjoint files) → W3b serial (Phase 7 — wire critic into commands/loom-plan/create.md as third parallel track + Step 1.7 revise pass + --skip-critic flag).
+
 ## 2026-06-13 -- Wave 1 recovery + drift-prevention postmortem (convergence-generalization)
 
 - **Symptom:** `/loom-plan execute --resume --auto` preflight halted before Wave 2. State.toon claimed Wave 1 = success, but on-disk file shapes (`agents/convergence-driver.md` at 520 lines, `test/protocol/stage-context.test.ts` at 399 lines) did not match the wave-1-summary expectations (921 + 1077 lines). Tag `plan-exec-convergence-generalization-wave-1-post` pointed at commit `4d1f2f2`, which was NOT reachable from `main` HEAD.
