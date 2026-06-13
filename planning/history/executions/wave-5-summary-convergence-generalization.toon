@@ -1,0 +1,128 @@
+schemaVersion: 1
+wave: 5
+runId: convergence-generalization-20260613-001
+status: success
+startedAt: 2026-06-13T18:10:00Z
+completedAt: 2026-06-13T19:05:00Z
+durationMs: 3300000
+strategy: W5a partial-parallel (Phase 12 + Phase 13 disjoint files) -> W5b serial (Phase 14 after Phase 13)
+
+phases[3]{id,agent,model,status,filesCreated,filesModified,exportsAdded,acceptanceCriteriaMet,startedAt,completedAt}:
+  12,wiring-agent,sonnet,success,0,4,0,"AC1-autoconverge-in-library-yaml,AC2-mode-document-in-library-yaml,AC3-autoconverge-in-loom-reference,AC4-three-modes-in-execution-conventions,AC5-bun-test-pass",2026-06-13T18:10:00Z,2026-06-13T18:20:00Z
+  13,implementer-agent,opus,success,5,0,20,"6-required-cases-plus-4-supplementary,bun-test-exit-0,deterministic-10-runs,uniform-iter-shape,canned-integrator-dispatch",2026-06-13T18:10:00Z,2026-06-13T18:22:00Z
+  14,implementer-agent,opus,success,24,0,16,"AC1-12-cases,AC2-bun-test-pass,AC3-50pct-reduction,AC4-converge-or-halt,AC5-auto-noninteractive-C08,AC6-skip-critic-shape-check,AC7-spawn-ceiling-14-of-15,AC8-tokensUsed-observability,AC9-review-integrate-combo,AC10-changelog-trajectory,AC11-link-extraction-readiness",2026-06-13T18:35:00Z,2026-06-13T18:55:00Z
+
+filesCreated[29]:
+  test/e2e/convergence/document-mode.test.ts
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts
+  test/e2e/convergence/fixtures/document-mode/canned-integrator.md
+  test/e2e/convergence/fixtures/document-mode/converge.config
+  test/e2e/convergence/fixtures/document-mode/subject.md
+  test/e2e/convergence/autoconverge.test.ts
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts
+  test/e2e/convergence/fixtures/autoconverge/ROADMAP.md
+  test/e2e/convergence/fixtures/autoconverge/PLAN-stub.md
+  test/e2e/convergence/fixtures/autoconverge/converge.config
+  test/e2e/convergence/fixtures/autoconverge/baseline-critique.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/feature-coverage-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/strategy-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/ux-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/phasing-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/parallelization-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/agentic-workflow-reviewer-agent-pre-critic.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/feature-coverage-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/strategy-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/ux-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/phasing-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/parallelization-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/agentic-workflow-reviewer-agent-post-critic-pass-1.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/feature-coverage-reviewer-agent-pass-2.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/strategy-reviewer-agent-pass-2.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/ux-reviewer-agent-pass-2.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/phasing-reviewer-agent-pass-2.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/parallelization-reviewer-agent-pass-2.toon
+  test/e2e/convergence/fixtures/autoconverge/canned-reviewers/agentic-workflow-reviewer-agent-pass-2.toon
+
+filesModified[5]:
+  skills/library.yaml
+  commands/loom-reference.md
+  commands/loom-plan.md
+  agents/protocols/execution-conventions.md
+  checksums.sha256
+
+filesDeleted[0]:
+
+exportsAdded[36]{file,name,kind}:
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,FindingSeverity,type
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,ScriptedFinding,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,HarnessScriptStep,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,IntegratorAction,type
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,IntegratorScriptStep,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,CannedConvergeConfig,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,DocumentModeFixtureContext,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,ConvergenceTerminalStatus,type
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,HaltReason,type
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,FixtureLoopResult,interface
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,SCOPE_EXPANSION_REGEXES,const
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,collectScopeHeadings,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,resolveIntegratorPath,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,runCannedHarness,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,applyIntegratorAction,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,serializeIterationSummary,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,parseIterationSummary,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,runDocumentModeLoop,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,sha256Hex,function
+  test/e2e/convergence/fixtures/document-mode/canned-harness.ts,serializeState,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,runAutoconvergeFixture,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,aggregatePass,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,readCritique,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,applyAutoconvergeIntegrator,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,encodeC08StderrLine,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,decodeC08StderrLine,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,buildTrajectoryLine,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,appendChangelogTrajectory,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,serializeAutoconvergeState,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,serializeAutoconvergeSummary,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,parseConvergenceSummary,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,sha256Hex,function
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,AutoconvergeFixtureContext,type
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,AutoconvergeRunResult,type
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,C08StderrLine,type
+  test/e2e/convergence/fixtures/autoconverge/canned-harness.ts,CONVERGENCE_SUMMARY_REQUIRED_FIELDS,const
+
+verification:
+  status: pass
+  typecheck: tsc --noEmit -p hooks/tsconfig.json -> clean (no errors)
+  protocolTests: bun test test/protocol/ -> 455 pass / 0 fail / 1114 expect() across 20 files (same as W4 baseline after manifest regen)
+  hooksTests: bun test hooks/__tests__/ -> 134 pass / 0 fail / 341 expect() across 11 files (no regression)
+  m01E2eTests: bun test test/e2e/convergence/document-mode.test.ts -> 10 pass / 0 fail / 79 expect() (Phase 13 AC)
+  m02E2eTests: bun test test/e2e/convergence/autoconverge.test.ts -> 12 pass / 0 fail / 105 expect() (Phase 14 AC)
+  libraryCatalogTest: bun test test/protocol/library-catalog.test.ts -> 19 pass / 0 fail / 41 expect() (Phase 12 AC5)
+  checksumsTest: bun test test/protocol/checksums.test.ts -> 14 pass / 0 fail / 58 expect() (after manifest regen)
+  determinism: 10 consecutive runs of document-mode.test.ts AND autoconverge.test.ts -> 100% pass
+  fullSubProject: cd test/e2e/convergence && bunx vitest run -> 11 files / 118 tests / all pass (106 baseline + 12 new autoconverge)
+  ownershipDrift: clean (Phase 12 = 4 files in declared list, Phase 13 = 5 files in declared list, Phase 14 = 24 files in declared list; no overlap, no out-of-bounds writes)
+  postWaveAction: scripts/generate-checksums.sh regenerated manifest because Phase 12 modified 2 tracked files (skills/library.yaml + commands/loom-plan.md) -- the manifest is project-wide and not in any phase's ownership; the orchestrator owns post-wave manifest refresh
+
+acceptanceCriteriaScore: 27/27 met across W5 (Phase 12: 5/5, Phase 13: 5/5 plus 4 supplementary, Phase 14: 11/11). Cumulative across W0-5: 107/107 ACs met.
+
+milestoneStatus:
+  M-01: CLOSED FULLY at end of W5 (logical close at W2 + verification fixture Phase 13 in W5). Driver document-mode contract verified end-to-end via fixture (canned harness + canned integrator + deterministic snapshots).
+  M-02: CLOSED FULLY at end of W5 (contract-level close at W4 + acceptance fixture Phase 14 in W5). /loom-plan create --autoconverge contract verified end-to-end: critic 50% reduction, 2-iteration convergence, --auto non-interactive with C-08 SCOPE_EXPANSION exit 1, --skip-critic shape check, --review-integrate combo, spawn ceiling 14/15, W-14 trajectory format, C-11 link-extraction readiness all green.
+
+contractDrift:
+  reconciliationItem: "commands/loom-plan/create.md Step 5 invokes /loom-converge --resume-config <path> but commands/loom-converge.md only documents --config <path>. This drift is from Wave 4 (Phase 10 honored plan AC verbatim). Wave 5 Phase 12 documented this in library.yaml + loom-reference.md using --mode document (the Phase 12 AC language) without taking sides. RESOLUTION: out-of-band post-execution; either add --resume-config alias to commands/loom-converge.md OR update Step 5 wording to --config. NOT blocking for M-01 or M-02."
+  severity: warning
+  affectsM01: false
+  affectsM02: false
+
+cumulativeTrajectory:
+  preCriticBaseline: 8 blocking findings (autoconverge fixture)
+  postCriticPass1: 4 blocking findings (50% reduction per F-02 target)
+  pass2: 0 blocking findings (convergence)
+  trajectoryLine: "trajectory: pass-1 blocking=4, pass-2 blocking=0"
+  spawnCount: 14 (1 critic + 12 reviewers + 1 integrator at maxIterations=2; ceiling=15 per AC7)
+  spawnCountFormula: "1 + maxIterations * 7 (critic once + maxIterations * (6 reviewers + 1 integrator))"
+
+inputTokensEstimate: 60000
+outputTokensEstimate: 280000

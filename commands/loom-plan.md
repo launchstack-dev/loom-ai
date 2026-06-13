@@ -97,6 +97,9 @@ Examples:
   /loom-plan create --estimate               Print token cost estimate without spawning agents
   /loom-plan create --skip-test-gen          Create plan only, skip criteria generation
   /loom-plan create --review-integrate       Apply review findings to PLAN.md
+  /loom-plan create --autoconverge           After plan write, run document-mode convergence loop (see loom-plan/create.md Step 5)
+  /loom-plan create --autoconverge --max-iterations N  Override convergence iteration cap (1–10; default 3)
+  /loom-plan create --skip-critic            Skip plan-critic-agent and Step 1.7 revise pass
   /loom-plan review                          6-agent parallel plan review
   /loom-plan execute                         Execute PLAN.md wave-by-wave
   /loom-plan execute --dry-run               Preview wave structure

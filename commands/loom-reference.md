@@ -58,6 +58,10 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-plan create --auto` | Generate plan without interactive review |
 | `/loom-plan create --v1` | Generate simpler v1 plan (no API specs or state machines) |
 | `/loom-plan create --review-integrate` | Apply plan review findings to PLAN.md |
+| `/loom-plan create --autoconverge` | Generate plan then run document-mode convergence loop until zero blocking findings |
+| `/loom-plan create --autoconverge --max-iterations N` | As above with iteration cap override (1–10; default 3) |
+| `/loom-plan create --autoconverge --dry-run` | Build converge.config and emit to stdout; stop before loop |
+| `/loom-plan create --skip-critic` | Skip plan-critic-agent spawn and Step 1.7 revise pass |
 | `/loom-plan review [path]` | Launch 6 planning agents in parallel to review a PLAN.md |
 
 #### Execution
@@ -85,6 +89,8 @@ A multi-agent pipeline for planning, executing, and verifying software projects.
 | `/loom-auto --converge-criteria --reviewers X,Y` | Criteria convergence with specific reviewer types |
 | `/loom-converge --target <path>` | Target convergence: compare implementation against deterministic reference |
 | `/loom-converge --criteria` | Criteria convergence: TDD + reviews until all conditions pass |
+| `/loom-converge --mode document` | Document convergence: iterate a single file via harness + integrator until zero blocking findings |
+| `/loom-converge --mode document --config <path>` | Document convergence using an existing converge.config |
 | `/loom-converge --criteria --phase N` | Criteria convergence for a specific plan phase |
 | `/loom-converge --criteria --reviewers security,code-review` | Criteria convergence with specific reviewer types |
 | `/loom-converge --criteria --no-soft` | Criteria convergence with tests only (no agent reviews) |
@@ -356,7 +362,13 @@ Outer Loop (max 3 iterations):
 
 ### Convergence Pipeline (/loom-converge)
 
-Two modes sharing a common driver loop:
+Three modes sharing a common driver loop:
+
+| Mode | Flag | Converges when | Harness produces | Applies changes via |
+|------|------|---------------|-----------------|---------------------|
+| target | `--target <path>` / `--plan` | score >= tolerance per target | Delta Report (score 0.0-1.0 per target) | fixer-agents (parallel) |
+| criteria | `--criteria` | all blocking criteria pass | pass/fail per criterion + review findings | fixer-agents (parallel) |
+| document | `--mode document` | zero blocking findings in `findings.toon` | `findings.toon` per iteration | integrator agent (single file) |
 
 **Target Convergence** (`--target` / `--plan`):
 ```

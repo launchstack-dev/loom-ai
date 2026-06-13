@@ -447,9 +447,14 @@ library:
     # ── Unified noun commands (v2.1) ──────────────────────────────
 
     - name: loom-plan
-      description: "Plan operations — create, review, execute, test, materialize plans via subcommands"
+      description: "Plan operations — create, review, execute, test, materialize plans via subcommands. create flags: --autoconverge (document-mode convergence loop after plan write), --skip-critic (skip plan-critic-agent and Step 1.7 revise pass), --max-iterations N (override autoconverge cap 1-10)"
       source: commands/loom-plan.md
       requires: [agent:plan-builder-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, protocol:execution-protocols, protocol:plan-schema, protocol:spec-schema, protocol:scenario-schema, protocol:contract-page-extensions-schema, protocol:entity-domain-partition-schema]
+
+    - name: loom-converge
+      description: "Convergence loop — target, criteria, or document mode. --mode document iterates a single file via harness + integrator until zero blocking findings; --target <path> compares output to a golden reference; --criteria runs TDD + agent reviews. Shared options: --max-iterations N, --dry-run, --resume, --no-auto-commit"
+      source: commands/loom-converge.md
+      requires: [agent:convergence-driver, agent:convergence-planner-agent, agent:target-parser, agent:harness-builder, agent:delta-analyzer, agent:fixer-agent, protocol:convergence-plan-schema]
 
     - name: loom-change
       description: "Change-proposal lifecycle over contract-* wiki pages — list, status, diff, init, review, approve, run, archive, reject, quick-archive subcommands"

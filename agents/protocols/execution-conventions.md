@@ -653,6 +653,18 @@ The convergence pipeline uses a 4-tier model defined in `convergence-tier.schema
 | e2e (1) | `e2e-runner-agent.md`, `e2e-test-writer-agent.md` | `e2e-story.schema.md` | `.plan-execution/convergence/e2e/` |
 | qa-review (2) | `interpretation-reviewer-agent.md` | `interpretation-conflict.schema.md`, `interpretation-report.schema.md` | `.plan-execution/conflicts/` |
 
+### Convergence Modes
+
+The `convergence-driver` supports three modes, selected by `convergenceMode` in `converge.config`:
+
+| Mode | `convergenceMode` value | Converges when | Key schema |
+|------|------------------------|---------------|-----------|
+| target | `target` (or absent) | score >= tolerance per target | `convergence-plan.schema.md` |
+| criteria | `criteria` | all blocking criteria pass | `criteria-plan.schema.md` |
+| document | `document` | zero blocking findings | `findings.schema.md`, `iteration-snapshot.schema.md` |
+
+Document mode iterates a single `subject` file by running a `harness` (e.g., `scripts/plan-review-harness.ts`) that emits `findings.toon` per iteration, then spawning an `integrator` agent that applies those findings back to the subject. The loop terminates when the harness reports `blockingCount: 0`. Snapshots of each iteration are written per `iteration-snapshot.schema.md` and optionally committed (controlled by `snapshotEnabled` in `converge.config`). The full config contract — including document-mode fields `subject`, `integrator`, `harness`, `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` — is defined in `convergence-tier.schema.md § ConvergeConfig Schema (Extended)`. Document mode is the mechanism behind `/loom-plan create --autoconverge`, which drives a newly written plan toward zero blocking findings using `plan-critic-agent` as the harness reviewer and `plan-builder-agent` as the integrator.
+
 ### Flaky Test Quarantine
 
 Tests that produce inconsistent results across convergence iterations are tracked in `.plan-execution/convergence/flaky-tests.toon` per `flaky-test.schema.md`. Quarantined tests are excluded from pass/fail gating but preserved for post-mortem. The convergence-driver reads this registry before evaluating circuit breaker conditions.
