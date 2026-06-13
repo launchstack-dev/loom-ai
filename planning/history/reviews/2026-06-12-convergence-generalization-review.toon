@@ -1,0 +1,111 @@
+reviewVersion: 1
+plan: planning/plans/PLAN-convergence-generalization.md
+roadmap: planning/ROADMAP-convergence-generalization.md
+reviewDate: 2026-06-12
+reviewerCount: 6
+findingsTotal: 60
+
+agents[6]{name,model,blockingCount,warningCount,infoCount,focusArea}:
+  feature-coverage-agent,sonnet,2,5,4,schema gaps + API surface gaps + competitive comparison
+  strategy-agent,sonnet,1,4,2,positioning + sequencing + scope-creep + critic-as-lever validation
+  ux-agent,sonnet,3,7,3,user-facing flows + halt messages + --auto interactions
+  phasing-agent,sonnet,2,6,2,dependency graph + wave structure + critical path
+  parallelization-agent,sonnet,1,4,3,file ownership conflicts + execution waves + merge strategy
+  agentic-workflow-agent,sonnet,0,5,6,context budget per phase + agent feasibility + spec sufficiency
+
+blockingFindings[9]{id,dimension,phaseRef,description}:
+  B-01,feature-coverage,Phase 0,ConvergeConfig schema table missing harness field row (lines 43-54). Phase 0 contracts-agent will produce incomplete convergence-tier.schema.md.
+  B-02,feature-coverage,Phase 12,/loom-converge flag table missing --resume and --resume-config entries (lines 199-205). Library catalog tests and wiring will be incomplete.
+  B-03,strategy,Phase 14,Token-cost ceiling AC (--autoconverge total cost <= 1.5x manual baseline) not automatable — spawn count and token cost are distinct metrics; no phase instruments cost tracking.
+  B-04,ux,driver-stdout,Progress visibility during multi-iteration autoconverge run is undefined. No specification for iteration counter, current blockingCount, or per-iteration output line.
+  B-05,ux,Phase 10,Circuit breaker halt messages have no defined presentation format. Five breakers (SCOPE_EXPANSION/STALL/REGRESSION/BUDGET_EXHAUSTED/MAX_ITERATIONS) all halt without specified user-facing text or recovery commands.
+  B-06,ux,Phase 5+10,--auto vs SCOPE_EXPANSION conflict — plan promises non-interactive end-to-end under --auto BUT also says SCOPE_EXPANSION prompts user. Mutually exclusive; must resolve.
+  B-07,phasing,Phase 13,Phase 13 convergence target (line 860) references --autoconverge but Phase 13 lists only Phase 5+11 as deps. Should belong to Phase 14 only; copy-paste artifact from Phase 10.
+  B-08,phasing,Phase 5+11,Phase 5 ACs require driver to write snapshot files for verification but the snapshot helper lives in Phase 11 (W4). Phase 5's M-01 gate is untestable until Phase 11 ships.
+  B-09,parallelization,Phase 10+12,library.yaml double-write conflict — Phase 10 AC line 857 writes library.yaml; Phase 12 also declares sole ownership of library.yaml in W5. Will clobber or duplicate entries.
+
+warningFindings[31]{id,dimension,phaseRef,description}:
+  W-01,feature-coverage,Phase 0,ConvergeConfig timestamp precision not locked (ISO 8601 ms vs s) — affects stall-detection regression checks
+  W-02,feature-coverage,Phase 0,IterationSnapshot slug derivation underspecified for files with multiple dots (PLAN-x.v2.md ambiguous)
+  W-03,feature-coverage,Phase 0,ConvergenceFindings missing reviewerAgent attribution field — once aggregated, origin of each finding is lost
+  W-04,feature-coverage,Phase 10,/loom-plan create lacks --dry-run for previewing generated converge.config before driver invocation
+  W-05,feature-coverage,Phase 10,/loom-converge missing --output-dir for concurrent runs or CI environments
+  W-06,strategy,Phase 5,Phase 5 ACs reference snapshot assertions that depend on Phase 11 (W4) helper — deferred-test caveat not annotated
+  W-07,strategy,Phase 6+7,Phase 6 and Phase 7 wave-parallel-eligible but Phase 7 depends on Phase 6 explicitly — verify wave executor respects ordering
+  W-08,strategy,Phase 14,'structurally equivalent final plans (within whitespace)' assertion in F-03 won't survive non-deterministic LLM outputs; replace with shape check
+  W-09,strategy,Phase 1,Missing-subject field path on old-style converge.config has no user-facing message (only schema validation)
+  W-10,ux,Phase 1+10,critique.toon vs findings.toon relationship not explained to user; two artifacts with different field names but no distinguishing UX
+  W-11,ux,Phase 7,--skip-critic semantic scope underspecified (stale critique.toon handling not addressed; flag combination with --autoconverge not in table)
+  W-12,ux,Phase 5,Snapshot rollback UX described only as risk-table footnote (C-07); no command/workflow for listing/diffing/restoring snapshots
+  W-13,ux,driver-output,Empty state (blockingCount=0 at iter 1) success message format undefined
+  W-14,ux,changelog,Convergence trajectory summary format and terminal-echo behavior undefined
+  W-15,ux,Phase 9,Harness partial failure (1 of 6 reviewers fails) user-facing warning missing
+  W-16,ux,Phase 10,critique.toon location never advertised — Step 1.7 completion does not echo path or predictedBlockingCount addressed
+  W-17,phasing,Phase 8,Phase 8 dep annotation contradictory — 'parallel; Phase 6 dep' is self-inconsistent
+  W-18,phasing,Phase 9+0,Phase 9 aggregator has no AgentResult.severity → ConvergenceFindings.severity mapping table; silent undercount risk
+  W-19,phasing,Wave 3,W3 advertised as parallel but Phases 6→7→8 form serial chain via dependency declarations
+  W-20,phasing,Phase 9,Phase 9 dependency on Phase 2 is reversed causality (Phase 9 produces what Phase 2 documents consuming)
+  W-21,phasing,Phase 10,Phase 10 convergence target references live planning file (ROADMAP-kit-native-skills.md) instead of test fixture
+  W-22,phasing,Milestones,M-02 phases list omits Phase 13 even though Phase 14 depends on Phase 13
+  W-23,parallelization,Phase 7+10,Phase 10's create.md edit depends on Phase 7's committed state; no inter-wave handoff protocol or grep gate defined
+  W-24,parallelization,Phase 9,Phase 9 declared W4 with Phase 10 dependency — they cannot run in parallel within W4 (serial pair masquerading as parallel wave)
+  W-25,parallelization,Wave 1,W1 phases 1-4 share convergence-driver.md; correctly serial via deps but wave label implies parallelism
+  W-26,parallelization,Phase 12,Phase 12 wiring scope omits Phase 9 dep — execution-conventions.md update needs to cover TS harness pattern
+  W-27,agentic-workflow,Phase 5,Phase 5 bundles two structurally distinct features (scope-guard + auto-snapshot); split candidates
+  W-28,agentic-workflow,Phase 9,Phase 9 TS implementation spec underconstrained — agent spawn mechanism from TS not specified; loom-converge.md not in files-in; AgentResult type undefined
+  W-29,agentic-workflow,Phase 10,Phase 10 --autoconverge invocation hedges ('or the equivalent existing entry'); no starting-state note for post-Phase-7 create.md
+  W-30,agentic-workflow,Phase 13,Phase 13 canned-harness invocation pattern underspecified (module vs spawn); fixture path resolution ambiguous; resume scenario setup undefined
+  W-31,agentic-workflow,Phase 14,Phase 14 file-in count at warning boundary (17); pre/post-critic blocking-count engineering undefined for canned reviewers
+
+infoFindings[20]{id,dimension,description}:
+  I-01,feature-coverage,ConvergenceIterationSummary missing haltReason field in extension table
+  I-02,feature-coverage,PlanCritique missing runDurationMs / modelUsed observability fields
+  I-03,feature-coverage,ConvergeConfig missing runId or sessionId field; second autoconverge invocation silently overwrites state
+  I-04,feature-coverage,/loom-plan create lacks documented behavior for --autoconverge + --review-integrate combination
+  I-05,feature-coverage,/loom-converge missing --list-runs or status query surface
+  I-06,strategy,M-01-vs-M-02 sequencing optimal (no issue) — annotated as info for confirmation
+  I-07,strategy,Out-of-scope deferrals (PR-review, code-review loop, wiki-review) are correct call — harness contract is general enough
+  I-08,ux,MAX_ITERATIONS halt distinguished from converged-clean output not defined
+  I-09,ux,critique.toon path discoverability — never mentioned to user
+  I-10,ux,/loom-converge direct vs /loom-plan create --autoconverge mental model not explained
+  I-11,phasing,Phase 6 could start in parallel with W1 (no file conflict) — M-01 gate is policy not technical
+  I-12,phasing,Phase 5 scope-expansion regex undefined; heading-format variance could cause false negatives
+  I-13,parallelization,W3 should be relabeled W3a (Phase 6+8 parallel) → W3b (Phase 7 after Phase 6)
+  I-14,parallelization,W2 single-agent gate is correct by design; documented for clarity
+  I-15,parallelization,Phase 11 is cleanest W4 agent; recommend merge-first in W4 order
+  I-16,agentic-workflow,Phase 1 implicit dep on loom-converge.md not listed
+  I-17,agentic-workflow,Phase 3 stage-context.test.ts not in deliverables despite extension requirement
+  I-18,agentic-workflow,Phase 6 paths use ~/.claude/agents/ (home-relative) but project agents live at .loom-ai/agents/
+  I-19,agentic-workflow,Phase 11 checksums.test.ts not in deliverables despite extension requirement
+  I-20,agentic-workflow,Phase 4 ACs are inspection-only; circuit-breaker parity unverified by automation until Phase 13
+
+crossCuttingThemes[5]{id,name,severity,flaggedBy,description}:
+  CC-01,Phase 5 / Phase 11 coupling,blocking,"strategy,phasing,agentic-workflow",Phase 5 (W2) writes documentation that references snapshot helper but the helper lives in Phase 11 (W4). Phase 5's M-01 gate is untestable until Phase 11 ships. Fix: promote Phase 11 to W2 (after Phase 5) OR split Phase 5 ACs into doc-only + post-Phase-11 tiers.
+  CC-02,library.yaml double-write,blocking,"parallelization,feature-coverage",Phase 10 AC says it updates library.yaml but Phase 12 is the sole declared owner. Will clobber. Fix: remove library.yaml line from Phase 10; defer entirely to Phase 12.
+  CC-03,Phase 9 underspecification,warning,"phasing,parallelization,agentic-workflow",TS spawn mechanism not specified; loom-converge.md and reviewer agents not in files-in; AgentResult-to-ConvergenceFindings severity mapping missing; Phase 2 dep is reversed causality. Phase 9 is the largest TS implementation in the plan; under-spec creates highest implementation risk.
+  CC-04,create.md cross-wave conflict,warning,"parallelization,agentic-workflow",Phase 7 (W3) and Phase 10 (W4) both modify create.md in disjoint sections but no inter-wave grep gate or starting-state protocol. Phase 10 agent could clobber Step 1.7 if given pre-Phase-7 file as input.
+  CC-05,W3 mislabeled as parallel,info,"phasing,parallelization",Phases 6→7→8 form a serial chain in W3 due to declared dependencies. Should be relabeled W3a (6+8 parallel) → W3b (7 after 6 merges) for executor clarity.
+
+priorityFixes[12]{id,severity,blockingCount,description,phaseRef,effort}:
+  PF-01,blocking,1,B-08+CC-01 — Move Phase 11 immediately after Phase 5 (promote to W2) OR split Phase 5 ACs into pre/post-Phase-11 tiers,Phase 5+11,M
+  PF-02,blocking,1,B-09+CC-02 — Remove library.yaml AC from Phase 10; let Phase 12 own it sole,Phase 10,S
+  PF-03,blocking,1,B-01 — Add harness field row to ConvergeConfig schema table in Phase 0,Phase 0,S
+  PF-04,blocking,1,B-06 — Resolve --auto + SCOPE_EXPANSION conflict; lock as new C-08 decision (suppress prompt in --auto OR exit 1 with machine-readable haltReason),C-08 (new),S
+  PF-05,blocking,1,B-04+B-05 — Define driver stdout progress format + per-breaker halt message format,Phase 2+4+10,M
+  PF-06,blocking,1,B-07 — Remove --autoconverge convergence target from Phase 13 (belongs in Phase 14 only),Phase 13,S
+  PF-07,blocking,1,B-02 — Document --resume and --resume-config in /loom-converge flag table,Phase 1+12,S
+  PF-08,blocking,1,B-03 — Replace token-cost AC with spawn-count ceiling OR add cost-tracking deliverable to earlier phase,Phase 14,M
+  PF-09,warning,multi,CC-03 — Fix Phase 9 spec gaps (spawn mechanism + files-in + AgentResult mapping table),Phase 0+9,M
+  PF-10,warning,multi,CC-04 — Add inter-wave grep gate for create.md between W3 and W4; explicit starting-state note in Phase 10,Phase 7+10,S
+  PF-11,warning,1,W-22 — Add Phase 13 to M-02 milestone phases list,Milestones,XS
+  PF-12,warning,1,W-08 — Soften 'structurally equivalent' F-03 assertion to shape check (blockingCount=0 + no new phases),Phase 14,S
+
+summary:
+  totalFindings: 60
+  blocking: 9
+  warning: 31
+  info: 20
+  crossCuttingBlocking: 2 (CC-01, CC-02)
+  passEvaluation: "Pass-1 review of a 15-phase 1202-line plan: 60 findings within expected range. 9 blocking is high but consistent with kit-native-skills pass-1 (8 blocking) on a similar-sized plan. Convergence trajectory expected to mirror prior pattern (~3 review-integrate passes) — exactly the problem this plan exists to solve."
+  recommendedPath: "Run /loom-plan create --review-integrate to apply these 60 findings, then re-review. Two passes likely sufficient. CC-01 (Phase 5+11) and CC-02 (library.yaml) are the load-bearing fixes; everything else is mechanical."
+  ironyNote: "Meta-recursion: this plan creates --autoconverge to avoid the very ~3-pass cycle this review just confirmed is the current state. Each manual --review-integrate pass on this plan validates the need for the plan itself."
