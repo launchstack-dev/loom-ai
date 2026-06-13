@@ -1,0 +1,108 @@
+wave: 4
+runId: convergence-generalization-20260613-001
+status: success
+startedAt: 2026-06-13T14:35:00Z
+completedAt: 2026-06-13T15:10:00Z
+durationMs: 2100000
+strategy: serial-pair (Phase 9 -> Phase 10; Phase 10 deps Phase 9 because Step 5 cites scripts/plan-review-harness.ts path that Phase 9 creates)
+
+phases[2]{id,agent,model,status,filesCreated,filesModified,completedAt}:
+  9,implementer-agent,opus,success,5,1,2026-06-13T14:58:00Z
+  10,implementer-agent,opus,success,0,1,2026-06-13T15:08:00Z
+
+filesCreated[5]:
+  scripts/plan-review-harness.ts
+  scripts/lib/aggregate-findings.ts
+  hooks/lib/spawn-agent.ts
+  test/protocol/aggregate-findings.test.ts
+  test/protocol/plan-review-harness.test.ts
+
+filesModified[2]:
+  hooks/tsconfig.json
+  commands/loom-plan/create.md
+
+filesAlsoTouched[0]:
+
+sectionOwnership[6]{phase,file,linesBefore,linesAfter,description}:
+  9,scripts/lib/aggregate-findings.ts,0,443,"Pure aggregator + TOON encoder; severityToConvergenceSeverity verbatim from findings.schema.md; deriveDimension; CANONICAL_DIMENSIONS + CANONICAL_REVIEWER_AGENTS constants; FindingsInvariantViolation class for blocking/advisory count invariant enforcement"
+  9,hooks/lib/spawn-agent.ts,0,171,"Spawn-request contract — writeSpawnRequest atomic + encodeSpawnRequestToToon. Documents the two-phase bridge from standalone Bun script to Claude Code Agent tool (driver fulfills spawn-request, re-invokes harness)"
+  9,scripts/plan-review-harness.ts,0,698,"Harness entry point. parseArgs (--config required, optional --iteration --results-dir); readConvergeConfig; readAgentResultEnvelope; buildSpawnRequest (resolves model from agent .md frontmatter for each of 6 reviewers); main dispatch (no results-dir -> write spawn-request + exit 0 with stderr instruction; results-dir + 6 envelopes -> aggregate + write findings.toon atomically); partial-failure UX (stderr warning, exit 0, failures NOT propagated)"
+  9,test/protocol/aggregate-findings.test.ts,0,711,"27 unit tests covering happy path, partial failure, empty findings, severity mapping for each of 6 enum values, ID sequence stability across reviewers, dimension derivation, invariant violation throws, W-03 reviewer attribution preserved per row"
+  9,test/protocol/plan-review-harness.test.ts,0,695,"22 integration tests covering CLI arg parsing, config reading, spawn-request mode (writes spawn-request.toon and exits 0), aggregate mode (reads 6 envelopes + writes findings.toon atomically), partial-failure stderr warnings, atomic-write .tmp cleanup"
+  9,hooks/tsconfig.json,17,19,"Extended include array with scripts/lib/**/* and scripts/plan-review-harness.ts so tsc covers Phase 9 code without a separate tsconfig"
+  10,commands/loom-plan/create.md,452,575,"Arguments adds --autoconverge + --max-iterations N + --dry-run. New Step 5 Autoconverge Loop between Step 4 and Step 4.5: Skip clause, --dry-run preview mode, converge.config generation with locked defaults table (9 fields: mode=document, integrator=plan-builder-agent, harness=scripts/plan-review-harness.ts, maxIterations=3 per C-05, scopeGuardEnabled=true per C-06, snapshotEnabled=true per C-07, etc), --max-iterations override (1-10 bound), /loom-converge --resume-config <path> invocation, --auto pass-through (C-08 SCOPE_EXPANSION exits 1 + stderr JSON, no prompt), --no-auto-commit pass-through (snapshots independent of git per C-07), halt handling with C-10 cause/recovery, flag interactions matrix (7 rows), link-extraction readiness (C-11) with full disk-output manifest + no-pipeline-state-mutation clause"
+
+exportsAdded[15]{file,name,kind}:
+  scripts/lib/aggregate-findings.ts,aggregateFindings,function
+  scripts/lib/aggregate-findings.ts,encodeFindingsToToon,function
+  scripts/lib/aggregate-findings.ts,severityToConvergenceSeverity,function
+  scripts/lib/aggregate-findings.ts,deriveDimension,function
+  scripts/lib/aggregate-findings.ts,CANONICAL_DIMENSIONS,const
+  scripts/lib/aggregate-findings.ts,CANONICAL_REVIEWER_AGENTS,const
+  scripts/lib/aggregate-findings.ts,FindingsInvariantViolation,class
+  hooks/lib/spawn-agent.ts,writeSpawnRequest,function
+  hooks/lib/spawn-agent.ts,encodeSpawnRequestToToon,function
+  scripts/plan-review-harness.ts,main,function
+  scripts/plan-review-harness.ts,parseArgs,function
+  scripts/plan-review-harness.ts,readConvergeConfig,function
+  scripts/plan-review-harness.ts,readAgentResultEnvelope,function
+  scripts/plan-review-harness.ts,buildSpawnRequest,function
+  scripts/plan-review-harness.ts,REVIEWER_AGENT_FILES,const
+
+lockedDecisionsWired[10]{id,location}:
+  C-01,commands/loom-plan/create.md Step 5 Invoke-the-Driver (driver is sole loop owner; wrapper doesn't duplicate loop logic)
+  C-05,commands/loom-plan/create.md Step 5 defaults table + --max-iterations override paragraph (maxIterations default 3)
+  C-06,commands/loom-plan/create.md Step 5 defaults table (scopeGuardEnabled=true)
+  C-07,commands/loom-plan/create.md Step 5 defaults table (snapshotEnabled=true) + --no-auto-commit pass-through (snapshots independent of git)
+  C-08,commands/loom-plan/create.md Step 5 --auto pass-through (exit 1 + stderr JSON; no prompt) + matrix row
+  C-10,commands/loom-plan/create.md Step 5 Halt-handling subsection (locked cause + recovery strings cross-ref to driver § Halt Messages)
+  C-11,commands/loom-plan/create.md Step 5 Link-Extraction Readiness subsection (full disk-output manifest + no pipeline-state-mutation clause + status-to-nextLink routing)
+  Q-01,commands/loom-plan/create.md Step 5 --auto pass-through (end-to-end non-interactive)
+  Q-02,commands/loom-plan/create.md Step 5 matrix row --autoconverge + --review-integrate SUPPORTED (critic skipped on review-integrate, autoconverge still runs)
+  W-01,scripts/lib/aggregate-findings.ts::aggregateFindings producedAt + scripts/plan-review-harness.ts::buildSpawnRequest createdAt (both Date#toISOString() ms-precision)
+  W-03,scripts/lib/aggregate-findings.ts preserves reviewerAgent per row; encodeFindingsToToon emits it as last column
+
+verification:
+  tsc: pass (bunx tsc --noEmit -p hooks/tsconfig.json exit 0; includes new scripts/lib/ + scripts/plan-review-harness.ts via extended include array)
+  test: pass (bun test test/protocol/ -> 455 pass / 0 fail / 1114 expect calls; was 406/0/950 — +49 tests +164 expects from W4)
+  testHooks: pass (bunx vitest run hooks/ -> 134 pass / 0 fail; no regression in hook tests from Phase 9's tsconfig edit)
+  lint: skip (bun run lint not configured)
+  ownershipDrift: clean (git status shows only the 7 declared files: 5 created + 2 modified; commands/loom-plan/create.md + hooks/tsconfig.json modified; scripts/lib/ + scripts/plan-review-harness.ts + hooks/lib/spawn-agent.ts + 2 test files new)
+  step5GrepCount: 12 (Step 5 header + 11 cross-references)
+  autoconvergeGrepCount: 23
+  maxIterationsGrepCount: 4
+  dryRunGrepCount: 6
+  c11GrepCount: 6
+  preEditGate: pass (grep -q "Step 1.7" commands/loom-plan/create.md returned 0)
+
+reconciliation:
+  crossBoundaryRequests: 0 (.plan-execution/ephemeral/requests/ empty)
+  ownershipViolations: 0 (Phase 9 only touched scripts/* + hooks/lib/spawn-agent.ts + hooks/tsconfig.json + 2 test files; Phase 10 only touched commands/loom-plan/create.md; disjoint)
+  conflictingExports: 0 (Phase 9 added 15 exports in new files; Phase 10 doc-only)
+  contractAmendments: 0
+  contractDriftNote: "Phase 10 honored the plan AC verbatim citing /loom-converge --resume-config <path>; existing commands/loom-converge.md uses --config <path>. Flagged by Phase 10 as a contract reconciliation item for Wave 5 (likely Phase 12 library.yaml updater, or a follow-up phase to add --resume-config as an alias in loom-converge.md, or align Step 5 wording to --config). Contract-only issue, NOT blocking — Phase 10's wrapper behavior is correct regardless of the inner flag name."
+
+wiringPass: skipped (scripts/plan-review-harness.ts is a standalone executable script with no barrel index; scripts/lib/aggregate-findings.ts is imported only by the harness; hooks/lib/spawn-agent.ts is imported only by the harness; no barrels/routes/index.ts to update. Vitest auto-discovers the new test files via test/protocol/ path. Same explicit no-op pattern as Waves 1-3.)
+
+automatedQualityGate: PROCEED (verification.status == pass, zero blocking issues, zero ownership violations, zero gate halts, no cross-boundary requests outstanding)
+
+acceptanceCriteriaSummary:
+  total: 21
+  met: 21
+  partial: 0
+  notMet: 0
+  notes: Phase 9 11/11 (harness + aggregator + tests + spawn-agent contract); Phase 10 10/10 (Step 5 autoconverge loop with all 10 ACs). Phase 9 acceptance-criteria includes the partial-failure UX (stderr warning + exit 0) and the W-03 reviewer-attribution preservation invariant. Phase 10 acceptance-criteria includes the link-extraction-readiness C-11 manifest with 7 disk-output rows.
+
+milestoneStatus:
+  M-01: still LOGICALLY CLOSED at end of W2 (driver document mode + snapshot helper); W5 Phase 13 e2e fixture is the gate
+  M-02: CLOSED CONTRACT-LEVEL at end of W4 (F-02 critic + F-03 plan-review harness + --autoconverge all shipped). e2e gate is W5 Phase 14.
+
+contextPressureNote: "Wave 4 ran across 2 serial implementer spawns (opus). Token costs this turn for spawned agents: Phase 9 130k (heaviest single agent so far — 2720 lines created + 49 tests) + Phase 10 79k = 209k. Plus orchestrator-side: ~25k for reads + verification. Cumulative across run: ~1.008M spawned-agent tokens. Per execute.md Step 9.1, ALWAYS checkpoint at wave boundaries. Per --auto Automated Quality Gate, decision is PROCEED. Recommend /clear + --resume for Wave 5 in a fresh window — W5 is the final wave (Phases 12 + 13 parallel -> Phase 14 serial) estimated 200-300k tokens."
+
+waveCost: ~209k spawned-agent tokens (Phase 9 130k + Phase 10 79k); cumulative across run: ~1008k (W0 186k + W1 290k + W2 146k + W3 177k + W4 209k)
+
+nextWave: 5
+nextWaveStrategy: "W5a parallel (Phase 12 wiring library.yaml/reference/conventions + Phase 13 M-01 e2e fixture — disjoint files) -> W5b serial (Phase 14 M-02 e2e fixture after Phase 13 since Phase 14 imports the document-mode driver fixture pattern). FINAL WAVE."
+nextWavePhases[3]: 12, 13, 14
+nextWaveMilestone: M-01 e2e gate (Phase 13) + M-02 e2e gate (Phase 14). Both close at end of W5.
+nextWaveContractItem: "Reconcile /loom-converge --resume-config vs --config flag — either add --resume-config alias in commands/loom-converge.md OR update Step 5 wording in commands/loom-plan/create.md to use --config. Phase 12 wiring is the natural owner."

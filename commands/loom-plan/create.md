@@ -15,6 +15,9 @@ Parse remaining arguments:
 - `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
 - `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
 - `--skip-critic`: skip the `plan-critic-agent` spawn in Step 1 AND the Step 1.7 Critic Revise Pass. Falls back to legacy dual-track behavior (plan-builder + criteria-planner only). Logs a warning to stderr: `"--skip-critic active: plan-critic-agent will not run; Step 1.7 Critic Revise Pass will be skipped."` See Step 1.7 for the flag combination matrix (interactions with `--autoconverge`, `--review-integrate`, `--estimate`, `--skip-test-gen`).
+- `--autoconverge`: after writing the plan in Step 4, generate a `converge.config` (document-mode) and invoke `/loom-converge --resume-config <path>` to drive the plan toward zero blocking findings. Defaults are LOCKED: `maxIterations: 3` (C-05), `scopeGuardEnabled: true` (C-06), `snapshotEnabled: true` (C-07), `integrator: plan-builder-agent`, `harness: scripts/plan-review-harness.ts`. See Step 5 for details, halt handling, and the flag-interaction matrix.
+- `--max-iterations <N>`: override the default `maxIterations: 3` cap on `--autoconverge` runs. Range `1 <= N <= 10` per `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema § Validation Rules`. Values outside the range are rejected with an error. No-op when `--autoconverge` is not also set.
+- `--dry-run`: when combined with `--autoconverge`, emit the generated `converge.config` TOON to stdout and exit 0 WITHOUT invoking the convergence-driver. Useful for previewing the generated config. No-op when `--autoconverge` is not also set.
 
 ### Instructions
 
@@ -393,6 +396,126 @@ Continue looping until the user approves.
      /loom-plan execute --dry-run         -- preview the wave structure
      /loom-roadmap status                 -- see unified roadmap + plan progress
    ```
+
+#### Step 5: Autoconverge Loop (`--autoconverge` only)
+
+This step is the user-facing entry point for **F-03 (autoconverge)**. After Step 4 has atomically written the initial plan, Step 5 generates a document-mode `converge.config` and invokes the convergence-driver via `/loom-converge --resume-config <path>` to iterate the plan toward zero blocking findings.
+
+Step 5 runs AFTER Step 4 (initial write) and BEFORE Step 4.5 (wiki update). This ordering is deliberate: the initial plan is durable on disk before the convergence loop starts, and Step 4.5 then captures the final converged state (initial write + any integrator revisions) in a single wiki update at the end.
+
+##### Skip clause
+
+If `--autoconverge` is NOT set, skip Step 5 entirely (no-op; proceed directly to Step 4.5).
+
+If `--autoconverge` is set without `--auto`, the wrapper runs interactively — the convergence-driver may prompt at SCOPE_EXPANSION boundaries per locked **C-08** (see Halt Handling below).
+
+##### `--dry-run` handling (preview mode)
+
+If `--autoconverge --dry-run`: build the `converge.config` TOON per § "Generate `converge.config`" below, emit it to stdout, exit 0. Do NOT invoke the convergence-driver and do NOT write the config to disk. Useful for previewing the generated config before committing to a full loop.
+
+`--dry-run` is a no-op when `--autoconverge` is not also set (the plain `--dry-run` flag has no other meaning in this command).
+
+##### Generate `converge.config`
+
+Write the generated config atomically (`.tmp` + rename per `agents/protocols/execution-conventions.md`) to:
+
+```
+.plan-execution/convergence/converge.config.toon
+```
+
+The defaults are **LOCKED** per the locked-decisions table in `PLAN-convergence-generalization.md` and `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`. Step 5 MUST emit these exact values for an `--autoconverge` invocation:
+
+| Field | Default value | Source / locked decision |
+|---|---|---|
+| `convergenceMode` | `document` | Plan creation runs in document mode |
+| `subject` | `{planPath}` (the path written in Step 4 — e.g., `planning/plans/PLAN.md` or `planning/plans/PLAN-{slug}.md`) | Subject of the convergence loop |
+| `integrator` | `plan-builder-agent` | Phase 8 deliverable; plan-builder Integrator Mode |
+| `harness` | `scripts/plan-review-harness.ts` | Phase 9 deliverable |
+| `outputPath` | `.plan-execution/convergence/findings.toon` | Driver reads after each iteration |
+| `maxIterations` | `3` | Locked **C-05** (default for `--autoconverge`) |
+| `agentBudget` | `30` | Existing default |
+| `scopeGuardEnabled` | `true` | Locked **C-06** |
+| `snapshotEnabled` | `true` | Locked **C-07** |
+| `snapshotDir` | `planning/history/snapshots/` | Default |
+
+**`--max-iterations N` override.** When `--max-iterations N` is passed alongside `--autoconverge`, ONLY the `maxIterations` field is overridden; all other defaults stay locked. Bound: `1 <= N <= 10` per the schema. Out-of-range values are rejected at this step with a stderr error:
+
+```
+--max-iterations must satisfy 1 <= N <= 10 (received: {N}). See agents/protocols/convergence-tier.schema.md § ConvergeConfig § Validation Rules.
+```
+
+No other flag overrides any other field. To customise other fields (e.g., `agentBudget`, `integrator`), hand-author a `converge.config` and run `/loom-converge --resume-config <path>` directly.
+
+##### Invoke the driver
+
+After writing the config, invoke the convergence-driver via:
+
+```
+/loom-converge --resume-config .plan-execution/convergence/converge.config.toon
+```
+
+This is the documented entry point — Step 5 MUST NOT inline the driver call or duplicate the convergence loop logic. The driver is the sole owner of the loop per locked decision **C-01** (DRY).
+
+##### `--auto` pass-through
+
+`--auto` flows through transparently to the inner `/loom-converge --resume-config` invocation per locked decision **Q-01** (end-to-end non-interactive under `--auto`) and **F-03**. The wrapper invocation under `--auto` becomes:
+
+```
+/loom-converge --resume-config .plan-execution/convergence/converge.config.toon --auto
+```
+
+Under `--auto`, a `SCOPE_EXPANSION` halt MUST exit the process with **exit code 1** and write a machine-readable JSON line to stderr per locked **C-08** (the exact stderr-line schema is normative in `agents/protocols/convergence-summary.schema.md` — see also `agents/convergence-driver.md § Document Mode Safeguards § Interactive vs --auto divergence (locked C-08)`). The driver MUST NOT record a user prompt under `--auto`; the wrapper MUST NOT swallow the non-zero exit. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still lands on disk BEFORE the process exit so downstream link consumers can read it from disk per locked **C-11**.
+
+##### `--no-auto-commit` pass-through
+
+`--no-auto-commit` flows through transparently to the driver and disables iteration-level git commits made by the integrator. It does **NOT** disable auto-snapshots: per locked **C-07**, snapshot writes to `planning/history/snapshots/{slug}-pass-{N}.{ext}` are independent of git state and run on every iteration regardless of `--no-auto-commit`. Snapshots are the recovery mechanism for `cp` rollback per the C-10 recovery string and remain available whether or not git commits are enabled.
+
+##### Halt handling
+
+On driver halt for ANY `haltReason`, Step 5 MUST:
+
+1. Leave the plan file (`{planPath}` — the subject) in its **last-good state** (the state after the last integrator pass; do NOT auto-revert). Recovery via `cp {snapshotDir}/{slug}-pass-{N}.{ext} {planPath}` is the operator's choice per the locked C-10 recovery string.
+2. Surface the `haltReason` and the locked **C-10** cause + recovery message to the user (or to stderr under `--auto`, per the C-08 path). The strings are **locked under C-10** — Step 5 MUST NOT paraphrase them. The canonical source is `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` and the table in `agents/convergence-driver.md § Circuit Breakers § Halt Messages and Recovery (locked C-10)`.
+3. Propagate the driver's exit code unchanged (exit 1 under `--auto` for `SCOPE_EXPANSION`; exit 0 otherwise for interactive halts that landed cleanly).
+
+The wrapper does NOT write its own halt-summary artifact. The authoritative "did we converge" signal is `.plan-execution/convergence-summary.toon` — see § "Link-extraction readiness (C-11)" below.
+
+##### Flag interactions matrix
+
+| Combination | Behavior |
+|---|---|
+| `--autoconverge` + `--auto` | Non-interactive end-to-end (Q-01, F-03). `SCOPE_EXPANSION` halts exit code 1 + machine-readable stderr JSON per locked **C-08**. NO prompt. |
+| `--autoconverge` + `--no-auto-commit` | Loop runs as normal. Iteration-level git commits are disabled. Auto-snapshots STILL write to `planning/history/snapshots/` per locked **C-07** (independent of git state). |
+| `--autoconverge` + `--review-integrate` | SUPPORTED per locked **Q-02**. Critic is skipped because `--review-integrate` already skips it by design; autoconverge still runs after the review-integrate edit lands. (Internal sequence: Step 0 → Step R → Step 5; Steps 1, 1.5, 1.7, 2, 3, 4 are skipped on the `--review-integrate` path. Step 5 reads the post-Step-R plan as its `subject`.) |
+| `--autoconverge` + `--skip-critic` | SUPPORTED. Critic skipped at Step 1 AND Step 1.7 (see Step 1.7 flag matrix); autoconverge still runs after Step 4. |
+| `--autoconverge` + `--dry-run` | Preview only. Emit generated `converge.config` TOON to stdout, exit 0. Driver is NOT invoked. No config is written to disk. |
+| `--autoconverge` + `--max-iterations N` | Override `maxIterations` ONLY. Bound `1 <= N <= 10`; out-of-range rejected with stderr error. Other defaults stay locked. |
+| `--autoconverge` + `--estimate` | NOT SUPPORTED. `--estimate` exits at Step 0.5 before Step 4 even runs — there is no plan to converge against. The `--autoconverge` flag is silently ignored under `--estimate`. |
+
+##### Link-extraction readiness (locked C-11)
+
+Step 5 explicitly documents that the wrapper's on-disk outputs MUST be sufficient for a **fresh-context** agent (the future `loom-auto` planning-link or `converge-link`) to derive a `link-result.toon` envelope and a `nextLink in {verify, fix, planning, done}` decision **WITHOUT** orchestrator-side conversational state. After Step 5 returns (success or halt), the following files MUST be present on disk:
+
+| Path | Producer | Purpose |
+|---|---|---|
+| `planning/plans/PLAN-{slug}.md` (or `PLAN.md` / `--output` path) | Step 4 initial write + integrator revisions during the loop | The subject — the converged (or last-good) plan |
+| `.plan-execution/convergence-summary.toon` | convergence-driver (terminal-state transition, exactly once per run) | **AUTHORITATIVE** "did we converge" signal — `status` field drives `nextLink` (locked C-11) |
+| `.plan-execution/criteria-plan.toon` (or `.plan-execution/criteria-plan-{slug}.toon`) | Step 1 criteria-planner-agent + Step 4 item 1b write | Criteria for downstream verify-link |
+| `planning/history/snapshots/{slug}-pass-{N}.{ext}` (one per iteration with N >= 2) | convergence-driver auto-snapshot writer (locked C-07) | Pre-integration snapshots for `cp` recovery on halt |
+| `.plan-execution/convergence/iterations/iter-{N}.toon` (one per iteration) | convergence-driver per-iteration summary writer | Per-pass detail for debrief |
+| `.plan-execution/critique.toon` (only if critic ran in Step 1) | plan-critic-agent in Step 1 | Pre-review advisory critique (consumed by Step 1.7) |
+| `.plan-execution/convergence/findings.toon` | plan-review-harness (Phase 9) per iteration | Latest iteration's findings (overwritten each iteration per schema) |
+
+**Explicit constraints (locked C-11):**
+
+- NO `pipeline-state.toon` mutation by this wrapper. The convergence-driver MUST NOT add convergence-internal fields to `pipeline-state.toon` per the forbidden-writes clause of `agents/protocols/convergence-summary.schema.md § Forbidden writes (C-11)`.
+- NO mid-flight orchestrator-side state changes. Step 5 does not maintain its own state — the driver's `convergence-state.toon` and the terminal `convergence-summary.toon` are the only state files.
+- The `convergence-summary.toon` `status` field is THE authoritative signal. A fresh-context link reads ONLY this file from disk and routes deterministically:
+  - `status: converged` -> `nextLink: done`
+  - `status: halted-stall` or `halted-regression` -> `nextLink: fix`
+  - `status: halted-scope-expansion`, `halted-max-iter`, or `halted-budget` -> `nextLink: planning` (revisit plan)
+
+This contract is what makes `--autoconverge` composable inside a future `loom-auto` planning-link / converge-link trampoline — the link can be invoked with no inherited conversational state and derive its next-step decision purely from on-disk artifacts.
 
 #### Step 4.5: Wiki Update (non-blocking)
 
