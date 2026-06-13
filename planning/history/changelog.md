@@ -1,3 +1,33 @@
+## 2026-06-13 -- Wave 1 recovery + drift-prevention postmortem (convergence-generalization)
+
+- **Symptom:** `/loom-plan execute --resume --auto` preflight halted before Wave 2. State.toon claimed Wave 1 = success, but on-disk file shapes (`agents/convergence-driver.md` at 520 lines, `test/protocol/stage-context.test.ts` at 399 lines) did not match the wave-1-summary expectations (921 + 1077 lines). Tag `plan-exec-convergence-generalization-wave-1-post` pointed at commit `4d1f2f2`, which was NOT reachable from `main` HEAD.
+- **Root cause:** Wave 1 auto-commit `4d1f2f2` was made on local `pr-16-followups` branch AFTER `origin/pr-16-followups` head `ab63d66` had been pushed. PR #17 merged the remote head (without the Wave 1 commit) into main; post-merge cleanup left `4d1f2f2` as a dangling commit reachable only via the tag.
+- **Recovery:** `git cherry-pick 4d1f2f2` onto main → commit `4787bbf` (`recover(wave-1): cherry-pick 4d1f2f2`). Re-verification on main post-cherry-pick: `tsc --noEmit -p hooks/tsconfig.json` exit 0 + `bun test test/protocol/` → 400 pass / 0 fail / 910 expect calls. All 23/23 Wave 1 acceptance criteria remain met.
+- **Why drift detection missed it:**
+  - `state.schema.md` Rule 4 ("Compare current file hashes against `fileHashes`") is correct in spec but `fileHashes` was empty in state.toon. `execute.md` provides no template for populating it in Step 3/Step 8/Step 9, so it never gets written.
+  - Even when populated, hash-only comparison can miss the actual failure mode here: "the commit producing those file contents is not reachable from HEAD." That requires a `git merge-base --is-ancestor {lastWaveCommit} HEAD` check, which the protocol does not specify.
+- **Postmortem written:** `planning/notes/2026-06-13-orphaned-wave-1-postmortem.md` — four gaps identified, four surgical fixes proposed (~85 lines of edits across two protocol files). Fixes NOT applied this session to avoid destabilizing the mid-flight `--resume` chain. Suggested next action: file a small `execution-drift-hardening` plan after M-02 closes.
+- **Next:** Wave 2 (Phase 5 → Phase 11 serial) resumes from `main` HEAD = `4787bbf`. Checkpoint refreshed; resume command unchanged.
+
+## 2026-06-13 -- Wave 0 executed (convergence-generalization, --auto)
+
+- Run ID: `convergence-generalization-20260613-001`
+- Mode: `--auto` (Automated Quality Gate replacing human approval gates; context-pressure-halt at wave boundaries per Step 9.1)
+- Rollback tag: `plan-exec-convergence-generalization-start`
+- Prior state archived: `.plan-execution/state-kit-native-skills-final.toon.bak` + `.plan-execution/backups/kit-native-skills-archive/` (M-02/M-03 closed earlier today, state.toon now free)
+- **Phase 0 (contracts-agent, opus):** 7 schema deliverables landed in one spawn
+  - **Created (4):** `findings.schema.md` (ConvergenceFindings + severityMapping table + reviewerAgent attribution), `plan-critique.schema.md` (locked 6-dim enum), `iteration-snapshot.schema.md` (W-02 slug rule + sha256), `convergence-summary.schema.md` (C-11 link-compat keystone with 6-value status enum)
+  - **Modified (3):** `convergence-tier.schema.md` (ConvergeConfig adds document mode + subject/integrator/harness fields), `stage-context.schema.md` (ConvergenceIterationSummary mode-uniform shape + subject/snapshotRef/haltReason/tokensUsed optional fields), `schema-versions.toon` (registry 19 → 23)
+  - **Manifest:** `.plan-execution/contracts/manifest.toon` lists all 7 deliverables with locked-decisions cross-reference table
+  - **Locked decisions wired:** C-08, C-09, C-10, C-11, W-01, W-02, W-03, CC-03 — all reflected in schema bodies with cross-refs documented
+- **Wave 0 → Wave 1 verification gate:** `tsc --noEmit -p hooks/tsconfig.json` exit 0 + `bun test test/protocol/schema-validation.test.ts` 17/17 (31 assertions) exit 0 + file ownership clean. Lint not configured (skipped, acceptable for schema-only wave). Recorded in `wave-0-summary.toon`.
+- **Stage context:** `.plan-execution/stage-context/contracts.toon` written atomically with 5 keyDecisions + 4 nextStageHints for Phase 1+.
+- **Auto-commit:** `c9223e3` — 8 files changed, +977/-24 lines
+- **Automated Quality Gate decision: PROCEED** (verification.status=pass, zero blocking issues, zero ownership violations, zero gate halts)
+- **Halt reason: context-pressure** — conversation context at high pressure after ~186k spawned-agent tokens this turn (contracts 152k + verification 34k) plus substantial prior session history. Per Step 9.1's "Always checkpoint" rule, halting cleanly for `/clear` + `/loom-plan execute --resume --auto` to continue Wave 1 in a fresh context window. `--auto` mode is preserved through resume.
+- **Token cost (this wave):** ~186k spawned-agent tokens. Wave 1 estimate: ~250-350k for 4 serial implementers on `agents/convergence-driver.md`.
+- **Next:** Wave 1 = Phase 1 → 2 → 3 → 4 serial chain (all touching `agents/convergence-driver.md` in disjoint sections; deps enforce ordering)
+
 ## 2026-06-13 -- Trampoline-link compat additions (convergence-generalization)
 
 - Triggered by handoff from parallel session refactoring `/loom-auto` into trampoline + dispatched-links architecture (commits 3872228, 1e1b31a). Three links shipped (verify/fix/execute); two queued (Phase 4 converge-link, Phase 5 planning-link).
