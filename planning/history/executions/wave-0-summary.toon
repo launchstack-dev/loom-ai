@@ -1,16 +1,35 @@
 wave: 0
-agent: contracts-agent
-taskId: w0-contracts
+runId: convergence-generalization-20260613-001
 status: success
+startedAt: 2026-06-13T11:00:00Z
+completedAt: 2026-06-13T11:11:00Z
+durationMs: 660000
 
-filesCreated[N]:
-filesModified[N]: agents/protocols/convergence-tier.schema.md, agents/protocols/plan.schema.md, .plan-execution/contracts/manifest.toon
-filesDeleted[N]:
+phases[1]{id,agent,model,status,filesCreated,filesModified}:
+  0,contracts-agent,opus,success,4,3
 
-exportsAdded[N]{file,name,kind}:
+filesCreated[4]:
+  agents/protocols/findings.schema.md
+  agents/protocols/plan-critique.schema.md
+  agents/protocols/iteration-snapshot.schema.md
+  agents/protocols/convergence-summary.schema.md
 
-unresolvedIssues[N]:
+filesModified[3]:
+  agents/protocols/convergence-tier.schema.md
+  agents/protocols/stage-context.schema.md
+  agents/protocols/schema-versions.toon
 
-integrationNotes: "All 9 protocol files verified against PLAN.md acceptance criteria. convergence-tier.schema.md had inverted level ordering corrected (unit=1 ascending by cost). plan.schema.md got cross-references to InterpretationConflict and DeltaReport. All other files were already complete from prior waves."
+filesAlsoTouched[1]:
+  .plan-execution/contracts/manifest.toon
 
-verificationStatus: verified
+verification:
+  tsc: pass (exit 0)
+  lint: skip (not configured)
+  test: pass (17/17 schema-validation tests, 31 assertions)
+  ownershipDrift: clean
+
+automatedQualityGate: PROCEED (verification.status == pass, zero blocking issues, zero ownership violations, zero gate halts)
+
+contextPressureNote: "Conversation context is at high pressure after Wave 0 (~186k spawned-agent tokens this turn + substantial prior session history). Per execute.md Step 9.1, ALWAYS checkpoint at wave boundaries. Recommended: /clear + /loom-plan execute --resume --auto to continue Wave 1 in a fresh context window. The Automated Quality Gate decision PROCEED is preserved in state.toon; --resume picks up Wave 1 with full disk-restored context per stage-context/contracts.toon + rolling-context.md."
+
+waveCost: ~186k tokens spent (contracts 152k + verification 34k); cumulative across run: ~186k
