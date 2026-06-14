@@ -1,14 +1,22 @@
 ---
 date: 2026-06-13
 plan: convergence-generalization
-context: fresh-session smoke test of /loom-plan create --autoconverge after Wave 5 ship
+context: fresh-session smoke test of /loom-plan create --autoconverge after Wave 5 ship — three rounds (dry-run, default, --skip-critic)
 author: orchestrator + smoke-test agent
-status: 5 of 7 findings open (A fixed in 2026-06-13 patch; B–G tracked below)
+status: ALL 3 SMOKES GREEN — 7 of 9 findings tracked open (A fixed in ef94ed0; B-I tracked); PR #18 merge-ready
 ---
 
 # Wave 5 smoke-test findings
 
-A fresh-session smoke test of `/loom-plan create --autoconverge --auto --max-iterations 1` against a throwaway 2-phase roadmap surfaced 7 distinct findings ranked A (high) → G (low). Findings B–G are captured here for follow-up; Finding A was fixed in the same commit that introduced this note.
+Three fresh-session smoke rounds of `/loom-plan create --autoconverge` against a throwaway 2-phase roadmap surfaced 9 distinct findings ranked A (HIGH) → I (LOW). Finding A was fixed in commit `ef94ed0`; B-I are tracked here for follow-up and do not block PR #18 merge.
+
+| Smoke | Variant | Outcome |
+|-------|---------|---------|
+| 1 | `--dry-run` (no LLM spawns) | converge.config emits correctly; surfaced flag-drift Finding (fixed in 965e790) |
+| 2 | `--autoconverge --auto --max-iterations 1` (default critic) | end-to-end wrapper functional; converged on iter 1; 7 findings (A-G) surfaced |
+| 3 | `--autoconverge --auto --max-iterations 1 --skip-critic` (fallback path) | --skip-critic skip clauses work; PLAN.md shape matches Smoke 2 within ±1; 2 new findings (H, I) |
+
+Decision matrix verdict: **all three smokes ✅ → merge PR #18 with confidence.**
 
 ## Bottom-line verdict
 
@@ -106,17 +114,35 @@ Reviewer envelopes emit `severity: warning` and `severity: blocking` per `agent-
 
 **Disposition:** Implementation-time concern. The Smoke 2 trace surfaced no observable consequence (both agents completed correctly), but the wrapper code path MUST honor the single-message batching when shipped. Track for code-review.
 
+## Finding H — Step 1.5 spec ambiguity on `--auto` blocking-gap handling (Smoke 3)
+
+**Severity:** LOW. Spec/wrapper interpretation.
+
+**Symptom:** Smoke 3's interpretation-reviewer surfaced 1 blocking **coverage gap** (CG-001: "no imports" AC has no verifier). The `--auto` halt clause in `commands/loom-plan/create.md:221` references only "conflicts" with `severity: blocking`. A strict literal reading lets blocking gaps through (Smoke 3 continued); a charitable reading should halt.
+
+**Disposition:** Spec ambiguity. Clarify in `commands/loom-plan/create.md` Step 1.5 whether blocking coverage gaps trip the `--auto` halt alongside blocking conflicts. Smoke 3 ran the literal reading; pick one interpretation and lock the spec text. Either choice is defensible; the bug is the ambiguity itself.
+
+## Finding I — Interpretation-reviewer report inconsistently persisted (Smoke 3)
+
+**Severity:** LOW. Wrapper-fidelity.
+
+**Symptom:** Step 1.5 spec says "Save the conflict report to `.plan-execution/conflicts/interpretation-report.toon`". Smoke 2 happened to land the report on disk (wrapper wrote it); Smoke 3 did not (agent returned inline only).
+
+**Disposition:** Wrapper code path must always persist this artifact regardless of how the agent returns it. The downstream consumers (link-extraction per C-11, post-run audits) depend on consistent on-disk presence.
+
 ## Engineering follow-up tracker
 
 | Finding | Owner | Action | Status |
 |---------|-------|--------|--------|
-| A — harness drops warning severity | Wave 4 / Phase 9 | Code fix + 8 new tests + schema doc | DONE 2026-06-13 |
-| B — MAX_ITERATIONS not exercised | smoke kit v2 | Re-point Smoke 2 at Phase 14 fixture | TODO |
+| A — harness drops warning severity | Wave 4 / Phase 9 | Code fix + 8 new tests + schema doc | **DONE** in `ef94ed0` (2026-06-13) |
+| B — MAX_ITERATIONS not exercised | smoke kit v2 | Re-point Smoke 2 at Phase 14 fixture, or accept clean-converge as design | TODO |
 | C — non-atomic config write | wrapper code path | `.tmp + rename` enforced in real wrapper | TODO (code-review gate) |
-| D — pass-1 snapshot expectation | smoke kit v2 | Drop pass-1 from success criteria | TODO |
-| E — canonical planning path polluted | smoke kit v2 | Add `--output planning/scratch/PLAN-smoke.md` | TODO |
-| F — changelog/trajectory drift | smoke kit v2 + wrapper | Accept the residue, verify trajectory line | TODO |
-| G — Step 1 parallelism | wrapper code path | Single-message batch enforced | TODO (code-review gate) |
+| D — pass-1 snapshot expectation | smoke kit v2 | Drop pass-1 from success criteria (align with C-11 N≥2 rule) | TODO |
+| E — canonical planning path polluted | smoke kit v2 | Add `--output planning/scratch/PLAN-smoke.md` to Smoke 2/3 prompts | TODO |
+| F — changelog/trajectory drift | smoke kit v2 + wrapper | Accept the residue, verify trajectory line W-14 format | TODO |
+| G — Step 1 parallelism | wrapper code path | Single-message batch of plan-builder + criteria-planner enforced | TODO (code-review gate) |
+| H — Step 1.5 blocking-gap halt ambiguity (Smoke 3) | spec | Clarify `commands/loom-plan/create.md:221` — do blocking coverage gaps trip `--auto` halt? | TODO (spec text) |
+| I — interpretation-report inconsistently persisted (Smoke 3) | wrapper code path | Always write `.plan-execution/conflicts/interpretation-report.toon` regardless of agent return mode | TODO (code-review gate) |
 
 ## Self-audit recap
 
@@ -126,6 +152,35 @@ The orchestrator should treat fresh-session smoke tests as a **mandatory pre-mer
 
 ## Related artifacts
 
-- Smoke 2 transcript: not preserved (fresh session, no recording)
-- Wave 5 commits: `e173b3f` (wave-5 deliverables), `965e790` (--resume-config flag fix), `a851e79` (install-catalog fix), `<commit-of-this-note>` (Finding A patch + this note)
+- Smoke 1/2/3 transcripts: not preserved (fresh sessions, no recording — distilled findings live in this note)
+- Wave 5 commits: `e173b3f` (wave-5 deliverables), `965e790` (--resume-config flag fix), `a851e79` (install-catalog fix), `ef94ed0` (Finding A patch + initial version of this note), `50bb7d1` (Gemini review patch: 2 HIGH + 4 MED), `<this-commit>` (Findings H, I + decision-matrix verdict)
 - PR #18 (draft): https://github.com/launchstack-dev/loom-ai/pull/18
+- Throwaway roadmap used by all 3 smokes — inlined below for recoverability after `planning/scratch/smoke-roadmap.md` is removed:
+
+```markdown
+---
+schemaVersion: 1
+title: Smoke Test Roadmap — convergence-generalization Wave 5
+created: 2026-06-13
+purpose: throwaway target for /loom-plan create --autoconverge smoke verification
+status: scratch
+---
+
+# Smoke Test Roadmap
+
+## Vision
+Verify the /loom-plan create --autoconverge wrapper resolves the document-mode loop
+end-to-end in a fresh session. Intentionally minimal so a single iteration converges cheaply.
+
+## Milestones
+
+### M-01: Add a hello-world script
+**Acceptance:** A scripts/hello.ts file exists that prints "hello world" when run
+with `bun run scripts/hello.ts`.
+
+## Features
+
+### F-01: hello.ts entry point
+**Description:** A single TypeScript file that imports nothing and prints "hello world" to stdout.
+**Acceptance:** `bun run scripts/hello.ts` exits 0 with stdout `hello world\n`.
+```
