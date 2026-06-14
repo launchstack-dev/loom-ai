@@ -198,7 +198,7 @@ Installed contracts-agent
 1. Inspect `~/.claude/skills/library/library.yaml`. If it is a symlink, follow it once and take the resolved target path (e.g. `/Users/foo/.loom-ai/skills/library.yaml`).
 2. Derive `checkoutRoot` by stripping the trailing `skills/library.yaml` (two path segments) — e.g. `/Users/foo/.loom-ai/skills/library.yaml` → `checkoutRoot = /Users/foo/.loom-ai`.
 3. Validate `checkoutRoot` is a Loom checkout by checking that BOTH `${checkoutRoot}/commands/` and `${checkoutRoot}/agents/` exist as directories. If either is missing, fall back to `installPattern = curl` (the symlink points somewhere unexpected — don't assume local-dev semantics).
-4. If validation passes, set `installPattern = local-dev`. If `library.yaml` is a regular file OR validation fails, set `installPattern = curl`.
+4. If validation passes, set `installPattern = local-dev`. If `library.yaml` is a regular file, set `installPattern = curl`. If `library.yaml` does not exist at all (no symlink, no regular file), abort with exit code `2` and stderr `error: library catalog missing at ~/.claude/skills/library/library.yaml — run install.sh or restore the symlink to a local checkout` — the install isn't bootstrapped, and falling through to curl mode would just fail again at the install-state read in Branch A. (Gemini PR #19 finding.)
 5. Print the detected pattern at the top of the sync output, e.g. `Detected install pattern: local-dev (checkout: /Users/foo/.loom-ai)`.
 
 **No mutations without confirmation.** Both branches require explicit confirmation before changing anything on disk, but the gate differs by branch:
@@ -233,7 +233,7 @@ Checking 18 installed items...
 2 items need updating, 1 source missing.
 Update now? (yes / no / select individually)
 ```
-4. If `--apply` and user approves: for each changed item, write the fetched source content to the target path. Update `lastSynced` in install-state.toon.
+4. If the user approves via the interactive prompt: for each changed item, write the fetched source content to the target path. Update `lastSynced` in install-state.toon. (Note: the curl branch uses interactive approval, NOT the `--apply` flag — `--apply` is the local-dev branch's gate. Gemini PR #19 finding.)
 5. For missing sources, ask whether to remove them from install-state.
 
 ---
@@ -280,13 +280,24 @@ Reconciliation plan (dry-run; pass --apply to mutate):
 Run with --apply to execute.
 ```
 
-4. **Execute on `--apply`.** Iterate the action list; for each `STALE-COPY` / `MISSING` / `SYMLINK-WRONG`, perform `rm -f {target}` followed by `ln -s ${checkoutRoot}/{relpath} {target}`. For each `ORPHAN`, `rm -f {target}`.
+4. **Execute on `--apply`.** Iterate the action list; for each `STALE-COPY` / `MISSING` / `SYMLINK-WRONG`:
+   1. `rm -f {target}` (removes a stale copy, a wrong symlink, or no-ops on MISSING — safe in all three cases).
+   2. `mkdir -p $(dirname {target})` — required for depth-3+ leaves like `~/.claude/commands/loom-auto/links/execute.md` where the parent directory may not exist yet. Without this, `ln -s` fails with `No such file or directory`. (Gemini PR #19 finding.)
+   3. `ln -s ${checkoutRoot}/{relpath} {target}`.
+   For each `ORPHAN`, `rm -f {target}` only — no replacement.
 
 5. **Safety guarantees:**
    - The `rm -f` step uses the explicit absolute path of the `~/.claude/` entry; it never follows a symlink during deletion (`rm -f` on a symlink removes the link itself, not its target — verified by every standard `rm(1)` implementation).
    - The allow-list is the only place sync writes; it never touches `~/.claude/skills/{name}/SKILL.md` (Claude Code's native-skill area), `~/.claude/hooks/`, `~/.claude/config/`, `.git/`, or any other unrelated path.
 
-6. **No `install-state.toon` updates.** Local-dev install is symlink-based; tracking `installedAt` per-file would lie (the file is just a pointer). The `install-state.toon` schema's `lastSynced` field IS updated to the wall-clock time of the run, to record that the reconciliation happened.
+6. **Update `install-state.toon` to mirror the reconciled symlink set.** After `--apply` completes successfully, rewrite `install-state.toon` so `list` and `status` (which both read this file as their sole source of truth) correctly report the symlinked items as installed. (Gemini PR #19 finding: without this, `/loom-library list` would show NO items installed on a local-dev env even though dozens of symlinks exist.)
+
+   - For each leaf in the allow-list that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` derived from the filename (strip `.md` and convert to the catalog name), `type` per the catalog (agent/protocol/prompt), `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
+   - For each `ORPHAN` removed, drop its row from `items[]`.
+   - Set `lastSynced` to the wall-clock time of the run.
+   - Use atomic write per `execution-conventions.md` (write to `{path}.tmp`, then `rename`).
+
+   The `installedAt` field semantics: in curl-install mode it records when the file was last fetched from main; in local-dev mode it records when the symlink was last reconciled. Both are wall-clock timestamps tied to a `sync` operation; the divergence in meaning is acceptable for `list`/`status` purposes, which only read it to display "installed since X".
 
 ---
 
