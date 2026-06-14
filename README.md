@@ -42,6 +42,54 @@ The four pillars:
 
 ## Commands
 
+### Use-case cookbook — "I want to X, run Y"
+
+| If you want to… | Run | Notes |
+|-----------------|-----|-------|
+| **Plan & build** | | |
+| Onboard an existing codebase to Loom | `/loom-init` | Brownfield: writes `CLAUDE.md`, seeds `.loom/wiki/` |
+| Plan a feature end-to-end | `/loom-plan create` then `/loom-plan execute` | Dual-track plan + criteria + scenarios, then wave-by-wave execution |
+| Run a feature fully autonomously | `/loom-auto --from "<idea>"` | Roadmap → plan → execute → test → review → fix in one pipeline |
+| Iterate an artifact toward a target | `/loom-converge --mode {target\|criteria\|document}` | Convergence loop with circuit breakers + auto-snapshots |
+| Fix a bug with Loom rigor (no full plan) | `/loom-bugfix "<desc>"` | Wiki context + impact assessment + fix archive |
+| Do a small task quickly | `/loom-quick "<desc>"` | Zero-ceremony + verification + impact + audit log |
+| **Review & ship** | | |
+| Review a PR or working diff | `/loom-code review` | 9+ parallel reviewers + scenario/contract compliance |
+| Auto-apply review findings | `/loom-code fix` | Equivalent to `/code-review --fix` for Loom's review surface |
+| Commit / push / open a PR | `/loom-git commit \| push \| pr` | Git workflow automation |
+| **Multi-agent reasoning patterns** | | |
+| Get N candidate approaches, pick best | `/loom-vote "<problem>"` | Parallel independent solutions + evaluator |
+| Refine one artifact across stages | `/loom-chain "<task>"` | Draft → refine → harden pipeline |
+| Surface adversarial perspectives | `/loom-debate "<question>"` | Multi-round adversarial debate |
+| Route ambiguous work to the right command | `/loom-do "<task>"` or `/loom-triage` | Smart routing (light = `/loom-do`, heavy classifier = `/loom-triage`) |
+| **State & handoff** | | |
+| See current project state / what's next | `/loom-status` / `/loom-next` | Status overview / state-aware suggestion |
+| Pause / resume a session | `/loom-pause` / `/loom-resume` | Snapshot for handoff and later restore |
+| Capture an idea without losing focus | `/loom-note add "<idea>"` | Captures to backlog; promote with `/loom-note --promote` |
+| **Customize & maintain** | | |
+| Manage the project roadmap | `/loom-roadmap {init\|review\|approve\|…}` | Roadmap lifecycle + dependency graphs |
+| Run a change proposal over contract pages | `/loom-change {init\|review\|approve\|run\|…}` | OpenSpec-style atomic change-proposal lifecycle |
+| Author a project agent | `/loom-agent create` | Guided interview, registers in `orchestration.toml` |
+| Pull a published kit on demand (per-machine) | `/loom-library use <kit>` | See [Pull what you need](#pull-what-you-need) |
+| **Refresh your install tree** (per-machine `~/.claude/`) | `/loom-library sync` | Auto-detects curl vs local-dev pattern |
+| **Migrate this project's planning files** (per-project) | `/loom-upgrade` | Scans `PLAN.md` / `ROADMAP.md` / state TOON files, migrates to current schemas |
+| Run the project's wiki layer | `/loom-wiki {ingest\|lint\|query\|status}` | Ingest, lint, search, synthesis |
+
+### Maintenance verbs — `/loom-library` vs `/loom-upgrade`
+
+These two commands look like they overlap; they don't. Different scopes, different layers:
+
+| Command | Operates on | When to use |
+|---------|-------------|-------------|
+| `/loom-library list / use / add / remove` | **Per-machine catalog** — `~/.claude/skills/library/library.yaml` + `install-state.toon` | "What Loom extensions are pulled into this Claude Code home tree?" |
+| `/loom-library sync` | **Per-machine install tree** — files under `~/.claude/{agents,commands,skills,…}` | "Bring `~/.claude/` up to date — re-pull (curl) or reconcile symlinks (local-dev)" |
+| `/loom-library update` | **Per-machine catalog refresh** — fetch new catalog entries from upstream `main` | "What new agents/kits has Loom published since I last looked?" |
+| `/loom-upgrade` | **Per-project artifacts** — `PLAN.md`, `ROADMAP.md`, state TOON files inside whatever project you're cd'ed into | "Migrate this project's old-format planning files to current schemas" |
+
+The split is the layer they touch. `/loom-library` is your **Loom binary** (the install in your home tree). `/loom-upgrade` is your **project data** (whatever directory you `cd` into). They never overlap.
+
+### Per-command reference
+
 | Command | Subcommands | What it does |
 |---------|-------------|-------------|
 | `/loom` | init, auto, converge, quick, bugfix, pause, resume, do, next, profile, status, debate, chain, vote, triage, upgrade | Root — project lifecycle, session management, orchestration patterns, kit dispatch |
@@ -52,7 +100,8 @@ The four pillars:
 | `/loom-wiki` | ingest, lint, query, status | Wiki management — ingest, lint, search, synthesis |
 | `/loom-agent` | create, list | Create bespoke agents, view registered agents |
 | `/loom-note` | (add), --review, --assimilate, --backlog, --promote | Notes and backlog — capture, promote to roadmap |
-| `/loom-library` | list, use, sync, update, search, add, remove | Catalog management — install on demand |
+| `/loom-library` | list, use, sync, update, search, add, remove | Per-machine catalog + install-tree management (curl- and local-dev-aware) |
+| `/loom-upgrade` | — | Per-project artifact migration — scan old-format `PLAN.md` / `ROADMAP.md` / state files, migrate to current schemas |
 | `/loom-git` | commit, push, pr, merge, cleanup, review-pr | Git workflow automation |
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
 | `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
@@ -90,6 +139,19 @@ kits:
 Each entry resolves against the matching block under `library:` (`library.skills:` for `type: skill`, `library.protocols:` for `type: protocol`, etc.). Bare-string entries are accepted for backwards compatibility and resolve via the priority `agent > protocol > skill > prompt`.
 
 ## Install
+
+### Two install patterns
+
+Loom supports two install patterns. Pick the one that matches your relationship to the codebase:
+
+| Pattern | Who it's for | Setup | Update flow | Detection signal |
+|---------|--------------|-------|-------------|------------------|
+| **Curl install** | End users; CI runners; anyone treating Loom as a closed binary | One-liner `curl ... \| bash` (next subsection) — fetches files from `main` and writes them as regular files into `~/.claude/` | Re-run the install one-liner to pull a fresh snapshot of `main` | `~/.claude/skills/library/library.yaml` is a regular file |
+| **Local-dev install** | Loom contributors; fork maintainers; anyone who needs to edit Loom and see changes live | `git clone` the repo, then symlink `~/.claude/{commands,agents,skills/library/library.yaml,…}` to paths in your local checkout | `cd /path/to/loom-ai && git pull && /loom-library sync` — `sync` detects the symlinked install and reconciles symlinks (adds new files, replaces stale copies, prunes broken links) | `~/.claude/skills/library/library.yaml` is a symlink to a local path |
+
+`/loom-library sync` auto-detects which pattern is in use and runs the right reconciliation. You never have to remember which one you're on.
+
+The rest of this section assumes the curl pattern. See [`### Update + uninstall`](#update--uninstall) below for the local-dev update flow.
 
 ### Prerequisites
 
@@ -165,18 +227,42 @@ After the bootstrap, kits are pulled on demand:
 
 ### Update + uninstall
 
+`/loom-library sync` is the single update command; it auto-detects which install pattern is in use (see [Two install patterns](#two-install-patterns)) and runs the right reconciliation.
+
+**Curl install — refresh the install tree:**
+
 ```
-/loom-library list                  See installed vs available
-/loom-library sync                  Re-pull all installed items, detect changes
-/loom-library update                Fetch new catalog entries + update everything
-/loom-upgrade                       Atomic upgrade (signed-release path, in flight)
+/loom-library sync                  Re-pull every tracked item; confirm before applying
+/loom-library update                Check all sources (catalog + items) for changes, show diff, confirm before applying
+/loom-library list                  Show installed vs available
 ```
+
+A `sync` on a curl-install env walks `~/.claude/skills/library/install-state.toon`, re-fetches each item from its `source` (curl-from-GitHub or local path), and — after the user confirms via `yes / no / select individually` — atomically replaces the `targetPath` and updates the install-state record. `update` is the broader operation: it ALSO surfaces new catalog entries published since the last run, then routes through the same apply step.
+
+**Local-dev install — refresh symlinks from local checkout:**
+
+```bash
+cd /path/to/loom-ai
+git pull
+```
+
+```
+/loom-library sync                  Reconcile ~/.claude/ symlinks vs the local checkout
+```
+
+A `sync` on a local-dev env (detected via `~/.claude/skills/library/library.yaml` being a symlink) walks the local checkout's `commands/`, `agents/`, `agents/protocols/`, and `skills/library.yaml`. It adds symlinks for new files, replaces stale install.sh copies with symlinks, and prunes broken symlinks whose targets no longer exist. The local checkout itself updates via plain `git pull` — symlinks pick up the new file contents automatically the moment `git pull` finishes; `sync` only fires when the checkout's *file set* changes (new agents, removed files, etc.).
+
+`/loom-library sync` is dry-run by default; pass `--apply` to mutate.
+
+**Uninstall (both patterns):**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/uninstall.sh | bash
 ```
 
-The uninstall script removes Loom-installed files from `~/.claude/` and `~/.cache/loom/`. Files from other tools (gsd, hookify, etc.) are left intact — Loom only removes paths it tracks in `install-state.toon`.
+Removes Loom-installed paths from `~/.claude/` and `~/.cache/loom/` per `install-state.toon`. For local-dev installs, also removes the symlinks pointing at the local checkout (the checkout itself is left untouched — `rm` the clone manually if you want).
+
+**Note on `/loom-upgrade`:** This is *not* an install-tree command. It scans the planning artifacts in whatever project you're cd'ed into (`PLAN.md`, `ROADMAP.md`, state TOON files) and migrates them from old schemas to current. Don't run it expecting an install upgrade — see [Maintenance verbs](#maintenance-verbs--loom-library-vs-loom-upgrade) above for the split.
 
 ### Private repo
 

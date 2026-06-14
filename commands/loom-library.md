@@ -188,16 +188,38 @@ Installed contracts-agent
 
 ## Command: `sync`
 
-**Pre-check — Infrastructure bootstrap detection:**
+`sync` brings `~/.claude/` up to date. It auto-detects which install pattern is in use and runs the matching reconciliation. Two patterns are supported:
+
+- **Curl install** — `~/.claude/skills/library/library.yaml` is a regular file. The install tree is a copy of `main` fetched at install time; sync re-pulls each tracked item from its source.
+- **Local-dev install** — `~/.claude/skills/library/library.yaml` is a symlink to a local checkout (typically a `git clone` of the Loom repo). The install tree is symlinks pointing at the checkout; sync reconciles the symlink set against what's on disk in the checkout.
+
+**Pattern detection (first step of every sync run):**
+
+1. Inspect `~/.claude/skills/library/library.yaml`. If it is a symlink, follow it once and take the resolved target path (e.g. `/Users/foo/.loom-ai/skills/library.yaml`).
+2. Derive `checkoutRoot` by stripping the trailing `skills/library.yaml` (two path segments) — e.g. `/Users/foo/.loom-ai/skills/library.yaml` → `checkoutRoot = /Users/foo/.loom-ai`.
+3. Validate `checkoutRoot` is a Loom checkout by checking that BOTH `${checkoutRoot}/commands/` and `${checkoutRoot}/agents/` exist as directories. If either is missing, fall back to `installPattern = curl` (the symlink points somewhere unexpected — don't assume local-dev semantics).
+4. If validation passes, set `installPattern = local-dev`. If `library.yaml` is a regular file OR validation fails, set `installPattern = curl`.
+5. Print the detected pattern at the top of the sync output, e.g. `Detected install pattern: local-dev (checkout: /Users/foo/.loom-ai)`.
+
+**No mutations without confirmation.** Both branches require explicit confirmation before changing anything on disk, but the gate differs by branch:
+
+- **Curl branch:** interactive `yes / no / select individually` prompt after the diff is shown. Existing behavior — preserved verbatim.
+- **Local-dev branch:** `--apply` flag (dry-run by default; without `--apply`, the command prints the reconciliation plan and exits 0). The flag-gate matches the local-dev branch's batch nature (often 10–100 file mutations per run, where an interactive prompt per item is impractical).
+
+**Pre-check — Infrastructure bootstrap detection (curl branch only):**
 1. Read `~/.claude/skills/library/library.yaml`
 2. If the catalog does NOT contain an `infrastructure:` section, this is a pre-v2 install. Print the re-install prompt (same as `list`). Continue with sync.
 
-**Main sync logic:**
+---
+
+### Branch A: curl install (`installPattern == curl`)
+
+Existing behavior — re-pull tracked items from their sources:
 
 1. Read install-state.toon
 2. For each installed item:
    a. Fetch current source content from repo (handle missing sources gracefully)
-   b. **Symlink safety check**: if the target path is a symlink (any symlink, regardless of where it points), classify this item as `[link] {name} — symlinked, no write needed` and SKIP it. Writing through a symlinked target silently overwrites whatever the link points to — could be a dev-install pointing back to a Loom repo checkout, could be a user-managed dotfiles target, could be anything. The link's existence is the signal that the user (or their tooling) is managing this path themselves; sync defers to them. Users with intentional symlinks who want sync to update them can convert via `cp --remove-destination` and re-run.
+   b. **Symlink safety check**: if the target path is a symlink (any symlink, regardless of where it points), classify this item as `[link] {name} — symlinked, no write needed` and SKIP it. Writing through a symlinked target silently overwrites whatever the link points to — could be a dev-install pointing back to a Loom repo checkout, could be a user-managed dotfiles target, could be anything. The link's existence is the signal that the user (or their tooling) is managing this path themselves; sync defers to them. (In curl mode this safety check is a defensive belt-and-suspenders; local-dev mode is handled by Branch B below, not here.)
    c. Read the installed target file.
    d. Compare source and target byte-for-byte. If they differ, the item needs updating.
 3. Report results:
@@ -211,8 +233,66 @@ Checking 18 installed items...
 2 items need updating, 1 source missing.
 Update now? (yes / no / select individually)
 ```
-4. If user approves: for each changed item, write the fetched source content to the target path. Update `lastSynced` in install-state.toon.
+4. If `--apply` and user approves: for each changed item, write the fetched source content to the target path. Update `lastSynced` in install-state.toon.
 5. For missing sources, ask whether to remove them from install-state.
+
+---
+
+### Branch B: local-dev install (`installPattern == local-dev`)
+
+Reconcile `~/.claude/` against the live local checkout. No fetch happens — the checkout is the source of truth, and `git pull` is the user's responsibility before invoking `sync`.
+
+**Allow-list of paths the local-dev branch reconciles** (under `${checkoutRoot}`):
+
+- `commands/loom-*.md` → `~/.claude/commands/`
+- `commands/loom-*/*.md` (any subcommand directory — `loom-plan/`, `loom-roadmap/`, `loom-auto/`, and any future `loom-*/`) → `~/.claude/commands/{subdir}/`
+- `agents/*.md` → `~/.claude/agents/`
+- `agents/protocols/*.md` → `~/.claude/agents/protocols/`
+- `skills/library.yaml` → `~/.claude/skills/library/library.yaml` (already symlinked; verified, not re-created)
+
+The glob form on subcommand dirs is intentional: it auto-covers any new subcommand tree added upstream (e.g. a future `commands/loom-upgrade/foo.md`) without a spec update. The same gap that the smoke-test surfaced for `plan-critic-agent` doesn't repeat for subcommand files.
+
+Hooks (`~/.claude/statusline-renderer.cjs`, etc.) are NOT reconciled — they are runtime-loaded at session start and the local-dev pattern leaves them as install.sh copies. The user can re-run `install.sh` if a hook file changes upstream (rare).
+
+**Steps:**
+
+1. **Detect each file's current state.** For every source file in the allow-list above, classify the corresponding `~/.claude/{relpath}`:
+   - `SYMLINK-OK` — `~/.claude/{relpath}` is a symlink pointing at `${checkoutRoot}/{relpath}` (the expected target). No action.
+   - `SYMLINK-WRONG` — symlink, but points somewhere else (e.g. a different checkout, a stale path). Action: `--apply` removes the wrong symlink and creates the correct one.
+   - `STALE-COPY` — `~/.claude/{relpath}` is a regular file. In local-dev mode, every regular file under the allow-list IS a stale install.sh copy by definition — the two install patterns are mutually exclusive, so a regular file here predates the user's switch to local-dev. Action: `--apply` removes the regular file and creates a symlink to `${checkoutRoot}/{relpath}`. The dry-run preview (which always runs before `--apply`) is the user's safety net; they can inspect each STALE-COPY entry before mutating.
+   - `MISSING` — `~/.claude/{relpath}` does not exist. Action: `--apply` creates a symlink.
+
+2. **Detect orphaned symlinks.** For every existing symlink under `~/.claude/agents/`, `~/.claude/commands/`, and their subdirectories: if the symlink target does not exist (upstream removed the file), classify as `ORPHAN`. Action: `--apply` removes the broken symlink.
+
+Note: an earlier draft of this spec included a `CONFLICT` classification that flagged any regular file whose content differed from the checkout. That heuristic is wrong — curl-installed files ALWAYS differ from the local checkout (curl pulls `main`, the checkout may be ahead/behind), so the heuristic would have classified every legitimate STALE-COPY as a conflict and refused to convert it. The local-dev pattern's contract is that the checkout IS the source of truth; users with hand-edits to `~/.claude/` files should commit those edits to the checkout first.
+
+3. **Report a diff summary.** Group by action, count each bucket:
+```
+Detected install pattern: local-dev (checkout: /Users/foo/.loom-ai)
+
+Reconciliation plan (dry-run; pass --apply to mutate):
+  STALE-COPY → SYMLINK   17 files (existing install.sh copies will be replaced with symlinks)
+  MISSING → SYMLINK       3 files (new files in the local checkout)
+  SYMLINK-WRONG → FIX     0 files (symlinks pointing at a different target than expected)
+  ORPHAN-REMOVE           1 file  (symlink targets gone upstream)
+  SYMLINK-OK             87 files (already correct, no action)
+
+Run with --apply to execute.
+```
+
+4. **Execute on `--apply`.** Iterate the action list; for each `STALE-COPY` / `MISSING` / `SYMLINK-WRONG`, perform `rm -f {target}` followed by `ln -s ${checkoutRoot}/{relpath} {target}`. For each `ORPHAN`, `rm -f {target}`.
+
+5. **Safety guarantees:**
+   - The `rm -f` step uses the explicit absolute path of the `~/.claude/` entry; it never follows a symlink during deletion (`rm -f` on a symlink removes the link itself, not its target — verified by every standard `rm(1)` implementation).
+   - The allow-list is the only place sync writes; it never touches `~/.claude/skills/{name}/SKILL.md` (Claude Code's native-skill area), `~/.claude/hooks/`, `~/.claude/config/`, `.git/`, or any other unrelated path.
+
+6. **No `install-state.toon` updates.** Local-dev install is symlink-based; tracking `installedAt` per-file would lie (the file is just a pointer). The `install-state.toon` schema's `lastSynced` field IS updated to the wall-clock time of the run, to record that the reconciliation happened.
+
+---
+
+### After either branch
+
+Print a one-line wrap-up: `Sync complete. {N} files updated, {M} unchanged.` Exit code: `0` on success or on dry-run-with-changes-pending; `1` if `--apply` failed mid-run (e.g., permission error on `rm` or `ln`); `2` if the install-pattern detection failed (e.g., library.yaml itself is missing).
 
 ## Command: `search <query>`
 
