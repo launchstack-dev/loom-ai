@@ -156,7 +156,10 @@ interface CliArgs {
   resultsDir?: string;
 }
 
-function parseArgs(argv: string[]): CliArgs {
+function parseArgs(
+  argv: string[],
+  exit: (code: number) => never,
+): CliArgs {
   // argv layout: [bun/node, scriptPath, ...userArgs]
   const userArgs = argv.slice(2);
   let configPath: string | undefined;
@@ -178,13 +181,23 @@ function parseArgs(argv: string[]): CliArgs {
       case "--help":
       case "-h":
         printUsage();
-        process.exit(0);
+        exit(0);
       // eslint-disable-next-line no-fallthrough
       default:
         if (arg.startsWith("--")) {
           process.stderr.write(`unknown flag: ${arg}\n`);
           printUsage();
-          process.exit(1);
+          exit(1);
+        } else {
+          // Bare positional argument — likely a typo (e.g., omitted `--`
+          // before a flag name, or a stray path). Reject explicitly rather
+          // than silently dropping; the smoke wrapper depends on
+          // deterministic argv handling. (Gemini review 2026-06-14.)
+          process.stderr.write(
+            `error: unrecognized positional argument '${arg}'\n`,
+          );
+          printUsage();
+          exit(1);
         }
     }
   }
@@ -192,22 +205,22 @@ function parseArgs(argv: string[]): CliArgs {
   if (!configPath) {
     process.stderr.write("error: --config <converge.config-path> is required\n");
     printUsage();
-    process.exit(1);
+    exit(1);
   }
   if (!iterationRaw) {
     process.stderr.write("error: --iteration <N> is required\n");
     printUsage();
-    process.exit(1);
+    exit(1);
   }
   const iteration = Number(iterationRaw);
   if (!Number.isInteger(iteration) || iteration < 1) {
     process.stderr.write(
       `error: --iteration must be a positive integer (got ${iterationRaw})\n`,
     );
-    process.exit(1);
+    exit(1);
   }
 
-  return { configPath, iteration, resultsDir };
+  return { configPath: configPath!, iteration, resultsDir };
 }
 
 function printUsage(): void {
@@ -246,7 +259,10 @@ interface ConvergeConfig {
  * Full validation is the convergence-driver's responsibility; the harness
  * trusts the driver did preflight before invocation.
  */
-function readConvergeConfig(configPath: string): ConvergeConfig {
+function readConvergeConfig(
+  configPath: string,
+  exit: (code: number) => never,
+): ConvergeConfig {
   const absPath = path.resolve(configPath);
   let text: string;
   try {
@@ -255,7 +271,7 @@ function readConvergeConfig(configPath: string): ConvergeConfig {
     process.stderr.write(
       `error: cannot read converge.config at ${absPath}: ${(err as Error).message}\n`,
     );
-    process.exit(2);
+    exit(2);
   }
 
   const config: Partial<ConvergeConfig> = {};
@@ -292,7 +308,7 @@ function readConvergeConfig(configPath: string): ConvergeConfig {
     process.stderr.write(
       `error: converge.config at ${absPath} is missing required field 'subject'\n`,
     );
-    process.exit(2);
+    exit(2);
   }
 
   return {
@@ -574,14 +590,30 @@ function buildSpawnRequest(args: {
 
 interface AggregateResult {
   envelopes: AgentResultEnvelope[];
+  /** Envelope file did not exist on disk. Triggers Mode A (spawn-request). */
   missing: string[];
+  /** Envelope parsed and surfaced `status: failure`. Aggregated as zero findings + stderr warning. */
   failed: string[];
+  /**
+   * Envelope file existed on disk but could not be parsed.
+   *
+   * Distinct from `missing` (no file) and `failed` (parsed envelope with
+   * status=failure). A corrupted envelope on disk is a signal of a real bug
+   * — either the reviewer agent emitted malformed TOON or the file was
+   * truncated mid-write. Treating it as `missing` would silently re-spawn
+   * all reviewers and could loop forever on persistent parse failures.
+   * The harness halts with exit 1 + diagnostic in this state.
+   *
+   * Added per Gemini review 2026-06-14 (PR #18) HIGH finding.
+   */
+  corrupted: string[];
 }
 
 function collectEnvelopes(resultsDir: string): AggregateResult {
   const envelopes: AgentResultEnvelope[] = [];
   const missing: string[] = [];
   const failed: string[] = [];
+  const corrupted: string[] = [];
 
   for (const row of REVIEWER_AGENT_FILES) {
     const candidate = path.resolve(resultsDir, `${row.reviewerAgent}.toon`);
@@ -591,9 +623,10 @@ function collectEnvelopes(resultsDir: string): AggregateResult {
     }
     const env = readAgentResultEnvelope(candidate);
     if (!env) {
-      // Parse failure is treated as failure status for the purposes of the
-      // partial-failure UX — the aggregator will contribute nothing.
-      failed.push(row.reviewerAgent);
+      // File exists but won't parse. This is a real bug (malformed TOON or
+      // mid-write truncation); treat as a halt condition rather than a
+      // silent re-spawn trigger. See AggregateResult.corrupted docs.
+      corrupted.push(row.reviewerAgent);
       continue;
     }
     // Force the envelope's `agent` field to the canonical schema-side name.
@@ -607,7 +640,7 @@ function collectEnvelopes(resultsDir: string): AggregateResult {
     envelopes.push(env);
   }
 
-  return { envelopes, missing, failed };
+  return { envelopes, missing, failed, corrupted };
 }
 
 // ---------------------------------------------------------------------------
@@ -615,14 +648,33 @@ function collectEnvelopes(resultsDir: string): AggregateResult {
 // ---------------------------------------------------------------------------
 
 function main(argv: string[] = process.argv, exit: (code: number) => never = (code) => process.exit(code) as never): void {
-  const args = parseArgs(argv);
-  const config = readConvergeConfig(args.configPath);
+  const args = parseArgs(argv, exit);
+  const config = readConvergeConfig(args.configPath, exit);
 
   const resultsDirDefault = ".plan-execution/convergence/reviewer-results";
   const resultsDir = args.resultsDir ?? resultsDirDefault;
 
   // Check if the results dir already contains all 6 envelopes.
   const collection = collectEnvelopes(resultsDir);
+
+  // Halt on corrupted envelopes — distinct from missing (Mode A respawn
+  // trigger). A corrupted file on disk signals a real bug; silently
+  // re-spawning could loop forever if the same reviewer keeps producing
+  // unparseable output. Surface the failure to the operator instead.
+  // (Gemini review 2026-06-14, HIGH finding.)
+  if (collection.corrupted.length > 0) {
+    process.stderr.write(
+      [
+        `error: corrupted or unparseable reviewer envelopes found at ${resultsDir}/:`,
+        ...collection.corrupted.map((name) => `  - ${name}.toon`),
+        "Halt: re-spawning these reviewers would risk an infinite loop on persistent parse failures.",
+        "Fix the on-disk envelopes (or delete them so the driver respawns cleanly) before re-invoking the harness.",
+        "",
+      ].join("\n"),
+    );
+    return exit(1);
+  }
+
   const haveAll = collection.missing.length === 0 && collection.envelopes.length === REVIEWER_AGENT_FILES.length;
 
   if (!haveAll) {

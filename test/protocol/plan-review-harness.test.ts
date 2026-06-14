@@ -36,6 +36,16 @@ function makeTempDir(prefix: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+/**
+ * Test-side `exit` callback. parseArgs and readConvergeConfig accept this
+ * callback to route exit calls through a mockable seam (Gemini review
+ * 2026-06-14 testability finding). The throw-based form lets test cases
+ * assert on exit codes via `.toThrow("EXIT:N")`.
+ */
+function throwingExit(code: number): never {
+  throw new Error(`EXIT:${code}`);
+}
+
 function writeFile(absPath: string, content: string): void {
   fs.mkdirSync(path.dirname(absPath), { recursive: true });
   fs.writeFileSync(absPath, content);
@@ -106,74 +116,123 @@ function csvQuote(raw: string): string {
 
 describe("parseArgs", () => {
   it("parses --config, --iteration, and --results-dir", () => {
-    const args = parseArgs([
-      "bun",
-      "scripts/plan-review-harness.ts",
-      "--config",
-      "converge.config",
-      "--iteration",
-      "2",
-      "--results-dir",
-      "/tmp/results",
-    ]);
+    const args = parseArgs(
+      [
+        "bun",
+        "scripts/plan-review-harness.ts",
+        "--config",
+        "converge.config",
+        "--iteration",
+        "2",
+        "--results-dir",
+        "/tmp/results",
+      ],
+      throwingExit,
+    );
     expect(args.configPath).toBe("converge.config");
     expect(args.iteration).toBe(2);
     expect(args.resultsDir).toBe("/tmp/results");
   });
 
-  it("exits 1 when --config is missing", () => {
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
-      throw new Error(`EXIT:${code}`);
-    }) as never);
+  it("exits 1 via the injected callback when --config is missing", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     try {
       expect(() =>
-        parseArgs(["bun", "scripts/plan-review-harness.ts", "--iteration", "1"]),
+        parseArgs(
+          ["bun", "scripts/plan-review-harness.ts", "--iteration", "1"],
+          throwingExit,
+        ),
       ).toThrow("EXIT:1");
     } finally {
-      exitSpy.mockRestore();
       stderrSpy.mockRestore();
     }
   });
 
-  it("exits 1 when --iteration is missing", () => {
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
-      throw new Error(`EXIT:${code}`);
-    }) as never);
+  it("exits 1 via the injected callback when --iteration is missing", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     try {
       expect(() =>
-        parseArgs([
-          "bun",
-          "scripts/plan-review-harness.ts",
-          "--config",
-          "foo",
-        ]),
+        parseArgs(
+          ["bun", "scripts/plan-review-harness.ts", "--config", "foo"],
+          throwingExit,
+        ),
       ).toThrow("EXIT:1");
     } finally {
-      exitSpy.mockRestore();
       stderrSpy.mockRestore();
     }
   });
 
-  it("exits 1 when --iteration is not a positive integer", () => {
-    const exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
-      throw new Error(`EXIT:${code}`);
-    }) as never);
+  it("exits 1 via the injected callback when --iteration is not a positive integer", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     try {
       expect(() =>
-        parseArgs([
-          "bun",
-          "scripts/plan-review-harness.ts",
-          "--config",
-          "foo",
-          "--iteration",
-          "0",
-        ]),
+        parseArgs(
+          [
+            "bun",
+            "scripts/plan-review-harness.ts",
+            "--config",
+            "foo",
+            "--iteration",
+            "0",
+          ],
+          throwingExit,
+        ),
       ).toThrow("EXIT:1");
     } finally {
-      exitSpy.mockRestore();
+      stderrSpy.mockRestore();
+    }
+  });
+
+  // Gemini review 2026-06-14 (MED): bare positional argv must be rejected
+  // explicitly rather than silently dropped. Previously the default case of
+  // the switch ignored anything that didn't start with `--`.
+  it("rejects unknown positional arguments with usage error + exit 1", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      expect(() =>
+        parseArgs(
+          [
+            "bun",
+            "scripts/plan-review-harness.ts",
+            "--config",
+            "foo",
+            "--iteration",
+            "1",
+            "stray-positional",
+          ],
+          throwingExit,
+        ),
+      ).toThrow("EXIT:1");
+      // Confirm the stderr message names the offending argument.
+      const calls = stderrSpy.mock.calls.map((c) => String(c[0]));
+      expect(calls.some((m) => m.includes("stray-positional"))).toBe(true);
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  // Gemini review 2026-06-14: confirm the existing unknown-flag path also
+  // routes through the injected exit callback (was already correct via
+  // `process.exit` direct call; the fix harmonizes it with the rest of
+  // parseArgs).
+  it("rejects unknown --flag with usage error + exit 1 via callback", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      expect(() =>
+        parseArgs(
+          [
+            "bun",
+            "scripts/plan-review-harness.ts",
+            "--config",
+            "foo",
+            "--iteration",
+            "1",
+            "--bogus-flag",
+          ],
+          throwingExit,
+        ),
+      ).toThrow("EXIT:1");
+    } finally {
       stderrSpy.mockRestore();
     }
   });
@@ -207,7 +266,7 @@ describe("readConvergeConfig", () => {
       ].join("\n"),
     );
 
-    const cfg = readConvergeConfig(cfgPath);
+    const cfg = readConvergeConfig(cfgPath, throwingExit);
     expect(cfg.subject).toBe("planning/PLAN.md");
     expect(cfg.outputPath).toBe(".plan-execution/convergence/findings.toon");
     expect(cfg.convergenceMode).toBe("document");
@@ -216,8 +275,33 @@ describe("readConvergeConfig", () => {
   it("defaults outputPath to the canonical location when absent", () => {
     const cfgPath = path.join(tmp, "converge.config");
     fs.writeFileSync(cfgPath, "subject: planning/PLAN.md\n");
-    const cfg = readConvergeConfig(cfgPath);
+    const cfg = readConvergeConfig(cfgPath, throwingExit);
     expect(cfg.outputPath).toBe(".plan-execution/convergence/findings.toon");
+  });
+
+  // Gemini review 2026-06-14 (MED): readConvergeConfig must route exit
+  // calls through the injected callback so tests can assert without
+  // mocking process.exit globally.
+  it("exits 2 via injected callback when the config file is unreadable", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      expect(() =>
+        readConvergeConfig(path.join(tmp, "does-not-exist.toon"), throwingExit),
+      ).toThrow("EXIT:2");
+    } finally {
+      stderrSpy.mockRestore();
+    }
+  });
+
+  it("exits 2 via injected callback when the config is missing 'subject'", () => {
+    const cfgPath = path.join(tmp, "no-subject.config");
+    fs.writeFileSync(cfgPath, "convergenceMode: document\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      expect(() => readConvergeConfig(cfgPath, throwingExit)).toThrow("EXIT:2");
+    } finally {
+      stderrSpy.mockRestore();
+    }
   });
 });
 
@@ -520,6 +604,59 @@ describe("collectEnvelopes", () => {
     );
     const result = collectEnvelopes(tmp);
     expect(result.failed).toEqual(["strategy-reviewer-agent"]);
+    expect(result.corrupted).toEqual([]);
+  });
+
+  // Gemini review 2026-06-14 (HIGH): a file that exists on disk but won't
+  // parse must be tracked as `corrupted`, NOT as `missing`. Lumping it into
+  // `missing` would cause main() to write a spawn-request and re-spawn ALL
+  // reviewers — including the ones that already produced valid envelopes.
+  // Persistent parse failures could loop forever.
+  it("flags unparseable envelopes in the new corrupted list (Gemini HIGH)", () => {
+    // Write a file that exists but is structurally broken (no agent: line,
+    // no status: line — readAgentResultEnvelope returns null).
+    fs.writeFileSync(
+      path.join(tmp, "ux-reviewer-agent.toon"),
+      "this is not a valid TOON envelope\n",
+    );
+    const result = collectEnvelopes(tmp);
+    expect(result.corrupted).toEqual(["ux-reviewer-agent"]);
+    // The corrupted file is NOT in `missing` (which would trigger respawn).
+    expect(result.missing.includes("ux-reviewer-agent")).toBe(false);
+    // And NOT in `envelopes` either.
+    expect(
+      result.envelopes.some((e) => e.agent === "ux-reviewer-agent"),
+    ).toBe(false);
+  });
+
+  it("distinguishes missing vs corrupted vs failed vs success in a single run", () => {
+    // 1 success envelope
+    writeFile(
+      path.join(tmp, "feature-coverage-reviewer-agent.toon"),
+      encodeAgentResult({
+        agent: "feature-coverage-reviewer-agent",
+        status: "success",
+      }),
+    );
+    // 1 status=failure envelope
+    writeFile(
+      path.join(tmp, "strategy-reviewer-agent.toon"),
+      encodeAgentResult({
+        agent: "strategy-reviewer-agent",
+        status: "failure",
+      }),
+    );
+    // 1 corrupted (unparseable) envelope
+    fs.writeFileSync(
+      path.join(tmp, "ux-reviewer-agent.toon"),
+      "garbage content\n",
+    );
+    // Remaining 3 reviewers absent → missing
+    const result = collectEnvelopes(tmp);
+    expect(result.envelopes.length).toBe(2); // success + failure both parsed
+    expect(result.failed).toEqual(["strategy-reviewer-agent"]);
+    expect(result.corrupted).toEqual(["ux-reviewer-agent"]);
+    expect(result.missing.length).toBe(3);
   });
 });
 
@@ -767,6 +904,99 @@ describe("main() — aggregate mode", () => {
       ".plan-execution/convergence/findings.toon",
     );
     expect(fs.existsSync(findingsPath)).toBe(false);
+  });
+
+  // Gemini review 2026-06-14 (HIGH): main() must HALT with exit 1 + stderr
+  // diagnostic when corrupted reviewer envelopes are found on disk —
+  // distinct from "missing" envelopes which legitimately trigger Mode A
+  // (spawn-request) respawn. Re-spawning to recover from persistent parse
+  // failure could loop forever; halting surfaces the bug to the operator.
+  it("halts with exit 1 + diagnostic when corrupted envelopes are on disk (Gemini HIGH)", () => {
+    fs.writeFileSync(
+      path.join(sandbox, "converge.config"),
+      [
+        "convergenceMode: document",
+        "subject: planning/PLAN.md",
+        "outputPath: .plan-execution/convergence/findings.toon",
+        "",
+      ].join("\n"),
+    );
+    writeFile(path.join(sandbox, "planning/PLAN.md"), "# plan\n");
+
+    const resultsDir = path.join(
+      sandbox,
+      ".plan-execution/convergence/reviewer-results",
+    );
+    fs.mkdirSync(resultsDir, { recursive: true });
+
+    // Write 5 valid envelopes and 1 deliberately-corrupted envelope.
+    for (const r of REVIEWER_AGENT_FILES.slice(0, 5)) {
+      writeFile(
+        path.join(resultsDir, `${r.reviewerAgent}.toon`),
+        encodeAgentResult({ agent: r.reviewerAgent, status: "success" }),
+      );
+    }
+    // Corrupted: unparseable TOON (no `agent:`, no `status:`).
+    fs.writeFileSync(
+      path.join(resultsDir, "agentic-workflow-reviewer-agent.toon"),
+      "this is garbage content that will not parse as TOON\n",
+    );
+
+    let exitCode: number | null = null;
+    const fakeExit = (code: number): never => {
+      exitCode = code;
+      throw new Error(`EXIT:${code}`);
+    };
+    const stderrWrites: string[] = [];
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderrWrites.push(String(chunk));
+        return true;
+      });
+
+    try {
+      expect(() =>
+        main(
+          [
+            "bun",
+            "scripts/plan-review-harness.ts",
+            "--config",
+            "converge.config",
+            "--iteration",
+            "1",
+            "--results-dir",
+            resultsDir,
+          ],
+          fakeExit as never,
+        ),
+      ).toThrow("EXIT:1");
+    } finally {
+      stderrSpy.mockRestore();
+    }
+
+    expect(exitCode).toBe(1);
+
+    // Diagnostic must name the corrupted reviewer + warn against blind respawn.
+    const fullStderr = stderrWrites.join("");
+    expect(fullStderr).toContain("corrupted");
+    expect(fullStderr).toContain("agentic-workflow-reviewer-agent.toon");
+    expect(fullStderr).toContain("infinite loop");
+
+    // CRITICAL: findings.toon must NOT have been written.
+    const findingsPath = path.join(
+      sandbox,
+      ".plan-execution/convergence/findings.toon",
+    );
+    expect(fs.existsSync(findingsPath)).toBe(false);
+
+    // CRITICAL: spawn-request.toon must NOT have been written (would
+    // trigger redundant respawn of the 5 already-valid envelopes).
+    const spawnRequestPath = path.join(
+      sandbox,
+      ".plan-execution/convergence/spawn-request.toon",
+    );
+    expect(fs.existsSync(spawnRequestPath)).toBe(false);
   });
 });
 
