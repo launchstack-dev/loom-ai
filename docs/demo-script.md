@@ -20,7 +20,7 @@ If we eventually want a polished video (3-5 min, voiceover, scope-drift-getting-
 ## Setup (before recording)
 
 1. **Clean terminal**: iTerm or Terminal.app, font size **16+**, color scheme high-contrast (Dracula or default-dark). Window sized to **100×30**. Anything narrower truncates Loom's status line.
-2. **Clean project**: use `examples/billing-api/` (created in this kit). Pre-run `/loom-init --audit-only` so wiki is seeded. Don't actually commit init artifacts — we want the recording to start from a known state.
+2. **Clean project**: pick a small scratch project you don't mind running Loom against (a scratch repo with a few source files is enough). Pre-run `/loom-init --audit-only` so wiki is seeded. Don't actually commit init artifacts — we want the recording to start from a known state.
 3. **Install asciinema**: `brew install asciinema` (or apt / pip equivalent).
 4. **Pre-test the script**: run the commands once before recording. The hero moment depends on Loom's actual behavior at this version; if anything has drifted, fix the script before capturing.
 

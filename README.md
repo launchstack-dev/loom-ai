@@ -21,8 +21,6 @@ For the full pipeline on a one-line idea:
 /loom-auto --from "add user auth with RBAC and team management"
 ```
 
-Want to try it on a sandbox project first? Clone this repo and `cd examples/billing-api/` — `RUN-THIS.md` walks five commands end-to-end.
-
 ## What's different
 
 Most "multi-agent" tools rely on prompts to enforce boundaries. Loom blocks at the tool-call level: file ownership, contract locks, context budget, wiki integrity, and quality gates are Claude Code hooks, not instructions. Most BDD layers treat scenarios as documentation. Loom scenarios are the canonical leaf-level testable unit — the convergence-planner emits verification targets directly from them and the pipeline blocks until they pass. Most spec workflows stop at the initial plan. Loom adds an OpenSpec-style change-proposal lifecycle over per-domain contract pages so the spec keeps converging after launch.
