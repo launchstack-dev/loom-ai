@@ -1,14 +1,22 @@
 # Loom
 
-A discipline layer on top of Claude Code. Loom turns loose prompts into locked scope contracts, plans into Given/When/Then scenarios that drive convergence, and ongoing maintenance into validated change proposals over per-domain contract pages — with deterministic enforcement at the tool-call level.
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v0.0.1-blue.svg)](https://github.com/launchstack-dev/loom-ai/releases)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
 
-> **Status: alpha — `v0.0.x`.** Schemas may evolve with migrations. The convergence engine, scenarios layer, and change-proposal lifecycle are shipped and exercised; the installer/distribution polish (signed releases, Homebrew formula, version-compat machinery) is in flight. See [planning/plans/PLAN-oss-launch.md](planning/plans/PLAN-oss-launch.md) for the launch roadmap.
+**A discipline layer on top of Claude Code.** Give Loom a one-line idea — *"add user auth with RBAC and team management"* — and it drives a multi-agent pipeline from scope decisions, through wave-based execution, to passing tests and reviewed code. Tool-call-level hooks keep agents on-task, in-scope, and within budget. The artifacts you get back (plans, scenarios, contracts, wiki) keep working *after* the initial build, through structured change proposals.
 
 > **New here?** Start with [`docs/first-30-minutes.md`](docs/first-30-minutes.md) (narrated quickstart) and [`docs/concepts.md`](docs/concepts.md) (the five concepts you need before commands stop looking arbitrary). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
 
 ## Quickstart
 
-After [installing](#install), in a project directory:
+```bash
+# 1. Install Claude Code (https://docs.claude.com/claude-code) if you haven't.
+# 2. Bootstrap Loom into ~/.claude/:
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
+# 3. Restart your Claude Code session.
+# 4. In any project directory:
+```
 
 ```
 /loom-init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
@@ -21,6 +29,8 @@ For the full pipeline on a one-line idea:
 /loom-auto --from "add user auth with RBAC and team management"
 ```
 
+Full install options (latest `main`, private repos, local-dev pattern) in [Install](#install).
+
 ## What's different
 
 Most "multi-agent" tools rely on prompts to enforce boundaries. Loom blocks at the tool-call level: file ownership, contract locks, context budget, wiki integrity, and quality gates are Claude Code hooks, not instructions. Most BDD layers treat scenarios as documentation. Loom scenarios are the canonical leaf-level testable unit — the convergence-planner emits verification targets directly from them and the pipeline blocks until they pass. Most spec workflows stop at the initial plan. Loom adds an OpenSpec-style change-proposal lifecycle over per-domain contract pages so the spec keeps converging after launch.
@@ -32,13 +42,19 @@ The four pillars:
 3. **Hook-enforced discipline.** Thirteen enforcement hooks block unauthorized writes, lock contracts after Wave 0, cap context budget at 100k per spawn, gate premature stops, and keep the wiki coherent.
 4. **Change-proposal lifecycle.** After the initial materialize, `/loom-change init → review → approve → run → archive` mutates per-domain `contract-*` wiki pages atomically with drift validation. `/loom-quick` auto-emits a retroactive proposal so small work stays zero-ceremony.
 
-## Surface area
+## Status
 
-- **41 command files** — 29 top-level (12 noun-grouped roots + `/loom` dispatcher + subcommand verbs) + 12 subcommand decomposition files
-- **67 agent definitions** + 5 stage teammates
-- **48 protocol files** (31 typed schemas + 17 supporting protocol docs)
-- **17 hook files** (13 enforcement + 3 infrastructure + 1 context-budget test harness)
-- **104 catalog entries** in `skills/library.yaml`
+Loom is **alpha (`v0.0.x`)** — the core pipeline is shipped and exercised on real work, but the surface is still settling.
+
+| Shipped today | In flight (post-v0.0.1) |
+|---|---|
+| Convergence engine (4 tiers) | Cosign-signed release tarballs (keyless OIDC + Sigstore) |
+| Scenarios layer + criteria-driven testing | Homebrew formula |
+| Change-proposal lifecycle over contract pages | Version-pinned installer with atomic rollback |
+| Hook-enforced execution discipline | Cross-platform expansion (Windows support) |
+| Wiki maintenance + drift validation | `/loom-skill create` wizard |
+
+Schemas can evolve with migrations — `/loom-upgrade` handles per-project migration when new schema versions ship. See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for what lands in v0.1.0.
 
 ## Commands
 
@@ -108,17 +124,11 @@ The split is the layer they touch. `/loom-library` is your **Loom binary** (the 
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
 | `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
 
-<!-- TODO(Phase 6 or later): DRY up duplicate extensibility coverage —
-     the older "### Bespoke reviewers" subsection (~line 460) and
-     "## Per-Project Extensibility" section (~line 740) overlap with
-     this consolidated "## Extending Loom" block. Phase 0b is purely
-     additive; the relocation/removal of those duplicates is out of
-     scope here per wave-ownership boundaries. -->
 ## Extending Loom
 
 Loom is an **extensible** platform, not a fixed methodology — every reviewer, executor, hook, schema, scenario template, and command is a swappable resource, not a hardcoded pipeline step. Tools that ship a single opinionated workflow force you to fight the framework when your domain doesn't fit; Loom hands you the same primitives its built-in agents use and lets you assemble what your project actually needs.
 
-There are two audiences for this surface: **consumers** and **authors**. To install a published skill kit, run `/loom-library use <kit>`. To author your own skill, agent, or kit, run `/loom-skill create` (wizard ships in Phase 8; `/loom-agent create` is available today). The wizards scaffold the resource, add it to `skills/library.yaml`, and register it where it belongs.
+There are two audiences for this surface: **consumers** and **authors**. To install a published skill kit, run `/loom-library use <kit>`. To author your own agent today, run `/loom-agent create`. The wizards scaffold the resource, add it to `skills/library.yaml`, and register it where it belongs.
 
 Five resource types compose every Loom behavior: **agent** (`.claude/agents/`), **prompt** (`.claude/commands/`), **protocol** (`agents/protocols/`), **skill** (`~/.claude/skills/`), and **infrastructure** (`hooks/`, `scripts/`). Per-project registration lives in `.claude/orchestration.toml`.
 
@@ -168,11 +178,19 @@ Platforms tested: macOS (Apple Silicon + Intel), Ubuntu 22.04+. Windows is not s
 
 ### One-liner
 
+**Stable (recommended)** — pin to a tagged release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
+```
+
+**Latest** — track `main` for early-adopter changes:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
-This is a **minimal bootstrap**. It fetches a small set of core commands plus infrastructure from `main`, validated against `checksums.sha256` (currently from the same branch — signed-tarball release flow is in flight; see planning/plans/PLAN-oss-launch.md).
+Either form is a **minimal bootstrap**. It fetches a small set of core commands plus infrastructure from the chosen ref, validated against `checksums.sha256` from that same ref. The cosign-signed tarball flow lands in v0.1.0 (see [Status](#status)).
 
 ### What gets installed
 
@@ -275,9 +293,9 @@ gh auth login
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh | bash
 ```
 
-### Signed-release path (in flight)
+### Signed-release path
 
-The current installer fetches files directly from `main` and validates against a same-branch checksum manifest. The cosign + Sigstore signed-tarball flow (keyless, OIDC-backed) plus version pinning (`--ref vX.Y.Z`) and atomic file-scoped rollback land with the OSS launch. See planning/plans/PLAN-oss-launch.md for the launch roadmap.
+The current installer fetches files directly from the chosen ref (tag or branch) and validates against a same-ref checksum manifest. The cosign + Sigstore signed-tarball flow (keyless, OIDC-backed) plus version-pinned `--ref vX.Y.Z` installs and atomic file-scoped rollback land in v0.1.0. See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for the launch roadmap.
 
 ## Pre-flight Scope Contract
 
@@ -869,17 +887,21 @@ Manual: `/loom-wiki ingest`, `/loom-wiki lint`, `/loom-wiki query "question"`.
 ## Tests
 
 ```bash
+# Root suite (scenarios, change validators, contract-page drift, e2e)
+bun install && bunx vitest run
+
 # Protocol tests
-cd test/protocol && npm install && npx vitest run
+(cd test/protocol && bun install && bunx vitest run)
 
 # Hook tests
-cd hooks && npm install && npx vitest run
-
-# Top-level (scenarios, change validators, contract-page drift, e2e)
-npx vitest run
+(cd hooks && bun install && bunx vitest run)
 ```
 
+`bun` is preferred for speed; `npm install && npx vitest run` works as a fallback.
+
 ## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch + commit conventions, the local-dev install pattern, and how to run the test suites.
 
 After cloning, run once to enable the integrity-protection git hooks:
 
@@ -887,7 +909,7 @@ After cloning, run once to enable the integrity-protection git hooks:
 scripts/install-hooks.sh
 ```
 
-This sets `core.hooksPath = scripts/git-hooks`. The pre-commit hook auto-regenerates `checksums.sha256` whenever you stage a file the manifest tracks (`hooks/*`, `commands/*`, `config/*`, `skills/library.yaml`). `install.sh` validates downloaded files against this manifest on cold install — drift would break every fresh install on `main`. The hook closes that window locally; the `checksums` CI workflow is the safety net for contributors who skip the install step.
+This sets `core.hooksPath = scripts/git-hooks`. The pre-commit hook auto-regenerates `checksums.sha256` whenever you stage a file the manifest tracks (`hooks/*`, `commands/*`, `config/*`, `skills/library.yaml`). `install.sh` validates downloaded files against this manifest on cold install — drift would break every fresh install. The hook closes that window locally; the `checksums` CI workflow is the safety net for contributors who skip the install step.
 
 To regenerate manually:
 
