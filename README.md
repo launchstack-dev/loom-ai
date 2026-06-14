@@ -44,17 +44,9 @@ The four pillars:
 
 ## Status
 
-Loom is **alpha (`v0.0.x`)** — the core pipeline is shipped and exercised on real work, but the surface is still settling.
+Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
 
-| Shipped today | In flight (post-v0.0.1) |
-|---|---|
-| Convergence engine (4 tiers) | Cosign-signed release tarballs (keyless OIDC + Sigstore) |
-| Scenarios layer + criteria-driven testing | Homebrew formula |
-| Change-proposal lifecycle over contract pages | Version-pinned installer with atomic rollback |
-| Hook-enforced execution discipline | Cross-platform expansion (Windows support) |
-| Wiki maintenance + drift validation | `/loom-skill create` wizard |
-
-Schemas can evolve with migrations — `/loom-upgrade` handles per-project migration when new schema versions ship. See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for what lands in v0.1.0.
+See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for v0.1.0 scope.
 
 ## Commands
 
@@ -191,6 +183,34 @@ curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/instal
 ```
 
 Either form is a **minimal bootstrap**. It fetches a small set of core commands plus infrastructure from the chosen ref, validated against `checksums.sha256` from that same ref. The cosign-signed tarball flow lands in v0.1.0 (see [Status](#status)).
+
+### Trust model
+
+Before running any of the install commands, here's exactly what they touch:
+
+- **Writes only to `~/.claude/` and `~/.cache/loom/`.** No `sudo`, no system paths, no shell-init files.
+- **No outbound calls after install.** The installer fetches files from GitHub; nothing in Loom phones home.
+- **Files are checksum-verified** against `checksums.sha256` from the same ref before they're written.
+
+### Install without piping to `bash`
+
+If you'd rather inspect the installer before running it:
+
+```bash
+# Download, read, then run
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh -o /tmp/loom-install.sh
+less /tmp/loom-install.sh
+bash /tmp/loom-install.sh
+```
+
+Or clone the repo at the tag and run the installer locally:
+
+```bash
+git clone --branch v0.0.1 --depth 1 https://github.com/launchstack-dev/loom-ai.git
+cd loom-ai && ./install.sh
+```
+
+The `git clone` path is also the entry point for the [local-dev install pattern](#two-install-patterns) if you plan to edit Loom.
 
 ### What gets installed
 
