@@ -151,7 +151,7 @@ Loom supports two install patterns. Pick the one that matches your relationship 
 
 `/loom-library sync` auto-detects which pattern is in use and runs the right reconciliation. You never have to remember which one you're on.
 
-The rest of this section assumes the curl pattern. See [`### Update + uninstall`](#update--uninstall) below for the local-dev update flow.
+The rest of this section assumes the curl pattern. See [`### Update + uninstall`](#update-uninstall) below for the local-dev update flow.
 
 ### Prerequisites
 
@@ -262,7 +262,7 @@ curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/uninst
 
 Removes Loom-installed paths from `~/.claude/` and `~/.cache/loom/` per `install-state.toon`. For local-dev installs, also removes the symlinks pointing at the local checkout (the checkout itself is left untouched — `rm` the clone manually if you want).
 
-**Note on `/loom-upgrade`:** This is *not* an install-tree command. It scans the planning artifacts in whatever project you're cd'ed into (`PLAN.md`, `ROADMAP.md`, state TOON files) and migrates them from old schemas to current. Don't run it expecting an install upgrade — see [Maintenance verbs](#maintenance-verbs--loom-library-vs-loom-upgrade) above for the split.
+**Note on `/loom-upgrade`:** This is *not* an install-tree command. It scans the planning artifacts in whatever project you're cd'ed into (`PLAN.md`, `ROADMAP.md`, state TOON files) and migrates them from old schemas to current. Don't run it expecting an install upgrade — see [Maintenance verbs](#maintenance-verbs-loom-library-vs-loom-upgrade) above for the split.
 
 ### Private repo
 

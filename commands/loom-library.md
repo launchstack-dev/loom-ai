@@ -245,12 +245,12 @@ Reconcile `~/.claude/` against the live local checkout. No fetch happens — the
 **Allow-list of paths the local-dev branch reconciles** (under `${checkoutRoot}`):
 
 - `commands/loom-*.md` → `~/.claude/commands/`
-- `commands/loom-*/*.md` (any subcommand directory — `loom-plan/`, `loom-roadmap/`, `loom-auto/`, and any future `loom-*/`) → `~/.claude/commands/{subdir}/`
+- `commands/loom-*/**/*.md` — **recursive descent** under any `loom-*/` subdirectory. Covers depth-2 files (`commands/loom-plan/create.md`), depth-3 files (`commands/loom-auto/links/execute.md`), and any deeper nesting that arrives later. Verified against the live checkout: 12 files at depth 2, 3 files at depth 3 (under `loom-auto/links/`). → `~/.claude/commands/{relpath}/`
 - `agents/*.md` → `~/.claude/agents/`
 - `agents/protocols/*.md` → `~/.claude/agents/protocols/`
 - `skills/library.yaml` → `~/.claude/skills/library/library.yaml` (already symlinked; verified, not re-created)
 
-The glob form on subcommand dirs is intentional: it auto-covers any new subcommand tree added upstream (e.g. a future `commands/loom-upgrade/foo.md`) without a spec update. The same gap that the smoke-test surfaced for `plan-critic-agent` doesn't repeat for subcommand files.
+The recursive glob on subcommand dirs is intentional: it auto-covers any new subcommand tree added upstream (e.g. a future `commands/loom-upgrade/sync.md` or new files under `commands/loom-auto/{links,phases}/`) without a spec update. The same gap that the smoke-test surfaced for `plan-critic-agent` doesn't repeat for subcommand files. **Implementation note:** when expanding the recursive glob, ensure each intermediate directory under `~/.claude/commands/` exists (`mkdir -p` on the parent of each leaf symlink) before creating the symlink itself — depth-3+ leaves need `loom-auto/links/` etc. to exist first.
 
 Hooks (`~/.claude/statusline-renderer.cjs`, etc.) are NOT reconciled — they are runtime-loaded at session start and the local-dev pattern leaves them as install.sh copies. The user can re-run `install.sh` if a hook file changes upstream (rare).
 
