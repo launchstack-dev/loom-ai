@@ -163,6 +163,23 @@ library:
       description: Schema for contract-partition.toon — explicit partitioning manifest mapping entities to contract-{domain} pages (used by /loom-plan materialize)
       source: agents/protocols/entity-domain-partition.schema.md
 
+    # Convergence-generalization schemas (Phase 0 of convergence-generalization plan; consumed by document-mode loops)
+    - name: findings-schema
+      description: Schema for findings.toon — uniform ConvergenceFindings contract emitted by harnesses (target/criteria/document modes); locked severity-to-convergence-severity mapping (critical|high → blocking, medium → warning, low|info|advisory → info); preserves W-03 reviewerAgent attribution per row
+      source: agents/protocols/findings.schema.md
+
+    - name: plan-critique-schema
+      description: Schema for critique.toon — PlanCritique envelope written by plan-critic-agent (Step 1.7); mirrors findings.schema.md shape so plan-builder-agent's Integrator Mode can consume critic output through the same integrator contract
+      source: agents/protocols/plan-critique.schema.md
+
+    - name: iteration-snapshot-schema
+      description: Schema for IterationSnapshot metadata files at planning/history/snapshots/{slug}-pass-{N}.toon — pairs with the per-iteration subject-file copy; sha256-verified atomic-write contract used by document-mode auto-snapshots (C-07)
+      source: agents/protocols/iteration-snapshot.schema.md
+
+    - name: convergence-summary-schema
+      description: Schema for convergence-summary.toon — 11-field terminal-state envelope for any /loom-converge run (target/criteria/document); link-extraction readiness contract per C-11; halt-reason enum cross-referenced from convergence-driver.md circuit breakers
+      source: agents/protocols/convergence-summary.schema.md
+
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
     - name: python-conventions
@@ -316,9 +333,18 @@ library:
       requires: [protocol:execution-protocols, protocol:scope-contract-schema]
 
     - name: plan-builder-agent
-      description: Creates v1/v2 PLAN.md files - v2 is spec-driven with API specs, state machines, error handling
+      description: Creates v1/v2 PLAN.md files - v2 is spec-driven with API specs, state machines, error handling. Also supports Integrator Mode (consumes findings.toon + current subject, returns revised subject) for /loom-plan create --autoconverge document-mode loops
       source: agents/plan-builder-agent.md
-      requires: [protocol:spec-schema]
+      requires: [protocol:spec-schema, protocol:findings-schema]
+
+    - name: plan-critic-agent
+      description: Adversarial reviewer for PLAN.md drafts — walks a locked 30-item checklist across 6 dimensions and writes a PlanCritique envelope to .plan-execution/critique.toon for Step 1.7 revise pass. Haiku-tier, advisory-only, severity enum {blocking, warning, info}; skipped under --skip-critic per Q-02
+      source: agents/plan-critic-agent.md
+      requires: [protocol:plan-critique-schema, protocol:agent-result-schema, agent:plan-critic-checklist]
+
+    - name: plan-critic-checklist
+      description: 30-item distilled concern checklist (5 per dimension across feature-coverage, strategy, ux, phasing, parallelization, agentic-workflow) — paired with plan-critic-agent; the agent reads this file inline as a guide for its critique
+      source: agents/plan-critic-checklist.md
 
     # Utility agents
     - name: meta-agent
@@ -449,7 +475,7 @@ library:
     - name: loom-plan
       description: "Plan operations — create, review, execute, test, materialize plans via subcommands. create flags: --autoconverge (document-mode convergence loop after plan write), --skip-critic (skip plan-critic-agent and Step 1.7 revise pass), --max-iterations N (override autoconverge cap 1-10)"
       source: commands/loom-plan.md
-      requires: [agent:plan-builder-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, protocol:execution-protocols, protocol:plan-schema, protocol:spec-schema, protocol:scenario-schema, protocol:contract-page-extensions-schema, protocol:entity-domain-partition-schema]
+      requires: [agent:plan-builder-agent, agent:plan-critic-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent, agent:phasing-agent, agent:parallelization-agent, agent:agentic-workflow-agent, agent:contracts-agent, agent:implementer-agent, agent:wiring-agent, agent:verification-agent, agent:acceptance-criteria-agent, agent:unit-test-agent, agent:e2e-test-agent, protocol:execution-protocols, protocol:plan-schema, protocol:spec-schema, protocol:scenario-schema, protocol:contract-page-extensions-schema, protocol:entity-domain-partition-schema, protocol:findings-schema, protocol:plan-critique-schema, protocol:iteration-snapshot-schema, protocol:convergence-summary-schema]
 
     - name: loom-converge
       description: "Convergence loop — target, criteria, or document mode. --mode document iterates a single file via harness + integrator until zero blocking findings; --target <path> compares output to a golden reference; --criteria runs TDD + agent reviews. Shared options: --max-iterations N, --dry-run, --resume, --no-auto-commit"

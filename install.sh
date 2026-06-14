@@ -64,6 +64,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-plan/execute.md:${CLAUDE_DIR}/commands/loom-plan/execute.md"
   "commands/loom-plan/test.md:${CLAUDE_DIR}/commands/loom-plan/test.md"
   "commands/loom-plan/status.md:${CLAUDE_DIR}/commands/loom-plan/status.md"
+  "commands/loom-plan/materialize.md:${CLAUDE_DIR}/commands/loom-plan/materialize.md"
   # Progressive disclosure sub-files for loom-roadmap
   "commands/loom-roadmap/init.md:${CLAUDE_DIR}/commands/loom-roadmap/init.md"
   "commands/loom-roadmap/review.md:${CLAUDE_DIR}/commands/loom-roadmap/review.md"
