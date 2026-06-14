@@ -17,7 +17,7 @@ createdAt: 2026-05-23T12:00:00.000Z
 updatedAt: 2026-05-27T09:00:00.100Z
 createdBy: materializer
 updatedBy: loom-quick
-sourceRefs[2]: /Users/alice/.loom-ai/test-fixtures/spec-upgrades-e2e/ROADMAP.md, /Users/alice/.loom-ai/test-fixtures/spec-upgrades-e2e/PLAN.md
+sourceRefs[2]: test-fixtures/spec-upgrades-e2e/ROADMAP.md, test-fixtures/spec-upgrades-e2e/PLAN.md
 crossRefs[0]:
 tags[2]: contract, customers
 staleness: fresh

@@ -17,7 +17,7 @@ createdAt: 2026-05-23T12:00:00.000Z
 updatedAt: 2026-05-24T12:00:00.000Z
 createdBy: materializer
 updatedBy: human:fixture
-sourceRefs[2]: /Users/alice/.loom-ai/test-fixtures/spec-upgrades-e2e/ROADMAP.md, /Users/alice/.loom-ai/test-fixtures/spec-upgrades-e2e/PLAN.md
+sourceRefs[2]: test-fixtures/spec-upgrades-e2e/ROADMAP.md, test-fixtures/spec-upgrades-e2e/PLAN.md
 crossRefs[0]:
 tags[2]: contract, invoicing
 staleness: fresh

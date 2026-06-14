@@ -19,3 +19,10 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Claude Code per-project state (machine-specific, must not ship)
+.claude/projects/
+.claude/settings.local.json
+
+# Backup files
+*.bak
