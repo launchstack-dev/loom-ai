@@ -88,6 +88,8 @@ These two commands look like they overlap; they don't. Different scopes, differe
 
 The split is the layer they touch. `/loom-library` is your **Loom binary** (the install in your home tree). `/loom-upgrade` is your **project data** (whatever directory you `cd` into). They never overlap.
 
+**Naming-collision note:** `/loom-library upgrade` exists as a deprecated alias for `/loom-library update` and emits a stderr warning. It's **NOT** the same as `/loom-upgrade`. If you want to migrate a project's planning artifacts → `/loom-upgrade`. If you want to refresh your install catalog → `/loom-library update` (or `/loom-library upgrade`, but you'll get a deprecation warning steering you to `update`).
+
 ### Per-command reference
 
 | Command | Subcommands | What it does |

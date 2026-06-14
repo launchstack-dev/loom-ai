@@ -17,7 +17,7 @@ Parse arguments:
 - `add <source>`: Add new item (local path or GitHub URL) to catalog
 - `remove <name>`: Uninstall, warn about dependents. If `<name>` matches a kit in the `kits:` section of library.yaml, treat as kit removal (see Kit Operations below).
 - `update`: Check all sources for changes, show new catalog entries, confirm before applying. If `--check-only` is appended, report what's available without applying.
-- `upgrade`: Alias for `update` (convenience)
+- `upgrade`: **Deprecated alias for `update`.** Emit a stderr warning when invoked: `warning: '/loom-library upgrade' is a deprecated alias for '/loom-library update'. Use 'update' instead. Note: '/loom-upgrade' (no library prefix) is a different command — it migrates per-project planning artifacts, not the install tree.` Then proceed as `update`. (Gemini PR #19 round 5 finding: the `upgrade` alias collides with the unrelated `/loom-upgrade` command, causing user confusion between per-machine install upgrade and per-project artifact migration. Deprecation prevents accidental misuse without breaking existing invocations.)
 
 When `use` or `remove` receives a name, first check if it matches a kit in the `kits:` section of library.yaml. If it does, dispatch to kit-specific logic (see Kit Operations below). If not, fall through to individual item logic as before.
 
@@ -300,6 +300,17 @@ Run with --apply to execute.
       - `sha256` set to SHA-256 of the file at `${checkoutRoot}/{source}` (use `shasum -a 256` or `crypto.createHash('sha256')` against the file the symlink points TO, not the symlink itself — matches the curl-install semantics where sha256 tracks installed content)
       - `component` resolved by catalog lookup when available (read the entry's `component` field if present in `library.yaml`); for non-catalog leaves (subcommand sub-files, root dispatcher), default to `"loom-core"` — the component identifier the canonical schema uses for first-party Loom files
       - `installedAt` set to the current run timestamp
+
+   **install-state.toon schema-version handling** (Gemini PR #19 round 5 finding — pre-existing spec inconsistency surfaced here):
+
+   This file has two schema-version references that have drifted: the `State Management` section (lines 30-44) describes schemaVersion 2 with 5 columns; the `use` section (line 172) and this `sync` Branch B both write the v3 7-column form (which is what `install-state.schema.md` documents as current). `install.sh` currently bootstraps with v2.
+
+   On any `sync` invocation (curl OR local-dev), before writing, read the current `schemaVersion`:
+   - `schemaVersion: 1` (legacy contentHash): migrate per the "Migration from v1" note in State Management — read fields, ignore contentHash, write as v3.
+   - `schemaVersion: 2`: migrate per `install-state.schema.md § v2 → v3 migration` (best-effort sha256 from each existing item's targetPath; component = "loom-core"). Write as v3.
+   - `schemaVersion: 3`: write as v3 verbatim.
+
+   In all three cases the file on disk after `sync --apply` is schemaVersion 3 with the 7-column items[] header. This collapses the v2/v3 drift each time `sync` runs without requiring a separate `/loom-upgrade` step. (Follow-up: align `install.sh` and the State Management section to v3 in a separate PR. Out of scope for this docs PR; tracked here so the implementer knows the migration belongs in `sync`.)
 
    **`name` and `type` resolution rules** (in priority order — Gemini PR #19 round 3 finding: progressive-disclosure sub-files like `commands/loom-plan/create.md` AND `commands/loom-roadmap/create.md` have identical filenames; deriving `name` from filename alone would cause collisions, overwriting entries in install-state.toon):
 
