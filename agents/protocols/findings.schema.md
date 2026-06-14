@@ -78,6 +78,8 @@ Each row in the `findings[]` typed array has these columns:
 
 The plan-review harness aggregates `AgentResult.issues[]` rows from the 6 reviewer agents. Each reviewer's `severity` enum (per `agent-result.schema.md`) maps deterministically to a `ConvergenceFindings.severity`. The aggregator MUST apply this mapping verbatim. Silent re-categorization is a `FINDINGS_SCHEMA_INVALID` defect.
 
+Two source enums coexist by design — see § "Why two enums" below.
+
 ### severityToConvergenceSeverity
 
 | AgentResult severity | ConvergenceFindings severity | `blockingCount` contribution | `advisoryCount` contribution |
@@ -88,6 +90,14 @@ The plan-review harness aggregates `AgentResult.issues[]` rows from the 6 review
 | `low` | `info` | 0 | +1 |
 | `info` | `info` | 0 | +1 |
 | `advisory` | `info` | 0 | +1 |
+| `blocking` | `blocking` | +1 | 0 |
+| `warning` | `warning` | 0 | +1 |
+
+### Why two enums
+
+Loom reviewer agents (`feature-coverage-reviewer-agent`, etc.) emit `severity` values aligned with the convergence-side enum (`{blocking, warning, info}`) per `agent-result.schema.md`'s canonical examples. Non-Loom reviewers and the original mapping table use the classic ladder (`{critical, high, medium, low, info, advisory}`). The aggregator accepts BOTH; the mapping table above is the union. The `info` row is identical across enums.
+
+**Smoke 2 Finding A (2026-06-13)** discovered that the plan-review harness's input-validator only recognized the classic ladder, silently dropping all `severity: warning` and `severity: blocking` rows emitted by Loom reviewers. The mapping table and the input validator have been extended to accept both enums. See `planning/notes/2026-06-13-wave-5-smoke-findings.md` for the recovery trail.
 
 ### Invariants
 

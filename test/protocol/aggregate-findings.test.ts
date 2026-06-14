@@ -58,13 +58,150 @@ function issue(
 // ---------------------------------------------------------------------------
 
 describe("severityToConvergenceSeverity", () => {
-  it("maps each AgentResult severity per findings.schema.md § Severity Mapping", () => {
+  it("maps each AgentResult severity per findings.schema.md § Severity Mapping (classic ladder)", () => {
     expect(severityToConvergenceSeverity("critical")).toBe("blocking");
     expect(severityToConvergenceSeverity("high")).toBe("blocking");
     expect(severityToConvergenceSeverity("medium")).toBe("warning");
     expect(severityToConvergenceSeverity("low")).toBe("info");
     expect(severityToConvergenceSeverity("info")).toBe("info");
     expect(severityToConvergenceSeverity("advisory")).toBe("info");
+  });
+
+  // Regression test for Smoke 2 Finding A (2026-06-13): reviewers emit
+  // {blocking, warning, info} per agent-result.schema.md but the original
+  // aggregator + harness validator only accepted the classic ladder, so
+  // these severities were silently dropped at the input-validator stage.
+  // This test asserts the extended mapping accepts both enums (the union).
+  it("maps convergence-aligned reviewer severities (blocking/warning) identity-style", () => {
+    expect(severityToConvergenceSeverity("blocking")).toBe("blocking");
+    expect(severityToConvergenceSeverity("warning")).toBe("warning");
+    // info is shared across both enums; identity behaviour is already covered
+    // by the classic-ladder test above.
+  });
+});
+
+// Smoke 2 Finding A regression: integration-realistic envelope that mirrors
+// what Loom reviewers actually emit in production (severity values from the
+// convergence-aligned enum, not the classic ladder). The original unit suite
+// only exercised the classic ladder, so the schema-seam mismatch slipped past
+// all 27 aggregator tests + 22 harness tests. This block defends against
+// future enum drift by asserting the realistic input shape produces the
+// expected counts.
+describe("aggregateFindings — realistic reviewer severities (Smoke 2 Finding A)", () => {
+  it("accepts blocking + warning + info from reviewers and counts them correctly", () => {
+    const envelopes: AgentResultEnvelope[] = [
+      envelope("feature-coverage-reviewer-agent", "success", [
+        issue("blocking", { message: "missing AC coverage" }),
+        issue("warning", { message: "Phase 1 stdout-assertion gap" }),
+      ]),
+      envelope("strategy-reviewer-agent", "success", [
+        issue("info", { message: "consider broader rollout note" }),
+      ]),
+      envelope("ux-reviewer-agent", "success", []),
+      envelope("phasing-reviewer-agent", "success", [
+        issue("warning", { message: "phase ordering ambiguous" }),
+      ]),
+      envelope("parallelization-reviewer-agent", "success", []),
+      envelope("agentic-workflow-reviewer-agent", "success", [
+        issue("info", { message: "agent registration optional" }),
+      ]),
+    ];
+
+    const findings = aggregateFindings({
+      subject: SUBJECT,
+      iteration: 1,
+      envelopes,
+      now: fixedNow(),
+    });
+
+    expect(findings.findings.length).toBe(5);
+    expect(findings.blockingCount).toBe(1);
+    expect(findings.advisoryCount).toBe(4);
+
+    const severities = findings.findings.map((f) => f.severity).sort();
+    expect(severities).toEqual(["info", "info", "blocking", "warning", "warning"].sort());
+  });
+
+  it("does NOT silently drop reviewer-emitted blocking severities (regression for warning-drop bug)", () => {
+    // The bug was: reviewer envelope with severity: "blocking" produced a
+    // finding with severity: undefined (switch fell through), and the input
+    // validator earlier in the pipeline rejected the row outright. After the
+    // fix, the row lands as a real blocking finding and increments
+    // blockingCount.
+    const envelopes: AgentResultEnvelope[] = [
+      envelope("feature-coverage-reviewer-agent", "success", [
+        issue("blocking", { message: "schema mismatch — production-blocking" }),
+      ]),
+      envelope("strategy-reviewer-agent", "success", []),
+      envelope("ux-reviewer-agent", "success", []),
+      envelope("phasing-reviewer-agent", "success", []),
+      envelope("parallelization-reviewer-agent", "success", []),
+      envelope("agentic-workflow-reviewer-agent", "success", []),
+    ];
+    const findings = aggregateFindings({
+      subject: SUBJECT,
+      iteration: 1,
+      envelopes,
+      now: fixedNow(),
+    });
+    expect(findings.findings.length).toBe(1);
+    expect(findings.findings[0].severity).toBe("blocking");
+    expect(findings.blockingCount).toBe(1);
+    expect(findings.advisoryCount).toBe(0);
+  });
+
+  it("does NOT silently drop reviewer-emitted warning severities", () => {
+    const envelopes: AgentResultEnvelope[] = [
+      envelope("feature-coverage-reviewer-agent", "success", []),
+      envelope("strategy-reviewer-agent", "success", []),
+      envelope("ux-reviewer-agent", "success", []),
+      envelope("phasing-reviewer-agent", "success", []),
+      envelope("parallelization-reviewer-agent", "success", []),
+      envelope("agentic-workflow-reviewer-agent", "success", [
+        issue("warning", { message: "advisory-only finding" }),
+      ]),
+    ];
+    const findings = aggregateFindings({
+      subject: SUBJECT,
+      iteration: 1,
+      envelopes,
+      now: fixedNow(),
+    });
+    expect(findings.findings.length).toBe(1);
+    expect(findings.findings[0].severity).toBe("warning");
+    expect(findings.blockingCount).toBe(0);
+    expect(findings.advisoryCount).toBe(1);
+  });
+
+  it("handles MIXED enum inputs (legacy classic ladder + convergence-aligned in same run)", () => {
+    // Defensive: a fresh-install run may have one reviewer still emitting the
+    // classic ladder while others have migrated to the convergence-aligned
+    // values. The aggregator must accept the union.
+    const envelopes: AgentResultEnvelope[] = [
+      envelope("feature-coverage-reviewer-agent", "success", [
+        issue("critical", { message: "classic-ladder blocker" }),
+      ]),
+      envelope("strategy-reviewer-agent", "success", [
+        issue("blocking", { message: "convergence-aligned blocker" }),
+      ]),
+      envelope("ux-reviewer-agent", "success", []),
+      envelope("phasing-reviewer-agent", "success", [
+        issue("medium", { message: "classic-ladder warning" }),
+      ]),
+      envelope("parallelization-reviewer-agent", "success", [
+        issue("warning", { message: "convergence-aligned warning" }),
+      ]),
+      envelope("agentic-workflow-reviewer-agent", "success", []),
+    ];
+    const findings = aggregateFindings({
+      subject: SUBJECT,
+      iteration: 1,
+      envelopes,
+      now: fixedNow(),
+    });
+    expect(findings.findings.length).toBe(4);
+    expect(findings.blockingCount).toBe(2);
+    expect(findings.advisoryCount).toBe(2);
   });
 });
 

@@ -327,6 +327,85 @@ describe("readAgentResultEnvelope", () => {
     const env = readAgentResultEnvelope(filePath);
     expect(env!.status).toBe("failure");
   });
+
+  // Regression: Smoke 2 Finding A (2026-06-13) — the validator at line 433
+  // only accepted the classic severity ladder, so reviewer-emitted
+  // `severity: warning` and `severity: blocking` rows were dropped at parse
+  // time with a stderr warning. Real reviewer-emit envelopes use the
+  // convergence-aligned enum. These tests assert the validator accepts both
+  // enums end-to-end (parse + pass through to aggregator).
+  it("accepts severity: blocking from reviewer envelopes (Smoke 2 Finding A regression)", () => {
+    const filePath = path.join(tmp, "blocking.toon");
+    fs.writeFileSync(
+      filePath,
+      encodeAgentResult({
+        agent: "feature-coverage-reviewer-agent",
+        status: "success",
+        issues: [
+          {
+            severity: "blocking",
+            description: "missing scenario coverage on F-01",
+            file: "planning/PLAN.md",
+          },
+        ],
+      }),
+    );
+    const env = readAgentResultEnvelope(filePath);
+    expect(env).not.toBeNull();
+    expect(env!.issues!.length).toBe(1);
+    expect(env!.issues![0].severity).toBe("blocking");
+  });
+
+  it("accepts severity: warning from reviewer envelopes (Smoke 2 Finding A regression)", () => {
+    const filePath = path.join(tmp, "warning.toon");
+    fs.writeFileSync(
+      filePath,
+      encodeAgentResult({
+        agent: "agentic-workflow-reviewer-agent",
+        status: "success",
+        issues: [
+          {
+            severity: "warning",
+            description: "Phase 1 stdout-assertion gap",
+            file: "planning/PLAN.md",
+          },
+        ],
+      }),
+    );
+    const env = readAgentResultEnvelope(filePath);
+    expect(env).not.toBeNull();
+    expect(env!.issues!.length).toBe(1);
+    expect(env!.issues![0].severity).toBe("warning");
+  });
+
+  it("accepts a mixed envelope with both classic-ladder and convergence-aligned severities", () => {
+    const filePath = path.join(tmp, "mixed.toon");
+    fs.writeFileSync(
+      filePath,
+      encodeAgentResult({
+        agent: "strategy-reviewer-agent",
+        status: "success",
+        issues: [
+          { severity: "blocking", description: "convergence-aligned blocker" },
+          { severity: "critical", description: "classic-ladder blocker" },
+          { severity: "warning", description: "convergence-aligned warning" },
+          { severity: "medium", description: "classic-ladder warning" },
+          { severity: "info", description: "shared info" },
+        ],
+      }),
+    );
+    const env = readAgentResultEnvelope(filePath);
+    expect(env).not.toBeNull();
+    expect(env!.issues!.length).toBe(5);
+    const severities = env!.issues!.map((i) => i.severity);
+    expect(severities).toEqual([
+      "blocking",
+      "critical",
+      "warning",
+      "medium",
+      "info",
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------

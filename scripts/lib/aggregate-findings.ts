@@ -85,14 +85,31 @@ const CANONICAL_REVIEWER_ORDER: ReviewerAgent[] = [...CANONICAL_REVIEWER_AGENTS]
 // Input shapes — narrow subset of AgentResult that the aggregator consumes.
 // ---------------------------------------------------------------------------
 
-/** Severity values accepted from `AgentResult.issues[]`. */
+/**
+ * Severity values accepted from `AgentResult.issues[]`.
+ *
+ * Two enums coexist by design (the agent-result schema and the convergence
+ * schema diverged at the seam — see Smoke 2 Finding A 2026-06-13). The
+ * aggregator accepts BOTH:
+ *
+ * - **Classic severity ladder** (`critical`, `high`, `medium`, `low`, `info`,
+ *   `advisory`): used by non-Loom reviewers and the original
+ *   findings.schema.md mapping table.
+ * - **Convergence-aligned values** (`blocking`, `warning`, `info`): used by
+ *   Loom reviewer agents per agent-result.schema.md's canonical examples.
+ *
+ * Both map cleanly via `severityToConvergenceSeverity`. `info` is the only
+ * value that exists in both enums (identity in either).
+ */
 export type AgentIssueSeverity =
   | "critical"
   | "high"
   | "medium"
   | "low"
   | "info"
-  | "advisory";
+  | "advisory"
+  | "blocking"
+  | "warning";
 
 /** Convergence-side severity values per findings.schema.md. */
 export type ConvergenceSeverity = "blocking" | "warning" | "info" | "advisory";
@@ -202,7 +219,8 @@ export class FindingsInvariantViolation extends Error {
 
 /**
  * Map an AgentResult severity onto a ConvergenceFindings severity.
- * Verbatim from findings.schema.md § Severity Mapping.
+ * Verbatim from findings.schema.md § Severity Mapping (extended for
+ * convergence-aligned reviewer outputs per Smoke 2 Finding A).
  */
 export function severityToConvergenceSeverity(
   severity: AgentIssueSeverity,
@@ -210,8 +228,10 @@ export function severityToConvergenceSeverity(
   switch (severity) {
     case "critical":
     case "high":
+    case "blocking":
       return "blocking";
     case "medium":
+    case "warning":
       return "warning";
     case "low":
     case "info":

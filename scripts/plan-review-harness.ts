@@ -132,12 +132,18 @@ const REVIEWER_AGENT_FILES: ReviewerAgentRow[] = [
 ];
 
 const VALID_AGENT_ISSUE_SEVERITIES: readonly AgentIssueSeverity[] = [
+  // Classic severity ladder (legacy findings.schema.md mapping).
   "critical",
   "high",
   "medium",
   "low",
   "info",
   "advisory",
+  // Convergence-aligned values emitted by Loom reviewer agents per
+  // agent-result.schema.md (added 2026-06-13 per Smoke 2 Finding A —
+  // reviewers were emitting these and the harness silently dropped them).
+  "blocking",
+  "warning",
 ];
 
 // ---------------------------------------------------------------------------
