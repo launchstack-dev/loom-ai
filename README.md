@@ -151,7 +151,7 @@ Loom supports two install patterns. Pick the one that matches your relationship 
 
 `/loom-library sync` auto-detects which pattern is in use and runs the right reconciliation. You never have to remember which one you're on.
 
-The rest of this section assumes the curl pattern. See [`### Update + uninstall`](#update-uninstall) below for the local-dev update flow.
+The rest of this section assumes the curl pattern. See [`### Update and uninstall`](#update-and-uninstall) below for the local-dev update flow.
 
 ### Prerequisites
 
@@ -225,7 +225,7 @@ After the bootstrap, kits are pulled on demand:
 /loom-library use loom-wiki         Wiki agents + hooks
 ```
 
-### Update + uninstall
+### Update and uninstall
 
 `/loom-library sync` is the single update command; it auto-detects which install pattern is in use (see [Two install patterns](#two-install-patterns)) and runs the right reconciliation.
 

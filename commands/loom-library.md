@@ -244,7 +244,7 @@ Reconcile `~/.claude/` against the live local checkout. No fetch happens — the
 
 **Allow-list of paths the local-dev branch reconciles** (under `${checkoutRoot}`):
 
-- `commands/loom-*.md` → `~/.claude/commands/`
+- `commands/loom*.md` → `~/.claude/commands/` — note the **single-glob form** (no hyphen between `loom` and `*`). This matches BOTH `commands/loom.md` (the root dispatcher) AND `commands/loom-*.md` (the noun commands like `loom-plan.md`). The earlier hyphen-bearing pattern `commands/loom-*.md` would have silently excluded `commands/loom.md` — caught by Gemini PR #19 re-review.
 - `commands/loom-*/**/*.md` — **recursive descent** under any `loom-*/` subdirectory. Covers depth-2 files (`commands/loom-plan/create.md`), depth-3 files (`commands/loom-auto/links/execute.md`), and any deeper nesting that arrives later. Verified against the live checkout: 12 files at depth 2, 3 files at depth 3 (under `loom-auto/links/`). → `~/.claude/commands/{relpath}/`
 - `agents/*.md` → `~/.claude/agents/`
 - `agents/protocols/*.md` → `~/.claude/agents/protocols/`
@@ -292,7 +292,16 @@ Run with --apply to execute.
 
 6. **Update `install-state.toon` to mirror the reconciled symlink set.** After `--apply` completes successfully, rewrite `install-state.toon` so `list` and `status` (which both read this file as their sole source of truth) correctly report the symlinked items as installed. (Gemini PR #19 finding: without this, `/loom-library list` would show NO items installed on a local-dev env even though dozens of symlinks exist.)
 
-   - For each leaf in the allow-list that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` derived from the filename (strip `.md` and convert to the catalog name), `type` per the catalog (agent/protocol/prompt), `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
+   - For each leaf in the allow-list that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` derived from the filename (strip `.md` and convert to the catalog name), `type` resolved as described below, `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
+
+   **`type` resolution rules** (in priority order — Gemini PR #19 re-review finding: progressive-disclosure sub-files like `commands/loom-plan/create.md` have no entries in `library.yaml`, so a catalog lookup ALONE would fail for them; fall through to path-based inference):
+   1. **Catalog lookup first.** If the file's `name` matches an entry in `library.yaml`, use that entry's declared section (`agents:` → `agent`, `protocols:` → `protocol`, `prompts:` → `prompt`, `skills:` → `skill`). This is the authoritative source for any file the catalog tracks.
+   2. **Path-based inference fallback** for files NOT in the catalog (subcommand sub-files, dispatcher files like `loom.md`, etc.):
+      - `commands/**/*.md` → `prompt`
+      - `agents/protocols/**/*.md` → `protocol`
+      - `agents/**/*.md` (excluding `agents/protocols/`) → `agent`
+      - `skills/**/SKILL.md` → `skill`
+   3. If neither rule applies (the file is in the allow-list but its path doesn't match any inference rule), log a warning `unknown type for {relpath}; defaulting to prompt` and use `prompt`. This is a never-should-happen safety case — the allow-list and the inference rules are designed to be exhaustive for the same paths.
    - For each `ORPHAN` removed, drop its row from `items[]`.
    - Set `lastSynced` to the wall-clock time of the run.
    - Use atomic write per `execution-conventions.md` (write to `{path}.tmp`, then `rename`).
