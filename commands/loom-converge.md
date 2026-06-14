@@ -40,15 +40,23 @@ Parse arguments after `converge`:
 - `--e2e` -- shorthand for `--tier e2e` (runs `e2e-test-writer-agent` for story generation then `e2e-runner-agent` for execution)
 - `--no-qa-review` -- skip qa-review tier (prints stderr warning)
 
+**Document mode options (mode=document):**
+- `--mode <enum>` -- one of `target`, `criteria`, `document`; required for document mode (target/criteria are inferred from `--target`/`--criteria` for backwards compat)
+- `--subject <path>` -- subject file the document-mode loop iterates over (required when mode=document)
+- `--integrator <agent>` -- integrator agent name (required when mode=document; resolved to `agents/{name}-agent.md` via the same dispatch path as production agents)
+- `--harness <path>` -- harness script path or registered name (required when mode=document; e.g., `scripts/plan-review-harness.ts`)
+
 **Shared options:**
-- `--config <path>` -- path to an existing converge.config (skip planner + setup, either mode)
+- `--config <path>` -- path to an existing converge.config (skip planner + setup, either mode); for hand-managed configs in a clean output-dir
+- `--resume-config <path>` -- path to an **alternate** converge.config TOON file; signals "wrapper-driven invocation, tolerate any partial iteration files in output-dir from prior runs" — used by `/loom-plan create --autoconverge` Step 5 and by e2e fixtures running concurrently. Distinct from `--config`: `--config` expects a clean output-dir; `--resume-config` is re-entry-safe.
+- `--output-dir <path>` -- override the convergence working directory (default: `.plan-execution/convergence/`); used by CI and concurrent fixture runs to avoid stomping on the default location. Pairs with `--resume-config` for fully-isolated wrapper-driven runs.
 - `--light` -- fewer questions in planner (one consolidated batch)
 - `--auto` -- accept all defaults, no interaction
-- `--max-iterations N` -- override max iterations (default: 5)
+- `--max-iterations N` -- override max iterations (default: 5 for target/criteria, 3 for document mode per C-05)
 - `--tolerance <threshold>` -- global tolerance override for target mode (0.0-1.0)
 - `--dry-run` -- run planner/setup, show config, stop before iteration loop
 - `--no-auto-commit` -- disable per-iteration auto-commits during convergence loop
-- `--resume` -- resume from `.plan-execution/convergence-state.toon`
+- `--resume` -- resume from `.plan-execution/convergence-state.toon` (works across all three modes)
 - `--status` -- show current convergence state without running anything
 - No args: show usage help
 
@@ -92,14 +100,22 @@ Two modes: target convergence (match a reference) and criteria convergence (sati
   --no-e2e                Skip e2e tier (stderr warning)
   --no-qa-review          Skip qa-review tier (stderr warning)
 
+### Document Mode Options (mode=document)
+  --mode <enum>           One of: target, criteria, document (required for document mode)
+  --subject <path>        Subject file the document-mode loop iterates over
+  --integrator <agent>    Integrator agent name (resolved via standard dispatch)
+  --harness <path>        Harness script path or registered name
+
 ### Shared Options
-  --config <path>         Existing converge.config (skip setup, either mode)
+  --config <path>         Existing converge.config (skip setup, either mode); clean output-dir expected
+  --resume-config <path>  Wrapper-supplied config; re-entry-safe (tolerates partial iteration files in output-dir)
+  --output-dir <path>     Override convergence working dir (default: .plan-execution/convergence/)
   --light                 Fewer questions in planner (one batch)
   --auto                  Accept all defaults, no interaction
-  --max-iterations N      Override max iterations (default: 5)
+  --max-iterations N      Override max iterations (default: 5; 3 for document mode per C-05)
   --dry-run               Run setup only, show config, stop before loop
   --no-auto-commit        Disable per-iteration auto-commits
-  --resume                Resume from saved state
+  --resume                Resume from saved state (any mode)
   --status                Show current convergence state
 
 Examples:
@@ -117,6 +133,12 @@ Examples:
   /loom-converge --full                     Run all 4 tiers in order
   /loom-converge --approve-qa               Bulk-approve non-blocking QA findings
   /loom-converge --criteria --no-tests      Skip unit/integration (warns on stderr)
+  /loom-converge --mode document --subject planning/plans/PLAN.md --integrator plan-builder-agent --harness scripts/plan-review-harness.ts
+                                            Document: iterate PLAN.md toward zero blocking findings
+  /loom-converge --resume-config .plan-execution/convergence/converge.config.toon
+                                            Wrapper-driven: pick up the autoconverge-generated config (re-entry-safe)
+  /loom-converge --resume-config <path> --output-dir /tmp/concurrent-run-1/
+                                            CI/concurrent: isolated output-dir to avoid colliding with default convergence runs
   /loom-converge --resume
   /loom-converge --status
 ```
