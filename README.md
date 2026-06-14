@@ -250,7 +250,7 @@ git pull
 /loom-library sync                  Reconcile ~/.claude/ symlinks vs the local checkout
 ```
 
-A `sync` on a local-dev env (detected via `~/.claude/skills/library/library.yaml` being a symlink) walks the local checkout's `commands/`, `agents/`, `agents/protocols/`, and `skills/library.yaml`. It adds symlinks for new files, replaces stale install.sh copies with symlinks, and prunes broken symlinks whose targets no longer exist. The local checkout itself updates via plain `git pull` — symlinks pick up the new file contents automatically the moment `git pull` finishes; `sync` only fires when the checkout's *file set* changes (new agents, removed files, etc.).
+A `sync` on a local-dev env (detected via `~/.claude/skills/library/library.yaml` being a symlink) walks the local checkout's `commands/`, `agents/`, `agents/protocols/`, `skills/library.yaml`, and `skills/*/SKILL.md` (native Claude Code skills). It adds symlinks for new files, replaces stale install.sh copies with symlinks, and prunes broken symlinks whose targets no longer exist. The local checkout itself updates via plain `git pull` — symlinks pick up the new file contents automatically the moment `git pull` finishes; `sync` only fires when the checkout's *file set* changes (new agents, removed files, etc.).
 
 `/loom-library sync` is dry-run by default; pass `--apply` to mutate.
 

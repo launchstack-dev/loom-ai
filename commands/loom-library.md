@@ -249,6 +249,7 @@ Reconcile `~/.claude/` against the live local checkout. No fetch happens — the
 - `agents/*.md` → `~/.claude/agents/`
 - `agents/protocols/*.md` → `~/.claude/agents/protocols/`
 - `skills/library.yaml` → `~/.claude/skills/library/library.yaml` (already symlinked; verified, not re-created)
+- `skills/*/SKILL.md` → `~/.claude/skills/{name}/SKILL.md` — native Claude Code skills under `skills/{name}/` (e.g. `skills/python-conventions/SKILL.md`). Gemini PR #19 round 4 finding: without this row, native skills installed by `/loom-library use <kit>` stay as stale regular files even when the rest of the env is in local-dev mode. Excludes `skills/library.yaml` (the catalog, handled above).
 
 The recursive glob on subcommand dirs is intentional: it auto-covers any new subcommand tree added upstream (e.g. a future `commands/loom-upgrade/sync.md` or new files under `commands/loom-auto/{links,phases}/`) without a spec update. The same gap that the smoke-test surfaced for `plan-critic-agent` doesn't repeat for subcommand files. **Implementation note:** when expanding the recursive glob, ensure each intermediate directory under `~/.claude/commands/` exists (`mkdir -p` on the parent of each leaf symlink) before creating the symlink itself — depth-3+ leaves need `loom-auto/links/` etc. to exist first.
 
@@ -292,7 +293,13 @@ Run with --apply to execute.
 
 6. **Update `install-state.toon` to mirror the reconciled symlink set.** After `--apply` completes successfully, rewrite `install-state.toon` so `list` and `status` (which both read this file as their sole source of truth) correctly report the symlinked items as installed. (Gemini PR #19 finding: without this, `/loom-library list` would show NO items installed on a local-dev env even though dozens of symlinks exist.)
 
-   - For each leaf in the allow-list (**excluding `skills/library.yaml`** — that file IS the catalog, not an installed item; Gemini PR #19 round 3 finding) that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` and `type` resolved per the rules below, `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
+   - For each leaf in the allow-list (**excluding `skills/library.yaml`** — that file IS the catalog, not an installed item; Gemini PR #19 round 3 finding) that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with **all 7 v3 schema columns** (`name,type,source,targetPath,sha256,component,installedAt` per `install-state.schema.md`; Gemini PR #19 round 4 finding — writing only 5 columns would mismatch the v3 header at line 172 and corrupt the file):
+      - `name` and `type` resolved per the rules below
+      - `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`)
+      - `targetPath` set to the `~/.claude/` symlink path
+      - `sha256` set to SHA-256 of the file at `${checkoutRoot}/{source}` (use `shasum -a 256` or `crypto.createHash('sha256')` against the file the symlink points TO, not the symlink itself — matches the curl-install semantics where sha256 tracks installed content)
+      - `component` resolved by catalog lookup when available (read the entry's `component` field if present in `library.yaml`); for non-catalog leaves (subcommand sub-files, root dispatcher), default to `"loom-core"` — the component identifier the canonical schema uses for first-party Loom files
+      - `installedAt` set to the current run timestamp
 
    **`name` and `type` resolution rules** (in priority order — Gemini PR #19 round 3 finding: progressive-disclosure sub-files like `commands/loom-plan/create.md` AND `commands/loom-roadmap/create.md` have identical filenames; deriving `name` from filename alone would cause collisions, overwriting entries in install-state.toon):
 
