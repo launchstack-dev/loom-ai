@@ -195,7 +195,7 @@ Installed contracts-agent
 
 **Pattern detection (first step of every sync run):**
 
-1. Inspect `~/.claude/skills/library/library.yaml`. If it is a symlink, follow it once and take the resolved target path (e.g. `/Users/foo/.loom-ai/skills/library.yaml`).
+1. Inspect `~/.claude/skills/library/library.yaml`. If it is a symlink, resolve it to its **absolute** target path (use `fs.realpath` or shell `readlink -f`, NOT bare `readlink`) — relative symlinks like `../../loom-ai/skills/library.yaml` resolve correctly to `/Users/foo/.loom-ai/skills/library.yaml` rather than being interpreted against the current working directory. (Gemini PR #19 round 3 finding.)
 2. Derive `checkoutRoot` by stripping the trailing `skills/library.yaml` (two path segments) — e.g. `/Users/foo/.loom-ai/skills/library.yaml` → `checkoutRoot = /Users/foo/.loom-ai`.
 3. Validate `checkoutRoot` is a Loom checkout by checking that BOTH `${checkoutRoot}/commands/` and `${checkoutRoot}/agents/` exist as directories. If either is missing, fall back to `installPattern = curl` (the symlink points somewhere unexpected — don't assume local-dev semantics).
 4. If validation passes, set `installPattern = local-dev`. If `library.yaml` is a regular file, set `installPattern = curl`. If `library.yaml` does not exist at all (no symlink, no regular file), abort with exit code `2` and stderr `error: library catalog missing at ~/.claude/skills/library/library.yaml — run install.sh or restore the symlink to a local checkout` — the install isn't bootstrapped, and falling through to curl mode would just fail again at the install-state read in Branch A. (Gemini PR #19 finding.)
@@ -292,15 +292,20 @@ Run with --apply to execute.
 
 6. **Update `install-state.toon` to mirror the reconciled symlink set.** After `--apply` completes successfully, rewrite `install-state.toon` so `list` and `status` (which both read this file as their sole source of truth) correctly report the symlinked items as installed. (Gemini PR #19 finding: without this, `/loom-library list` would show NO items installed on a local-dev env even though dozens of symlinks exist.)
 
-   - For each leaf in the allow-list that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` derived from the filename (strip `.md` and convert to the catalog name), `type` resolved as described below, `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
+   - For each leaf in the allow-list (**excluding `skills/library.yaml`** — that file IS the catalog, not an installed item; Gemini PR #19 round 3 finding) that is now a `SYMLINK-OK` (was-OK or newly-applied), add or update its row in `items[]` with: `name` and `type` resolved per the rules below, `source` set to the checkout-relative path (e.g. `commands/loom-plan/create.md`), `targetPath` set to the `~/.claude/` symlink path, `installedAt` set to the current run timestamp.
 
-   **`type` resolution rules** (in priority order — Gemini PR #19 re-review finding: progressive-disclosure sub-files like `commands/loom-plan/create.md` have no entries in `library.yaml`, so a catalog lookup ALONE would fail for them; fall through to path-based inference):
-   1. **Catalog lookup first.** If the file's `name` matches an entry in `library.yaml`, use that entry's declared section (`agents:` → `agent`, `protocols:` → `protocol`, `prompts:` → `prompt`, `skills:` → `skill`). This is the authoritative source for any file the catalog tracks.
-   2. **Path-based inference fallback** for files NOT in the catalog (subcommand sub-files, dispatcher files like `loom.md`, etc.):
-      - `commands/**/*.md` → `prompt`
-      - `agents/protocols/**/*.md` → `protocol`
-      - `agents/**/*.md` (excluding `agents/protocols/`) → `agent`
-      - `skills/**/SKILL.md` → `skill`
+   **`name` and `type` resolution rules** (in priority order — Gemini PR #19 round 3 finding: progressive-disclosure sub-files like `commands/loom-plan/create.md` AND `commands/loom-roadmap/create.md` have identical filenames; deriving `name` from filename alone would cause collisions, overwriting entries in install-state.toon):
+
+   1. **Catalog lookup by `source` path first.** If the file's checkout-relative path matches the `source` field of an entry in `library.yaml`, use that entry's `name` and declared section (`agents:` → `agent`, `protocols:` → `protocol`, `prompts:` → `prompt`, `skills:` → `skill`). This is the authoritative source for any file the catalog tracks.
+
+   2. **Fallback for files NOT in the catalog** (subcommand sub-files, dispatcher files like `loom.md`, etc.):
+      - **Name derivation:** Derive a unique name from the relative path by stripping the leading top-level dir (`commands/`, `agents/`, or `skills/`) and `.md` suffix, then replacing remaining slashes with hyphens. Examples: `commands/loom-plan/create.md` → `loom-plan-create`; `commands/loom-roadmap/create.md` → `loom-roadmap-create` (no collision); `commands/loom.md` → `loom`; `commands/loom-auto/links/execute.md` → `loom-auto-links-execute`.
+      - **Type inference:**
+        - `commands/**/*.md` → `prompt`
+        - `agents/protocols/**/*.md` → `protocol`
+        - `agents/**/*.md` (excluding `agents/protocols/`) → `agent`
+        - `skills/**/SKILL.md` → `skill`
+
    3. If neither rule applies (the file is in the allow-list but its path doesn't match any inference rule), log a warning `unknown type for {relpath}; defaulting to prompt` and use `prompt`. This is a never-should-happen safety case — the allow-list and the inference rules are designed to be exhaustive for the same paths.
    - For each `ORPHAN` removed, drop its row from `items[]`.
    - Set `lastSynced` to the wall-clock time of the run.
