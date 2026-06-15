@@ -29,6 +29,8 @@ Flags:
   --dry-run            Diagnose and assess impact without applying the fix
   --path <hint>        Hint at suspected file/module path
   --model <model>      Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
+  --autoconverge       Run as an F-03 convergence loop (debug-harness + fixer-agent integrator)
+  --symptom <path>     Path to failing test / repro script / error log (required with --autoconverge)
 
 Examples:
   /loom-bugfix --model opus Complex race condition in the queue worker
@@ -55,6 +57,8 @@ Supported flags:
 - `--dry-run` — boolean
 - `--path <hint>` — takes next token as value
 - `--model <model>` — takes next token as value (opus/sonnet/haiku). Overrides the agent's frontmatter model for this invocation. Use `--model opus` when the analyst is struggling with a complex bug.
+- `--autoconverge` — boolean. Switches the command into F-03 convergence mode (see § Autoconverge Mode below). Mutually exclusive with `--dry-run`.
+- `--symptom <path>` — takes next token as value. Required when `--autoconverge` is set. Repo-relative path to a failing test file, repro shell script, or error log.
 
 Unknown flags: print warning and continue.
 
@@ -245,3 +249,78 @@ If the impact assessment found `recurringPattern: true`, append:
 NOTE: This is a recurring fix area. Consider creating a tech-debt wiki page
 and/or a deeper investigation plan with /loom-plan create.
 ```
+
+## Autoconverge Mode (`--autoconverge`)
+
+When `--autoconverge` is set, the command BYPASSES the analyst-driven flow above (Steps 4–7) and instead delegates to the F-03 convergence loop documented in `planning/plans/PLAN-convergence-applications.md` Phase 3. This is the rigorous, multi-iteration variant — useful when a bug's root cause is not obvious after one diagnosis pass.
+
+### Preconditions
+
+- `--symptom <path>` MUST be provided. The path MUST resolve to a real file under repo root (per OQ-02 in `agents/protocols/converge.config.applications.md`).
+- `--dry-run` MUST NOT be set (mutually exclusive — autoconverge always applies fixes).
+
+If either precondition fails, print an error and stop before Step 4.
+
+### Step A1: Resolve the subject
+
+Determine the `subject` for the convergence run:
+
+1. If `--path <hint>` is provided, use it as the subject.
+2. Otherwise, run a quick recon of the symptom (open it, scan imports/error stacks) and pick the most-likely file as the subject.
+
+The subject MUST exist under the repo root.
+
+### Step A2: Generate the converge.config
+
+Write `converge.config.toon` per `agents/protocols/converge.config.schema.md` with the F-03 field values from `agents/protocols/converge.config.applications.md`:
+
+```toon
+runId: conv-{YYYY-MM-DD-HH-mm-ss}-{NNN}
+convergenceMode: document
+subject: {resolved subject path}
+harness: scripts/debug-harness.ts
+integrator: fixer-agent
+maxIterations: 5
+agentBudget: 40
+snapshotEnabled: true
+outputDir: .plan-execution/convergence/
+```
+
+The integrator is `fixer-agent` invoked in its Integrator Mode (Phase 4) with a debug-context wrapper — no separate `fix-applier-agent` file is authored per OQ-03.
+
+Write atomically (`.tmp` then rename) to `.plan-execution/convergence/converge.config.toon`.
+
+### Step A3: Invoke /loom-converge
+
+Delegate to `/loom-converge --config .plan-execution/convergence/converge.config.toon`. The convergence-driver:
+
+1. Reads the config, runs preflight.
+2. Loops: invoke `scripts/debug-harness.ts --symptom {symptom} --subject {subject} --iteration {N}`, read the emitted `findings.toon`, route to the integrator when `blockingCount > 0`, terminate at `blockingCount == 0` with `status: converged`.
+3. Writes `convergence-summary.toon` at the terminal-state transition.
+
+### Step A4: Post-convergence summary
+
+When the driver returns, read `.plan-execution/convergence-summary.toon` and print:
+
+```
+--- Bugfix Autoconverge Complete ---
+Symptom:        {symptom path}
+Subject:        {subject path}
+Status:         {converged | halted-stall | halted-regression | halted-max-iter | halted-budget | halted-scope-expansion}
+Iterations:     {iterationsRun}
+Final blocks:   {finalBlockingCount}
+Summary:        .plan-execution/convergence-summary.toon
+```
+
+If `status != converged`, print a one-line recovery hint from `agents/protocols/convergence-summary.schema.md` § Halt Reason Cross-Reference.
+
+### What autoconverge skips
+
+The autoconverge path skips:
+
+- Wiki lookup / matched-flow surfacing (Step 2a)
+- Fix archive read/write (Steps 2b, 5b, 5c)
+- Commit offer (Step 6a)
+- Wiki update prompt (Step 6b)
+
+These are deliberate omissions — the convergence loop is the authoritative artifact trail and writes its own `iter-{N}.toon` snapshots and `convergence-summary.toon` under `.plan-execution/convergence/`. The user may opt back into the analyst-driven flow by re-running without `--autoconverge`.

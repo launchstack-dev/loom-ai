@@ -38,6 +38,7 @@ Examples:
   /loom-code review --pr 123     Review a specific PR
   /loom-code review --quick      Quick review (code + security only)
   /loom-code review --full       Full review (all reviewers)
+  /loom-code review --autoconverge   Iterative review-then-fix loop (F-01)
   /loom-code fix                 Apply findings from last review
   /loom-code fix --dry-run       Show fix plan without applying
   /loom-code fix --auto          Apply fixes without approval gate
@@ -60,6 +61,7 @@ Parse arguments:
 - `--security-only`: run only the security reviewer
 - `--quick`: run only built-in code-reviewer + security-reviewer (skip slower agents)
 - `--full`: run ALL reviewers including comment-analyzer and type-design-analyzer
+- `--autoconverge`: instead of running the one-shot fan-out, generate a `converge.config` and invoke `/loom-converge` so the fixer-agent iteratively applies findings until `blockingCount == 0` or `maxIterations` is reached. See § Subcommand: review --autoconverge below.
 
 ### Project-Specific Reviewers
 
@@ -283,6 +285,71 @@ Each finding is tagged with the reviewer that found it:
 - `[PLAN]` -- plan-compliance-reviewer
 - `[CONTRACT]` -- scope contract violation (plan-compliance-reviewer)
 - `[API-MAP]` -- api-explorer
+
+## Subcommand: review --autoconverge
+
+The `--autoconverge` flag turns `/loom-code review` from a one-shot fan-out into a convergence loop. Instead of running the 9 reviewers once and presenting findings to the user, the wrapper writes a `converge.config` and delegates to `/loom-converge`, which alternates between the code-review harness (which spawns the same 9 reviewers and emits `findings.toon`) and the `fixer-agent` integrator (which applies the findings to the subject file) until convergence (`blockingCount == 0`) or `maxIterations` is reached.
+
+This is the F-01 application of the convergence loop. See:
+
+- `agents/protocols/converge.config.applications.md` — F-01 field-value matrix
+- `agents/protocols/findings.applications-rows.md` — F-01 row variant
+- `planning/plans/PLAN-convergence-applications.md` Phase 1
+
+### Trigger
+
+`--autoconverge` MAY be combined with `--subject <path>`, `--files file1 file2 ...`, `--staged`, or `--branch`. Resolve the subject set first (using the same logic as a regular `/loom-code review` invocation), then proceed to config generation. If multiple files resolve, emit ONE `converge.config` whose `subject` field is the comma-separated repo-relative path list (per the F-01 row in `converge.config.applications.md`, which permits a comma-list).
+
+### Step A — Generate converge.config
+
+Write `.plan-execution/convergence/converge.config.toon` atomically (`.tmp` + rename) with these field values, conformant to the canonical schema (`agents/protocols/converge.config.schema.md` v1):
+
+```toon
+runId: conv-{YYYY-MM-DD-HH-mm-ss}-{NNN}
+convergenceMode: document
+subject: <resolved subject path or comma-list>
+harness: scripts/code-review-harness.ts
+integrator: fixer-agent
+maxIterations: 3
+agentBudget: 30
+snapshotEnabled: true
+outputDir: .plan-execution/convergence/
+```
+
+Field bindings are locked by Wave 0 contracts:
+
+- `convergenceMode` MUST be `document`.
+- `harness` MUST be `scripts/code-review-harness.ts`.
+- `integrator` MUST be `fixer-agent` (Phase 4's Integrator Mode).
+- `maxIterations` defaults to `3` per the F-01 row.
+- `snapshotEnabled` defaults to `true` per the converge.config schema's document-mode rule (DF-02 resolution).
+- `outputDir` defaults to `.plan-execution/convergence/`.
+- `agentBudget` SHOULD be `>= maxIterations * (9 reviewers + 1 integrator) = 30` minimum.
+
+### Step B — Invoke /loom-converge
+
+Shell out to `/loom-converge --config .plan-execution/convergence/converge.config.toon`. Forward any `--auto` or `--resume` flags the user passed through. The driver handles preflight (subject must exist, harness must exist, integrator must be registered), per-iteration spawn fulfillment, and terminal-state reporting in `convergence-summary.toon`.
+
+### Step C — --auto pass-through (C-08 SCOPE_EXPANSION semantics)
+
+If the user passed `--auto` alongside `--autoconverge`, forward it. The convergence-driver applies C-08 scope-expansion semantics: when the integrator iteration touches a file OUTSIDE the subject set, the driver halts with `haltCause: SCOPE_EXPANSION` and writes the halt to `convergence-summary.toon`. The user MUST then either widen `subject` and `--resume`, or accept the scope as-is and run a manual fix.
+
+In non-`--auto` mode, the same halt occurs but the driver pauses for explicit confirmation before resuming.
+
+### Step D — Report terminal state
+
+After `/loom-converge` exits, read `.plan-execution/convergence/convergence-summary.toon` and print a one-paragraph summary: `status` (converged | max-iterations | halted), `iterationCount`, `finalBlockingCount`, and (when halted) `haltCause`. Then print:
+
+```
+To inspect per-iteration history, see .plan-execution/convergence/iterations/iter-{N}.toon.
+To re-run with a wider subject, edit converge.config.toon and run /loom-converge --resume.
+```
+
+### Error handling
+
+- **Harness missing:** preflight in /loom-converge halts with `HARNESS_MISSING`. The wrapper need not detect this — it surfaces in `convergence-summary.toon`.
+- **Integrator not registered:** preflight halts with `INTEGRATOR_NOT_FOUND`. Phase 4 ships `fixer-agent`'s Integrator Mode; until then, `--autoconverge` is non-functional and the wrapper SHOULD print a warning naming Phase 4 as the unblocking dependency.
+- **Subject does not exist:** preflight halts with `FINDINGS_SCHEMA_INVALID` (subject mismatch). The wrapper SHOULD validate `subject` is a real file on disk before invoking `/loom-converge`.
 
 ## Subcommand: fix
 

@@ -1,0 +1,17 @@
+agent: code-reviewer
+wave: 1
+taskId: t-code-reviewer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  medium,Function getUserById returns unknown without input validation,test/fixtures/code-review/converges-in-2-iters/input.ts,5,Add a zod schema or explicit type guard for the id parameter
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

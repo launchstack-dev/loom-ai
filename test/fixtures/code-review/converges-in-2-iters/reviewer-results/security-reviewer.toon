@@ -1,0 +1,17 @@
+agent: security-reviewer
+wave: 1
+taskId: t-security-reviewer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  critical,SQL injection via string interpolation in getUserById query,test/fixtures/code-review/converges-in-2-iters/input.ts,6,"Use parameterized query: db.query('SELECT * FROM users WHERE id = $1', [id])"
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

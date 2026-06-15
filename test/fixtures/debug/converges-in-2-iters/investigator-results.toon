@@ -1,0 +1,5 @@
+agent: debug-investigator-agent
+status: success
+
+issues[1]{severity,file,location,description,suggestion}:
+  high,test/fixtures/debug/converges-in-2-iters/src/buggy.ts,:15,divide() does not guard against b === 0 — division by zero returns Infinity instead of throwing,Add `if (b === 0) throw new Error('division by zero');` before the return statement

@@ -1,0 +1,16 @@
+...FFF                                                                  [100%]
+=================================== FAILURES ===================================
+________________________ TestAdd.test_adds_two_positives _______________________
+
+self = <test_math.TestAdd object at 0x10abcd>
+
+    def test_adds_two_positives(self):
+>       assert add(2, 3) == 5
+E       AssertionError: assert -1 == 5
+
+tests/test_math.py:8: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_math.py::TestAdd::test_adds_two_positives - AssertionError: assert -1 == 5
+FAILED tests/test_math.py::TestAdd::test_adds_positive_and_negative - AssertionError: assert 14 == 6
+FAILED tests/test_math.py::test_double_positive - AssertionError: assert 7 == 8
+========================= 3 failed, 1 passed in 0.12s ==========================

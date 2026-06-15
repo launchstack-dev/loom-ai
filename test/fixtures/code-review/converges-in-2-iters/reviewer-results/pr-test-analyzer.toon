@@ -1,0 +1,17 @@
+agent: pr-test-analyzer
+wave: 1
+taskId: t-pr-test-analyzer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  low,No tests exist for getUserById or loadConfig,test/fixtures/code-review/converges-in-2-iters/input.ts,0,Add unit tests covering success and error paths
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

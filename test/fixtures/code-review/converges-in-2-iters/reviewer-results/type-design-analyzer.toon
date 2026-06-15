@@ -1,0 +1,17 @@
+agent: type-design-analyzer
+wave: 1
+taskId: t-type-design-analyzer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  medium,getUserById return type is unknown — caller cannot statically verify shape,test/fixtures/code-review/converges-in-2-iters/input.ts,5,Define a User interface and return User | null
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

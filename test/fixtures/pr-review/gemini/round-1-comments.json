@@ -1,0 +1,34 @@
+[
+  {
+    "id": "IC_round1_a",
+    "author": "gemini-code-assist[bot]",
+    "path": "src/auth/session.ts",
+    "line": 17,
+    "body": "![high] Potential null dereference on `session.user`\nGuard the access with an `if (session?.user)` check before reading `id`.",
+    "createdAt": "2026-06-15T10:00:00Z"
+  },
+  {
+    "id": "IC_round1_b",
+    "author": "gemini-code-assist[bot]",
+    "path": "src/api/users.ts",
+    "line": 88,
+    "body": "![medium] Consider using `const` instead of `let`\nThe binding is never reassigned in this block.",
+    "createdAt": "2026-06-15T10:00:01Z"
+  },
+  {
+    "id": "IC_round1_c",
+    "author": "gemini-code-assist[bot]",
+    "path": "README.md",
+    "line": 4,
+    "body": "![low] Minor: typo `recieve` should be `receive`",
+    "createdAt": "2026-06-15T10:00:02Z"
+  },
+  {
+    "id": "IC_round1_d",
+    "author": "gemini-code-assist[bot]",
+    "path": "scripts/util.ts",
+    "line": 12,
+    "body": "Note: this comment has no severity tag; should default to info.",
+    "createdAt": "2026-06-15T10:00:03Z"
+  }
+]

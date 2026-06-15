@@ -1,0 +1,10 @@
+wave: 2
+status: success
+startedAt: 2026-06-15T00:35:00Z
+completedAt: 2026-06-15T00:40:00Z
+agents[1]{taskId,agent,model,status,filesCreated,durationMs}:
+  w2-p5-gemini-adapter,implementer-agent,opus,success,6,203358
+verification:
+  typecheck: pass-on-new-files
+  tests: 18-pass
+notes: F-04 Gemini adapter shipped with cross-iteration dedup (OQ-04). Adapter exports geminiAdapter constant + fetchFindings function. CodeRabbit and Copilot adapters deferred per CA-05. Wave 3 dispatcher will import geminiAdapter and route by converge.config.botAdapter.

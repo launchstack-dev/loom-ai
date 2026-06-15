@@ -520,7 +520,21 @@ Do NOT count wiki maintenance against circuit breaker thresholds or agent budget
 #### Step 10: Repeat or Complete
 
 - If more waves remain, go to Step 5
-- If all waves complete:
+- If all waves complete, **finalize the plan** before printing the completion banner:
+
+**Finalize step (mandatory on full success):**
+
+1. Resolve the plan path per `agents/protocols/planning-paths.md` (same resolution used in Step 1).
+2. Read the plan's frontmatter (YAML block between `---` fences at the top).
+3. If `status:` is not already `completed`:
+   - Set `status: completed`
+   - Add or update `completedAt: {ISO-8601 UTC timestamp of this moment, e.g. 2026-06-14T18:32:00Z}`
+   - Preserve all other frontmatter fields and ordering
+4. Write the file atomically: write to `{planPath}.tmp`, then `fs.renameSync` to `{planPath}`.
+5. If a roadmap is referenced via `roadmapRef:` in the plan frontmatter and that file exists, locate the milestone(s) backed by this plan (matched by `planRef:` in the roadmap milestone block) and set their `status: completed` + `completedAt:` using the same atomic-write pattern. If no match is found, log a warning and continue — never block finalize on roadmap drift.
+6. If any write fails, do NOT abort the run — log `finalizeStatus: failed` with the error into the final wave summary and continue to print the completion banner. The reconciler in `/loom-plan status --reconcile` will catch the drift on the next read.
+
+Then print:
 
 ```
 ## Execution Complete
@@ -530,6 +544,7 @@ Waves completed: [N]
 Total files created: [count]
 Total files modified: [count]
 Verification: All passing
+Plan finalized: status=completed, completedAt=[timestamp]
 
 Rolling context and state preserved in .plan-execution/
 Use --resume if you need to re-run any wave.

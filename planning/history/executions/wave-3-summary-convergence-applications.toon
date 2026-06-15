@@ -1,0 +1,12 @@
+wave: 3
+status: success
+startedAt: 2026-06-15T00:40:00Z
+completedAt: 2026-06-15T00:55:00Z
+agents[3]{taskId,agent,model,status,filesCreated,filesModified,durationMs}:
+  w3-p6-pr-review-harness,implementer-agent,opus,success,9,1,356291
+  w3-p7-readme-docs,implementer-agent,opus,success,0,1,60902
+  w3-p8-cross-app-tests,implementer-agent,opus,success,2,0,172316
+verification:
+  typecheck: pass-on-new-files
+  tests: 58-pass-across-wave-2-3-suites
+notes: F-04 dispatcher harness + pr-state writer + wrapper-config wired and converging on canned PR fixture in 2 iterations. README gains a disambiguation table and Convergence Applications subsection (surgical additions, no restructure). Two new doc-as-code regression tests under test/convergence-applications/ assert schema purity (OQ-01) and spawn ceilings (F-01=7, F-02/3/4=11).

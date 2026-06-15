@@ -1,0 +1,14 @@
+wave: 1
+status: success
+startedAt: 2026-06-15T00:05:00Z
+completedAt: 2026-06-15T00:35:00Z
+agents[4]{taskId,agent,model,status,filesCreated,filesModified,durationMs}:
+  w1-p4-fixer-integrator,implementer-agent,opus,success,2,1,165000
+  w1-p3-debug-harness,implementer-agent,opus,success,8,1,423957
+  w1-p2-test-harness,implementer-agent,opus,success,10,0,459244
+  w1-p1-code-review-harness,implementer-agent,opus,success,12,1,499644
+verification:
+  typecheck: pass-on-new-files
+  tests: 94-pass-across-4-suites
+  lint: skipped-no-script
+notes: Phase 4 (fixer Integrator Mode) shipped first per F-11 critical-path sequencing; e2e tests in P1/P2/P3 marked skipIf(!PHASE_4_SHIPPED) and now unblocked. Pre-existing tsc errors (vitest types not at top-level, unrelated import.meta in dogfood-install-state-migration.ts) — no new errors introduced. Test-runner fragmentation (debug uses bun-test globals, others use vitest) flagged as follow-up.

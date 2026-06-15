@@ -392,6 +392,18 @@ The same engine powers multiple applications:
 
 Roadmap rows are wirings against the frozen engine — see [`planning/ROADMAP-convergence-applications.md`](planning/ROADMAP-convergence-applications.md).
 
+### Convergence Applications
+
+One loop, applied everywhere — the same convergence-driver substrate powers all five `--autoconverge` surfaces below. Each is a thin wiring (subject + harness + integrator) onto the shared engine; the iteration semantics, circuit breakers, and snapshots come for free. See the table above for the subject/harness/integrator split.
+
+| Surface | Iterates | Status |
+|---------|----------|--------|
+| `/loom-plan create --autoconverge` | A `PLAN.md` toward zero plan-critic + reviewer findings | shipped (convergence-generalization) |
+| `/loom-code review --autoconverge` | The working tree / diff toward zero blocking review findings | F-01 |
+| `/loom-test --autoconverge` | Generated test files toward zero test-quality findings | F-02 |
+| `/loom-bugfix --autoconverge` | A failing symptom toward a passing reproduction | F-03 |
+| `/loom-git review-pr --autoconverge` | A PR head toward zero external-bot findings (Gemini-only for now) | F-04 |
+
 ### Modes
 
 `/loom-converge` exposes three modes that parameterize the loop:
@@ -600,6 +612,17 @@ For iterative review inside the convergence loop:
 ```
 
 Convergence iterates: review → fixer fan-out → re-review → driver decides converged/stalled/regression. The same circuit breakers apply (`stalled`, `regression`, `budget_exhausted`).
+
+### `/loom-code review --autoconverge` vs `/loom-code fix`
+
+Both apply review findings; they differ in whether they loop. Pick by whether you want a single pass or convergence to zero blocking findings:
+
+| Action | When to use | Output |
+|--------|-------------|--------|
+| `/loom-code review --autoconverge` | You want the code to converge to zero blocking review findings — driver runs review → fix → re-review until converged, stalled, or budget-exhausted | Iteration log under `.plan-execution/convergence/iterations/` + final patched tree |
+| `/loom-code fix` | You already have findings on disk and want a one-shot apply pass with no re-review loop | Patched files; unfixable findings escalated via `.plan-execution/ephemeral/requests/` |
+
+`--autoconverge` is the convergence-driver wiring; `fix` is the integrator step on its own. They share the same fixer-agent fan-out and the same `file-ownership.ts` / `contract-lock.ts` guarantees described below.
 
 ### Fix-time guarantees
 
