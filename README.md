@@ -359,32 +359,62 @@ The 4-tier convergence model maps tiers to planning-hierarchy levels:
 
 See `docs/scenarios-authoring-template.md` for authoring guidance and `agents/protocols/scenario.schema.md` for validator rules.
 
-## Convergence Loop
+## Convergence: one loop, applied everywhere
 
-`/loom-converge` is the iteration engine that closes the gap between what was built and what was specified. It has two modes:
-
-- **Criteria mode** (`--criteria`) — TDD + reviews. Iterate until every scenario passes and every reviewer approves. This is the default for `/loom-auto` and the recommended mode for most work.
-- **Target mode** (`--target <path>` or `--plan`) — match a deterministic reference (a golden file, an API response, a known-good output). Iterate until the delta against the reference reaches zero.
-
-### Iteration shape
-
-Each iteration is a five-step loop, executed by the orchestrator:
+Loom has a single iteration pattern — **do work, check work, remediate what failed, repeat until done** — implemented in `convergence-driver`. The driver knows nothing about its application: it consumes a `subject`, a `harness` (what to check), and an `integrator` (who applies fixes), runs the loop with circuit breakers and snapshots, and stops when the harness reports zero blocking findings. New applications are pure wirings — no engine changes.
 
 ```
-  ┌─→ 1. planner          convergence-planner-agent emits/refreshes converge.config
-  │                       (criteria mode: targets emitted directly from scenarios)
-  │
-  │   2. harness          harness-builder / criteria-harness-builder generate runner
-  │                       scripts (vitest cmd, e2e Playwright cmd, qa-review fan-out)
-  │
-  │   3. run              Invoke runners in tier order. Capture stdout/stderr/exit.
-  │
-  │   4. delta            delta-analyzer compares actual vs expected. Emits per-target
-  │                       pass/fail/score + diff summary into iter-{N}.toon.
-  │
-  └── 5. driver           convergence-driver decides: converged | continue | stalled
-                          | regression | budget_exhausted. Picks the next iteration's
-                          fix targets (fan-out to fixer-agents per failing target).
+   ┌─→  do work        execute, draft, generate
+   │
+   │   check           harness emits findings.toon
+   │                   (tests, reviewer fan-out, golden diff,
+   │                    doc-quality review, PR-bot output)
+   │
+   │   triage          driver: converged | continue | stalled |
+   │                   regression | budget_exhausted
+   │
+   └── remediate       integrator applies findings
+                       (fixer-agent in parallel, or a custom
+                        integrator that rewrites the artifact)
+```
+
+The same engine powers multiple applications:
+
+| Application       | Subject              | Harness                       | Integrator       | Status |
+|-------------------|----------------------|-------------------------------|------------------|--------|
+| Code + tests      | working tree / diff  | vitest + reviewer fan-out     | fixer-agent      | shipped (criteria mode) |
+| Plan creation     | `PLAN.md`            | plan-critic + reviewers       | plan-builder     | shipped (document mode, via `/loom-plan create --autoconverge`) |
+| Document refine   | any markdown file    | configurable doc-harness      | fixer-agent      | shipped (document mode) |
+| Golden-file match | generated output     | diff vs reference             | fixer-agent      | shipped (target mode) |
+| Test creation     | test files           | test-quality reviewers        | fixer-agent      | roadmap (F-01) |
+| Debug loop        | failing test/log     | symptom re-run                | bugfix-analyst   | roadmap (F-03) |
+| PR review         | PR head              | Gemini/CodeRabbit/Copilot     | fixer-agent      | roadmap (F-04) |
+
+Roadmap rows are wirings against the frozen engine — see [`planning/ROADMAP-convergence-applications.md`](planning/ROADMAP-convergence-applications.md).
+
+### Modes
+
+`/loom-converge` exposes three modes that parameterize the loop:
+
+- **`--criteria`** — iterate until every scenario passes and every reviewer approves. Default for `/loom-auto` and recommended for most work.
+- **`--target <path>` or `--plan`** — iterate until the delta against a deterministic reference (golden file, API response, known-good output) reaches zero.
+- **`--mode document --subject <path>`** — iterate any document until its harness reports zero blocking findings. This is the substrate the roadmap applications wire onto.
+
+### How an iteration runs
+
+Inside the loop, each iteration is a five-step pipeline executed by the orchestrator:
+
+```
+1. planner          convergence-planner-agent emits/refreshes converge.config
+                    (criteria mode: targets emitted directly from scenarios)
+2. harness          harness-builder / criteria-harness-builder generate runner
+                    scripts (vitest cmd, e2e Playwright cmd, qa-review fan-out)
+3. run              Invoke runners in tier order. Capture stdout/stderr/exit.
+4. delta            delta-analyzer compares actual vs expected. Emits per-target
+                    pass/fail/score + diff summary into iter-{N}.toon.
+5. driver           convergence-driver decides: converged | continue | stalled
+                    | regression | budget_exhausted. Picks the next iteration's
+                    fix targets (fan-out to fixer-agents per failing target).
 ```
 
 Per-iteration artifacts are written to `.plan-execution/convergence/iterations/iter-{N}.toon` and preserved across iterations. State lives in `.plan-execution/convergence-state.toon` so the loop is resumable.
