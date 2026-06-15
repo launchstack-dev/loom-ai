@@ -26,3 +26,6 @@ Thumbs.db
 
 # Backup files
 *.bak
+
+# Git worktrees managed by wt.sh
+.worktrees/

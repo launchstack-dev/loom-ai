@@ -653,6 +653,72 @@ outputRole = "reviewer"
 
 Bespoke reviewers participate in the same fan-out, contribute findings in the same envelope, and feed the same fixer pipeline.
 
+## Test Convergence
+
+`/loom-test --autoconverge` runs your test suite, treats every failure as a blocking finding, and loops `fixer-agent` against the code under test until all tests pass (or `maxIterations=5` is hit, or the driver detects a stall). It is TDD-by-convergence: you write the tests, the engine drives the implementation to green.
+
+The test-harness ships three runner adapters — `bun test`, `vitest`, `pytest` — selected via `--runner`. Each adapter parses its runner's output format into the canonical `findings.toon` shape (one row per failure, `severity: blocking`, `locationAnchor` is the `describe > it` chain, `summary` is the first line of the failure message stripped of ANSI). The fixer-agent's Integrator Mode (shared with `/loom-code review --autoconverge`) consumes those findings and revises the source under test.
+
+### When to use
+
+- TDD where you want the engine to chip away at a failing suite without a human in the loop
+- Recovering a suite after a refactor that broke a known subset of tests
+- Driving a partially-stubbed implementation toward green
+
+### Invocation
+
+```
+/loom-test --autoconverge --subject src/billing.ts             Default runner (bun)
+/loom-test --autoconverge --subject src/api --runner vitest    Vitest output format
+/loom-test --autoconverge --subject pkg/foo.py --runner pytest Pytest output format
+```
+
+Spawn-count ceiling at the locked `maxIterations=5` default: **11 agents** (`1 + 5 × (1 test-run + 1 fixer)`) — bounded and predictable. See `scripts/test-harness.ts`.
+
+## Bugfix Convergence
+
+`/loom-bugfix --autoconverge` targets a failing symptom (a failing test path, a repro script, or an error log) and converges the code that's causing it. It composes two agents the convergence-driver fans out per iteration: `debug-investigator-agent` surfaces probable causes as findings, and `fixer-agent` applies them. The harness re-runs the symptom each iteration and emits a synthetic `severity: blocking` row (`reviewerAgent: debug-harness`, `summary: "symptom still reproduces"`) until the symptom resolves — at which point that row disappears, `blockingCount → 0`, and the driver declares converged. No schema extension; pure synthetic-finding workaround per OQ-01.
+
+### When to use
+
+- A failing test or repro script you can't immediately localize
+- Recurring symptoms where you want the investigator's confidence-graded cause hypotheses written to disk for audit
+- Compared to bare `/loom-bugfix` (one-shot diagnose + fix, no loop): use `--autoconverge` when you want the engine to keep iterating until the symptom is genuinely gone, with circuit breakers if it stalls
+
+### Invocation
+
+```
+/loom-bugfix --autoconverge --symptom test/path/to/failing.test.ts
+/loom-bugfix --autoconverge --symptom scripts/repro-issue-42.sh
+```
+
+Investigator confidence maps to finding severity: `high=blocking, medium=warning, low=info`. The synthetic symptom-row is what gates termination — even if the investigator produces only warnings, the loop continues until the repro script exits 0. See `scripts/debug-harness.ts` and `agents/debug-investigator-agent.md`.
+
+## PR-Review Convergence
+
+`/loom-git review-pr --autoconverge` pulls PR-review-bot findings (Gemini Code Assist today; CodeRabbit and Copilot adapters deferred) and converges the PR head toward zero blocking findings. Per iteration: the dispatcher refreshes a `pr-state.toon` projection (`baseSha`, `headSha`, `diffHash`, `files[]`, `commentIds[]`) via `gh pr view/diff`, the Gemini adapter parses inline-image severity tags (`![high|medium|low]`) into the canonical findings shape, and `pr-fixer-agent` (a thin wrapper over `fixer-agent` with `gh pr diff` context injection) applies them. Each iteration commits with message `fix(pr-iter-{N}/gemini): {summary}` — squash-on-merge collapses them into a single PR commit.
+
+The adapter dedupes findings cross-iteration per OQ-04: it reads the prior iteration's `findings.toon` and suppresses any `(locationPath, locationAnchor, summary)` triple it already saw. That solves the Gemini stale-anchor re-flag problem observed during the manual PR #19 dogfood (rounds 3–5).
+
+### When to use
+
+- A PR with Gemini Code Assist enabled where you want the bot's findings applied iteratively instead of round-tripping by hand
+- Any PR where dedup across rounds matters (rebase-heavy branches, long-running PRs)
+
+### Setup
+
+- `gh` CLI must be authenticated against the repo
+- Gemini Code Assist must be enabled on the PR (or whichever adapter you target via `botAdapter`)
+
+### Invocation
+
+```
+/loom-git review-pr --autoconverge                  Resolves current branch's open PR via gh
+/loom-git review-pr --autoconverge --pr 123         Explicit PR number
+```
+
+Spawn-count ceiling at `maxIterations=5`: **11 agents** (`1 + 5 × (1 adapter + 1 pr-fixer)`). See `scripts/pr-review-harness.ts`, `scripts/lib/pr-review-adapters/gemini.ts`, and `agents/pr-fixer-agent.md`.
+
 ## Change Lifecycle (over `contract-*` wiki pages)
 
 Completed milestones materialize via `/loom-plan materialize` into per-domain `contract-*` wiki pages at `.loom/wiki/pages/contract-{domain}.md`. Subsequent maintenance flows through `/loom-change`:
