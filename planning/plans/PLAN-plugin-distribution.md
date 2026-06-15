@@ -1,9 +1,9 @@
 ---
 planVersion: 2
 name: "Loom Marketplace & Plugin Distribution"
-status: draft
+status: approved
 created: 2026-06-15
-lastReviewed: null
+lastReviewed: 2026-06-15
 roadmapRef: planning/ROADMAP-plugin-distribution.md
 totalPhases: 17
 totalWaves: 9
@@ -11,14 +11,23 @@ totalWaves: 9
 
 # Plan: Loom Marketplace & Plugin Distribution
 
+**Revision Notes:** v2 refinement: applied 6-agent review findings (planning/history/reviews/2026-06-15-PLAN-plugin-distribution-review.toon).
+
 ## Overview
 
 This plan implements the ROADMAP for distributing Loom via the Claude Code marketplace as the primary channel, with curl demoted to a documented escape hatch. It delivers M-01 (marketplace day-one launch — submission-blocking + post-submission fast-follow) and M-02 (plugin-native architecture + sunset evaluation). The plan honors all 16 locked constraints (C-01..C-16), emits TOON artifacts per CLAUDE.md, and gates the marketplace listing on a Docker-based clean-machine harness (C-15) that verifies first-invocation UX (C-11) and hook PATH safety (C-16).
 
 Phasing follows roadmap critical path C-13:
 - **Phase 1 (M-01 submission-blocking):** F-01, F-02, F-03, F-06, F-07a, F-09a, F-10a, F-15 — 8 features across Waves 0–4
-- **Phase 2 (M-01 post-submission fast-follow):** F-04, F-05, F-11, F-12, F-13 — 5 features across Waves 5–6
-- **Phase 3 (M-02 plugin-native):** F-04b, F-07, F-08, F-09b, F-10b, F-14 — 6 features across Waves 7–8
+- **Phase 2 (M-01 post-submission fast-follow):** F-04, F-05, F-11, F-12, F-13 — 5 features across Waves 5a/5b–6
+- **Phase 3 (M-02 plugin-native):** F-04b, F-07, F-08, F-09b, F-10b, F-14 — 6 features across Waves 7a/7b–8
+
+### Wave restructuring (per v2 refinement)
+
+- **Wave 5a (Phase 9 — F-04 doctor v1) → Wave 5b (Phase 10 — F-05 migrate):** Phase 10 depends on Phase 9. Wave 5 is no longer parallel. Wave 5b starts only after Wave 5a commits and `npx tsc --noEmit` passes.
+- **Wave 7 SEQUENTIAL ordering — Wave 7a (Phase 15 only — F-07 full resolver) → Wave 7b (Phase 14 — F-04b doctor v2) → Wave 7c (Phase 16 — F-08 plugin-declared hooks):** Phase 14 reads manifest paths via Phase 15's resolver at runtime, so cannot run parallel with Phase 15. Phase 16 depends on Phase 15 (resolver) AND Phase 14 (doctor for verification). All three serialize. Previous v2 wording ("Phase 14 + Phase 15 parallel") was contradicted by stated dependencies — corrected.
+- **Wave 2→3 wiring step (Phase W2W3-Wiring, owned by wiring-agent):** After Phase 3 and Phase 5 both commit in Wave 2, a Wave 3 wiring step (executed by `wiring-agent` BEFORE Phase 6 begins) merges the text from `marketplace/loom-init-success-output.toon` into `commands/loom-init.md`. This is an explicit Wave 3 task with its own deliverable (the patched `commands/loom-init.md`). Phase 3 owns `commands/loom-init.md`; Phase 5 produces only the canonical artifact. Phase 2 (F-15) audit output lives in `loom-init-audit-notes.md` (NOT `commands/loom-init.md`).
+- **Phase 17 split (Wave 8):** Phase 17a (F-10b extended fixtures) + Phase 17b-i (F-14 triage wiring, ships immediately post-M-01) + Phase 17b-ii (F-09b listing iteration, gated on `launchDate + 30d` real marketplace data). Phase 17a dependencies: Phase 6, Phase 8, **Phase 10, Phase 11, Phase 13, Phase 14, Phase 16** — the convergence-loop fixture exercises the full CLI surface including doctor v2 and plugin-declared hooks. Phase 17b-ii has an explicit acceptance criterion: copy must reference real manifest-fetch counter data, not synthetic.
 
 ## Tech Stack
 
@@ -31,6 +40,7 @@ Phasing follows roadmap critical path C-13:
 | CI | GitHub Actions | n/a | Atomic release pipeline; manifest-drift; sigstore |
 | Signing | sigstore/cosign | latest | Release asset attestation (C-08) |
 | Container fixture | Docker | n/a | Clean-machine E2E harness (C-15) |
+| GHA local runner | act (nektos/act) | latest | Dev dependency. Enables Phase 6 release-pipeline convergence target to run locally via `act push --eventpath fixtures/v0.1.0-test-event.json` instead of pushing a real tag. Marks Phase 6 scenarios `automatable: true`. |
 | Data format | TOON | n/a | All Loom artifacts per CLAUDE.md |
 | Shell | POSIX sh | n/a | `install.sh`, `hooks/run-hook.sh` |
 
@@ -51,7 +61,9 @@ All schemas use TOON. Canonical schema files live under `agents/protocols/` and 
 | migratedFrom | object\|null | optional | `{channel, version}` populated by F-05 |
 | lastPing | string\|null | ISO 8601, optional | null when `doNotTrack=true` |
 | doNotTrack | boolean | required | default false; true after opt-out |
-| updateInProgress | object\|null | optional | `{fromVersion, toVersion, startedAt}` during `/loom-update` |
+| updateInProgress | object\|enum\|null | optional | `{fromVersion, toVersion, startedAt}` during `/loom-update`, or `failed` terminal state when `--resume` is unrecoverable |
+| installError | object\|null | optional | `{step: string, message: string, timestamp: string}` populated when install partially fails — partial-install forensic trace consumed by F-04 `install-interrupted` red check |
+| pinnedVersion | string\|null | optional | semver `vX.Y.Z` if user pinned via `claude plugin add loom@<version>`; honored by F-12 `/loom-update` |
 
 #### Indexes
 
@@ -72,9 +84,12 @@ Not applicable (no foreign keys; file-singleton).
 | sha256 | string | 64 hex chars | matches Release tarball |
 | attestationUrl | string | sigstore URL | required for C-08 |
 | minClaudeCodeVersion | string | semver | consumed by F-04 |
-| compatibilityMatrix | array | optional | additional CC spec versions |
+| compatibilityMatrix | string[] | optional | array of Claude Code spec version ranges (e.g., `["1.0.x", ">=2.0.0 <3.0.0"]`) — TS type MUST be `string[]` not `unknown[]` |
 | hooks | array | optional in M-01; required in M-02 (F-08) | plugin-declared hook entries |
 | permissions | array | required | scoped per agent |
+| entryPoint | string | required | relative path to plugin entry module — consumed by Claude Code plugin loader |
+| publisher | string | required | publisher identity (e.g., `loom-ai`) — required for marketplace discoverability |
+| categories | string[] | required | marketplace category tags (e.g., `["workflow", "planning", "agents"]`) — required for marketplace discoverability |
 
 #### Indexes
 
@@ -90,6 +105,7 @@ Not applicable (immutable per release).
 
 | Field | Type | Constraints | Validation Rules |
 |-------|------|-------------|-----------------|
+| reportVersion | integer | required | discriminator: `1` for M-01 doctor output (Phase 9); `2` after M-02 doctor checks land (Phase 14) |
 | generatedAt | string | ISO 8601, required | RFC 3339 |
 | loomVersion | string | semver, required | from `install.toon` |
 | installChannel | enum | required | `curl \| plugin` (top-level per FC-08) |
@@ -132,6 +148,7 @@ Singleton per project; not applicable.
 |-------|------|-------------|-----------------|
 | timestamp | string | ISO 8601 | per entry |
 | hookName | string | required | which hook failed |
+| hookScriptPath | string | required | absolute path to the .ts file invoked (Phase 2 acceptance asserts on this) |
 | pathAtProbe | string | required | full PATH at probe time |
 | runtimeAttempted | enum | required | `bun \| npx-tsx \| node \| none` |
 
@@ -197,14 +214,15 @@ This plan defines CLI surface, not HTTP endpoints. The "endpoints" below specify
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--json` | bool | false | Emit TOON `doctor-report.toon` to stdout (per CLAUDE.md naming) |
-| `--check <name>` | string | — | Run only the named check |
-| `--bundle` | bool | false | Produce redacted `.tar.gz` diagnostic bundle |
+| `--only <name>` | string | — | Run only the named check (renamed from `--check` to avoid collision with `/loom-update --check` dry-run-query convention) |
+| `--bundle` | bool | false | Produce redacted `.tar.gz` diagnostic bundle. Output path convention: `~/.cache/loom/bundles/loom-doctor-{version}-{ISO8601-timestamp}.tar.gz` (Phase 9 S-05 asserts this format). |
 | `--fix` | bool | false | Stub in M-01 (emits message that F-04b ships auto-remediation) |
 
 **Checks shipped in M-01:**
 - `version-drift` — installed vs latest manifest (skips with yellow on network failure)
 - `channel-files` — `install.toon.channel` vs actual file presence at `~/.claude/plugins/loom/` (red on mismatch; suggests `/loom-migrate-to-plugin --reconcile`)
 - `hooks` — checks `~/.cache/loom/hook-failures.log` for entries in last 24h (red if any; F-15)
+- `install-interrupted` — red check fires when `install.toon.installError` is non-null (partial-install forensic trace; suggests `/loom-update --check` or re-running installer)
 
 **Exit codes:**
 | Code | When |
@@ -252,6 +270,7 @@ This plan defines CLI surface, not HTTP endpoints. The "endpoints" below specify
 |------|------|---------|-------------|
 | `--check` | bool | false | Report available vs installed; no apply |
 | `--channel curl\|plugin` | string | — | Override `install.toon.channel` |
+| `--pin <version>` | string | — | Pin to a specific version: `claude plugin add loom@<version>` semantics. Writes `install.toon.pinnedVersion`. See F-01 install path and F-12 update path for full pinning behavior. |
 | `--resume` | bool | false | Resume from `install.toon.updateInProgress` |
 | `--json` | bool | false | Machine-readable output (TOON) |
 
@@ -283,7 +302,7 @@ This plan defines CLI surface, not HTTP endpoints. The "endpoints" below specify
 | `--yes` | bool | false | Bypass interactive confirmation |
 
 **Interactive prompts:**
-- Base: `Remove Loom from this machine? Project-root state (.loom/wiki/, orchestration.toml, .plan-execution/) is preserved. [y/N]` — 60s timeout → exit 1
+- Base: `Remove Loom from this machine? Project-root state (.loom/wiki/, orchestration.toml, .plan-execution/) is preserved. [y/N] (60s)` — 60s countdown; on timeout emit stderr line `Confirmation timed out after 60s; no changes made.` and exit 1
 - `--purge-project-state`: typed confirmation `uninstall` required
 
 **Exit codes:**
@@ -293,7 +312,11 @@ This plan defines CLI surface, not HTTP endpoints. The "endpoints" below specify
 | 1 | User declined (`N` or timeout) |
 | 2 | Permission error during removal |
 
-### HTTP: POST `https://telemetry.loom-ai.org/v1/ping` (F-11)
+### HTTP: POST `https://telemetry.loom-ai.org/v1/ping` (F-11) — server-side DEFERRED to M-02
+
+**M-01 scope (Phase 13):** Server-side handler is **deferred to M-02**. Phase 13 ships only the client-side opt-in flow (`install.toon` updates) and writes pings to a local JSON queue at `~/.cache/loom/pending-pings.toon`. Hosting decision is explicitly deferred. The C-09 kill-criterion fallback (GitHub Release download ratio vs plugin manifest fetches) becomes the **primary measurement path** in M-01. Phase 13 adds a dedicated step to instrument the manifest-fetch counter via GitHub API.
+
+**M-02 scope:** Server-side ping handler ships when hosting is decided.
 
 **Description:** Opt-in install-channel ping endpoint. Only invoked when `install.toon.doNotTrack=false`.
 **Auth:** none (anonymous)
@@ -358,7 +381,9 @@ This plan defines CLI surface, not HTTP endpoints. The "endpoints" below specify
 ```
 null ──/loom-update start──→ {from,to,startedAt} ──success──→ null
                                     │
-                                    └──interrupt──→ {from,to,startedAt} (persists for /loom-update --resume)
+                                    ├──interrupt──→ {from,to,startedAt} (persists for /loom-update --resume)
+                                    │
+                                    └──unrecoverable resume──→ failed (terminal)
 ```
 
 **States:**
@@ -366,6 +391,7 @@ null ──/loom-update start──→ {from,to,startedAt} ──success──�
 |-------|-------------|-----------------|
 | null | No update in flight | Default; cleared on update success |
 | in-progress | Update mid-flight | `/loom-update` writes marker pre-mutation |
+| failed | `--resume` unrecoverable terminal state | toVersion no longer in registry OR irrecoverable error during `--resume` |
 
 **Valid transitions:**
 | From | To | Trigger | Side effects |
@@ -373,13 +399,26 @@ null ──/loom-update start──→ {from,to,startedAt} ──success──�
 | null | in-progress | `/loom-update` (any apply path) | Writes `{fromVersion, toVersion, startedAt}` |
 | in-progress | null | Successful completion | Clears marker; bumps `installedVersion` |
 | in-progress | in-progress | Crash/kill | No-op (marker persists for resume) |
+| in-progress | failed | `/loom-update --resume` hits unrecoverable condition | Sets state to `failed`; `fixCommand: "/loom-update --check OR /loom-doctor --bundle to file an issue"` |
 
 **Invalid transitions:**
 | From | To | Error code | Message |
 |------|----|-----------|---------|
 | null | null | NO_UPDATE_NEEDED | Already at latest (informational, not an error condition) |
+| failed | in-progress | UPDATE_FAILED_TERMINAL | Cannot resume from `failed`; run `/loom-update --check` or `/loom-doctor --bundle` |
 
-### MigrationMarker (`.loom/migration-in-progress`)
+### MigrationMarker schema (`.loom/migration-in-progress`)
+
+| Field | Type | Constraints | Validation Rules |
+|-------|------|-------------|-----------------|
+| startedAt | string | ISO 8601, required | RFC 3339 |
+| fromChannel | enum | required | `curl \| plugin` |
+| toChannel | enum | required | `curl \| plugin` |
+| stepCompleted | enum\|null | required | one of: `download \| verify \| swap \| clear-marker \| null`. `--resume` skips completed steps and continues from the next. |
+
+The four migration/update steps (F-12 `/loom-update` flow): (1) `download` tarball, (2) `verify` sha256, (3) `swap` files, (4) `clear-marker`. `--resume` reads `stepCompleted` and continues from the next step.
+
+### MigrationMarker state machine
 
 ```
 absent ──/loom-migrate-to-plugin start──→ present ──success──→ absent
@@ -474,9 +513,9 @@ Read from process env on every command invocation. No `.env` file support — Lo
 ### Phase 0 — Wave 0: Contracts & Schemas
 
 **Agent:** contracts-agent
-**Objective:** Materialize all TOON schemas, TypeScript types, and shared protocol files consumed by downstream phases.
+**Objective:** Materialize all TOON schemas, TypeScript types, build toolchain (tsconfig + package.json), schema validator script, and shared protocol files consumed by downstream phases.
 **Dependencies:** None
-**File Ownership:** agents/protocols/install-state.schema.md, agents/protocols/plugin-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/plugin-root.schema.md, agents/protocols/dismissed-init-prompt.schema.md, agents/protocols/hook-failure-log.schema.md, agents/protocols/migration-marker.schema.md, hooks/lib/types/install-state.ts, hooks/lib/types/plugin-manifest.ts, hooks/lib/types/doctor-report.ts, hooks/lib/types/error-envelope.ts
+**File Ownership:** agents/protocols/install-state.schema.md, agents/protocols/plugin-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/plugin-root.schema.md, agents/protocols/dismissed-init-prompt.schema.md, agents/protocols/hook-failure-log.schema.md, agents/protocols/migration-marker.schema.md, hooks/lib/types/install-state.ts, hooks/lib/types/plugin-manifest.ts, hooks/lib/types/doctor-report.ts, hooks/lib/types/error-envelope.ts, hooks/lib/types/hook-failure-log.ts, tsconfig.json, package.json, scripts/validate-toon-schemas.ts
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -492,12 +531,19 @@ Read from process env on every command invocation. No `.env` file support — Lo
 | hooks/lib/types/plugin-manifest.ts | Create | contracts-agent |
 | hooks/lib/types/doctor-report.ts | Create | contracts-agent |
 | hooks/lib/types/error-envelope.ts | Create | contracts-agent |
+| hooks/lib/types/hook-failure-log.ts | Create — TS type matching the HookFailureLog TOON schema | contracts-agent |
+| tsconfig.json | Create — TypeScript 5.x, strict, ESM | contracts-agent |
+| package.json | Create — minimal with TypeScript + tsx + vitest deps | contracts-agent |
+| scripts/validate-toon-schemas.ts | Create — validates files under `agents/protocols/*.schema.md` | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `npx tsc --noEmit` exits with code 0
+- [ ] `bunx tsx scripts/validate-toon-schemas.ts` exits 0 and validates every `agents/protocols/*.schema.md`
 - [ ] Every schema file has TOON-format reference example
 - [ ] Every enum value referenced in roadmap (channel, source) is defined in TypeScript
-- [ ] `agents/protocols/install-state.schema.md` includes all 11 fields from Data Model
+- [ ] `agents/protocols/install-state.schema.md` includes all 14 fields from Data Model (11 base + `installError`, `pinnedVersion`, `updateInProgress.failed` terminal state)
+- [ ] `hooks/lib/types/plugin-manifest.ts` declares `compatibilityMatrix: string[]` (NOT `unknown[]`); TS compiler asserts the array element type
+- [ ] **Shared C-12 `--help` enforcement (applied to Phases 3, 9, 10, 11, 12):** every user-facing command exits 0 on `--help` and prints usage to stdout. Phase 0 publishes a shared `help-output` scenario template consumed by downstream phases.
 
 ---
 
@@ -573,7 +619,9 @@ automatable: true
 **Agent:** implementer-agent
 **Objective:** Complete F-15: wrapper PATH prepend (already committed in PR #9), loom-init settings.json audit, fail-loud escalation, install.sh post-install probe.
 **Dependencies:** Phase 0
-**File Ownership:** hooks/run-hook.sh, hooks/lib/fail-loud-logger.ts, hooks/lib/fail-loud-logger.test.ts, install.sh, scripts/probe-hook-runtime.sh, commands/loom-init.md (audit section only)
+**File Ownership:** hooks/run-hook.sh, hooks/lib/fail-loud-logger.ts, hooks/lib/fail-loud-logger.test.ts, install.sh, scripts/probe-hook-runtime.sh, loom-init-audit-notes.md, test/fixtures/hook-input.json
+
+> **Wave-1 ownership note (per blocker resolution):** Phase 2 does NOT write `commands/loom-init.md`. Phase 3 (F-02) is the SOLE writer. Phase 2's audit output is captured in a separate file `loom-init-audit-notes.md`.
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -583,14 +631,16 @@ automatable: true
 | hooks/lib/fail-loud-logger.test.ts | Create | implementer-agent |
 | install.sh | Modify (add post-install probe at lines 263-288) | implementer-agent |
 | scripts/probe-hook-runtime.sh | Create | implementer-agent |
-| commands/loom-init.md | Modify (audit settings.json template) | implementer-agent |
+| loom-init-audit-notes.md | Create — Phase 2 audit findings on settings.json + C-16 PATH dependency, consumed by Phase 3 when authoring `commands/loom-init.md` | implementer-agent |
+| test/fixtures/hook-input.json | Create — minimal Claude Code hook stdin fixture for the minimal-container probe | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] `env -i HOME=$HOME PATH=/usr/bin:/bin sh hooks/run-hook.sh hooks/deploy-guard.ts` exits 0 with no stderr
 - [ ] Same probe succeeds for all 6 PreToolUse hooks: deploy-guard, context-budget, budget-tracker, contract-lock, file-ownership, wiki-write-guard
-- [ ] When neither bun nor node resolves, `~/.cache/loom/hook-failures.log` receives a timestamped entry
+- [ ] When neither bun nor node resolves, `~/.cache/loom/hook-failures.log` receives a timestamped entry with `hookScriptPath` populated to the absolute `.ts` path
 - [ ] `install.sh` runs the post-install probe under stripped PATH and warns on failure
-- [ ] `commands/loom-init.md` documents the C-16 PATH dependency
+- [ ] `loom-init-audit-notes.md` documents the C-16 PATH dependency (NOT `commands/loom-init.md`; that file is owned by Phase 3)
+- [ ] **Minimal-container PATH probe (catches F-15 regressions before Wave 4):** `docker run --rm -v $PWD:/loom alpine sh /loom/hooks/run-hook.sh /loom/hooks/deploy-guard.ts < /loom/test/fixtures/hook-input.json` exits 0
 
 #### Convergence Targets
 - All 6 PreToolUse hooks exit 0 under `env -i HOME=$HOME PATH=/usr/bin:/bin`
@@ -643,9 +693,11 @@ automatable: true
 ### Phase 3 — Wave 2: First-invocation graceful no-op (F-02, P0)
 
 **Agent:** implementer-agent
-**Objective:** Implement C-11 graceful no-op for all `/loom-*` commands, 24h suppression marker, and edge-case handling.
-**Dependencies:** Phase 0, Phase 1
-**File Ownership:** hooks/lib/init-guard.ts, hooks/lib/init-guard.test.ts, hooks/lib/dismissal-marker.ts, hooks/lib/dismissal-marker.test.ts, commands/_loom-init-guard.md
+**Objective:** Implement C-11 graceful no-op for all `/loom-*` commands, 24h suppression marker, edge-case handling, and author `commands/loom-init.md` (SOLE writer per Wave 2 ownership resolution).
+**Dependencies:** Phase 0, Phase 1, Phase 2 (consumes `loom-init-audit-notes.md`)
+**File Ownership:** hooks/lib/init-guard.ts, hooks/lib/init-guard.test.ts, hooks/lib/dismissal-marker.ts, hooks/lib/dismissal-marker.test.ts, commands/_loom-init-guard.md, commands/loom-init.md
+
+> **Wave 2→3 wiring step:** After Phase 5 (F-09a) produces `marketplace/loom-init-success-output.toon`, a wiring step merges the success-output text from that artifact into `commands/loom-init.md`. Phase 3 is the SOLE writer of `commands/loom-init.md`; Phase 5 produces only the canonical reference artifact.
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -655,6 +707,7 @@ automatable: true
 | hooks/lib/dismissal-marker.ts | Create | implementer-agent |
 | hooks/lib/dismissal-marker.test.ts | Create | implementer-agent |
 | commands/_loom-init-guard.md | Create (shared snippet for all /loom-* commands) | implementer-agent |
+| commands/loom-init.md | Create (SOLE writer; integrates Phase 2 audit notes + Phase 5 success-output spec via Wave 2→3 wiring) | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] `/loom-status` invoked without `.loom/plugin-root` emits exact prompt: `Loom is not initialized in this project. Run /loom-init to activate.`
@@ -662,6 +715,8 @@ automatable: true
 - [ ] `.loom/dismissed-init-prompt` written atomically via `.tmp` rename per CLAUDE.md
 - [ ] `bunx vitest run hooks/lib/init-guard.test.ts hooks/lib/dismissal-marker.test.ts` exits 0
 - [ ] No `/loom-*` command mutates project state when `.loom/plugin-root` is absent (except `/loom-init` itself)
+- [ ] **Idempotency:** if `.loom/plugin-root` already exists, `/loom-init` is a no-op with stdout "Loom already initialized in this project. Use /loom-update to upgrade or /loom-doctor to diagnose." and exit 0
+- [ ] **C-12 `--help`:** `/loom-init --help` exits 0 and prints usage to stdout (shared scenario from Phase 0)
 
 #### Convergence Targets
 - First-display prompt is exact string match
@@ -723,6 +778,19 @@ automatable: true
 ```
 
 ```toon
+id: S-06
+title: /loom-init is idempotent when .loom/plugin-root exists
+given[1]: A project already has .loom/plugin-root present from a prior init
+when: /loom-init is invoked
+whenTriggerType: actor-action
+then[3]: stdout MUST equal "Loom already initialized in this project. Use /loom-update to upgrade or /loom-doctor to diagnose.", The command MUST exit 0, No filesystem mutation MUST occur
+stateRef:
+tags[2]: edge-case, regression
+testTier: integration
+automatable: true
+```
+
+```toon
 id: S-05
 title: Worktree first-open behaves like fresh project
 given[2]: A new worktree has been created from a Loom-initialized main repo, The worktree has no .loom/plugin-root
@@ -754,7 +822,8 @@ automatable: true
 | plugin/first-run.test.ts | Create | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] `plugin/manifest.toon` declares `manifestVersion=1`, `loomVersion`, `sha256`, `attestationUrl`, `minClaudeCodeVersion`, `permissions`
+- [ ] `plugin/manifest.toon` declares `manifestVersion=1`, `loomVersion`, `sha256`, `attestationUrl`, `minClaudeCodeVersion`, `permissions`, `entryPoint`, `publisher`, `categories`
+- [ ] Acceptance asserts on `entryPoint` (non-empty relative path), `publisher` (`loom-ai`), and `categories` (non-empty `string[]`)
 - [ ] First-run handler writes `~/.loom/install.toon` with `channel=plugin` and `source` per C-06
 - [ ] `bunx vitest run plugin/` exits 0
 - [ ] Manifest validates against `agents/protocols/plugin-manifest.schema.md`
@@ -797,23 +866,24 @@ automatable: true
 ### Phase 5 — Wave 2: Outcome-led listing copy (F-09a, P0)
 
 **Agent:** implementer-agent
-**Objective:** Author marketplace listing copy and `/loom-init` success-output spec implementation.
+**Objective:** Author marketplace listing copy and produce the canonical `/loom-init` success-output reference artifact. Phase 5 does NOT write `commands/loom-init.md` directly (Phase 3 is sole writer); a Wave 2→3 wiring step merges the artifact text into the command file.
 **Dependencies:** Phase 0
-**File Ownership:** marketplace/listing.md, marketplace/listing-checklist.md, commands/loom-init.md (success-output section only — coordinated read-only with Phase 2)
+**File Ownership:** marketplace/listing.md, marketplace/listing-checklist.md, marketplace/loom-init-success-output.toon
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
 | marketplace/listing.md | Create | implementer-agent |
 | marketplace/listing-checklist.md | Create | implementer-agent |
-| commands/loom-init.md | Modify (success-output spec UX-NEW-03) | implementer-agent |
+| marketplace/loom-init-success-output.toon | Create — canonical reference artifact for UX-NEW-03 success-output spec; Phase 3 merges this into `commands/loom-init.md` via Wave 2→3 wiring; Phase 8 reads this as the source of truth for `test/fixtures/expected-init-output.txt` | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] Listing copy leads with outcomes (planning waves, convergence loops, repo-committed wiki)
 - [ ] Listing includes C-14 differentiation claim verbatim
 - [ ] Listing includes "Community-supported. GitHub issues only. No SLA." above the fold
 - [ ] Single onboarding CTA copy-pasteable: `claude plugin add loom`
-- [ ] `/loom-init` final output emits (a) files written, (b) suggested next command, (c) telemetry opt-in prompt result
+- [ ] `marketplace/loom-init-success-output.toon` defines the three required sections: (a) files written, (b) suggested next command, (c) telemetry opt-in prompt result
+- [ ] **Named maintainer review gate (file-based assertion is insufficient):** before the marketplace submission PR opens, a GitHub issue assigned to the repo owner explicitly approves the listing copy. The submission PR description links to the resolved review issue.
 
 #### Convergence Targets
 - Listing copy passes outcomes-not-features checklist (file-based assertion)
@@ -853,29 +923,33 @@ automatable: true
 ### Phase 6 — Wave 3: Atomic release pipeline (F-03, P0)
 
 **Agent:** implementer-agent
-**Objective:** Single GHA workflow triggered by `git tag vX.Y.Z`: build tarball, upload to GitHub Releases, generate plugin manifest with sha256, open marketplace-repo PR, auto-generate CHANGELOG entry.
+**Objective:** Single GHA workflow triggered by `git tag vX.Y.Z`: build tarball, upload to GitHub Releases, generate plugin manifest with sha256, open marketplace-repo PR (gated on passing sigstore workflow), auto-generate CHANGELOG entry. Convergence target runs locally via `act` instead of pushing a real tag.
 **Dependencies:** Phase 0, Phase 4
-**File Ownership:** .github/workflows/release.yml, scripts/build-release-tarball.ts, scripts/generate-manifest.ts, scripts/generate-changelog.ts, scripts/open-marketplace-pr.ts
+**File Ownership:** .github/workflows/release.yml, scripts/build-release-tarball.ts, scripts/generate-manifest.ts, scripts/generate-changelog.ts, scripts/open-marketplace-pr.ts, fixtures/v0.1.0-test-event.json, docs/release-runbook.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
 | .github/workflows/release.yml | Create | implementer-agent |
-| scripts/build-release-tarball.ts | Create | implementer-agent |
+| scripts/build-release-tarball.ts | Create — dry-run mode emits `dist/loom-local-test.tar.gz` for Phase 8 fixture | implementer-agent |
 | scripts/generate-manifest.ts | Create | implementer-agent |
 | scripts/generate-changelog.ts | Create | implementer-agent |
-| scripts/open-marketplace-pr.ts | Create | implementer-agent |
+| scripts/open-marketplace-pr.ts | Create — MUST check for a passing sigstore workflow run before opening the marketplace PR | implementer-agent |
+| fixtures/v0.1.0-test-event.json | Create — `act push --eventpath` fixture | implementer-agent |
+| docs/release-runbook.md | Create — partial-release recovery runbook | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] Pushing a tag `v0.1.0-test` triggers the workflow end-to-end in a dry-run mode (no actual marketplace PR)
-- [ ] Workflow produces exactly one tarball
+- [ ] **Agent-executable via `act`:** `act push --eventpath fixtures/v0.1.0-test-event.json` runs the workflow end-to-end locally in dry-run mode without pushing a real tag
+- [ ] Workflow produces exactly one tarball; in dry-run mode emits to `dist/loom-local-test.tar.gz` (consumed by Phase 8 `--local-tarball` fixture)
 - [ ] `manifest.toon` sha256 matches `sha256sum` of the tarball
 - [ ] `CHANGELOG.md` entry is auto-generated and committed
 - [ ] No manual intervention required between tag-push and PR-open
+- [ ] **Phase 6→7 sequencing:** `open-marketplace-pr.ts` checks for a passing sigstore workflow run on the same commit BEFORE opening the marketplace PR (Wave 3 wiring pass wires the `needs:` cross-workflow reference)
+- [ ] **Partial-release rollback documented in `docs/release-runbook.md`:** if tarball uploaded but marketplace PR not opened, runbook step is "delete the GitHub Release asset, re-tag with patch bump, re-run workflow"
 
 #### Convergence Targets
-- `git tag v0.1.0 && git push --tags` triggers the workflow without manual steps
-- Tarball uploaded to GitHub Releases AND manifest PR opened in marketplace repo
+- `act push --eventpath fixtures/v0.1.0-test-event.json` exits 0 without manual steps (automatable)
+- Tarball uploaded to GitHub Releases AND manifest PR opened in marketplace repo (after sigstore success)
 - CHANGELOG.md entry committed with version header `## vX.Y.Z`
 
 #### Scenarios
@@ -966,8 +1040,8 @@ automatable: true
 ### Phase 8 — Wave 4: Docker clean-machine harness (F-10a, P0)
 
 **Agent:** implementer-agent
-**Objective:** Containerized clean-machine harness per C-15 — Docker base image, install Claude Code, run `claude plugin add github:loom-ai/loom@<tag>`, exercise first-invocation flow with stripped subprocess PATH (C-16 verification matrix).
-**Dependencies:** Phase 0, Phase 2 (hook fix), Phase 3 (F-02), Phase 4 (manifest), Phase 5 (listing copy spec for `/loom-init` output)
+**Objective:** Containerized clean-machine harness per C-15 — Docker base image, install Claude Code, run `claude plugin add github:loom-ai/loom@<tag>` OR consume a local tarball fixture, exercise first-invocation flow with stripped subprocess PATH (C-16 verification matrix).
+**Dependencies:** Phase 0, Phase 2 (hook fix), Phase 3 (F-02), Phase 4 (manifest), Phase 5 (listing copy + success-output artifact), Phase 6 (local tarball fixture)
 **File Ownership:** test/docker/Dockerfile, test/docker/run-harness.sh, test/plugin-install-e2e.test.ts, test/worktree-init.test.ts, test/fixtures/expected-init-output.txt
 
 #### Deliverables
@@ -981,10 +1055,11 @@ automatable: true
 
 #### Acceptance Criteria
 - [ ] `bun test test/plugin-install-e2e.test.ts` exits 0 inside a fresh container
+- [ ] Harness accepts `--local-tarball <path>` and consumes the Phase 6 dry-run output at `dist/loom-local-test.tar.gz` (enables Phase 8 to run before a real tag exists)
 - [ ] Worktree fixture verifies independent per-worktree `.loom/plugin-root`
 - [ ] All 6 PreToolUse hooks pass C-16 verification matrix (env -i, stripped PATH)
 - [ ] Harness verifies F-02 prompt → `/loom-init` → working state pipeline
-- [ ] Harness verifies F-09a UX-NEW-03 `/loom-init` success output spec
+- [ ] Harness verifies F-09a UX-NEW-03 `/loom-init` success output spec; `test/fixtures/expected-init-output.txt` is generated from `marketplace/loom-init-success-output.toon` (Phase 5 artifact is source of truth)
 
 #### Convergence Targets
 - E2E test exits 0 on fresh container build
@@ -1022,7 +1097,7 @@ automatable: true
 ```toon
 id: S-03
 title: All 6 PreToolUse hooks exit 0 under stripped PATH
-given[1]: The container has bun at /opt/homebrew/bin/bun and PATH is stripped to /usr/bin:/bin
+given[1]: The Linux Docker container has bun at /usr/local/bin/bun and PATH is stripped to /usr/bin:/bin (wrapper PATH prepend covers both Linux and macOS paths)
 when: env -i HOME=$HOME PATH=/usr/bin:/bin sh hooks/run-hook.sh is invoked for each of the 6 PreToolUse hooks
 whenTriggerType: api-call
 then[2]: Every invocation MUST exit 0, No stderr output MUST be emitted from any invocation
@@ -1034,11 +1109,11 @@ automatable: true
 
 ---
 
-### Phase 9 — Wave 5: `/loom-doctor` v1 (F-04, P1)
+### Phase 9 — Wave 5a: `/loom-doctor` v1 (F-04, P1)
 
 **Agent:** implementer-agent
-**Objective:** Ship scope-reduced `/loom-doctor` with checks (a) version-drift and (d) channel-files, plus F-15's hooks check, with `--json`, `--check`, `--bundle`, and stub `--fix`.
-**Dependencies:** Phase 0, Phase 1, Phase 2
+**Objective:** Ship scope-reduced `/loom-doctor` with checks (a) version-drift, (d) channel-files, F-15's hooks check, and the `install-interrupted` red check, with `--json`, `--only` (renamed from `--check`), `--bundle`, and stub `--fix`.
+**Dependencies:** Phase 0, Phase 1, Phase 2, Phase 4 (doctor reads `install.toon` produced by Phase 4 first-run handler)
 **File Ownership:** commands/loom-doctor.md, src/commands/doctor/index.ts, src/commands/doctor/checks/version-drift.ts, src/commands/doctor/checks/channel-files.ts, src/commands/doctor/checks/hooks.ts, src/commands/doctor/bundle.ts, src/commands/doctor/render.ts, src/commands/doctor/__tests__/*.test.ts
 
 #### Deliverables
@@ -1055,11 +1130,14 @@ automatable: true
 
 #### Acceptance Criteria
 - [ ] `/loom-doctor` on a fresh plugin install: all checks green, exit 0
-- [ ] `/loom-doctor --json` emits valid `doctor-report.toon` conforming to schema
+- [ ] `/loom-doctor --json` emits valid `doctor-report.toon` conforming to schema with `reportVersion=1`
 - [ ] Mixed-channel state (curl install + `~/.claude/plugins/loom/` present) yields red `channel-files` with `fixCommand: /loom-migrate-to-plugin --reconcile`
-- [ ] `--bundle` produces a `.tar.gz` with redacted `install.toon` + report (no secrets)
+- [ ] `install-interrupted` red check fires when `install.toon.installError` is non-null
+- [ ] `--bundle` produces a `.tar.gz` with redacted `install.toon` + report (no secrets); output path matches `~/.cache/loom/bundles/loom-doctor-{version}-{ISO8601-timestamp}.tar.gz` (S-05 asserts this format)
 - [ ] `--fix` emits the stub message and exits 0
 - [ ] Network failure on version check yields yellow, not red
+- [ ] `--only <name>` runs only the named check (renamed from `--check` to avoid collision with `/loom-update --check`)
+- [ ] **C-12 `--help`:** `/loom-doctor --help` exits 0 and prints usage to stdout
 
 #### Convergence Targets
 - All three checks present (version-drift, channel-files, hooks)
@@ -1126,7 +1204,7 @@ title: --bundle produces redacted diagnostic tarball
 given[1]: install.toon contains an installSourceUrl that should be preserved and no secrets
 when: /loom-doctor --bundle is invoked
 whenTriggerType: actor-action
-then[2]: A .tar.gz MUST be written to the bundle dir, The bundled install.toon MUST exclude any redactable fields
+then[3]: A .tar.gz MUST be written to the bundle dir, The filename MUST match the format loom-doctor-{version}-{ISO8601-timestamp}.tar.gz, The bundled install.toon MUST exclude any redactable fields
 stateRef:
 tags[1]: happy-path
 testTier: integration
@@ -1135,7 +1213,7 @@ automatable: true
 
 ---
 
-### Phase 10 — Wave 5: `/loom-migrate-to-plugin` (F-05, P1)
+### Phase 10 — Wave 5b: `/loom-migrate-to-plugin` (F-05, P1)
 
 **Agent:** implementer-agent
 **Objective:** Opt-in migration command with `--dry-run`, `--reconcile`, `--resume`, partial-failure recovery via `.loom/migration-in-progress` marker.
@@ -1158,6 +1236,7 @@ automatable: true
 - [ ] `--dry-run` produces complete diff with zero mutations
 - [ ] Killed mid-run, marker is detected; `--resume` completes from marker
 - [ ] `--reconcile` repairs mixed-channel state detected by `/loom-doctor`
+- [ ] **C-12 `--help`:** `/loom-migrate-to-plugin --help` exits 0 and prints usage to stdout
 
 #### Convergence Targets
 - Migration preserves all of `.loom/wiki/`, `.plan-execution/`, `orchestration.toml`
@@ -1243,7 +1322,9 @@ automatable: true
 - [ ] `/loom-update --check --json` returns TOON with `currentVersion`, `latestVersion`, `behind`
 - [ ] `--resume` completes from a mid-update marker
 - [ ] Final stdout line on plugin update: `Claude Code restart required to load new plugin version`
-- [ ] `--resume` on unrecoverable marker (toVersion gone) exits non-zero without clearing marker
+- [ ] `--resume` on unrecoverable marker (toVersion gone) sets `install.toon.updateInProgress` to terminal `failed` state with `fixCommand` "/loom-update --check OR /loom-doctor --bundle to file an issue"; exits non-zero
+- [ ] `--pin <version>` writes `install.toon.pinnedVersion` and runs `claude plugin add loom@<version>` (F-01/F-12 pinning support)
+- [ ] **C-12 `--help`:** `/loom-update --help` exits 0 and prints usage to stdout
 
 #### Convergence Targets
 - `--check` output exact-string match per UX-NEW-04
@@ -1327,6 +1408,8 @@ automatable: true
 - [ ] `--dry-run` produces complete removal preview without mutation
 - [ ] Base-prompt 60s timeout exits with code 1 and no mutation
 - [ ] `--yes` bypasses all confirmations
+- [ ] Base-prompt shows a countdown `(60s)`; on timeout stderr emits `Confirmation timed out after 60s; no changes made.` before exit 1
+- [ ] **C-12 `--help`:** `/loom-uninstall --help` exits 0 and prints usage to stdout
 
 #### Convergence Targets
 - Confirmation prompt exact-string match per UX-NEW-02
@@ -1392,24 +1475,28 @@ automatable: true
 ### Phase 13 — Wave 6: Install telemetry (F-11, P1)
 
 **Agent:** implementer-agent
-**Objective:** Opt-in telemetry plumbing: opt-in prompt inside `/loom-init`, `lastPing` updates, server endpoint, `doNotTrack` honoring.
+**Objective:** **M-01 client-side only** — opt-in telemetry plumbing: opt-in prompt inside `/loom-init`, `lastPing` updates, local pending-pings queue, `doNotTrack` honoring, AND a dedicated manifest-fetch counter instrumentation step. Server-side handler is **deferred to M-02** (hosting decision deferred). C-09 kill-criterion fallback (GitHub Release download ratio vs plugin manifest fetches) is the **primary measurement path** in M-01.
 **Dependencies:** Phase 0, Phase 1, Phase 3, Phase 5
-**File Ownership:** src/telemetry/ping-client.ts, src/telemetry/opt-in-prompt.ts, src/telemetry/__tests__/*.test.ts, telemetry-server/v1/ping-handler.ts, docs/privacy.md
+**File Ownership:** src/telemetry/ping-client.ts, src/telemetry/opt-in-prompt.ts, src/telemetry/__tests__/*.test.ts, src/telemetry/manifest-fetch-counter.ts, docs/privacy.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| src/telemetry/ping-client.ts | Create | implementer-agent |
-| src/telemetry/opt-in-prompt.ts | Create | implementer-agent |
+| src/telemetry/ping-client.ts | Create — writes to local queue at `~/.cache/loom/pending-pings.toon`; server delivery deferred to M-02 | implementer-agent |
+| src/telemetry/opt-in-prompt.ts | Create — 30s timeout; default `doNotTrack: true` on timeout (prevents CI/non-interactive `/loom-init` blocking) | implementer-agent |
 | src/telemetry/__tests__/telemetry.test.ts | Create | implementer-agent |
-| telemetry-server/v1/ping-handler.ts | Create | implementer-agent |
+| src/telemetry/manifest-fetch-counter.ts | Create — instruments GitHub API manifest-fetch counter for C-09 kill-criterion primary measurement | implementer-agent |
 | docs/privacy.md | Create | implementer-agent |
+
+> **M-02 deferral note:** `telemetry-server/v1/ping-handler.ts` and the HTTP endpoint ship in M-02 once hosting is decided. M-01 writes pings to `~/.cache/loom/pending-pings.toon` only.
 
 #### Acceptance Criteria
 - [ ] `/loom-init` opt-in prompt: default `N` writes `doNotTrack: true`; `y` enables `lastPing` updates
-- [ ] Ping client honors `doNotTrack=true` and never sends
-- [ ] Ping endpoint returns 204 on valid body; 400 on malformed; 429 on rate limit
-- [ ] `docs/privacy.md` describes what is collected and links from F-09a listing copy
+- [ ] **Opt-in prompt has a 30s timeout; on timeout `doNotTrack: true` is written** (CI/non-interactive `/loom-init` must not block)
+- [ ] Ping client honors `doNotTrack=true` and never queues
+- [ ] When `doNotTrack=false`, pings are written to `~/.cache/loom/pending-pings.toon` (server delivery deferred to M-02)
+- [ ] Manifest-fetch counter instrumented via GitHub API and surfaced for C-09 evaluation (primary M-01 measurement path)
+- [ ] `docs/privacy.md` describes what is collected, links from F-09a listing copy, and documents the M-01→M-02 hosting deferral
 
 #### Convergence Targets
 - Opt-in prompt exact-string match per F-11 spec
@@ -1446,37 +1533,39 @@ automatable: true
 
 ```toon
 id: S-03
-title: Ping endpoint returns 400 on malformed body
-given[1]: The telemetry server is reachable
-when: POST /v1/ping is invoked with an invalid body
-whenTriggerType: api-call
-then[2]: HTTP status MUST be 400, Response body MUST contain code VALIDATION_ERROR
+title: Opt-in prompt times out at 30s with doNotTrack default true
+given[1]: /loom-init has invoked the opt-in prompt in a non-interactive context
+when: 30 seconds elapse with no input
+whenTriggerType: system-event
+then[2]: install.toon.doNotTrack MUST be true, /loom-init MUST exit 0 without blocking
 stateRef:
-tags[1]: error
+tags[2]: edge-case, regression
 testTier: integration
 automatable: true
 ```
 
 ```toon
 id: S-04
-title: Ping endpoint returns 204 on valid body
-given[1]: The telemetry server is reachable
-when: POST /v1/ping is invoked with a well-formed body
-whenTriggerType: api-call
-then[1]: HTTP status MUST be 204
+title: Manifest-fetch counter increments via GitHub API instrumentation
+given[1]: A plugin install triggers a manifest fetch
+when: The fetch completes
+whenTriggerType: system-event
+then[1]: The manifest-fetch counter MUST increment (used by C-09 kill-criterion primary measurement)
 stateRef:
 tags[1]: happy-path
 testTier: integration
 automatable: true
 ```
 
+> **M-02 scenarios (deferred):** Ping endpoint HTTP 204/400/429 scenarios ship in M-02 alongside the server-side handler.
+
 ---
 
-### Phase 14 — Wave 7: `/loom-doctor` v2 (F-04b, M-02)
+### Phase 14 — Wave 7a: `/loom-doctor` v2 (F-04b, M-02)
 
 **Agent:** implementer-agent
 **Objective:** Add doctor checks (b) `orchestration.toml` schema, (c) `.loom/wiki/` artifact schema, (e) Claude Code plugin spec version; add `--fix` auto-remediation.
-**Dependencies:** Phase 9
+**Dependencies:** Phase 9, Phase 15 (plugin-spec check reads manifest paths resolved via Phase 15 full resolver)
 **File Ownership:** src/commands/doctor/checks/schema-orch.ts, src/commands/doctor/checks/schema-wiki.ts, src/commands/doctor/checks/plugin-spec.ts, src/commands/doctor/fix.ts, src/commands/doctor/__tests__/v2.test.ts
 
 #### Deliverables
@@ -1491,8 +1580,9 @@ automatable: true
 #### Acceptance Criteria
 - [ ] Schema-drift check detects stale `orchestration.toml` versus current schema
 - [ ] Wiki artifact-schema check surfaces `/loom-upgrade` as `fixCommand`
-- [ ] Plugin-spec check compares manifest `minClaudeCodeVersion` to running CC version
+- [ ] Plugin-spec check compares manifest `minClaudeCodeVersion` to running CC version (reads manifest paths via Phase 15 resolver)
 - [ ] `--fix` runs auto-remediable migrations and reports per-check outcome
+- [ ] `/loom-doctor --json` output asserts `reportVersion=2` (discriminator bump from M-01 `reportVersion=1`)
 
 #### Convergence Targets
 - All five doctor checks present (a/d from M-01 + b/c/e from M-02 + hooks from F-15)
@@ -1528,7 +1618,7 @@ automatable: true
 
 ---
 
-### Phase 15 — Wave 7: Full plugin-root resolver (F-07, M-02)
+### Phase 15 — Wave 7a: Full plugin-root resolver (F-07, M-02)
 
 **Agent:** implementer-agent
 **Objective:** Extend F-07a resolver to cover `library.yaml` and hook bodies; zero inline `${LOOM_PLUGIN_ROOT}` outside resolver.
@@ -1595,7 +1685,7 @@ automatable: true
 
 ---
 
-### Phase 16 — Wave 7: Plugin-declared hooks (F-08, M-02)
+### Phase 16 — Wave 7b: Plugin-declared hooks (F-08, M-02)
 
 **Agent:** implementer-agent
 **Objective:** Migrate all Loom hooks from `~/.claude/settings.json` hand-edits to plugin-manifest declarations (C-07).
@@ -1665,10 +1755,52 @@ automatable: true
 
 ---
 
-### Phase 17 — Wave 8: M-02 polish — listing iteration, extended fixtures, triage (F-09b, F-10b, F-14)
+### Phase 17a — Wave 8: F-10b extended fixtures (M-02)
 
 **Agent:** wiring-agent
-**Objective:** Ship F-09b listing copy iteration with changelog surfacing, F-10b extended CI fixtures, F-14 support triage wiring. This is a wiring/polish phase combining three small features that touch independent files.
+**Objective:** Ship F-10b extended CI fixtures (stale-schema, mixed-channel, partial-migration) and the convergence-loop fixture.
+**Dependencies:** Phase 6 (changelog), Phase 8 (F-10a fixture), Phase 10 (`/loom-migrate-to-plugin`), Phase 11 (`/loom-update`), Phase 13 (telemetry), Phase 14 (`/loom-doctor` v2), Phase 16 (plugin-declared hooks) — the convergence-loop fixture exercises the full CLI surface including doctor v2 and plugin-declared hooks; without them the stale-schema and mixed-channel fixtures reference checks that don't exist.
+**File Ownership:** test/plugin-convergence-loop.test.ts, test/fixtures/stale-schema/, test/fixtures/mixed-channel/, test/fixtures/partial-migration/
+
+#### Acceptance Criteria
+- [ ] Extended F-10b fixture exercises a sample convergence loop end-to-end inside the container
+- [ ] Stale-schema, mixed-channel, partial-migration fixtures all exit 0
+
+---
+
+### Phase 17b-i — Wave 8: F-14 triage wiring (M-02; ships immediately post-M-01)
+
+**Agent:** wiring-agent
+**Objective:** Ship F-14 support triage wiring (GitHub labels, issue templates, contributing docs). **No marketplace-data dependency** — ships immediately after M-01 listing goes live.
+**Dependencies:** Phase 0, Phase 4 (channel/source enum)
+**File Ownership:** .github/labels.yml, .github/ISSUE_TEMPLATE/bug.md, .github/ISSUE_TEMPLATE/install-issue.md, docs/contributing.md
+
+#### Acceptance Criteria
+- [ ] GitHub labels `channel:curl`, `channel:plugin`, `source:*` exist
+- [ ] Issue template prompts for `install.toon` contents and `/loom-doctor --bundle` attachment
+- [ ] Triage flow documented in docs/contributing.md
+
+---
+
+### Phase 17b-ii — Wave 8: F-09b listing copy iteration (M-02; gated on launchDate + 30d)
+
+**Agent:** wiring-agent
+**Objective:** Ship F-09b listing copy iteration with changelog surfacing. **Gated on real first-30-day marketplace data** — cannot start until `launchDate + 30d`.
+**Dependencies:** Phase 6 (changelog), Phase 13 (telemetry / manifest-fetch counter), M-01 launch + 30 days of real marketplace data
+**File Ownership:** marketplace/listing.md (Modify), marketplace/changelog-surfacing.ts, marketplace/competitive-scan.md
+
+#### Acceptance Criteria
+- [ ] Listing copy iteration references real manifest-fetch counter data from `src/telemetry/manifest-fetch-counter.ts` (not synthetic)
+- [ ] Marketplace adjacency scan re-evaluates the C-14 differentiation claim against current marketplace listings
+- [ ] Changelog surfacing block in listing.md sourced from Phase 6's auto-generated CHANGELOG.md
+- [ ] Gate enforced: phase MUST NOT begin before `launchDate + 30d` (track via GitHub issue with launch timestamp)
+
+---
+
+### Phase 17 — Wave 8: M-02 polish (legacy combined view — superseded by 17a/17b)
+
+**Agent:** wiring-agent
+**Objective:** Ship F-09b listing copy iteration with changelog surfacing, F-10b extended CI fixtures, F-14 support triage wiring. This is a wiring/polish phase combining three small features that touch independent files. **Superseded by the 17a/17b split above.**
 **Dependencies:** Phase 6 (changelog), Phase 8 (F-10a fixture), Phase 13 (telemetry)
 **File Ownership:** marketplace/listing.md (extend — modify), marketplace/changelog-surfacing.ts, test/plugin-convergence-loop.test.ts, test/fixtures/stale-schema/, test/fixtures/mixed-channel/, test/fixtures/partial-migration/, .github/ISSUE_TEMPLATE/bug-report.yml, scripts/create-triage-labels.ts, docs/contributing.md
 
@@ -1817,7 +1949,8 @@ bunx tsx src/cli.ts loom-uninstall --dry-run
 - Single resolver layer covers `library.yaml` and hooks (F-07)
 - Extended F-10b fixture covers convergence loop + stale-schema + mixed-channel + partial-migration
 - Triage labels and issue template wired (F-14)
-- C-03 sunset and C-09 kill criterion evaluated at the 90-day mark using F-11 signals
+- C-03 sunset and C-09 kill criterion evaluated at the 90-day mark using F-11 signals (manifest-fetch counter primary in M-01)
+- **C-10 activation hook (quarterly review checkpoint):** each quarter, evaluate whether Anthropic has shipped first-party planning primitives; if yes, initiate a 30-day C-10 evaluation window.
 
 ## Risks & Mitigations
 
