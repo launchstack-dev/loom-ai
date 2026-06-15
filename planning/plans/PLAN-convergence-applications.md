@@ -353,7 +353,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship `scripts/code-review-harness.ts` that emits canonical `findings.toon` from the existing `/loom-code review` reviewer fan-out, plus the `--autoconverge` wrapper on `/loom-code review`.
-**Dependencies:** Phase 0
+**Dependencies:** Phase 0, Phase 4 (e2e scenarios S-02 and S-03 require fixer-agent Integrator Mode to be shipped first)
 **File Ownership:** `scripts/code-review-harness.ts`, `scripts/lib/code-review-harness/**`, `~/.claude/commands/loom-code.md` (modify — `--autoconverge` flag only), `test/code-review-harness.test.ts`, `test/fixtures/code-review/**`
 
 #### Deliverables
@@ -424,7 +424,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship `scripts/test-harness.ts` (with `bun`/`vitest`/`pytest` runners), a `/loom-test --autoconverge` wrapper, and a fixture that converges in exactly 2 iterations.
-**Dependencies:** Phase 0
+**Dependencies:** Phase 0, Phase 4 (e2e scenario S-04 requires fixer-agent Integrator Mode to be shipped first)
 **File Ownership:** `scripts/test-harness.ts`, `scripts/lib/test-runners/**`, `~/.claude/commands/loom-test.md` (Create — new command), `test/test-harness.test.ts`, `test/fixtures/test-harness/**`
 
 #### Deliverables
@@ -510,13 +510,13 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship `debug-investigator-agent`, `scripts/debug-harness.ts` (with synthetic symptom-row workaround per OQ-01), and `/loom-bugfix --autoconverge` wrapper. Per OQ-03 (single-agent + new mode), `fix-applier-agent` is `fixer-agent` invoked with a debug-context wrapper — no new agent file is authored for it; Phase 4 (fixer-agent Integrator Mode) supplies the integrator.
-**Dependencies:** Phase 0
-**File Ownership:** `agents/debug-investigator-agent.md` (Create at `~/.claude/agents/debug-investigator-agent.md`), `scripts/debug-harness.ts`, `scripts/lib/debug-harness/**`, `~/.claude/commands/loom-bugfix.md` (modify — `--autoconverge` flag only), `test/debug-harness.test.ts`, `test/fixtures/debug/**`
+**Dependencies:** Phase 0, Phase 4 (Phase 4 must complete before the e2e acceptance criteria of this phase can be verified — see F-11 fix)
+**File Ownership:** `agents/debug-investigator-agent.md` (Create), `scripts/debug-harness.ts`, `scripts/lib/debug-harness/**`, `~/.claude/commands/loom-bugfix.md` (modify — `--autoconverge` flag only), `test/debug-harness.test.ts`, `test/fixtures/debug/**`
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| ~/.claude/agents/debug-investigator-agent.md | Create | implementer-agent |
+| agents/debug-investigator-agent.md | Create | implementer-agent |
 | scripts/debug-harness.ts | Create | implementer-agent |
 | scripts/lib/debug-harness/synthetic-symptom.ts | Create | implementer-agent |
 | ~/.claude/commands/loom-bugfix.md | Modify (`--autoconverge` flag + behavior section) | implementer-agent |
@@ -581,15 +581,18 @@ automatable: true
 ### Phase 4 — Wave 1: fixer-agent Integrator Mode + pr-fixer-agent
 
 **Agent:** implementer-agent
-**Objective:** Extend `~/.claude/agents/fixer-agent.md` with an Integrator Mode (input contract: `findingsPath + subjectPath` → atomic revised file write), and ship a new `~/.claude/agents/pr-fixer-agent.md` that thin-wraps fixer-agent with PR-diff context-injection. Per OQ-03, fixer-agent stays a single agent with a new mode (not a separate `fixer-integrator-agent.md`).
+**Objective:** Extend `agents/fixer-agent.md` with an Integrator Mode (input contract: `findingsPath + subjectPath` → atomic revised file write), and ship a new `agents/pr-fixer-agent.md` that thin-wraps fixer-agent with PR-diff context-injection. Per OQ-03, fixer-agent stays a single agent with a new mode (not a separate `fixer-integrator-agent.md`).
+
+> **Note (F-11 fix):** Phase 4 is placed in Wave 1 but its Integrator Mode is a prerequisite for the e2e acceptance criteria of Phases 1, 2, and 3. Within Wave 1, Phase 4 MUST be completed and merged before the e2e scenarios of Phases 1-3 are exercised. Harness-level work in Phases 1-3 may proceed in parallel with Phase 4; the e2e verification gate at each phase boundary waits on Phase 4.
+
 **Dependencies:** Phase 0
-**File Ownership:** `~/.claude/agents/fixer-agent.md` (Modify — append Integrator Mode section only), `~/.claude/agents/pr-fixer-agent.md` (Create), `test/fixer-agent-integrator-mode.test.ts`
+**File Ownership:** `agents/fixer-agent.md` (Modify — append Integrator Mode section only), `agents/pr-fixer-agent.md` (Create), `test/fixer-agent-integrator-mode.test.ts`
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| ~/.claude/agents/fixer-agent.md | Modify (append Integrator Mode section mirroring plan-builder-agent's) | implementer-agent |
-| ~/.claude/agents/pr-fixer-agent.md | Create | implementer-agent |
+| agents/fixer-agent.md | Modify (append Integrator Mode section mirroring plan-builder-agent's) | implementer-agent |
+| agents/pr-fixer-agent.md | Create | implementer-agent |
 | test/fixer-agent-integrator-mode.test.ts | Create | implementer-agent |
 
 #### Acceptance Criteria
@@ -909,9 +912,11 @@ bun test test/convergence-applications/                      # Phase 8
 | Wave | Phases | Milestone(s) |
 |------|--------|--------------|
 | 0 | Phase 0 | prerequisite for all |
-| 1 | Phases 1, 2, 3, 4 (parallel; F-01..F-04 share no files per CA-02) | completes M-01 + M-02 |
-| 2 | Phase 5 | M-03 (Gemini adapter) |
+| 1 | Phases 1, 2, 3, 4 (parallel harness work; e2e gates of Phases 1-3 wait on Phase 4 completion per F-11 fix) | completes M-01 + M-02 |
+| 2 | Phase 5 (requires Wave 1 complete, specifically Phase 4 — fixer-agent Integrator Mode — per Phase 5 Dependencies) | M-03 (Gemini adapter) |
 | 3 | Phases 6, 7, 8 | completes M-03 |
+
+> **Dependency chain (F-12 fix):** Phase 4 (Wave 1) → Phase 5 (Wave 2) → Phase 6 (Wave 3). Wave 2 cannot begin until Phase 4 is complete because Phase 5's `Dependencies` field lists `Phase 4` explicitly. This chain is linear: Wave 2 starts only after all of Wave 1 merges (including Phase 4).
 
 ## Risks & Mitigations
 
