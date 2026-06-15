@@ -26,6 +26,25 @@ if [ "$#" -lt 1 ]; then
   exit 0
 fi
 
+# Claude Code subprocesses sometimes inherit a minimal PATH that omits Homebrew's
+# bin directories — notably when Claude Code is launched from a GUI shortcut,
+# Finder, cmux, or any non-login-shell context. bun lives at /opt/homebrew/bin
+# on Apple Silicon and /usr/local/bin on Intel; without these, the bun probe
+# below misses and falls through to npx tsx, which on Node 25+ has stricter ESM
+# resolution that fails to load the tsx loader for hooks' relative .js imports.
+# The result is `node:internal/modules/esm/resolve:N` errors that the exit-0
+# safety net below cannot catch (resolution failure happens before TypeScript
+# loads). Silently disables every PreToolUse contract enforcer.
+#
+# Prepend the Homebrew paths if missing. No-op when already present.
+for candidate in /opt/homebrew/bin /usr/local/bin; do
+  case ":$PATH:" in
+    *":$candidate:"*) ;;
+    *) PATH="$candidate:$PATH" ;;
+  esac
+done
+export PATH
+
 # Honor explicit runtime override first. Word-split intentionally so users can
 # set e.g. LOOM_HOOK_RUNTIME="npx --yes tsx" with arguments.
 if [ -n "${LOOM_HOOK_RUNTIME:-}" ]; then
