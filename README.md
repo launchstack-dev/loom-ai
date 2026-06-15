@@ -10,26 +10,25 @@
 
 ## Quickstart
 
+**1. Install** (assumes you already have [Claude Code](https://docs.claude.com/claude-code)):
+
 ```bash
-# 1. Install Claude Code (https://docs.claude.com/claude-code) if you haven't.
-# 2. Bootstrap Loom into ~/.claude/:
 curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
-# 3. Restart your Claude Code session.
-# 4. In any project directory:
 ```
 
-```
-/loom-init                          Brownfield onboarding: writes CLAUDE.md and seeds .loom/wiki/
-/loom-quick "<a small task>"        Zero-ceremony task with verification + impact + audit log
-```
+Restart your Claude Code session. Full install options (latest `main`, private repos, local-dev, non-pipe paths) in [Install](#install).
 
-For the full pipeline on a one-line idea:
+**2. Pick your starting point.** Loom branches on whether you're bringing Loom to existing code or starting fresh:
 
-```
-/loom-auto --from "add user auth with RBAC and team management"
-```
+| You are… | First command | What it does |
+|---|---|---|
+| **Brownfield** — adding Loom to an existing codebase | `/loom-init` | Scans the repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/` with what's already there. Run this before anything else so downstream agents understand your code. |
+| **Greenfield** — starting from a one-line idea | `/loom-auto --from "<idea>"` | Full pipeline: prompt refiner → scope contract → roadmap → plan → execute → converge → test → review → fix. Use `--auto` to accept defaults; without it you confirm each gate. |
+| **Tiny task in any repo** | `/loom-quick "<task>"` | Zero-ceremony: wiki-context aware, runs the work, emits a retroactive change-proposal so contract pages stay coherent. |
 
-Full install options (latest `main`, private repos, local-dev pattern) in [Install](#install).
+**3. Recommended for `/loom-auto`:** enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window. Without it, long runs hit context budget and require `/clear` + `--resume` between waves.
+
+For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the five concepts behind everything see [`docs/concepts.md`](docs/concepts.md).
 
 ## What's different
 
