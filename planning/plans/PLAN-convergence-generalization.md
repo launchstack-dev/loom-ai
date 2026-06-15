@@ -1,9 +1,10 @@
 ---
 planVersion: 2
 name: "Convergence Generalization — Document Mode + Plan Critic"
-status: reviewed
+status: completed
 created: 2026-06-12
 lastReviewed: 2026-06-12
+completedAt: 2026-06-13T19:05:00Z
 roadmapRef: planning/ROADMAP-convergence-generalization.md
 totalPhases: 15
 totalWaves: 5

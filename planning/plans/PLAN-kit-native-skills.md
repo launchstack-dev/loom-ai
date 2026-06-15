@@ -1,9 +1,10 @@
 ---
 planVersion: 2
 name: "Loom Kit Upgrade — Native Skills as First-Class Resource"
-status: reviewed
+status: completed
 created: 2026-06-12
 lastReviewed: 2026-06-12
+completedAt: 2026-06-13T00:27:00Z
 roadmapRef: planning/ROADMAP-kit-native-skills.md
 <!-- pass-4: lastReviewed updated to today on architectural revision pass -->
 totalPhases: 13
