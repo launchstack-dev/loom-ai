@@ -161,10 +161,24 @@ Every wrapper command exposes `--autoconverge` (matching `/loom-plan create --au
 ## Open Questions
 
 - **OQ-01:** F-03's custom termination — does the existing driver support a pluggable termination check, or does it always read `blockingCount` from findings.toon? If the latter, F-03 needs a small driver extension (against CA-01) or a workaround (e.g., harness emits `findings.toon` with `blockingCount=0` only when the symptom no longer reproduces, treating the symptom-check as a synthetic finding). **Decide before F-03 starts.**
+
+  **Decision (2026-06-14):** Synthetic-finding workaround. Driver hard-codes `blockingCount == 0` in document mode (see `agents/convergence-driver.md` Convergence Loop step 2) — no pluggable termination hook exists. F-03's debug-harness re-runs the symptom as part of emitting `findings.toon`. If the symptom still reproduces, emit a synthetic finding `severity=blocking, summary="symptom still reproduces"`. When resolved, that finding disappears and `blockingCount → 0` → driver declares CONVERGED. **CA-01 compliant; no engine change.** CA-04's `customTerminationOutcome` schema extension is therefore unnecessary — `status: converged` is the correct signal because convergence IS "blocking findings cleared."
+
 - **OQ-02:** F-04's subject — can `subject` in `converge.config` be a PR identifier (`gh:pr:19`) instead of a file path, with the driver treating it as opaque? Or does the driver require a real file? Probably needs a tiny spec clarification in `agents/convergence-driver.md` (one-line change to "subject is opaque to the engine; only the harness interprets it"). **Decide before F-04 starts.**
+
+  **Decision (2026-06-14):** Synthetic-file workaround. Driver preflight check #3 explicitly resolves `subject` to "an existing file under the repo root"; snapshot writer copies it per iteration. PR identifier as subject breaks both. Solution: F-04 harness maintains `pr-state.toon` (head SHA + base SHA + diff hash + comment IDs) as the subject. First action each iteration is to refresh that file. The PR identifier lives inside `converge.config` as an additional field the harness reads. The integrator (`pr-fixer-agent`) reads findings + uses `gh` CLI to fetch the diff. Snapshot mechanism just snapshots `pr-state.toon` — clean. **CA-01 compliant; no engine change.** The driver believes it's iterating a file; the file is a PR projection.
+
 - **OQ-03:** Should `fixer-agent`'s Integrator Mode be a single new mode on the existing agent, or a separate `fixer-integrator-agent.md`? Phase 8 used the former pattern for plan-builder; symmetry argues for the same here. **Default to single-agent + new mode.**
+
+  **Decision (2026-06-14):** Single agent + new mode. Locked.
+
 - **OQ-04:** Does F-04's Gemini adapter need to handle Gemini's "stale anchor re-flag" behavior (we observed in PR #19 round 3 that Gemini re-flagged already-fixed code at the same line number)? Probably yes — adapter should dedupe findings against the prior iteration's findings.toon (same `locationPath:locationAnchor:summary` → suppress). **Decide before F-04 implementation.**
+
+  **Decision (2026-06-14):** Required. Adapter reads prior iteration's `findings.toon` from `.plan-execution/convergence/iterations/iter-{N-1}.toon` and suppresses entries with matching `(locationPath, locationAnchor, summary)`. Failure mode without dedup is silent loop oscillation that triggers REGRESSION incorrectly. Applies to all per-bot adapters (Gemini priority-one; CodeRabbit/Copilot inherit the contract).
+
 - **OQ-05:** Convergence on a non-merging branch — F-04 commits per iteration; what's the right squash/merge strategy for the resulting commits? Probably squash-on-merge so the PR shows a single "fix(pr-review): applied {botName} findings (N iterations)" commit. **Decide before F-04 ships.**
+
+  **Decision (2026-06-14):** Per-iteration commits with structured message (`fix(pr-iter-{N}/{botName}): {summary}`) for forensic trail; PR squash-on-merge produces a single `fix(pr-review): applied {botName} findings (N iterations)` commit on `main`. Matches manual execution on PR #19.
 
 ## Notes
 
