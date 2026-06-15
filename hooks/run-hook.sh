@@ -36,11 +36,15 @@ fi
 # safety net below cannot catch (resolution failure happens before TypeScript
 # loads). Silently disables every PreToolUse contract enforcer.
 #
-# Prepend the Homebrew paths if missing. No-op when already present.
+# APPEND (not prepend) so a user's deliberately-pinned runtime (mise/asdf/volta
+# /nvm/~/.bun/bin/...) wins over the system Homebrew copy. Only add a candidate
+# if its directory actually exists — keeps Linux/Nix/containers a clean no-op
+# without naming a platform.
 for candidate in /opt/homebrew/bin /usr/local/bin; do
+  [ -d "$candidate" ] || continue
   case ":$PATH:" in
     *":$candidate:"*) ;;
-    *) PATH="$candidate:$PATH" ;;
+    *) PATH="$PATH:$candidate" ;;
   esac
 done
 export PATH
