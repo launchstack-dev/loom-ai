@@ -1,0 +1,76 @@
+type: exploration
+topic: marketplace and plugin distribution for loom
+slug: marketplace-plugin-distribution
+exploredAt: 2026-06-15
+depth: standard
+rounds: 2
+status: complete
+priorDebate: .plan-execution/debate-20260615-090957.toon
+
+personas[4]{name,rounds,keyContribution}:
+  engineer,1-2,Concrete release pipeline + .loom/plugin-root pointer pattern + CI fixture gap
+  pm,1-2,Thin-veneer plugin first MVP + 3-part sunset criterion + opt-in migration
+  ops,1-2,Atomic single-tarball pipeline + loom doctor check matrix + supply-chain signing gap
+  skeptic,1-2,Stress-tested plugin vs curl UX + LOOM_PLUGIN_ROOT debt + kill number + manifest-drift CI
+
+recommendation: |
+  Add to roadmap as phased initiative. Phase 1: thin-veneer plugin via self-hosted
+  GitHub URL wrapping curl installer + /loom-init. Phase 2: plugin-native architecture
+  with ${LOOM_PLUGIN_ROOT} + official marketplace, gated on >=100 Phase 1 installs.
+  Commit concrete sunset criterion now.
+
+keyInsights[5]:
+  - Loom directory layout already plugin-shaped — structural lift small
+  - Real blocker is repo-root artifacts; solution = /loom-init + ${LOOM_PLUGIN_ROOT} single resolver layer
+  - One artifact two delivery URLs — git tag triggers single GHA, dual-publish
+  - Acquisition story weaker than assumed — auto-update helps returning users not first-timers
+  - Sunset criterion is concrete and signal-gated, not date-based
+
+requirementsSurfaced[10]{requirement,source,round}:
+  Single resolver layer for LOOM_PLUGIN_ROOT (never inline path),engineer+skeptic,2
+  .loom/plugin-root pointer file written by /loom-init,engineer,2
+  loom doctor command (version + schema + channel checks),ops,2
+  Atomic release pipeline — one tarball two delivery URLs,engineer+ops,2
+  Install-channel telemetry via ~/.loom/install.toon,ops,2
+  /loom-migrate-to-plugin opt-in command,pm,2
+  CI fixture for end-to-end plugin install,engineer,2
+  Sigstore/cosign attestation on Release asset,ops,2
+  Manifest-drift CI check (tagged vs published hash),skeptic,2
+  Listing copy leads with outcomes not feature lists,pm,2
+
+risks[8]{risk,severity,mitigation,source}:
+  LOOM_PLUGIN_ROOT becomes migration debt if Anthropic changes plugin path model,H,Single resolver layer; never inline in agent prompts,skeptic
+  Silent manifest drift after hotfix bypasses pipeline,H,CI hash-compare check on release,skeptic
+  Supply-chain attack via compromised GitHub token,H,Sigstore/cosign attestation before Phase 2,ops
+  Dual-channel maintenance becomes permanent,M,Concrete signal-gated sunset criterion in ROADMAP,pm
+  First-time UX no better than curl,M,Validate via install-count signal before re-architecture,skeptic
+  Brand dilution in marketplace adjacency,M,Outcome-led listing copy; defer official listing,pm
+  No CI coverage for plugin install end-to-end,M,Containerized harness or vitest mock as Phase 1 deliverable,engineer
+  Anthropic ships first-party planning primitive,L-M,Reposition Loom as opinionated workflow layer,pm
+
+openQuestions[4]:
+  - Self-hosted plugin URL only in Phase 1 or also official Anthropic marketplace day one?
+  - Adopt Skeptic's kill number as-is (<500 installs AND <15% browse-attributed in 90 days)?
+  - CI plugin-install fixture — Phase 1 or Phase 2?
+  - Sigstore signing — Phase 1 must-have or Phase 2?
+
+sunsetCriterion:
+  description: When curl can be demoted from README to advanced-install doc
+  trigger:
+    - plugin install count >= 5x curl over rolling 30-day window
+    - loom doctor reports parity for 2 consecutive releases
+    - /loom-migrate-to-plugin command shipped for >= 60 days
+  source: pm, round 2 (refines prior debate's 30-day-green placeholder)
+
+suggestedScope:
+  mvp: |
+    Phase 1 thin-veneer plugin: self-hosted github URL, wraps curl + /loom-init,
+    atomic release pipeline, loom doctor v1, /loom-migrate-to-plugin opt-in,
+    manifest-drift CI, sigstore attestation.
+  full: |
+    Phase 2 plugin-native: ${LOOM_PLUGIN_ROOT} single resolver, plugin-declared
+    hooks, scoped permissions per agent, official Anthropic marketplace with
+    outcome-led copy, CI fixture for end-to-end install, quarterly sunset evaluation.
+  skipIf: |
+    Phase 1 installs <100 in 90 days AND <15% browse-attributed, OR Anthropic ships
+    manifest v2 breaking LOOM_PLUGIN_ROOT-style resolution before Phase 2 starts.
