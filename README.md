@@ -236,6 +236,8 @@ The `git clone` path is also the entry point for the [local-dev install pattern]
 
 Nothing outside `~/.claude/` or `~/.cache/loom/` is touched. The install script validates target paths before writing.
 
+> **Known gap (v0.0.1):** the installer does **not** ship the enforcement hooks (`file-ownership`, `contract-lock`, `context-budget`, `deploy-guard`, `quality-gate`, `typecheck-on-write`, wiki guards, etc.) or the `.claude/settings.json` that wires them into PreToolUse / PostToolUse. Those live per-project (Claude Code hooks reference `$CLAUDE_PROJECT_DIR/hooks/...`), and the curl install only touches `~/.claude/`. Pillar 3 of the README — "hook-enforced discipline" — is only fully live in the local-dev install pattern today, where you work inside the Loom repo itself. Curl-install users get the slash commands, agents, and convergence pipeline, but the tool-call-level enforcement gates are not wired. Tracking issue + fix planned for the next minor release; the fix will extend `/loom-init` to bootstrap project-local hooks + `settings.json` on opt-in.
+
 ### Verify the install
 
 ```bash
