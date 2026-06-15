@@ -180,8 +180,52 @@ Every wrapper command exposes `--autoconverge` (matching `/loom-plan create --au
 
   **Decision (2026-06-14):** Per-iteration commits with structured message (`fix(pr-iter-{N}/{botName}): {summary}`) for forensic trail; PR squash-on-merge produces a single `fix(pr-review): applied {botName} findings (N iterations)` commit on `main`. Matches manual execution on PR #19.
 
+## Dogfood Pass 1 — findings (2026-06-15)
+
+The recursive-dogfood step (route this roadmap through `/loom-plan create --autoconverge --max-iterations 2`) ran today. Outcome: **CONVERGED on iteration 1 of 2** in document mode, with `plan-review-harness.ts` as harness and `plan-builder-agent` as integrator.
+
+**Run summary:**
+- runId: `convergence-applications-20260615-001`
+- subject: `planning/plans/PLAN-convergence-applications.md` (committed in PR #5 as the Step 1 salvage)
+- 4 blocking findings → 0 (resolved in commit `bd98eef` on `main`):
+  - F-11 / F-12 (phasing): Phase 4 intra-wave dependency made explicit in Phases 1–3 + Wave→Milestone map
+  - F-19 / F-20 (agentic-workflow): agent paths corrected from `~/.claude/agents/` → `agents/` (repo-relative)
+- 18 advisory findings remain (4 warning, 14 info) — not gating but informative
+- Pre-integrator state in git rev `71dff44`; integrator commit `bd98eef`
+- Snapshot artifact NOT written (see DF-02 below)
+
+The engine substrate validated end-to-end on a real planning artifact. The remaining findings surface tuning opportunities, not engine problems.
+
+### DF-01: Parallelization severity rubric is conservative
+
+Four advisories (F-13, F-14, F-15, F-17 from the run's `findings.toon`) flagged real same-wave race-condition risks — Phase 4 modifies `agents/fixer-agent.md` while Phases 1–3 read it; Phases 1 + 3 both modify files in `~/.claude/commands/`; Wave 1 holds 22 deliverables across 4 parallel phases (over the 8-per-wave guideline). These were scored as `warning` by `parallelization-reviewer-agent`, so `blockingCount` stayed at 0 once the F-11/F-12/F-19/F-20 set was resolved, and the loop converged with the race-condition predictions unresolved.
+
+**Why this matters:** for F-01 (Code-Review Convergence) the same rubric will govern whether the harness gates an executable plan or merely surfaces advisories. Same-wave shared-file modifications are a deterministic execution-failure predictor — promoting them to `blocking` would let the autoconverge loop drive plans to **executable** quality, not just **spec-passing** quality.
+
+**Resolution:** F-01 phasing should include a sub-task to tune `parallelization-reviewer-agent`'s severity rubric (or the harness's severity mapping in `severityToConvergenceSeverity`) so cross-phase shared-file writes become blocking. This is itself a design call worth a sub-OQ during F-01 planning; the conservative default has its own merit (avoids false-positive iteration churn) and the tightening may need to be opt-in via a `--strict-parallelization` harness flag rather than a global change.
+
+### DF-02: Snapshot doesn't auto-enable for direct `/loom-converge` invocations
+
+The C-07 default (`snapshotEnabled: true`) is locked for `/loom-plan create --autoconverge` Step 5 (which generates a `converge.config` with the field set). The resume path in this dogfood pass used `/loom-converge --mode document --subject ... --harness ... --integrator ... --max-iterations 2 --auto` directly, which did NOT auto-set `snapshotEnabled`. Result: `iter-1.toon` shows `snapshotRef: null`; no snapshot landed in `planning/history/snapshots/`. Recovery via `git show 71dff44` worked, but only because the subject was already git-tracked — for the wired applications (F-01..F-04) where the subject may be working-tree code, the snapshot is the audit trail.
+
+**Resolution:** Either (a) make `snapshotEnabled` default `true` in the engine itself for `convergenceMode: document` regardless of how the loop is invoked (one-line driver-spec clarification, still CA-01 compliant since behavior is additive), or (b) require every per-application wrapper (F-01..F-04) to set `snapshotEnabled: true` explicitly in its generated config. Recommendation: (a) — single source of truth for the locked-default, fewer places for wrappers to forget. Worth a Phase 0 contract clarification in F-01.
+
+### DF-03: Working-directory rename during an active session causes path-split state corruption
+
+Process finding, not a Loom finding. During the dogfood, the orchestrating session moved `~/Projects/meta-orchestration → ~/Projects/loom-ai` while the autoconverge session was iterating. Cwd-by-inode preserved the relative-path writes (they landed in the renamed canonical dir), but absolute-path writes (using the old path) created a stub directory and the outputs split between two locations. Recovery: see PR #5 (Step 1 salvage commit). User-facing rule for OSS docs: **never rename a project's working directory while a Claude Code session is active in it** — symlink-and-relink-then-rename if needed; the Bash tool's cwd-by-inode behavior makes silent corruption possible.
+
+### Outputs available for Pass 2
+
+If the parallelization rubric is tuned (DF-01) and the snapshot default is fixed (DF-02), a Pass 2 autoconverge against the current `planning/plans/PLAN-convergence-applications.md` should:
+- Re-promote F-13/F-14/F-15/F-17 to blocking severity
+- Drive the integrator to resolve them (Phase 4 reshuffle, Phase 7/8 merge into Phase 6, Phase 1 path-string fix)
+- Produce a snapshot in `planning/history/snapshots/` for the audit trail
+- Either fully converge or surface stalled/regression as a stronger signal
+
+Pass 2 should run AFTER F-01 has shipped (so the tuned rubric is real, not a hand-edited probe), making this dogfood loop itself part of the M-01 acceptance criteria for the convergence-applications work. Self-referential, intentionally.
+
 ## Notes
 
 Authored 2026-06-14 by the same session that shipped convergence-generalization PR #18 and PR #19. The trigger was an observation that the document-mode driver we just built is fully general and should apply to test-runs / debugs / code-review / PR-review — not just plan creation. The Gemini-loop manual execution on PR #19 (rounds 1–5) is the unbuilt F-04 application executed by hand; trajectory `4 → 4 → 2 → 3 → 2`.
 
-Next step: route this roadmap through `/loom-plan create` (with or without `--autoconverge` — recursively dogfooding the existing system) to produce a phased PLAN with wave assignments. F-01 + F-02 land first as M-01; F-03 + F-04 follow once the integrator mode + adapter contracts are locked.
+Pass 1 dogfood (2026-06-15) ran the engine on this roadmap's own PLAN; results captured under "Dogfood Pass 1 — findings" above. F-01 + F-02 land first as M-01 and should address DF-01 + DF-02; F-03 + F-04 follow once the integrator mode + adapter contracts are locked.
