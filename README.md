@@ -165,8 +165,8 @@ The rest of this section assumes the curl pattern. See [`### Update and uninstal
 - **Claude Code** — the CLI or IDE extension. Loom's hooks and skills load from `~/.claude/`.
 - **bash 4+** — for the install script.
 - **`curl`** — fetches files from GitHub. Falls back to `gh api` when `curl` cannot reach the repo (private-repo flow).
-- **Node.js 18+** — TypeScript hooks run via `bun` (preferred) or `npx tsx` fallback.
-- **`bun` (optional but recommended)** — faster hook execution; `npm`/`npx` works if absent.
+- **Node.js 18–24** — TypeScript hooks run via `bun` (preferred) or `npx tsx` fallback. On **Node 25+** the `npx tsx` fallback is unreliable due to stricter ESM resolution; **`bun` is required** on Node 25+ (or set `LOOM_HOOK_RUNTIME` to a working command).
+- **`bun` (strongly recommended; required on Node 25+)** — faster hook execution and the only fallback-free path. Install: `curl -fsSL https://bun.sh/install | bash`.
 - **`gh` CLI (optional)** — only needed for private-repo installs.
 
 Platforms tested: macOS (Apple Silicon + Intel), Ubuntu 22.04+. Windows is not supported today.
