@@ -171,44 +171,35 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
 
 6. **Install enforcement hooks.** This is a SAFETY NET for users who skipped `/loom-init` — that command is the canonical place hooks get registered. Step 6 ensures the pipeline still works if init was bypassed.
 
-   **Pipeline enforcement hooks** (file-ownership, contract-lock, budget-tracker, quality-gate, status-updater, typecheck-on-write, wiki-write-guard): if `.claude/settings.json` doesn't exist, create it with the block below. The hooks live in `~/Projects/meta-orchestration/hooks/`.
+   The full Loom hook suite (14 hooks: file-ownership, contract-lock, budget-tracker, context-budget, deploy-guard, quality-gate, status-updater, typecheck-on-write, wiki guards, context-monitor, checkpoint-trigger) is registered via the deterministic helper. The helper copies inert templates from `~/.claude/templates/hooks/` (staged by the curl installer) into the project, then merges entries into `.claude/settings.json` while preserving any unrelated hooks.
 
    ```bash
-   mkdir -p .claude && cat > .claude/settings.json << 'EOF'
-   {
-     "hooks": {
-       "PreToolUse": [
-         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/file-ownership.ts", "timeout": 5000}]},
-         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/contract-lock.ts", "timeout": 5000}]},
-         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/wiki-write-guard.ts", "timeout": 5000}]},
-         {"matcher": "Agent", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]}
-       ],
-       "PostToolUse": [
-         {"matcher": "Write|Edit", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/typecheck-on-write.ts", "timeout": 30000}]}
-       ],
-       "SubagentStop": [
-         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/budget-tracker.ts", "timeout": 5000}]},
-         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/status-updater.ts", "timeout": 5000}]}
-       ],
-       "Stop": [
-         {"matcher": "", "hooks": [{"type": "command", "command": "bunx tsx ~/Projects/meta-orchestration/hooks/quality-gate.ts", "timeout": 5000}]}
-       ]
-     }
-   }
-   EOF
-   ```
+   # Detect prior registration: skip if Loom hooks are already in settings.json.
+   if [ -f .claude/settings.json ] && grep -q "hooks/file-ownership.ts" .claude/settings.json; then
+     echo "Loom hooks already registered — skipping."
+   else
+     mkdir -p hooks scripts
+     if [ -d ~/.claude/templates/hooks ]; then
+       cp -r ~/.claude/templates/hooks/. hooks/
+     fi
+     if [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
+       cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
+     fi
 
-   If `.claude/settings.json` already exists, merge the `hooks` key. The hooks fail open -- no `.plan-execution/` means exit 0 immediately.
+     # Back up pre-existing settings.json before merge
+     if [ -f .claude/settings.json ]; then
+       ts=$(date -u +"%Y%m%dT%H%M%SZ")
+       cp .claude/settings.json ".claude/settings.json.bak-${ts}"
+     fi
 
-   **Wiki health hooks** (`wiki-session-status`, `wiki-impact-warner`, `wiki-commit-ledger`): when `.loom/wiki/` exists, register the wiki hooks via the deterministic helper. Do NOT inline these in the heredoc above — the helper auto-detects whether to emit `${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts` (plugin install) or project-relative `hooks/<name>.ts` (dev checkout), and picks `bunx tsx` vs `npx --yes tsx` based on what's actually on PATH.
-
-   ```bash
-   if [ -d .loom/wiki ]; then
-     node scripts/register-wiki-hooks.ts --replace
+     node scripts/register-loom-hooks.ts --replace || \
+       echo "WARN: hook registration failed — pipeline will run without full enforcement. Rerun 'node scripts/register-loom-hooks.ts --replace' to fix."
    fi
    ```
 
-   `--replace` purges any stale wiki hook entries (different prefix, different runner) before writing fresh ones, so this is safe to re-run from any starting state. Idempotent when settings already match. Non-fatal on failure: print the script's error, continue with the pipeline.
+   The helper auto-detects whether to emit `${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts` (plugin install) or project-relative `hooks/<name>.ts` (dev checkout / curl install), and dispatches through `hooks/run-hook.sh` (bun → npx tsx fallback at exec time). `--replace` purges any stale Loom hook entries (different prefix, different runner) before writing fresh ones, so this is safe to re-run from any starting state. Idempotent when settings already match. Non-fatal on failure: print the script's error, continue with the pipeline.
+
+   > **Note:** This supersedes the legacy `scripts/register-wiki-hooks.ts` (3 wiki hooks only). `register-loom-hooks.ts` covers all 14, including the 3 wiki ones. The legacy script remains callable for backwards compatibility.
 
    **Wiki hook behavior:**
    - `wiki-session-status` (SessionStart) — surfaces `.loom/wiki/` freshness and injects high-confidence page summaries into session context. Honors `[wiki].sessionContext` (default `minimal`).

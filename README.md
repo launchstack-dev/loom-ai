@@ -236,7 +236,26 @@ The `git clone` path is also the entry point for the [local-dev install pattern]
 
 Nothing outside `~/.claude/` or `~/.cache/loom/` is touched. The install script validates target paths before writing.
 
-> **Known gap (v0.0.1):** the installer does **not** ship the enforcement hooks (`file-ownership`, `contract-lock`, `context-budget`, `deploy-guard`, `quality-gate`, `typecheck-on-write`, wiki guards, etc.) or the `.claude/settings.json` that wires them into PreToolUse / PostToolUse. Those live per-project (Claude Code hooks reference `$CLAUDE_PROJECT_DIR/hooks/...`), and the curl install only touches `~/.claude/`. Pillar 3 of the README — "hook-enforced discipline" — is only fully live in the local-dev install pattern today, where you work inside the Loom repo itself. Curl-install users get the slash commands, agents, and convergence pipeline, but the tool-call-level enforcement gates are not wired. Tracking issue + fix planned for the next minor release; the fix will extend `/loom-init` to bootstrap project-local hooks + `settings.json` on opt-in.
+The curl install also stages inert hook templates under `~/.claude/templates/hooks/` and `~/.claude/templates/scripts/`. These are **not active** until you opt in per-project — see the next section.
+
+### Hook enforcement (per-project)
+
+Loom uses a **two-tier install model**:
+
+1. **User-global tier (`~/.claude/`)** — slash commands, agents, statusline, update-checker, and inert hook templates. Installed once by the curl installer.
+2. **Per-project tier (`<repo>/hooks/` + `<repo>/.claude/settings.json`)** — the 14 enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus ambient monitors). Installed per-project, opt-in.
+
+Claude Code hooks reference `$CLAUDE_PROJECT_DIR/hooks/...`, so the user-global tier alone cannot wire enforcement. The per-project tier is bootstrapped during these commands:
+
+- `/loom-init` — Step 6 prompts to register hooks. Default: yes.
+- `/loom-roadmap init` (greenfield) — Step 0 registers hooks before any agents spawn (skips if already registered).
+- `/loom-auto` — Step 6 registers hooks as a safety net for pipelines that skipped `/loom-init`.
+
+Each command copies templates from `~/.claude/templates/hooks/` into `<repo>/hooks/`, copies `register-loom-hooks.ts` into `<repo>/scripts/`, backs up any existing `.claude/settings.json` to `.claude/settings.json.bak-{ts}`, then merges entries into `settings.json` while preserving unrelated hooks.
+
+**Opt out:** answer **N** at the `/loom-init` prompt. The rest of Loom (agents, slash commands, pipeline) still works — only the tool-call-level enforcement gates are skipped.
+
+**Re-register later:** run `node scripts/register-loom-hooks.ts --replace` from the project root. The `--replace` flag is idempotent — it purges any stale Loom hook entries and writes fresh ones. Unrelated hook entries are preserved.
 
 ### Verify the install
 

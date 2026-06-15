@@ -2,6 +2,39 @@
 
 Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-plan create`.
 
+### Step 0: Bootstrap Loom enforcement hooks (one-time, idempotent)
+
+Before any agents spawn, ensure the project has the Loom hook suite wired so file-ownership, contract-lock, budget-tracker, and the rest enforce throughout planning + execution. Skip if already registered.
+
+```bash
+# Detect prior registration: if any Loom hook is already in settings.json, skip.
+if [ -f .claude/settings.json ] && grep -q "hooks/file-ownership.ts" .claude/settings.json; then
+  echo "Loom hooks already registered — skipping bootstrap."
+else
+  # Prompt: "Register Loom enforcement hooks (file-ownership, contract-lock, context-budget,
+  #         deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]"
+  # Default Y. On decline, surface recovery hint and continue.
+
+  mkdir -p hooks scripts
+  if [ -d ~/.claude/templates/hooks ]; then
+    cp -r ~/.claude/templates/hooks/. hooks/
+  fi
+  if [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
+    cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
+  fi
+
+  if [ -f .claude/settings.json ]; then
+    ts=$(date -u +"%Y%m%dT%H%M%SZ")
+    cp .claude/settings.json ".claude/settings.json.bak-${ts}"
+  fi
+
+  node scripts/register-loom-hooks.ts --replace || \
+    echo "WARN: hook registration failed — rerun 'node scripts/register-loom-hooks.ts --replace' from project root."
+fi
+```
+
+Non-blocking on failure (same pattern as wiki-hook registration in `/loom-init`). See `/loom-init` Step 6 for the canonical version of this flow with the user-prompt details.
+
 ### Step 1: Codebase Context Gathering
 
 Scan the project before generating the plan. The orchestrator does this directly (no agent):

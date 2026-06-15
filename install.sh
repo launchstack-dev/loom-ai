@@ -74,6 +74,30 @@ declare -a COMMAND_FILES=(
   "commands/loom-roadmap/util.md:${CLAUDE_DIR}/commands/loom-roadmap/util.md"
 )
 
+# Hook templates: shipped inert to ~/.claude/templates/. Nothing executes here.
+# A project's /loom-init copies these into <project>/hooks/ and <project>/scripts/
+# then runs register-loom-hooks.ts to wire them into .claude/settings.json.
+# This is the second tier of the install model — per-project enforcement, opt-in
+# at /loom-init time. See README "Hook enforcement (per-project)".
+declare -a HOOK_TEMPLATE_FILES=(
+  "hooks/contract-lock.ts:${CLAUDE_DIR}/templates/hooks/contract-lock.ts"
+  "hooks/file-ownership.ts:${CLAUDE_DIR}/templates/hooks/file-ownership.ts"
+  "hooks/wiki-write-guard.ts:${CLAUDE_DIR}/templates/hooks/wiki-write-guard.ts"
+  "hooks/wiki-impact-warner.ts:${CLAUDE_DIR}/templates/hooks/wiki-impact-warner.ts"
+  "hooks/deploy-guard.ts:${CLAUDE_DIR}/templates/hooks/deploy-guard.ts"
+  "hooks/context-budget.ts:${CLAUDE_DIR}/templates/hooks/context-budget.ts"
+  "hooks/budget-tracker.ts:${CLAUDE_DIR}/templates/hooks/budget-tracker.ts"
+  "hooks/typecheck-on-write.ts:${CLAUDE_DIR}/templates/hooks/typecheck-on-write.ts"
+  "hooks/wiki-commit-ledger.ts:${CLAUDE_DIR}/templates/hooks/wiki-commit-ledger.ts"
+  "hooks/context-monitor.ts:${CLAUDE_DIR}/templates/hooks/context-monitor.ts"
+  "hooks/checkpoint-trigger.ts:${CLAUDE_DIR}/templates/hooks/checkpoint-trigger.ts"
+  "hooks/status-updater.ts:${CLAUDE_DIR}/templates/hooks/status-updater.ts"
+  "hooks/quality-gate.ts:${CLAUDE_DIR}/templates/hooks/quality-gate.ts"
+  "hooks/wiki-session-status.ts:${CLAUDE_DIR}/templates/hooks/wiki-session-status.ts"
+  "hooks/run-hook.sh:${CLAUDE_DIR}/templates/hooks/run-hook.sh"
+  "scripts/register-loom-hooks.ts:${CLAUDE_DIR}/templates/scripts/register-loom-hooks.ts"
+)
+
 echo "Installing Loom (minimal bootstrap)..."
 echo "Source: github.com/${REPO}@${BRANCH}"
 echo "Target: ${CLAUDE_DIR}"
@@ -86,6 +110,8 @@ mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
 mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
 mkdir -p "${CLAUDE_DIR}/config"
 mkdir -p "${CLAUDE_DIR}/skills/library"
+mkdir -p "${CLAUDE_DIR}/templates/hooks"
+mkdir -p "${CLAUDE_DIR}/templates/scripts"
 mkdir -p "${CACHE_DIR}"
 
 # ── Helper: fetch a file from GitHub ──
@@ -203,6 +229,24 @@ for entry in "${COMMAND_FILES[@]}"; do
   fi
 done
 
+# ── Fetch hook templates (inert; staged for per-project /loom-init opt-in) ──
+echo ""
+echo "Fetching hook templates..."
+for entry in "${HOOK_TEMPLATE_FILES[@]}"; do
+  src="${entry%%:*}"
+  dst="${entry#*:}"
+  if fetch_file "${src}" "${dst}" && verify_checksum "${src}" "${dst}"; then
+    echo "  OK   $(basename "${dst}")"
+  else
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+done
+
+# Make the hook wrapper executable so cp -r preserves the +x bit per-project.
+if [ -f "${CLAUDE_DIR}/templates/hooks/run-hook.sh" ]; then
+  chmod +x "${CLAUDE_DIR}/templates/hooks/run-hook.sh" || echo "  WARN could not chmod templates/hooks/run-hook.sh"
+fi
+
 if [ "${FAIL_COUNT}" -gt 0 ]; then
   echo ""
   echo "WARNING: ${FAIL_COUNT} file(s) failed to download."
@@ -225,6 +269,10 @@ for entry in "${INFRA_FILES[@]}"; do
   [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
 done
 for entry in "${COMMAND_FILES[@]}"; do
+  dst="${entry#*:}"
+  [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
+done
+for entry in "${HOOK_TEMPLATE_FILES[@]}"; do
   dst="${entry#*:}"
   [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
 done
@@ -253,6 +301,16 @@ for entry in "${COMMAND_FILES[@]}"; do
   name=$(basename "${dst}" .md)
   if [ -f "${dst}" ]; then
     echo "  ${name},prompt,${src},${dst},${NOW}" >> "${STATE_TMP}"
+  fi
+done
+
+# Record hook templates (inert until /loom-init copies them per-project)
+for entry in "${HOOK_TEMPLATE_FILES[@]}"; do
+  src="${entry%%:*}"
+  dst="${entry#*:}"
+  name=$(basename "${dst}" | sed 's/\.[^.]*$//')
+  if [ -f "${dst}" ]; then
+    echo "  ${name},hook-template,${src},${dst},${NOW}" >> "${STATE_TMP}"
   fi
 done
 
