@@ -1,0 +1,8 @@
+mode: document
+subject: .plan-execution/pr-review/pr-state.toon
+harness: scripts/pr-review-harness.ts
+integrator: pr-fixer-agent
+maxIterations: 5
+snapshotEnabled: true
+botAdapter: unsupportedBot
+prNumber: 42

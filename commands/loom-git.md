@@ -481,3 +481,87 @@ Print a comprehensive review summary in this format:
 ```
 
 This summary is informational only. Do not take any action on the PR.
+
+---
+
+### review-pr --autoconverge
+
+The `--autoconverge` flag turns `review-pr` from an informational summary into a full F-04 PR-review convergence loop. Per the convergence-applications plan, this drives the canned `(scripts/pr-review-harness.ts + pr-fixer-agent + Gemini adapter)` triple through `/loom-converge` and produces per-iteration commits per OQ-05.
+
+**Preflight:** gh CLI installed, gh auth (same as plain `review-pr`).
+
+**Step 1: Determine PR.**
+
+Check remaining arguments for a PR number or URL.
+
+- If a URL is provided, extract the PR number from it.
+- If no argument is provided, run `gh pr view --json number --jq '.number'` against the current branch and use its PR number. If no PR is associated with the current branch, print:
+
+  ```
+  Usage: /loom-git review-pr --autoconverge <number|url>
+  ```
+
+  Stop.
+
+**Step 2: Resolve bot adapter.**
+
+Check remaining arguments for `--bot <gemini|coderabbit|copilot>`. Default to `gemini` if absent. Reject any other value with:
+
+```
+Unknown bot adapter: {value}. Supported: gemini, coderabbit, copilot.
+```
+
+Only `gemini` ships in this plan; `coderabbit` and `copilot` are reserved in the converge.config schema but not yet wired (the dispatcher returns `CODE: ADAPTER_UNKNOWN` and exits 1).
+
+**Step 3: Generate the converge.config.**
+
+Invoke `scripts/lib/pr-review-harness/wrapper-config.ts::buildWrapperConfig({ prNumber, botAdapter })` and atomically write the encoded TOON to `.plan-execution/pr-review/converge.config.toon`. The resulting config is the F-04 binding from `agents/protocols/converge.config.applications.md`:
+
+```toon
+mode: document
+subject: .plan-execution/pr-review/pr-state.toon
+harness: scripts/pr-review-harness.ts
+integrator: pr-fixer-agent
+maxIterations: 5
+snapshotEnabled: true
+botAdapter: gemini
+prNumber: {N}
+```
+
+`pr-state.toon` is a synthetic projection produced by the harness on each iteration (per OQ-02) so the existing `hooks/lib/iteration-snapshot.ts` snapshot mechanism works without modification.
+
+**Step 4: Invoke /loom-converge.**
+
+Run:
+
+```bash
+/loom-converge --config .plan-execution/pr-review/converge.config.toon --auto
+```
+
+The driver:
+
+1. Calls `scripts/pr-review-harness.ts --config <path> --iteration <N>` to refresh `pr-state.toon` and write `iter-{N}/findings.toon`.
+2. If `blockingCount > 0`, spawns `pr-fixer-agent` (Integrator Mode) to apply the findings.
+3. Commits with the message:
+
+   ```
+   fix(pr-iter-{N}/gemini): {summary}
+   ```
+
+   where `{N}` is the 1-indexed iteration number and `{summary}` is the integrator's first-line summary. Per OQ-05, every iteration produces exactly one commit; squash-on-merge collapses them into a single PR commit.
+4. Re-invokes the harness for iteration `N+1`, passing `--prior-findings .plan-execution/convergence/iterations/iter-{N}/findings.toon` so the Gemini adapter applies OQ-04 cross-iteration dedup.
+5. Stops at the first iteration with `blockingCount == 0` (CONVERGED) or after `maxIterations = 5` (HALTED). The terminal-state transition writes `.plan-execution/convergence-summary.toon`.
+
+**Step 5: Report the outcome.**
+
+After `/loom-converge` exits, read `.plan-execution/convergence-summary.toon` and print:
+
+```
+PR #{number} — F-04 convergence: {status}
+  Iterations run: {iterationsRun}
+  Final blockingCount: {finalBlockingCount}
+  Halt reason: {haltReason or "(none — converged)"}
+```
+
+If `status != converged`, surface the per-iteration `findings.toon` paths so the user can inspect what kept blocking.
+
