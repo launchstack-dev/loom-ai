@@ -4,7 +4,7 @@ title: Convergence Applications — wire 4 more harness+integrator pairs to the 
 roadmapId: convergence-applications
 created: 2026-06-14
 dependsOn: convergence-generalization (PR #18 — merged)
-status: draft
+status: approved
 ---
 
 # Roadmap: Convergence Applications
