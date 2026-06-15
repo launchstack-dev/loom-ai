@@ -1,0 +1,9 @@
+subject: .plan-execution/pr-review/pr-state.toon
+harnessName: pr-review
+iteration: 1
+blockingCount: 1
+advisoryCount: 0
+producedAt: 2026-06-15T09:30:00.000Z
+
+findings[1]{id,dimension,severity,locationPath,locationAnchor,summary,suggestion,reviewerAgent}:
+  F-01,pr-review,blocking,src/auth/session.ts,:42,missing null check on user object,,gemini

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "IC_round2_a",
+    "author": "gemini-code-assist[bot]",
+    "path": "src/auth/session.ts",
+    "line": 42,
+    "body": "![high] missing null check on user object",
+    "createdAt": "2026-06-15T11:00:00Z"
+  },
+  {
+    "id": "IC_round2_b",
+    "author": "gemini-code-assist[bot]",
+    "path": "src/auth/session.ts",
+    "line": 73,
+    "body": "![medium] Newly flagged: thread-unsafe access to module-level cache",
+    "createdAt": "2026-06-15T11:00:01Z"
+  }
+]
