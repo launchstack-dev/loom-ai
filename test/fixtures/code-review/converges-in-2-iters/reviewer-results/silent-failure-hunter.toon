@@ -1,0 +1,17 @@
+agent: silent-failure-hunter
+wave: 1
+taskId: t-silent-failure-hunter
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  high,Catch block swallows JSON.parse error returning empty object — masks misconfiguration,test/fixtures/code-review/converges-in-2-iters/input.ts,17,Rethrow or log error with context before returning fallback
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

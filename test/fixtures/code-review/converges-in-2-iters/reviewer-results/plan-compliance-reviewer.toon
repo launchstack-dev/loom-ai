@@ -1,0 +1,16 @@
+agent: plan-compliance-reviewer
+wave: 1
+taskId: t-plan-compliance-reviewer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[0]{severity,description,file,line}:
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

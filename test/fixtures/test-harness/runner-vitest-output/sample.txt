@@ -1,0 +1,16 @@
+ RUN  v2.1.0 /Users/test/project
+
+ ❯ test/math.test.ts > add > adds two positive numbers
+   AssertionError: expected -1 to be 5 // Object.is equality
+    ❯ test/math.test.ts:8:23
+ ❯ test/math.test.ts > add > adds a positive and a negative
+   AssertionError: expected 14 to be 6
+    ❯ test/math.test.ts:12:25
+ ❯ test/math.test.ts > add > returns its argument when adding zero
+   AssertionError: expected 7 to be 7
+    ❯ test/math.test.ts:16:24
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed (4)
+   Start at  12:00:00
+   Duration  0.42s

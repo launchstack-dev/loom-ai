@@ -17,6 +17,6 @@
     "../scripts/loom-change/proposal-frontmatter.ts",
     "../scripts/loom-change/diff.ts",
     "../scripts/lib/**/*",
-    "../scripts/plan-review-harness.ts"
+    "../scripts/*.ts"
   ]
 }

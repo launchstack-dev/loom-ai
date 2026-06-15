@@ -1,0 +1,17 @@
+agent: architecture-reviewer
+wave: 1
+taskId: t-architecture-reviewer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[1]{severity,description,file,location,suggestion}:
+  high,Direct import of db layer from a route-level module bypasses the service layer,test/fixtures/code-review/converges-in-2-iters/input.ts,11,Move db access into a service module and import the service instead
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

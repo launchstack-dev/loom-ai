@@ -1,0 +1,16 @@
+agent: comment-analyzer
+wave: 1
+taskId: t-comment-analyzer
+status: success
+filesCreated[0]:
+filesModified[0]:
+filesDeleted[0]:
+exportsAdded[0]{file,name,kind}:
+dependenciesAdded[0]:
+integrationNotes: synthetic fixture envelope
+
+issues[0]{severity,description,file,line}:
+
+contractAmendments[0]{file,issue}:
+crossBoundaryRequests[0]{file,reason,suggestedChange}:
+durationMs: 0

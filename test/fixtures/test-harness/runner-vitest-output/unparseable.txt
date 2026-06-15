@@ -1,0 +1,3 @@
+vitest: command not configured
+this is some garbage output that does not match any expected reporter format
+nothing here resembles a vitest test result line at all
