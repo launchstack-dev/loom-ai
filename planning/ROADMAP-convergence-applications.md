@@ -125,17 +125,20 @@ Every wrapper command exposes `--autoconverge` (matching `/loom-plan create --au
 ### M-01: Code-Review + Test-Run Convergence Shipped
 
 **Features:** F-01, F-02
+**Status:** completed (2026-06-15)
 **Acceptance:** Both wrappers exist; both pass their fixtures; both reuse `fixer-agent` Integrator Mode; spawn-count ceilings hold; no driver/schema changes.
 
 ### M-02: Debug Convergence Shipped (custom termination)
 
 **Features:** F-03
+**Status:** completed (2026-06-15)
 **Depends on:** M-01 (so fixer-agent's Integrator Mode is locked before F-03 starts)
 **Acceptance:** Investigator + fix-applier agents land; custom termination via re-run-symptom works; schema extension (if needed) is reviewed + locked.
 
 ### M-03: PR-Review Convergence Shipped (Gemini adapter as priority-one)
 
 **Features:** F-04 (Gemini adapter shipped; CodeRabbit/Copilot deferred)
+**Status:** completed (2026-06-15)
 **Depends on:** M-01
 **Acceptance:** `/loom-git review-pr --autoconverge` against a canned-bot fixture converges in 2 iterations. Subject-extension (PR-as-virtual-subject) design-reviewed and either confirmed unnecessary or shipped as a minimal driver-spec patch (escalation to engine-v2 roadmap if invasive).
 

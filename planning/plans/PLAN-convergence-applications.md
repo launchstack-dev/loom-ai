@@ -1,7 +1,8 @@
 ---
 planVersion: 2
 name: "Convergence Applications — Wire 4 Harness+Integrator Pairs"
-status: draft
+status: completed
+completedAt: 2026-06-15T00:55:00Z
 created: 2026-06-14
 lastReviewed: null
 roadmapRef: planning/ROADMAP-convergence-applications.md
