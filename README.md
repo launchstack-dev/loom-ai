@@ -18,13 +18,16 @@ curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/inst
 
 Restart your Claude Code session. Full install options (latest `main`, private repos, local-dev, non-pipe paths) in [Install](#install).
 
-**2. Pick your starting point.** Loom branches on whether you're bringing Loom to existing code or starting fresh:
+**2. Pick your starting point.** Loom forks on (a) is there existing code Loom should learn first, and (b) how deliberate do you want the build to be:
 
 | You are… | First command | What it does |
 |---|---|---|
-| **Brownfield** — adding Loom to an existing codebase | `/loom-init` | Scans the repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/` with what's already there. Run this before anything else so downstream agents understand your code. |
-| **Greenfield** — starting from a one-line idea | `/loom-auto --from "<idea>"` | Full pipeline: prompt refiner → scope contract → roadmap → plan → execute → converge → test → review → fix. Use `--auto` to accept defaults; without it you confirm each gate. |
+| **Brownfield** — adding Loom to an existing codebase | `/loom-init` | Scans the repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/` with what's already there. Run this *before* any planning command so downstream agents understand your code. |
+| **Greenfield, deliberate** — fresh idea, want to think through the roadmap and plan before any code lands | `/loom-roadmap init --full` | Interactive: roadmap (with reviewers) → review-integrate → approve → plan. Pauses at each gate for your input. Closes when you have an approved roadmap + plan ready for `/loom-plan execute`. |
+| **Greenfield, fast** — fresh idea, willing to let the pipeline drive end-to-end | `/loom-auto --from "<idea>"` | Full pipeline: prompt refiner → scope contract → roadmap → plan → execute → converge → test → review → fix. Add `--auto` to accept defaults at every gate. |
 | **Tiny task in any repo** | `/loom-quick "<task>"` | Zero-ceremony: wiki-context aware, runs the work, emits a retroactive change-proposal so contract pages stay coherent. |
+
+For brownfield projects that *also* want to plan a new feature, run `/loom-init` first, then `/loom-roadmap init --brownfield --full` — the `--brownfield` flag adds a codebase-analysis step that shapes the roadmap around what already exists.
 
 **3. Recommended for `/loom-auto`:** enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window. Without it, long runs hit context budget and require `/clear` + `--resume` between waves.
 
@@ -55,8 +58,9 @@ See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for
 |-----------------|-----|-------|
 | **Plan & build** | | |
 | Onboard an existing codebase to Loom | `/loom-init` | Brownfield: writes `CLAUDE.md`, seeds `.loom/wiki/` |
-| Plan a feature end-to-end | `/loom-plan create` then `/loom-plan execute` | Dual-track plan + criteria + scenarios, then wave-by-wave execution |
-| Run a feature fully autonomously | `/loom-auto --from "<idea>"` | Roadmap → plan → execute → test → review → fix in one pipeline |
+| Start a greenfield project deliberately | `/loom-roadmap init --full` | Interactive roadmap → review → approve → plan. Stops at an approved plan ready to execute |
+| Start a greenfield project from a roadmap you already have | `/loom-plan create` then `/loom-plan execute` | Dual-track plan + criteria + scenarios, then wave-by-wave execution |
+| Run a feature fully autonomously from a one-line idea | `/loom-auto --from "<idea>"` | Roadmap → plan → execute → test → review → fix in one pipeline |
 | Iterate an artifact toward a target | `/loom-converge --mode {target\|criteria\|document}` | Convergence loop with circuit breakers + auto-snapshots |
 | Fix a bug with Loom rigor (no full plan) | `/loom-bugfix "<desc>"` | Wiki context + impact assessment + fix archive |
 | Do a small task quickly | `/loom-quick "<desc>"` | Zero-ceremony + verification + impact + audit log |
