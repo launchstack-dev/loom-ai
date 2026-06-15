@@ -249,6 +249,38 @@ Inside Claude Code, run:
 
 If `/loom` returns "Unknown command", confirm `~/.claude/commands/loom.md` exists and that your Claude Code session has reloaded (restart the session or run `/clear`).
 
+### Agent Teams (experimental — recommended for `/loom-auto`)
+
+Claude Code ships an experimental **agent teams** mode that lets a lead agent spawn long-running stage teammates and pass context between them through disk instead of keeping every stage in the same context window. Loom uses this when available — `/loom-auto` switches to a lead-dispatcher / per-stage-teammate architecture (`execute-stage-teammate`, `test-stage-teammate`, `review-stage-teammate`, `fix-stage-teammate`, `converge-stage-teammate`) whose context windows reset between stages.
+
+To enable it, export this env var in your shell rc (`~/.zshrc`, `~/.bashrc`, etc.) and start a fresh Claude Code session:
+
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+Confirm by inspecting `env | grep AGENT_TEAMS` inside the session.
+
+**What changes when it's on:**
+
+| Mode | Behavior |
+|------|----------|
+| Off (default) | `/loom-auto` runs single-agent with checkpoint+clear. Stages share one context window; at the checkpoint critical threshold, the lead writes full state to disk and recommends `/clear` then `--resume`. |
+| On (`=1`) | `/loom-auto` runs as a lead dispatcher that spawns a dedicated teammate per stage. Each stage starts with a fresh context window and reads its inputs from `stage-context/*.toon` on disk. No `/clear` needed between stages. |
+
+**When to turn it on**
+
+- You run `/loom-auto` end-to-end on multi-wave plans where the single-agent context fills up before convergence
+- You want deterministic context boundaries between stages (each teammate is auditable in isolation)
+- You're comfortable with experimental Claude Code surfaces
+
+**When to leave it off**
+
+- One-shot commands (`/loom-quick`, `/loom-bugfix`, `/loom-code review`) — they don't span enough stages to benefit
+- Sessions where you actively want to inspect / inject between stages
+
+Either mode produces the same on-disk artifacts (`stage-context/*.toon`, `wave-N-summary.toon`, etc.) — agent teams is a runtime acceleration, not a different pipeline. See `commands/loom-auto.md` Step 1 for the detection logic and `agents/protocols/team-coordination.md` for the dispatch protocol.
+
 ### Your first run
 
 See the [Quickstart](#quickstart) section at the top of this README, or the narrated walkthrough in [`docs/first-30-minutes.md`](docs/first-30-minutes.md).
@@ -847,6 +879,8 @@ Selected protocols (47 total in `agents/protocols/`):
 Prompt refiner → scope interrogation → roadmap → dual-track plan → execute → converge → test → review → fix. Circuit breakers stop the loop if stuck. Contract drift detection per wave.
 
 Flags: `--skip-preflight`, `--light-preflight`, `--auto` (accept all defaults).
+
+For long multi-wave runs, enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) so each pipeline stage gets a fresh context window instead of accumulating in one. Without it, the single agent will hit context budget thresholds and require `/clear` + `--resume` between waves.
 
 ### Quick task
 
