@@ -1,0 +1,18 @@
+wave: 0
+status: success
+startedAt: 2026-06-15T00:00:00Z
+completedAt: 2026-06-15T00:05:00Z
+agents[2]{taskId,agent,model,status,filesCreated}:
+  w0-contracts,contracts-agent,opus,success,3
+  w0-converge-config-schema-backfill,contracts-agent,opus,success,1
+filesCreated[4]:
+  agents/protocols/converge.config.applications.md
+  agents/protocols/findings.applications-rows.md
+  agents/protocols/converge.config.schema.md
+  .plan-execution/contracts/wave-0-manifest.toon
+filesModified[0]:
+verification:
+  typecheck: skipped-no-code
+  lint: skipped-no-code
+  schemaDiff: pass
+notes: Wave 0 surfaced and resolved a phantom reference (converge.config.schema.md missing despite being called "locked" throughout the codebase). Backfilled inline as part of contracts pass. DF-02 (snapshotEnabled default) baked into schema layer.
