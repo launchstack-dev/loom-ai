@@ -268,7 +268,8 @@ function entryAlreadyPresent(
     const itemMatcher = item.matcher ?? "";
     const wantMatcher = entry.matcher ?? "";
     if (itemMatcher !== wantMatcher) continue;
-    for (const h of item.hooks ?? []) {
+    const hooksList = Array.isArray(item.hooks) ? item.hooks : [];
+    for (const h of hooksList) {
       if (!h || typeof h !== "object") continue;
       if (commandReferencesHook(String(h.command ?? ""), expectedScriptName)) {
         return true;
@@ -313,7 +314,8 @@ function purgeLoomEntries(settings: Settings): number {
       // Filter out individual hook references from the inner array; if no
       // hooks remain, drop the bucket entry entirely. This preserves the
       // unrelated hooks in a mixed entry while purging Loom ones.
-      const keptInner = (item.hooks ?? []).filter((h) => {
+      const hooksList = Array.isArray(item.hooks) ? item.hooks : [];
+      const keptInner = hooksList.filter((h) => {
         if (!h || typeof h !== "object") return true;
         const cmd = String(h.command ?? "");
         const isLoom = loomNames.some((name) => commandReferencesHook(cmd, name));
