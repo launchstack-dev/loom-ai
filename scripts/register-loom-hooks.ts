@@ -48,7 +48,6 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
 
 type EventKind = "SessionStart" | "PreToolUse" | "PostToolUse" | "Stop";
 
@@ -120,23 +119,29 @@ function parseArgs(argv: string[]): Options {
     dryRun: false,
     json: false,
   };
+  const requireValue = (flag: string, value: string | undefined): string => {
+    if (value === undefined || value.startsWith("-")) {
+      throw new Error(`${flag} requires a value`);
+    }
+    return value;
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--settings") opts.settingsPath = path.resolve(argv[++i]);
-    else if (a === "--hooks-root") opts.hooksRoot = path.resolve(argv[++i]);
+    if (a === "--settings") opts.settingsPath = path.resolve(requireValue("--settings", argv[++i]));
+    else if (a === "--hooks-root") opts.hooksRoot = path.resolve(requireValue("--hooks-root", argv[++i]));
     else if (a === "--mode") {
-      const v = argv[++i];
+      const v = requireValue("--mode", argv[++i]);
       if (v !== "local" && v !== "plugin" && v !== "auto") {
         throw new Error(`--mode must be one of: local, plugin, auto (got "${v}")`);
       }
       opts.mode = v;
     } else if (a === "--runner") {
-      const v = argv[++i];
+      const v = requireValue("--runner", argv[++i]);
       if (v !== "bunx" && v !== "npx" && v !== "auto") {
         throw new Error(`--runner must be one of: bunx, npx, auto (got "${v}")`);
       }
       opts.runner = v;
-    } else if (a === "--command-prefix") opts.commandPrefixOverride = argv[++i];
+    } else if (a === "--command-prefix") opts.commandPrefixOverride = requireValue("--command-prefix", argv[++i]);
     else if (a === "--replace") opts.replace = true;
     else if (a === "--dry-run") opts.dryRun = true;
     else if (a === "--json") opts.json = true;
@@ -155,15 +160,6 @@ function detectMode(settingsPath: string): "local" | "plugin" {
     fs.existsSync(path.join(projectRoot, "hooks", "file-ownership.ts")) &&
     fs.existsSync(path.join(projectRoot, "scripts", "register-loom-hooks.ts"));
   return looksLikeLoomCheckout ? "local" : "plugin";
-}
-
-function detectRunner(): "bunx" | "npx" {
-  try {
-    execSync("bunx --version", { stdio: "ignore" });
-    return "bunx";
-  } catch {
-    return "npx";
-  }
 }
 
 function runnerPrefix(runner: "bunx" | "npx"): string {

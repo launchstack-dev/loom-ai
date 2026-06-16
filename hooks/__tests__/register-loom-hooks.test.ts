@@ -10,7 +10,8 @@ const SCRIPT = path.join(REPO_ROOT, "scripts", "register-loom-hooks.ts");
 const TSX_RUNNER: [string, string[]] = (() => {
   try {
     execSync("bun --version", { stdio: "ignore" });
-    return ["bunx", ["tsx"]];
+    // Bun executes TypeScript natively — skip the bunx tsx round-trip.
+    return ["bun", []];
   } catch {
     return ["npx", ["--yes", "tsx"]];
   }
