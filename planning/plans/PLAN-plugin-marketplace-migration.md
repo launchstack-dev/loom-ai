@@ -3,6 +3,9 @@ planVersion: 2
 name: plugin-marketplace-migration
 status: draft
 created: 2026-06-16
+lastReviewed: 2026-06-16
+lastIntegrated: 2026-06-16
+blockedUntil: M-06-Phase-1
 roadmapRef: planning/ROADMAP.md
 milestoneRef: M-07
 featureRefs:
@@ -24,20 +27,20 @@ convergenceTiers:
 
 ## 1. Vision
 
-Align Loom's install model with Anthropic's documented Claude Code plugin format (`.claude-plugin/plugin.json` + `hooks/hooks.json`) so users can `/plugin marketplace add launchstack-dev/loom-ai` and `/plugin install loom` to get a fully-wired Loom toolchain — agents, skills, commands, hooks, MCP servers — without any mutation of `~/.claude/settings.json`. The curl `install.sh` path remains a first-class, supported fallback for users on locked-down systems or those who want a tagged, signed release. Both install paths produce equivalent runtime behavior, differing only in the anchor variable (`${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_PROJECT_DIR}`). A new `/loom-doctor` skill replaces the existing ad-hoc `cp -n` / `--replace` heuristics with a deterministic, evidence-guarded health check and SessionStart auto-migration. Per-project hook registration defaults to `.claude/settings.local.json` (machine-local, gitignored), with explicit team opt-in to the committed `.claude/settings.json` tier.
+Align Loom's install model with Anthropic's documented Claude Code plugin format (`.claude-plugin/plugin.json` + `hooks/hooks.json`) so users can `/plugin marketplace add launchstack-dev/loom-ai` and `/plugin install loom` to get a fully-wired Loom toolchain — agents, skills, commands, hooks, MCP servers — without any mutation of `~/.claude/settings.json`. The curl `install.sh` path remains supported for users on **enterprise / MDM-managed machines where Claude Code's plugin marketplace is blocked at the network layer**. Other users — including those who want a tagged signed release — should prefer the plugin path once M-06 Phase 1 ships signed releases. README restructure (Phase 4a) leads with the plugin path; curl is documented as the enterprise/blocked-network alternative. <!-- applied: HF-08 --> Both install paths produce equivalent runtime behavior, differing only in the anchor variable (`${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_PROJECT_DIR}`). A new `/loom-doctor` skill replaces the existing ad-hoc `cp -n` / `--replace` heuristics with a deterministic, evidence-guarded health check and SessionStart auto-migration. Per-project hook registration defaults to `.claude/settings.local.json` (machine-local, gitignored), with explicit team opt-in to the committed `.claude/settings.json` tier.
 
 ## 2. Scope
 
 ### In Scope
 
 - `.claude-plugin/plugin.json` manifest describing Loom's agents, skills, commands, hooks, MCP servers
-- `hooks/hooks.json` declaring SessionStart, PreToolUse, PostToolUse, UserPromptSubmit, Stop wiring under `${CLAUDE_PLUGIN_ROOT}`
+- `hooks/hooks.json` declaring SessionStart, PreToolUse, PostToolUse, Stop wiring under `${CLAUDE_PLUGIN_ROOT}` (UserPromptSubmit reserved for F-10; not registered in M-07) <!-- applied: HF-09 -->
 - `install.sh` mutual-exclusion detection (refuse install when plugin already registered; surface migration recipe)
 - `/loom-doctor` skill + `scripts/loom-doctor.ts` health-check CLI (TOON + `--json` output)
 - `hooks/loom-migration.ts` SessionStart hook with ownership-evidence guarding
 - `register-loom-hooks.ts` `--tier <auto|local|project>` flag with default flip to `local`
 - Updates to `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md` to pass through tier
-- Two E2E stories (Playwright + Chrome MCP per F-04/F-05): plugin install path, curl install path
+- Three E2E specs (vitest + subprocess invocation of `loom-doctor` CLI per section 5.5): plugin install path (Phase 4b — blocked on M-06 Phase 1), curl install path, runtime equivalence <!-- applied: CB-04 -->
 - README restructure documenting both install paths and decision matrix
 - `planning/notes/plugin-marketplace-rationale.md` for kit authors
 
@@ -66,12 +69,14 @@ Establish TOON/markdown schemas before any implementation so all downstream wave
 | `agents/protocols/doctor-report.schema.md` | wave-0-schemas-agent | DoctorReport + embedded HealthCheck[] |
 | `agents/protocols/migration-evidence.schema.md` | wave-0-schemas-agent | Hash-based ownership evidence record |
 | `agents/protocols/settings-tier.schema.md` | wave-0-schemas-agent | SettingsTier enum + TierResolution algorithm |
+| `agents/protocols/upstream/plugin.schema.json` | wave-0-schemas-agent | Fetched snapshot of Anthropic's plugin manifest JSON Schema from `code.claude.com/docs/en/plugins-reference`; pinned with snapshotDate in a sibling `.meta.toon` file | <!-- applied: CB-02 -->
 
 **Acceptance Criteria**
 
 - All five schema files exist with TOON-formatted exemplar blocks (unit tier)
 - Each schema cross-references its consumer (which phase/wave reads it) (qa-review tier)
 - No schema references a not-yet-defined type (unit tier — schema linter)
+- upstream plugin.schema.json fetched and pinned with snapshotDate (unit tier) <!-- applied: CB-02 -->
 
 ### Phase 1 — F-15 Plugin Manifest (Wave 1)
 
@@ -84,13 +89,13 @@ Ship the native Claude Code plugin manifest and install-time mutual-exclusion.
 | `.claude-plugin/plugin.json` | wave-1-manifest-agent | Plugin manifest declaring all Loom resources |
 | `hooks/hooks.json` | wave-1-manifest-agent | Hook descriptor referencing `${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh` |
 | `install.sh` (edit) | wave-1-manifest-agent | Add plugin-detection pre-flight, mutual-exclusion abort path |
-| `tests/plugin-manifest.test.ts` | wave-1-manifest-agent | Vitest: manifest JSON-schema-valid, all referenced files exist, anchors well-formed |
-| `tests/install-mutual-exclusion.test.ts` | wave-1-manifest-agent | Vitest: install.sh exits with code `INSTALL_CONFLICT_PLUGIN_AND_CURL` when plugin present |
+| `test/plugin-manifest.test.ts` | wave-1-manifest-agent | Vitest: manifest JSON-schema-valid, all referenced files exist, anchors well-formed | <!-- applied: CB-01 -->
+| `test/install-mutual-exclusion.test.ts` | wave-1-manifest-agent | Vitest: install.sh exits with code `INSTALL_CONFLICT_PLUGIN_AND_CURL` when plugin present | <!-- applied: CB-01 -->
 
 **Acceptance Criteria**
 
 - `plugin.json` validates against Anthropic's published plugin schema (unit tier)
-- `hooks.json` registers SessionStart, PreToolUse, PostToolUse, UserPromptSubmit, Stop with `${CLAUDE_PLUGIN_ROOT}` anchors (unit tier)
+- `hooks.json` registers SessionStart, PreToolUse, PostToolUse, Stop with `${CLAUDE_PLUGIN_ROOT}` anchors (unit tier) <!-- applied: HF-09 -->
 - Plugin install produces equivalent runtime behavior to curl install modulo anchor variable (integration tier)
 - `install.sh` detects an existing plugin install and refuses with exit code 9 and a one-line migration recipe (integration tier)
 - README mentions both install paths in the Quickstart (qa-review tier)
@@ -107,8 +112,9 @@ Replace ad-hoc install heuristics with a deterministic health check and ownershi
 | `scripts/loom-doctor.ts` | wave-2-doctor-agent | Health-check CLI; emits TOON by default, JSON with `--json` |
 | `hooks/loom-migration.ts` | wave-2-doctor-agent | SessionStart hook performing idempotent legacy rewrite |
 | `scripts/lib/ownership-evidence.ts` | wave-2-doctor-agent | Hash-based file-divergence detector reused by doctor + migration |
-| `tests/loom-doctor.test.ts` | wave-2-doctor-agent | Vitest: health checks (hook files, runner resolution, anchor form, orphans) |
-| `tests/loom-migration.test.ts` | wave-2-doctor-agent | Vitest: migration is idempotent, refuses ownership-divergent files, emits MigrationEvidence |
+| `scripts/lib/migration-runner.ts` | wave-2-doctor-agent | Shared migration logic imported by BOTH `hooks/loom-migration.ts` and `scripts/loom-doctor.ts --fix`. Eliminates the impossible "doctor imports stdin-reading hook" coupling | <!-- applied: HF-07 -->
+| `test/loom-doctor.test.ts` | wave-2-doctor-agent | Vitest: health checks (hook files, runner resolution, anchor form, orphans) | <!-- applied: CB-01 -->
+| `test/loom-migration.test.ts` | wave-2-doctor-agent | Vitest: migration is idempotent, refuses ownership-divergent files, emits MigrationEvidence | <!-- applied: CB-01 -->
 
 **Acceptance Criteria**
 
@@ -118,7 +124,7 @@ Replace ad-hoc install heuristics with a deterministic health check and ownershi
 - SessionStart migration is idempotent — running twice produces identical settings file (integration tier)
 - Migration refuses to rewrite a settings entry whose recorded hash differs from on-disk hash; surfaces `MIGRATION_OWNERSHIP_DIVERGED` as advisory (integration tier)
 - Doctor surfaces `DOCTOR_BARE_ANCHOR` for legacy pre-PR-8 entries (unit tier)
-- `--fix` flag delegates to migration logic and re-runs checks (integration tier)
+- `--fix` flag delegates to the shared `migration-runner.ts` and re-runs checks (integration tier) <!-- applied: HF-07 -->
 
 ### Phase 3 — F-17 Settings Tier Flip (Wave 3)
 
@@ -128,13 +134,13 @@ Default per-project hook registration into `.claude/settings.local.json`; provid
 
 | Path | Owner | Purpose |
 |---|---|---|
-| `scripts/register-loom-hooks.ts` (edit) | wave-3-tier-agent | Add `--tier <auto|local|project>` flag; default resolution = `auto` → `local` |
+| `scripts/register-loom-hooks.ts` (edit) | wave-3-tier-agent | Add `--tier <auto|local|project>` flag; default flip to `local`; ALSO append `loom-migration` SessionStart entry to LOOM_HOOKS array so curl-install users get the migration hook wired | <!-- applied: CB-06 -->
 | `scripts/lib/tier-resolution.ts` | wave-3-tier-agent | TierResolution algorithm (extracted) |
 | `commands/loom-init.md` (edit) | wave-3-tier-agent | Pass through tier flag |
 | `commands/loom-auto.md` (edit) | wave-3-tier-agent | Pass through tier flag |
 | `commands/loom-roadmap/init.md` (edit) | wave-3-tier-agent | Pass through tier flag |
-| `tests/tier-resolution.test.ts` | wave-3-tier-agent | Vitest: auto-resolution, explicit overrides, conflict detection |
-| `tests/register-loom-hooks-tier.test.ts` | wave-3-tier-agent | Vitest: writes to settings.local.json by default; project tier opt-in writes settings.json |
+| `test/tier-resolution.test.ts` | wave-3-tier-agent | Vitest: auto-resolution, explicit overrides, conflict detection | <!-- applied: CB-01 -->
+| `test/register-loom-hooks-tier.test.ts` | wave-3-tier-agent | Vitest: writes to settings.local.json by default; project tier opt-in writes settings.json | <!-- applied: CB-01 -->
 
 **Acceptance Criteria**
 
@@ -144,9 +150,9 @@ Default per-project hook registration into `.claude/settings.local.json`; provid
 - Tier conflict (entries in both files) surfaces `MIGRATION_TIER_AMBIGUOUS` and refuses to write without explicit `--tier` (integration tier)
 - Re-running on an existing project preserves prior tier choice (integration tier)
 
-### Phase 4 — Docs + E2E (Wave 4)
+### Phase 4a — Docs + curl-path E2E (Wave 4a)  <!-- applied: CB-03 -->
 
-Document both install paths and prove equivalence with E2E stories.
+Document both install paths and prove curl-path equivalence with E2E stories. Ships independently of M-06.
 
 **Deliverables**
 
@@ -154,16 +160,31 @@ Document both install paths and prove equivalence with E2E stories.
 |---|---|---|
 | `README.md` (edit) | wave-4-docs-agent | Restructure Quickstart with plugin path, curl path, decision matrix |
 | `planning/notes/plugin-marketplace-rationale.md` | wave-4-docs-agent | Kit-author guide; why both paths; how to author kits that work under both |
-| `tests/e2e/plugin-install.spec.ts` | wave-4-e2e-agent | Playwright + Chrome MCP: fresh project → `/plugin install loom` → run `/loom-doctor` → zero problems |
-| `tests/e2e/curl-install.spec.ts` | wave-4-e2e-agent | Playwright + Chrome MCP: fresh project → `curl install.sh` → run `/loom-doctor` → zero problems |
-| `tests/e2e/runtime-equivalence.spec.ts` | wave-4-e2e-agent | Playwright: same `/loom-quick` task under each install path produces equivalent hook fire sequence |
+| `test/e2e/curl-install.spec.ts` | wave-4-e2e-agent | Vitest + subprocess: fresh project → `curl install.sh` → run `/loom-doctor` → zero problems | <!-- applied: CB-01, CB-04 -->
+| `test/e2e/runtime-equivalence.spec.ts` | wave-4-e2e-agent | Vitest + subprocess: same `/loom-quick` task under each install path produces equivalent hook fire sequence (plugin path mocked) | <!-- applied: CB-01, CB-04 -->
 
 **Acceptance Criteria**
 
 - README Quickstart has two install paths with clear "use plugin when … / use curl when …" guidance (qa-review tier)
 - `planning/notes/plugin-marketplace-rationale.md` covers the decision tree for kit authors (qa-review tier)
-- Both E2E specs run green on CI (e2e tier)
+- Curl-install E2E spec runs green on CI (e2e tier)
 - Runtime-equivalence spec asserts identical hook fire order and identical agent registration list (e2e tier)
+
+### Phase 4b — Plugin-path E2E + Marketplace Publication (Wave 4b)  <!-- applied: CB-03 -->
+
+**BLOCKED on M-06 Phase 1 (signed release).** Plugin-path E2E and marketplace listing submission require a tagged, signed release artifact.
+
+**Deliverables**
+
+| Path | Owner | Purpose |
+|---|---|---|
+| `test/e2e/plugin-install.spec.ts` | wave-4b-e2e-agent | Vitest + subprocess: fresh project → `/plugin install loom` → run `/loom-doctor` → zero problems | <!-- applied: CB-01, CB-04 -->
+| marketplace listing submission | wave-4b-publish-agent | Submit Loom to Anthropic plugin marketplace registry; references signed release tag |
+
+**Acceptance Criteria**
+
+- Plugin-install E2E spec runs green on CI against signed release (e2e tier)
+- Marketplace listing accepted (qa-review tier)
 
 ## 4. Data Model
 
@@ -172,6 +193,9 @@ PluginManifest:
   name: string                    # "loom"
   version: string                 # semver, matches package.json
   description: string
+  keywords[]: string             # marketplace search terms  <!-- applied: HF-02 -->
+  license: string                # SPDX identifier (e.g. "MIT")  <!-- applied: HF-02 -->
+  permissions[]: string          # derived from hooks.json matchers (e.g. ["Write","Edit","Bash","Agent","SessionStart","Stop"])  <!-- applied: HF-01 -->
   author: string                  # "launchstack-dev"
   repository: string              # https URL
   entrypoints[]{type,path}:
@@ -188,7 +212,7 @@ HookManifest:
     SessionStart,*,${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh loom-migration,30
     PreToolUse,Write|Edit,${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh pre-write,15
     PostToolUse,Write|Edit,${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh post-write,15
-    UserPromptSubmit,*,${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh prompt-submit,10
+    # UserPromptSubmit reserved for F-10 (wiki-context-suggester); not registered in M-07  <!-- applied: HF-09 -->
     Stop,*,${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh stop,10
 
 DoctorReport:
@@ -281,6 +305,14 @@ bun scripts/register-loom-hooks.ts [--tier <auto|local|project>] [--replace] [--
 | `--replace` | Existing behavior: overwrite Loom-owned entries |
 | `--dry-run` | Print planned writes without mutating disk |
 
+Flag semantics: `--mode` (existing) = path anchor style (`${CLAUDE_PROJECT_DIR}` vs `${CLAUDE_PLUGIN_ROOT}`); `--tier` (new) = destination settings file (`settings.local.json` vs `settings.json`). Orthogonal axes. The value `local` means different things in each flag — both surfaces stay in the same script; --help text MUST document the distinction. <!-- applied: HF-06 -->
+
+### User-visible output strings  <!-- applied: HF-11 -->
+
+- Plugin install success (printed by SessionStart hook first-run): `Loom installed. Run /loom-doctor to verify.`
+- SessionStart migration in-progress (stderr): `Loom: migrating N legacy hook entries... done.`
+- SessionStart migration no-op (stderr, only with $LOOM_DEBUG): `Loom: hook entries up to date.`
+
 ### External API Contracts (owned by Anthropic)
 
 - `.claude-plugin/plugin.json` — per `code.claude.com/docs/en/plugins-reference`
@@ -288,6 +320,12 @@ bun scripts/register-loom-hooks.ts [--tier <auto|local|project>] [--replace] [--
 - `~/.claude/settings.json`, `.claude/settings.json`, `.claude/settings.local.json` tier hierarchy — per `code.claude.com/docs/en/settings`
 
 Loom MUST treat these schemas as upstream. The plan's data model snapshots known fields; on Anthropic schema drift, only `agents/protocols/plugin-manifest.schema.md` and `agents/protocols/hook-manifest.schema.md` need updates.
+
+## 5.5 E2E Test Environment  <!-- applied: CB-04 -->
+
+- **Runner:** vitest + subprocess invocation of the `loom-doctor` CLI (matches existing `test/e2e/convergence/` pattern). No Playwright or Chrome MCP required.
+- **Fixture:** temp project directory + simulated `.claude/` skeleton + a fake `plugin.json` used to exercise the install.sh mutual-exclusion path.
+- **CI strategy:** specs run as part of `bun test`. No real Claude Code installation required. Anything that depends on `/plugin install loom` (Phase 4b) is mocked at the subprocess boundary; the plugin-path spec only un-mocks once a signed release is available.
 
 ## 6. State Machines
 
@@ -329,7 +367,7 @@ transitions[]{from,to,trigger}:
 | `DOCTOR_ORPHAN_ENTRY` | warning | 1 | Run `/loom-doctor --fix`; an entry references a hook file Loom no longer owns |
 | `MIGRATION_OWNERSHIP_DIVERGED` | warning | 1 | Settings file hash differs from recorded evidence; review diff and re-run with `--fix --force` |
 | `MIGRATION_SETTINGS_CORRUPT` | error | 2 | Settings JSON unparseable; manual repair required |
-| `MIGRATION_TIER_AMBIGUOUS` | error | 1 | Loom entries found in both settings.json and settings.local.json; pass explicit `--tier` |
+| `MIGRATION_TIER_AMBIGUOUS` | error | 1 | Loom entries found in BOTH `.claude/settings.json` (N entries) and `.claude/settings.local.json` (M entries). To resolve: (1) run `bun scripts/loom-doctor.ts --tier auto` to see the resolution report listing sample conflicting hook names from each file; (2) re-run register with explicit `--tier local` (keep machine-local) or `--tier project` (commit to repo). | <!-- applied: HF-12 -->
 | `MANIFEST_INVALID` | error | 2 | `plugin.json` or `hooks.json` fails schema validation; reinstall from tagged release |
 | `INSTALL_CONFLICT_PLUGIN_AND_CURL` | error | 9 | Plugin already registered; uninstall plugin or skip curl install |
 
@@ -376,18 +414,24 @@ transitions[]{from,to,trigger}:
 | Wave | Agent | Owned Paths |
 |---|---|---|
 | 0 | wave-0-schemas-agent | `agents/protocols/plugin-manifest.schema.md`, `agents/protocols/hook-manifest.schema.md`, `agents/protocols/doctor-report.schema.md`, `agents/protocols/migration-evidence.schema.md`, `agents/protocols/settings-tier.schema.md` |
-| 1 | wave-1-manifest-agent | `.claude-plugin/plugin.json`, `hooks/hooks.json`, `install.sh`, `tests/plugin-manifest.test.ts`, `tests/install-mutual-exclusion.test.ts` |
-| 2 | wave-2-doctor-agent | `commands/loom-doctor.md`, `scripts/loom-doctor.ts`, `hooks/loom-migration.ts`, `scripts/lib/ownership-evidence.ts`, `tests/loom-doctor.test.ts`, `tests/loom-migration.test.ts` |
-| 3 | wave-3-tier-agent | `scripts/register-loom-hooks.ts`, `scripts/lib/tier-resolution.ts`, `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md`, `tests/tier-resolution.test.ts`, `tests/register-loom-hooks-tier.test.ts` |
-| 4 | wave-4-docs-agent | `README.md`, `planning/notes/plugin-marketplace-rationale.md` |
-| 4 | wave-4-e2e-agent | `tests/e2e/plugin-install.spec.ts`, `tests/e2e/curl-install.spec.ts`, `tests/e2e/runtime-equivalence.spec.ts` |
+| 1 | wave-1-manifest-agent | `.claude-plugin/plugin.json`, `hooks/hooks.json`, `install.sh`, `test/plugin-manifest.test.ts`, `test/install-mutual-exclusion.test.ts` | <!-- applied: CB-01 -->
+| 2 | wave-2-doctor-agent | `commands/loom-doctor.md`, `scripts/loom-doctor.ts`, `hooks/loom-migration.ts`, `scripts/lib/ownership-evidence.ts`, `scripts/lib/migration-runner.ts`, `test/loom-doctor.test.ts`, `test/loom-migration.test.ts` | <!-- applied: CB-01, HF-07 -->
+| 3 | wave-3-tier-agent | `scripts/register-loom-hooks.ts`, `scripts/lib/tier-resolution.ts`, `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md`, `test/tier-resolution.test.ts`, `test/register-loom-hooks-tier.test.ts` | <!-- applied: CB-01 -->
+| 4a | wave-4-docs-agent | `README.md`, `planning/notes/plugin-marketplace-rationale.md` |
+| 4a | wave-4-e2e-agent | `test/e2e/curl-install.spec.ts`, `test/e2e/runtime-equivalence.spec.ts` | <!-- applied: CB-01, CB-03 -->
+| 4b | wave-4b-e2e-agent | `test/e2e/plugin-install.spec.ts` | <!-- applied: CB-01, CB-03 -->
+| 4b | wave-4b-publish-agent | marketplace listing submission | <!-- applied: CB-03 -->
 
 **Boundary notes**
 
 - Wave 2 reads `scripts/register-loom-hooks.ts` but does not write it; tier mutation is Wave 3's exclusive territory.
 - Wave 3 reads `scripts/lib/ownership-evidence.ts` (Wave 2's deliverable) but does not modify it.
-- Waves 2 and 3 run sequentially, not in parallel, because Wave 3's tier-resolution tests exercise doctor's evidence helper.
+- Wave 3's edit to `register-loom-hooks.ts` imports types from Wave 2's `scripts/lib/ownership-evidence.ts`. `tier-resolution.ts` is independent of ownership-evidence. Wave 3 starts after Wave 2-A's interface (the exported TypeScript types in ownership-evidence.ts) is stable — not after full Wave 2 completion. If parallelism is desired, expose the ownership-evidence interface in a Phase 0 schema and run Waves 2 and 3 in parallel. <!-- applied: CB-05 -->
 - Wave 4 docs and Wave 4 e2e have disjoint paths and may run in parallel.
+
+### Cross-Plan Dependencies  <!-- applied: HF-03 -->
+
+F-15's `DoctorReport.installSource` (`plugin | curl`) is derived dynamically per session. The existing `agents/protocols/install-state.schema.md` (v3, shipped under M-06 F-13) has no corresponding persisted field. Open a follow-up PR to add `installSource` to install-state v3.1 so `/loom-upgrade` can route plugin-path vs curl-path updates. This plan does not own that change but flags it for M-07 sign-off.
 
 ## 10. Risks & Mitigations
 

@@ -1,0 +1,64 @@
+schemaVersion: 1
+reviewedPlan: planning/plans/PLAN-plugin-marketplace-migration.md
+reviewDate: 2026-06-16
+mode: planning
+reviewers[6]: feature-coverage-agent, strategy-agent, ux-agent, phasing-agent, parallelization-agent, agentic-workflow-agent
+
+structuralPrecheck:
+  stage1Structure: pass
+  stage2Dependencies: pass
+  stage3Ownership: pass
+  stage4Sizing: pass
+
+# Cross-cutting blockers — flagged by 2+ reviewers independently
+crossCuttingBlockers[6]{id,severity,description,reviewers,fix}:
+  CB-01,blocking,"tests/ vs test/ path discrepancy. Plan section 9 ownership matrix and all phase deliverable tables use tests/, but the existing repo uses test/. Every test deliverable would be orphaned (vitest scan root excludes tests/). Mechanical fix: rename tests/ to test/ throughout plan.",parallelization+agentic-workflow,Replace all tests/ paths with test/ in plan sections 3 and 9
+  CB-02,blocking,"Anthropic plugin schema not snapshotted or pinned. Phase 0 says schemas mirror Anthropic shape; Phase 1 says plugin.json validates against Anthropic's published schema. No local snapshot, no pinned URL. Wave 0 and Wave 1 agents cannot execute.",phasing+agentic-workflow,Add Phase 0 deliverable: fetch and cache code.claude.com/docs/en/plugins-reference schema to agents/protocols/upstream/plugin.schema.json with snapshotDate
+  CB-03,blocking,"M-06 Phase 1 dependency mis-framed as risk. Phase 4 plugin-path E2E and milestone publication require signed-release infra that hasn't started. Plan treats this as low-likelihood risk; it is a structural gate.",strategy+phasing,Split Phase 4 into 4a (docs + curl E2E + runtime-equivalence) and 4b (plugin-path E2E + marketplace publication; BLOCKED on M-06 Phase 1). Add Blocked-Until field to plan header.
+  CB-04,blocking,"E2E test environment underspecified. Plan says Playwright + Chrome MCP but: (a) Playwright not in package.json; (b) existing test/e2e/convergence/ uses vitest not Playwright; (c) CI strategy for driving Claude Code commands undefined.",ux+phasing+agentic-workflow,Add ## E2E Environment section specifying runner (vitest+subprocess vs @playwright/test vs Chrome MCP), fixture structure, and CI strategy (skip/mock/local-only)
+  CB-05,blocking,"Wave 2 → Wave 3 serialization justification likely wrong. Boundary note says tier-resolution tests exercise ownership-evidence helper. tier-resolution.ts is pure-function flag/file detection; ownership-evidence is hash-based file divergence. They are likely independent.",phasing+parallelization,"Either: (a) audit and confirm dependency, document explicit uses: annotation; or (b) parallelize Wave 2 + Wave 3, expose ownership-evidence interface in Wave 0 schema"
+  CB-06,blocking,"loom-migration SessionStart registration ownership undefined. Wave 1 ships hooks/hooks.json (plugin path). Wave 2 ships hooks/loom-migration.ts. Neither wave updates register-loom-hooks.ts HOOKS array to register loom-migration for curl install path.",phasing,Assign explicitly to Wave 3 (which already edits register-loom-hooks.ts) and add to Wave 3 deliverables table
+
+# High-severity findings unique to a single reviewer
+highFindings[12]{id,severity,description,reviewer,fix}:
+  HF-01,high,"PluginManifest missing permissions[] field. Anthropic security-guidance plugin includes this. Enterprise trust signal; pre-install review UX.",feature-coverage,Add permissions[] to PluginManifest schema; derive from hooks.json matchers
+  HF-02,high,"PluginManifest missing license + keywords[]. Required for well-formed marketplace listing and discoverability.",feature-coverage,Add both fields to schema in Phase 0
+  HF-03,high,"installSource not persisted in install-state.schema.md. DoctorReport derives dynamically; install-state v3 (M-06) has no field. /loom-upgrade can't differentiate plugin vs curl install path.",feature-coverage,Add installSource: plugin|curl to v3 install-state schema; cross-plan dependency
+  HF-04,high,"Error catalog missing: DOCTOR_HOOK_TIMEOUT, DOCTOR_PERMISSIONS_MISMATCH, DOCTOR_VERSION_SKEW, DOCTOR_UPDATE_AVAILABLE. Live production paths fall through to exit 2 (internal error).",feature-coverage,Extend section 7 with the 4 missing codes
+  HF-05,high,"Tier passthrough gap. F-17 covers loom-init, loom-auto, loom-roadmap/init but not loom-quick, loom-change, loom-plan which also trigger registration.",feature-coverage,Audit all entry-point commands; extend Phase 3 deliverable list
+  HF-06,high,"--tier vs --mode flag naming collision. register-loom-hooks.ts already has --mode local|plugin|auto. New --tier local|project|auto overlaps semantically. value=local means different things.",agentic-workflow,Add explicit Phase 3 note: --mode = path anchor style; --tier = destination settings file. Use --tier values local|project|auto only.
+  HF-07,high,"loom-doctor --fix cannot import loom-migration.ts (stdin-reading hook). Need shared scripts/lib/migration-runner.ts that both hook and doctor CLI call.",agentic-workflow,Add migration-runner.ts to Wave 2-A scope; refactor loom-migration.ts to dispatch through it
+  HF-08,high,"Curl audience ambiguity. Vision says first-class fallback; ROADMAP says demote to alternative. Drives mutual-exclusion error wording, README structure, install.sh UX.",strategy,Pick one. Add Curl install is for: paragraph to Vision committing to a specific audience (e.g. enterprise on MDM-blocked machines).
+  HF-09,high,"UserPromptSubmit dangling reference. HookManifest in Section 4 declares UserPromptSubmit entry but no handler exists in repo (no hooks/prompt-submit.ts).",phasing,Remove UserPromptSubmit from hooks.json and note it is reserved for F-10 wiki-context-suggester; OR add hooks/prompt-submit.ts no-op stub to Wave 1.
+  HF-10,high,"Differentiation gap. Plan does not articulate what Loom's plugin manifest exposes that GSD/cc-plugins do not. Strongest candidate: /loom-doctor TOON output composing with /loom-converge.",strategy,Add explicit differentiator statement to Section 1 Vision; surface in README restructure deliverable acceptance criteria.
+  HF-11,high,"Install success state undefined. Plan defines no output for /plugin install loom completion or for SessionStart migration in-progress state. User has no signal install succeeded other than running /loom-doctor.",ux,Add explicit output strings to Section 5; SessionStart migration emits stderr progress line.
+  HF-12,high,"MIGRATION_TIER_AMBIGUOUS has no resolution path. Error blocks writes; plan doesn't define what user sees next (which file has which entries, how to inspect, which flag resolves it).",ux,Define remediation: count + sample keys + exact resolve command per tier; add to Section 7 remediation column.
+
+# Medium-severity findings
+mediumFindings[10]{id,severity,description,reviewer,fix}:
+  MF-01,medium,"Phase 0 collapses well into consuming waves. 5 schemas for one milestone is over-specified relative to milestone acceptance criteria.",strategy,Optionally collapse Phase 0 into Waves 1-3 (each authors its own schema). Reduces wave count from 5 to 4.
+  MF-02,medium,"F-17 P2 sequenced before E2E gate. Highest-cost docs/verification wait on P2.",strategy,Either defer F-17 to follow-up PR or sequence it after Phase 4.
+  MF-03,medium,"ownership-evidence --fix --force escape hatch is a scope creep signal on a safety mechanism. GSD pattern surfaces divergence; doesn't auto-force.",strategy,Remove --force; require manual resolution. Adds destructive-action guard.
+  MF-04,medium,"--fix --force lacks confirmation guard. Destructive overwrite of user-modified settings without --yes / interactive prompt.",ux,Add confirmation prompt or require --yes; print diff first.
+  MF-05,medium,"loom-doctor TOON default output rendering uncontracted. May be as opaque as JSON for non-TOON-familiar users.",ux,Specify human-readable rendering: header line + per-check icon + footer summary in commands/loom-doctor.md.
+  MF-06,medium,"loom-doctor discoverability undefined. No trigger surfaces it for existing users.",ux,Add PreToolUse hook failure footer: Tip: run /loom-doctor to diagnose hook health.
+  MF-07,medium,"plugin marketplace publication step needs split (4a / 4b). 4b BLOCKED on M-06 Phase 1.",phasing,See CB-03.
+  MF-08,medium,"Wave 0 should add canonicalAnchors block to hook-manifest schema. Enables Wave 1+2 parallel execution (1 wave saved).",parallelization,Add canonicalAnchors[]: ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh, ${CLAUDE_PROJECT_DIR}/hooks/run-hook.sh to Phase 0 schema.
+  MF-09,medium,"Schema drift risk on plugin-manifest and hook-manifest. Both mirror upstream-owned shapes.",phasing,Add snapshotDate + URL pin to both schemas; Wave 1 unit test validates against snapshot not derived copy.
+  MF-10,medium,"Wave 2 internal 3-stage fan-out unexploited. 6 deliverables could run as 1+3+2 parallel (~50% reduction).",parallelization,Refactor Wave 2 as Stage A (ownership-evidence) → Stage B (3 parallel: doctor, migration, doctorcmd) → Stage C (2 parallel tests).
+
+# Recommendations for plan integrator
+integratorActions[5]{priority,action}:
+  P0,Apply CB-01 (tests→test rename) mechanically across plan
+  P0,Apply CB-02 (snapshot Anthropic schema) — add Phase 0 deliverable
+  P0,Apply CB-03 (Phase 4 split + Blocked-Until) — restructure section 3
+  P0,Apply CB-06 (loom-migration ownership) — assign to Wave 3
+  P1,Apply CB-04 (E2E env section) + CB-05 (Wave 2/3 dependency audit) + HF-01/02/03 (manifest fields + install-state cross-plan) + HF-06/07 (flag collision + migration-runner extraction) + HF-08 (curl audience) + HF-09 (UserPromptSubmit) + HF-11/12 (UX feedback voids)
+
+summary:
+  totalFindings: 28
+  blocking: 6
+  high: 12
+  medium: 10
+  unanimousBlockers: 1
+  recommendation: "Plan is structurally sound but needs an integrator pass before execution. Six blocking findings prevent any wave from running cleanly. After fixes, a second review pass should drop blocking count to zero."
