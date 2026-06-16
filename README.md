@@ -257,6 +257,18 @@ Each command copies templates from `~/.claude/templates/hooks/` into `<repo>/hoo
 
 **Re-register later:** run `node scripts/register-loom-hooks.ts --replace` from the project root. The `--replace` flag is idempotent — it purges any stale Loom hook entries and writes fresh ones. Unrelated hook entries are preserved.
 
+**Path anchoring (important for kit authors).** All hook commands written by `register-loom-hooks.ts` are anchored with `${CLAUDE_PROJECT_DIR}` (local mode) or `${CLAUDE_PLUGIN_ROOT}` (plugin mode). Bare relative paths like `hooks/file-ownership.ts` fail with exit 127 once Claude Code's persistent Bash shell `cd`s into a subdir (see [Anthropic's hooks docs](https://docs.anthropic.com/en/docs/claude-code/hooks)). If you hand-author a hook entry, anchor it the same way.
+
+**Severity convention.** When adding a hook to a kit, slot it by event type:
+
+| Event | Use for | Examples in Loom |
+|---|---|---|
+| `PreToolUse` | **Hard gates** that block the tool call (exit 1 or `permissionDecision: deny`) | `file-ownership`, `contract-lock`, `deploy-guard`, `context-budget`, `wiki-write-guard` |
+| `PostToolUse` | **Soft / advisory** signals (typecheck, format, telemetry, wiki ledger) | `typecheck-on-write`, `wiki-commit-ledger`, `context-monitor`, `status-updater` |
+| `Stop` / `SessionStart` / `SubagentStop` | End-of-turn quality gates and session bootstrap | `quality-gate`, `wiki-session-status` |
+
+Hooks that need to *block* belong on `PreToolUse`; hooks that *observe or react* belong on `PostToolUse`. Mis-slotting a soft observer onto `PreToolUse` makes every related tool call wait on it; mis-slotting a hard gate onto `PostToolUse` lets the bad action through.
+
 ### Verify the install
 
 ```bash

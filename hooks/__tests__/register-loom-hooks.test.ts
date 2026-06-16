@@ -255,7 +255,9 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(preCommands).not.toContain(
         "bunx tsx ${CLAUDE_PLUGIN_ROOT}/hooks/file-ownership.ts"
       );
-      // Fresh project-relative version present.
+      // Fresh project-anchored version present (explicit --command-prefix
+      // overrides the default ${CLAUDE_PROJECT_DIR} anchoring, so this test
+      // exercises the bare-path path that is reachable only via the override).
       expect(preCommands).toContain("bunx tsx hooks/file-ownership.ts");
     });
 
@@ -295,7 +297,7 @@ describe("scripts/register-loom-hooks.ts", () => {
   });
 
   describe("mode + runner", () => {
-    it("--mode local emits project-relative hooks/<name>.ts paths", () => {
+    it("--mode local emits ${CLAUDE_PROJECT_DIR}-anchored hooks/<name>.ts paths", () => {
       const result = runScript([
         "--settings",
         settingsPath,
@@ -310,7 +312,11 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(result.exitCode).toBe(0);
       const settings = readSettings();
       const allCmds = JSON.stringify(settings.hooks);
-      expect(allCmds).toContain("bunx tsx hooks/file-ownership.ts");
+      // Anchored, not bare — required so the persistent Bash shell can cd
+      // into subdirs without breaking hook resolution (exit 127).
+      expect(allCmds).toContain(
+        "bunx tsx ${CLAUDE_PROJECT_DIR}/hooks/file-ownership.ts"
+      );
       expect(allCmds).not.toContain("${CLAUDE_PLUGIN_ROOT}");
     });
 
@@ -349,7 +355,9 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(report.runner).toBe("wrapper");
       const settings = readSettings();
       const allCmds = JSON.stringify(settings.hooks);
-      expect(allCmds).toContain("sh hooks/run-hook.sh hooks/file-ownership.ts");
+      expect(allCmds).toContain(
+        "sh ${CLAUDE_PROJECT_DIR}/hooks/run-hook.sh ${CLAUDE_PROJECT_DIR}/hooks/file-ownership.ts"
+      );
       expect(allCmds).not.toContain("${CLAUDE_PLUGIN_ROOT}");
     });
 

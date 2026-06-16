@@ -189,8 +189,17 @@ function resolveCommandPrefix(opts: Options): {
   // .claude/settings.json shape in the loom-ai repo). The wrapper resolves
   // bun → npx tsx at exec time, so users can install bun later without
   // re-registering hooks.
+  //
+  // Hook commands MUST anchor with ${CLAUDE_PROJECT_DIR} (local) or
+  // ${CLAUDE_PLUGIN_ROOT} (plugin) — bare relative paths fail with exit 127
+  // once Claude Code's persistent Bash shell cd's into a subdir. See:
+  // https://docs.anthropic.com/en/docs/claude-code/hooks and
+  // https://github.com/gsd-build/get-shit-done/issues/1906
   if (opts.runner === "auto") {
-    const rootPart = effective === "local" ? "" : "${CLAUDE_PLUGIN_ROOT}/";
+    const rootPart =
+      effective === "local"
+        ? "${CLAUDE_PROJECT_DIR}/"
+        : "${CLAUDE_PLUGIN_ROOT}/";
     return {
       prefix: `sh ${rootPart}hooks/run-hook.sh ${rootPart}`,
       mode: effective,
@@ -200,9 +209,10 @@ function resolveCommandPrefix(opts: Options): {
 
   const runner = opts.runner;
   const runnerPart = runnerPrefix(runner);
-  const prefix = effective === "local"
-    ? runnerPart
-    : `${runnerPart} \${CLAUDE_PLUGIN_ROOT}`;
+  const prefix =
+    effective === "local"
+      ? `${runnerPart} \${CLAUDE_PROJECT_DIR}`
+      : `${runnerPart} \${CLAUDE_PLUGIN_ROOT}`;
   return { prefix, mode: effective, runner };
 }
 
@@ -254,7 +264,7 @@ function commandReferencesHook(command: string, scriptName: string): boolean {
   // match literally.
   const escaped = scriptName.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   const re = new RegExp(
-    `(^|[\\s"'])(\\$\\{CLAUDE_PLUGIN_ROOT\\}/)?hooks/${escaped}\\.ts(\\s|$|["'])`
+    `(^|[\\s"'])(\\$\\{CLAUDE_(?:PLUGIN_ROOT|PROJECT_DIR)\\}/)?hooks/${escaped}\\.ts(\\s|$|["'])`
   );
   return re.test(command);
 }
@@ -287,10 +297,12 @@ function buildSettingsEntry(
   commandPrefix: string
 ): SettingsHookEntry {
   const trimmed = commandPrefix.replace(/\s+$/, "");
-  const sep = /\$\{CLAUDE_PLUGIN_ROOT\}$|\/$/.test(trimmed) ? "" : " ";
-  const pathPart = /\$\{CLAUDE_PLUGIN_ROOT\}$/.test(trimmed)
-    ? `/hooks/${entry.hookName}.ts`
-    : `hooks/${entry.hookName}.ts`;
+  // A prefix ending in ${CLAUDE_PROJECT_DIR} or ${CLAUDE_PLUGIN_ROOT} expects
+  // a "/" to join the hooks path; a prefix already ending in "/" needs no
+  // separator; anything else (e.g. "bunx tsx") needs a space.
+  const endsWithRoot = /\$\{CLAUDE_(PROJECT_DIR|PLUGIN_ROOT)\}$/.test(trimmed);
+  const sep = endsWithRoot ? "/" : /\/$/.test(trimmed) ? "" : " ";
+  const pathPart = `hooks/${entry.hookName}.ts`;
   const command = `${trimmed}${sep}${pathPart}`;
   const result: SettingsHookEntry = {
     hooks: [{ type: "command", command, timeout: entry.timeoutMs }],
