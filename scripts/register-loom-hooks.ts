@@ -145,6 +145,7 @@ function parseArgs(argv: string[]): Options {
     else if (a === "--replace") opts.replace = true;
     else if (a === "--dry-run") opts.dryRun = true;
     else if (a === "--json") opts.json = true;
+    else throw new Error(`Unknown argument: ${a}`);
   }
   return opts;
 }
@@ -155,7 +156,12 @@ function parseArgs(argv: string[]): Options {
  * scripts/register-loom-hooks.ts). Otherwise "plugin".
  */
 function detectMode(settingsPath: string): "local" | "plugin" {
-  const projectRoot = path.dirname(path.dirname(path.resolve(settingsPath)));
+  // Default: peel off two levels (.claude/settings.json → project root).
+  // Fallback to cwd when --settings points somewhere unconventional.
+  const resolved = path.resolve(settingsPath);
+  const parent = path.dirname(resolved);
+  const projectRoot =
+    path.basename(parent) === ".claude" ? path.dirname(parent) : process.cwd();
   const looksLikeLoomCheckout =
     fs.existsSync(path.join(projectRoot, "hooks", "file-ownership.ts")) &&
     fs.existsSync(path.join(projectRoot, "scripts", "register-loom-hooks.ts"));
@@ -226,7 +232,13 @@ function writeAtomic(p: string, content: string): void {
 }
 
 function commandReferencesHook(command: string, scriptName: string): boolean {
-  const re = new RegExp(`(^|[\\s/])hooks/${scriptName}\\.ts(\\s|$|")`);
+  // Match either a standalone "hooks/<name>.ts" (preceded by start/space/quote)
+  // or a "${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts" form. Reject paths like
+  // "my-hooks/<name>.ts" or "custom-hooks/<name>.ts" so unrelated user hooks
+  // aren't accidentally treated as Loom hooks.
+  const re = new RegExp(
+    `(^|[\\s"'])(\\$\\{CLAUDE_PLUGIN_ROOT\\}/)?hooks/${scriptName}\\.ts(\\s|$|["'])`
+  );
   return re.test(command);
 }
 
@@ -380,8 +392,12 @@ function main(): void {
 
     const newItem = buildSettingsEntry(entry, commandPrefix);
     if (!opts.dryRun) {
-      const bucket = (settings.hooks[entry.event] ||= []);
-      bucket.push(newItem);
+      // Guard against a corrupted settings.json where settings.hooks[event]
+      // is present but not an array — coerce to a fresh array before push.
+      if (!Array.isArray(settings.hooks[entry.event])) {
+        settings.hooks[entry.event] = [];
+      }
+      settings.hooks[entry.event]!.push(newItem);
     }
     plan.push({
       hookName: entry.hookName,
