@@ -371,12 +371,15 @@ Skip this step entirely if the legacy layout is already in use (i.e., a non-stub
    On accept (default):
 
    ```bash
-   # Copy templates into the project (idempotent — cp -r overwrites)
+   # Copy templates into the project. Use cp -n (no-clobber) so any pre-existing
+   # hook file the user has customized is preserved. To force a refresh from the
+   # latest templates, the user can delete the file (or whole hooks/ dir) first,
+   # or run `cp -rf ~/.claude/templates/hooks/. hooks/` manually.
    mkdir -p hooks scripts
    if [ -d ~/.claude/templates/hooks ]; then
-     cp -r ~/.claude/templates/hooks/. hooks/
+     cp -rn ~/.claude/templates/hooks/. hooks/
    fi
-   if [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
+   if [ ! -f scripts/register-loom-hooks.ts ] && [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
      cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
    fi
 

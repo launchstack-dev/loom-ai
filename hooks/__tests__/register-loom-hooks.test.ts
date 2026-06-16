@@ -330,5 +330,44 @@ describe("scripts/register-loom-hooks.ts", () => {
         "bunx tsx ${CLAUDE_PLUGIN_ROOT}/hooks/file-ownership.ts"
       );
     });
+
+    it("default --runner auto emits the run-hook.sh wrapper prefix (local mode)", () => {
+      const result = runScript([
+        "--settings",
+        settingsPath,
+        "--hooks-root",
+        hooksRoot,
+        "--mode",
+        "local",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(0);
+      const report = JSON.parse(result.stdout);
+      expect(report.runner).toBe("wrapper");
+      const settings = readSettings();
+      const allCmds = JSON.stringify(settings.hooks);
+      expect(allCmds).toContain("sh hooks/run-hook.sh hooks/file-ownership.ts");
+      expect(allCmds).not.toContain("${CLAUDE_PLUGIN_ROOT}");
+    });
+
+    it("default --runner auto emits the run-hook.sh wrapper prefix (plugin mode)", () => {
+      const result = runScript([
+        "--settings",
+        settingsPath,
+        "--hooks-root",
+        hooksRoot,
+        "--mode",
+        "plugin",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(0);
+      const report = JSON.parse(result.stdout);
+      expect(report.runner).toBe("wrapper");
+      const settings = readSettings();
+      const allCmds = JSON.stringify(settings.hooks);
+      expect(allCmds).toContain(
+        "sh ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh ${CLAUDE_PLUGIN_ROOT}/hooks/file-ownership.ts"
+      );
+    });
   });
 });

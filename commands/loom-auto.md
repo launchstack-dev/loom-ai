@@ -178,11 +178,13 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
    if [ -f .claude/settings.json ] && grep -q "hooks/file-ownership.ts" .claude/settings.json; then
      echo "Loom hooks already registered — skipping."
    else
+     # cp -n preserves any user-customized hook files; settings.json is still
+     # re-wired by register-loom-hooks.ts --replace below.
      mkdir -p hooks scripts
      if [ -d ~/.claude/templates/hooks ]; then
-       cp -r ~/.claude/templates/hooks/. hooks/
+       cp -rn ~/.claude/templates/hooks/. hooks/
      fi
-     if [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
+     if [ ! -f scripts/register-loom-hooks.ts ] && [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
        cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
      fi
 

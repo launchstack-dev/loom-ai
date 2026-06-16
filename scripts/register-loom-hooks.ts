@@ -187,7 +187,7 @@ function resolveCommandPrefix(opts: Options): {
   if (opts.runner === "auto") {
     const rootPart = effective === "local" ? "" : "${CLAUDE_PLUGIN_ROOT}/";
     return {
-      prefix: `sh ${rootPart}hooks/run-hook.sh ${rootPart}`.replace(/ $/, " "),
+      prefix: `sh ${rootPart}hooks/run-hook.sh ${rootPart}`,
       mode: effective,
       runner: "wrapper",
     };

@@ -15,11 +15,13 @@ else
   #         deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]"
   # Default Y. On decline, surface recovery hint and continue.
 
+  # cp -n (no-clobber) preserves any user-customized hook files; --replace on
+  # the register script still re-wires settings.json regardless.
   mkdir -p hooks scripts
   if [ -d ~/.claude/templates/hooks ]; then
-    cp -r ~/.claude/templates/hooks/. hooks/
+    cp -rn ~/.claude/templates/hooks/. hooks/
   fi
-  if [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
+  if [ ! -f scripts/register-loom-hooks.ts ] && [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
     cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
   fi
 
