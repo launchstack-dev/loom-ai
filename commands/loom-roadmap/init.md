@@ -6,15 +6,18 @@ Creates a new ROADMAP.md with codebase awareness, validation, and optional agent
 
 Before any agents spawn, ensure the project has the Loom hook suite wired so file-ownership, contract-lock, budget-tracker, and the rest enforce throughout planning + execution. Skip if already registered.
 
+**Detect prior registration first.** If `.claude/settings.json` already references `hooks/file-ownership.ts`, skip the rest of this step entirely.
+
+**Otherwise, prompt the user:** "Register Loom enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]" — default Y.
+
+On decline (`n`): surface the recovery hint "Hooks not registered. Run `node scripts/register-loom-hooks.ts --replace` from the project root later." and continue with Step 1.
+
+On accept (default), execute:
+
 ```bash
-# Detect prior registration: if any Loom hook is already in settings.json, skip.
 if [ -f .claude/settings.json ] && grep -q "hooks/file-ownership.ts" .claude/settings.json; then
   echo "Loom hooks already registered — skipping bootstrap."
 else
-  # Prompt: "Register Loom enforcement hooks (file-ownership, contract-lock, context-budget,
-  #         deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]"
-  # Default Y. On decline, surface recovery hint and continue.
-
   # cp -n (no-clobber) preserves any user-customized hook files; --replace on
   # the register script still re-wires settings.json regardless.
   mkdir -p hooks scripts

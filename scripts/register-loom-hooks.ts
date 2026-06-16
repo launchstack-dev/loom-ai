@@ -216,7 +216,9 @@ interface Settings {
 function readSettings(p: string): { settings: Settings; existed: boolean } {
   if (!fs.existsSync(p)) return { settings: {}, existed: false };
   try {
-    return { settings: JSON.parse(fs.readFileSync(p, "utf-8")) as Settings, existed: true };
+    const content = fs.readFileSync(p, "utf-8").trim();
+    if (!content) return { settings: {}, existed: true };
+    return { settings: JSON.parse(content) as Settings, existed: true };
   } catch (err) {
     throw new Error(
       `Cannot parse ${p}: ${err instanceof Error ? err.message : String(err)}`
@@ -350,7 +352,7 @@ function main(): void {
     process.exit(1);
   }
 
-  if (!settings.hooks || typeof settings.hooks !== "object") {
+  if (!settings.hooks || typeof settings.hooks !== "object" || Array.isArray(settings.hooks)) {
     settings.hooks = {};
   }
 
