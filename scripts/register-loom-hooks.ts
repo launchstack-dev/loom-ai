@@ -352,6 +352,12 @@ function main(): void {
     process.exit(1);
   }
 
+  // Defensively normalize settings before reading its keys. JSON.parse can
+  // yield null, a primitive, or an array if settings.json contains something
+  // weird; coerce any of those to an empty object.
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    settings = {};
+  }
   if (!settings.hooks || typeof settings.hooks !== "object" || Array.isArray(settings.hooks)) {
     settings.hooks = {};
   }
