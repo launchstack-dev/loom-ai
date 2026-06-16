@@ -181,11 +181,11 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
      # cp -n preserves any user-customized hook files; settings.json is still
      # re-wired by register-loom-hooks.ts --replace below.
      mkdir -p hooks scripts
-     if [ -d ~/.claude/templates/hooks ]; then
-       cp -rn ~/.claude/templates/hooks/. hooks/
+     if [ -d "$HOME/.claude/templates/hooks" ]; then
+       cp -rn "$HOME/.claude/templates/hooks/." hooks/
      fi
-     if [ ! -f scripts/register-loom-hooks.ts ] && [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
-       cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
+     if [ ! -f scripts/register-loom-hooks.ts ] && [ -f "$HOME/.claude/templates/scripts/register-loom-hooks.ts" ]; then
+       cp "$HOME/.claude/templates/scripts/register-loom-hooks.ts" scripts/
      fi
 
      # Back up pre-existing settings.json before merge

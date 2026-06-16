@@ -160,8 +160,11 @@ function detectMode(settingsPath: string): "local" | "plugin" {
   // Fallback to cwd when --settings points somewhere unconventional.
   const resolved = path.resolve(settingsPath);
   const parent = path.dirname(resolved);
+  // Fall back to the settings file's parent dir rather than cwd — the script
+  // may be invoked from anywhere, but the project root is always near the
+  // settings file path. Only peel an extra level when nested in .claude/.
   const projectRoot =
-    path.basename(parent) === ".claude" ? path.dirname(parent) : process.cwd();
+    path.basename(parent) === ".claude" ? path.dirname(parent) : parent;
   const looksLikeLoomCheckout =
     fs.existsSync(path.join(projectRoot, "hooks", "file-ownership.ts")) &&
     fs.existsSync(path.join(projectRoot, "scripts", "register-loom-hooks.ts"));
@@ -229,8 +232,17 @@ function readSettings(p: string): { settings: Settings; existed: boolean } {
 function writeAtomic(p: string, content: string): void {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   const tmp = p + ".tmp";
-  fs.writeFileSync(tmp, content, "utf-8");
-  fs.renameSync(tmp, p);
+  try {
+    fs.writeFileSync(tmp, content, "utf-8");
+    fs.renameSync(tmp, p);
+  } catch (err) {
+    // Clean up the .tmp so we don't leave a partial write behind. Swallow
+    // unlink errors — the original write error is what the caller needs.
+    try {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch {}
+    throw err;
+  }
 }
 
 function commandReferencesHook(command: string, scriptName: string): boolean {
@@ -400,12 +412,12 @@ function main(): void {
 
     const newItem = buildSettingsEntry(entry, commandPrefix);
     if (!opts.dryRun) {
-      // Guard against a corrupted settings.json where settings.hooks[event]
-      // is present but not an array — coerce to a fresh array before push.
-      if (!Array.isArray(settings.hooks[entry.event])) {
-        settings.hooks[entry.event] = [];
+      // settings.hooks is normalized to {} above, so the ! is safe. Guard
+      // against a corrupted bucket (non-array) before push.
+      if (!Array.isArray(settings.hooks![entry.event])) {
+        settings.hooks![entry.event] = [];
       }
-      settings.hooks[entry.event]!.push(newItem);
+      settings.hooks![entry.event]!.push(newItem);
     }
     plan.push({
       hookName: entry.hookName,

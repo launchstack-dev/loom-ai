@@ -376,11 +376,11 @@ Skip this step entirely if the legacy layout is already in use (i.e., a non-stub
    # latest templates, the user can delete the file (or whole hooks/ dir) first,
    # or run `cp -rf ~/.claude/templates/hooks/. hooks/` manually.
    mkdir -p hooks scripts
-   if [ -d ~/.claude/templates/hooks ]; then
-     cp -rn ~/.claude/templates/hooks/. hooks/
+   if [ -d "$HOME/.claude/templates/hooks" ]; then
+     cp -rn "$HOME/.claude/templates/hooks/." hooks/
    fi
-   if [ ! -f scripts/register-loom-hooks.ts ] && [ -f ~/.claude/templates/scripts/register-loom-hooks.ts ]; then
-     cp ~/.claude/templates/scripts/register-loom-hooks.ts scripts/
+   if [ ! -f scripts/register-loom-hooks.ts ] && [ -f "$HOME/.claude/templates/scripts/register-loom-hooks.ts" ]; then
+     cp "$HOME/.claude/templates/scripts/register-loom-hooks.ts" scripts/
    fi
 
    # Back up existing settings.json before merge (timestamped)
