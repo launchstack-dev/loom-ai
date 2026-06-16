@@ -47,6 +47,8 @@ beforeEach(() => {
   for (const name of LOOM_HOOK_NAMES) {
     fs.writeFileSync(path.join(hooksRoot, `${name}.ts`), "// stub\n", "utf-8");
   }
+  // run-hook.sh stub satisfies the wrapper-runner existence check.
+  fs.writeFileSync(path.join(hooksRoot, "run-hook.sh"), "#!/bin/sh\nexit 0\n", "utf-8");
   settingsPath = path.join(tmpDir, ".claude", "settings.json");
 });
 

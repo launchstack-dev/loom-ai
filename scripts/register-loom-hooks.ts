@@ -249,9 +249,12 @@ function commandReferencesHook(command: string, scriptName: string): boolean {
   // Match either a standalone "hooks/<name>.ts" (preceded by start/space/quote)
   // or a "${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts" form. Reject paths like
   // "my-hooks/<name>.ts" or "custom-hooks/<name>.ts" so unrelated user hooks
-  // aren't accidentally treated as Loom hooks.
+  // aren't accidentally treated as Loom hooks. scriptName is regex-escaped so
+  // future hook names with regex-significant characters (`.`, `+`, etc.) still
+  // match literally.
+  const escaped = scriptName.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
   const re = new RegExp(
-    `(^|[\\s"'])(\\$\\{CLAUDE_PLUGIN_ROOT\\}/)?hooks/${scriptName}\\.ts(\\s|$|["'])`
+    `(^|[\\s"'])(\\$\\{CLAUDE_PLUGIN_ROOT\\}/)?hooks/${escaped}\\.ts(\\s|$|["'])`
   );
   return re.test(command);
 }
@@ -394,6 +397,21 @@ function main(): void {
   }
 
   const { prefix: commandPrefix, mode: resolvedMode, runner: resolvedRunner } = resolveCommandPrefix(opts);
+
+  // Wrapper runner dispatches all hooks through hooks/run-hook.sh. If it's
+  // missing, every registered hook fails at runtime — fail loudly here instead.
+  if (resolvedRunner === "wrapper") {
+    const wrapperPath = path.join(opts.hooksRoot, "run-hook.sh");
+    if (!fs.existsSync(wrapperPath)) {
+      const msg = `Wrapper runner selected but ${wrapperPath} is missing. Re-copy templates or pass --runner bunx|npx.`;
+      if (opts.json) {
+        process.stdout.write(JSON.stringify({ ok: false, error: msg }) + "\n");
+      } else {
+        process.stderr.write(`[register-loom-hooks] ${msg}\n`);
+      }
+      process.exit(1);
+    }
+  }
 
   let purgedCount = 0;
   if (opts.replace && !opts.dryRun) {
