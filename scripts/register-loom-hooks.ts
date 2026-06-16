@@ -264,10 +264,12 @@ function entryAlreadyPresent(
   const bucket = settings.hooks?.[entry.event];
   if (!Array.isArray(bucket)) return false;
   for (const item of bucket) {
+    if (!item || typeof item !== "object") continue;
     const itemMatcher = item.matcher ?? "";
     const wantMatcher = entry.matcher ?? "";
     if (itemMatcher !== wantMatcher) continue;
     for (const h of item.hooks ?? []) {
+      if (!h || typeof h !== "object") continue;
       if (commandReferencesHook(String(h.command ?? ""), expectedScriptName)) {
         return true;
       }
@@ -307,10 +309,12 @@ function purgeLoomEntries(settings: Settings): number {
     if (!Array.isArray(bucket)) continue;
     const filtered: SettingsHookEntry[] = [];
     for (const item of bucket) {
+      if (!item || typeof item !== "object") continue;
       // Filter out individual hook references from the inner array; if no
       // hooks remain, drop the bucket entry entirely. This preserves the
       // unrelated hooks in a mixed entry while purging Loom ones.
       const keptInner = (item.hooks ?? []).filter((h) => {
+        if (!h || typeof h !== "object") return true;
         const cmd = String(h.command ?? "");
         const isLoom = loomNames.some((name) => commandReferencesHook(cmd, name));
         if (isLoom) removed++;
@@ -335,7 +339,20 @@ interface PlanItem {
 }
 
 function main(): void {
-  const opts = parseArgs(process.argv.slice(2));
+  let opts: Options;
+  try {
+    opts = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Honor --json on parse failures too, so callers that requested
+    // structured output still get a parseable error envelope.
+    if (process.argv.includes("--json")) {
+      process.stdout.write(JSON.stringify({ ok: false, error: msg }) + "\n");
+    } else {
+      process.stderr.write(`[register-loom-hooks] ${msg}\n`);
+    }
+    process.exit(1);
+  }
 
   const sourcesPresent = LOOM_HOOKS.filter((e) =>
     fs.existsSync(path.join(opts.hooksRoot, `${e.hookName}.ts`))
