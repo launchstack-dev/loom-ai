@@ -433,6 +433,69 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - `/loom-library sync` on a Loom-dogfood install (where `~/.claude/agents/*` symlinks back to the repo) does not corrupt the repo
 - A 2-month-old stale pipeline-state does not block `/stop` events
 
+### F-15: Native Claude Code Plugin Manifest
+
+**Priority:** P1
+**Milestone:** M-07
+**Status:** Backlog — deferred from PR #8 follow-up; immediate-next after PR #8 merges. Sourced from deep-research finding #2 (sources: Anthropic `code.claude.com/docs/en/plugins-reference`, `anthropics/claude-code/plugins`, `jnuyens/gsd-plugin`, `musingfox/cc-plugins`, `anthropics/claude-plugins-official/security-guidance`).
+
+**Description:** Ship a `.claude-plugin/plugin.json` + `hooks/hooks.json` at the repo root so users can install Loom via Anthropic's native `/plugin marketplace add launchstack-dev/loom-ai` + `/plugin install loom`. Plugins auto-register hooks, agents, skills, commands, and MCP servers without mutating user `~/.claude/settings.json`. The curl `install.sh` path stays as a fallback for users not yet on the plugin-marketplace UX.
+
+**Entities involved:** PluginManifest, HookManifest, MarketplaceListing, InstallSource (curl | plugin)
+
+**Key behaviors:**
+- `.claude-plugin/plugin.json` declares plugin name, version, description, command/agent/skill/hook paths
+- `hooks/hooks.json` lists all 14 enforcement hooks with `${CLAUDE_PLUGIN_ROOT}`-anchored commands (matches the path-anchoring fix landed in PR #8 commit `b7285e8`)
+- `install.sh` and the plugin path are mutually exclusive — installer detects an existing plugin install and exits with a one-line pointer
+- Both install paths land on the same `${CLAUDE_PROJECT_DIR}` or `${CLAUDE_PLUGIN_ROOT}` anchored commands at runtime — no behavior divergence between users on either path
+
+**Convergence targets:**
+- Fresh user runs `/plugin marketplace add launchstack-dev/loom-ai && /plugin install loom` — all 14 hooks resolve, all slash commands available
+- Existing curl-install user runs the plugin install — `/loom-doctor` (F-16) detects and migrates without dupe registrations
+- The two install paths produce byte-identical `.claude/settings.json` (modulo the `${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_PROJECT_DIR}` anchor)
+
+### F-16: /loom-doctor + First-Session Auto-Migration
+
+**Priority:** P1
+**Milestone:** M-07
+**Status:** Backlog — deferred from PR #8 follow-up. Sourced from deep-research finding #3 (sources: `musingfox/cc-plugins` doctor/update skill triad, `jnuyens/gsd-plugin` first-session auto-migration pattern).
+
+**Description:** Replace ad-hoc `cp -n` + `--replace` heuristics with a dedicated `/loom-doctor` skill that health-checks installed hooks (file exists, runner resolves, settings shape valid, paths anchored) and a SessionStart auto-migration that detects and rewrites legacy entries with ownership-evidence guarding so user-customized files aren't clobbered.
+
+**Entities involved:** DoctorReport (status, problems[], suggestedFixes[]), MigrationEvidence (file-hash, install-source, mtime), HealthCheck
+
+**Key behaviors:**
+- `/loom-doctor` reports: each hook file present at expected path? runner resolves (bun → npx tsx → wrapper)? settings.json entries anchored with `${CLAUDE_PROJECT_DIR}` / `${CLAUDE_PLUGIN_ROOT}`? no orphan entries pointing at deleted files?
+- SessionStart auto-migration runs once per project; idempotent; refuses to rewrite a file whose hash diverges from any known Loom-shipped version (ownership-evidence guard from GSD)
+- Migrate-out path: detects legacy bare `hooks/<name>.ts` entries from earlier Loom installs and rewrites to `${CLAUDE_PROJECT_DIR}/hooks/<name>.ts` (matches PR #8's regex which already accepts both anchors)
+- Doctor exits 0 (healthy) or 1 (problems found) with structured TOON output so it composes with `/loom-converge`
+
+**Convergence targets:**
+- A project with mixed legacy + new entries runs through one SessionStart and emerges with all entries anchored
+- A user who hand-edited a hook file with a custom check has their edit preserved; doctor flags the divergence as a warning, not an auto-rewrite
+- `/loom-doctor` on a clean Loom install reports zero problems
+
+### F-17: settings.local.json as Default Per-Project Hook Tier
+
+**Priority:** P2
+**Milestone:** M-07
+**Status:** Backlog — deferred from PR #8 follow-up. Sourced from deep-research finding #4 (sources: `musingfox/cc-plugins`, Anthropic `code.claude.com/docs/en/settings` three-tier hierarchy doc).
+
+**Description:** Default per-project hook registrations into `.claude/settings.local.json` (gitignored, machine-local) instead of `.claude/settings.json` (committed). Teams who want hooks committed can opt into the `settings.json` target with a flag. Aligns with Anthropic's documented three-tier hierarchy (user-global → project → project-local) and avoids accidental commits of paths that reference a developer's specific machine layout.
+
+**Entities involved:** SettingsTier (user | project | local | managed), TierResolution
+
+**Key behaviors:**
+- `register-loom-hooks.ts` defaults to `--settings .claude/settings.local.json` (current default is `.claude/settings.json`)
+- Adds `--tier project|local` flag for explicit override; `local` is default, `project` opts into committed
+- `/loom-init` adds a one-line prompt: "Commit hooks to repo (.claude/settings.json) or keep machine-local (.claude/settings.local.json, recommended)?" — default local
+- `/loom-doctor` (F-16) understands both tiers and reports the resolution
+
+**Convergence targets:**
+- Fresh `/loom-init` creates `.claude/settings.local.json` only; no committed config drift
+- A team that wants committed hooks (e.g. CI-enforced) can re-run with `--tier project` and get the prior behavior
+- Migration: existing committed `.claude/settings.json` hooks stay where they are; doctor offers a one-shot move-to-local migration
+
 ## Data Model (Conceptual)
 
 ### Entities
@@ -563,6 +626,21 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 1. **Phase 0 (alpha foundation):** Schemas v3, version cadence doc, verify-release script, cosign spike workflow, run-hook.sh + symlink-safety, checksum manifest. 4 of 6 shipped; gates: cosign workflow_dispatch + 5-stranger demand test.
 2. **Phase 1 (signed release):** Release tagging workflow, cosign signing in CI, install.sh `--ref vX.Y.Z` pinning, atomic file-scoped rollback, install-state v3 runtime wiring (Rule 12), library-catalog v3 runtime wiring (Rule 13), plan-artifact relocation (Rule 14).
 3. **Phase 2 (launch):** Public announcement, demand validation, post-launch iteration.
+
+### M-07: Plugin Marketplace Migration -- NOT STARTED
+
+**Features:** F-15, F-16, F-17
+**Status:** Not started. Sourced from PR #8 deep-research synthesis (2026-06-16). Immediate-next after PR #8 merges — these were deliberately scoped out of PR #8 to keep that change reviewable, but address structural issues in the curl + template-copy install model the research identified.
+**Depends on:** M-06 Phase 1 (signed release infrastructure — the plugin path is published alongside signed curl tags, not in place of them)
+**Acceptance:** Loom is installable via both `/plugin marketplace add launchstack-dev/loom-ai` (native path) and `curl install.sh | bash` (fallback), producing equivalent runtime behavior. `/loom-doctor` reports zero problems on a fresh install via either path. Default per-project hook tier is `.claude/settings.local.json` (machine-local) with explicit opt-in for committed `.claude/settings.json`. README and `planning/notes/` document the rationale for kit authors.
+**Effort:** M (plugin manifest auth + doctor skill + first-session migration + tier-default flip + docs)
+
+#### Phasing
+
+1. **Phase 0 (manifest):** Author `.claude-plugin/plugin.json` + `hooks/hooks.json`. Verify install via `/plugin marketplace add` against a private fork. F-15.
+2. **Phase 1 (doctor):** Ship `/loom-doctor` skill + SessionStart auto-migration with ownership-evidence guarding. F-16.
+3. **Phase 2 (tier flip):** Flip register-loom-hooks.ts default target to `.claude/settings.local.json`; add `--tier project` opt-in; update `/loom-init` prompt. F-17.
+4. **Phase 3 (docs):** Update README's "Hook enforcement" section to lead with the plugin path; demote curl to the "alternative installs" subsection.
 
 ## Risks & Mitigations
 
