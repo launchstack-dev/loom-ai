@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://loom-ai.dev/schemas/upstream/plugin.schema.json",
+  "title": "Anthropic Claude Code Plugin Manifest (Loom-side snapshot)",
+  "description": "PLACEHOLDER SNAPSHOT. Source: https://code.claude.com/docs/en/plugins-reference. snapshotDate: 2026-06-17. snapshotMethod: deferred-fetch (Wave 0 placeholder; CI workflow scripts/refresh-upstream-schemas.sh MUST populate this from the live docs before Wave 1 starts). This file documents only the fields the M-07 plan currently knows about; additionalProperties is true so upstream additions do not break local validation.",
+  "type": "object",
+  "required": ["name", "version", "description"],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Plugin identifier. Loom canonical: \"loom\".",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "description": "Plugin version (semver). MUST match package.json#version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+].+)?$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short marketplace summary."
+    },
+    "author": {
+      "type": "string",
+      "description": "GitHub org or user slug owning the plugin."
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "HTTPS clone URL."
+    },
+    "keywords": {
+      "type": "array",
+      "description": "Marketplace search terms.",
+      "items": { "type": "string" }
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX identifier (e.g., MIT, Apache-2.0)."
+    },
+    "permissions": {
+      "type": "array",
+      "description": "Derived from hooks/hooks.json matchers at plugin-build time. Doctor validates the union in DOCTOR_PERMISSIONS_MISMATCH.",
+      "items": { "type": "string" }
+    },
+    "entrypoints": {
+      "type": "array",
+      "description": "Maps resource type to a directory or file path within the plugin tarball.",
+      "items": {
+        "type": "object",
+        "required": ["type", "path"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["agent", "skill", "command", "hook", "mcp"]
+          },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "requires": {
+      "type": "object",
+      "description": "Runtime requirements.",
+      "additionalProperties": true,
+      "properties": {
+        "claudeCode": {
+          "type": "string",
+          "description": "Minimum Claude Code version (semver range). M-07 baseline: >=2.0.0."
+        }
+      }
+    }
+  }
+}
