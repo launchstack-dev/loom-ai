@@ -2,6 +2,44 @@
 
 Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-plan create`.
 
+### Step 0: Bootstrap Loom enforcement hooks (one-time, idempotent)
+
+Before any agents spawn, ensure the project has the Loom hook suite wired so file-ownership, contract-lock, budget-tracker, and the rest enforce throughout planning + execution. Skip if already registered.
+
+**Detect prior registration first.** If `.claude/settings.json` already references `hooks/file-ownership.ts`, skip the rest of this step entirely.
+
+**Otherwise, prompt the user:** "Register Loom enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]" — default Y.
+
+On decline (`n`): surface the recovery hint "Hooks not registered. Run `node scripts/register-loom-hooks.ts --replace` from the project root later." and continue with Step 1.
+
+On accept (default), execute:
+
+```bash
+if [ -f .claude/settings.json ] && grep -q "hooks/file-ownership.ts" .claude/settings.json; then
+  echo "Loom hooks already registered — skipping bootstrap."
+else
+  # cp -n (no-clobber) preserves any user-customized hook files; --replace on
+  # the register script still re-wires settings.json regardless.
+  mkdir -p hooks scripts
+  if [ -d "$HOME/.claude/templates/hooks" ]; then
+    cp -rn "$HOME/.claude/templates/hooks/." hooks/
+  fi
+  if [ ! -f scripts/register-loom-hooks.ts ] && [ -f "$HOME/.claude/templates/scripts/register-loom-hooks.ts" ]; then
+    cp "$HOME/.claude/templates/scripts/register-loom-hooks.ts" scripts/
+  fi
+
+  if [ -f .claude/settings.json ]; then
+    ts=$(date -u +"%Y%m%dT%H%M%SZ")
+    cp .claude/settings.json ".claude/settings.json.bak-${ts}"
+  fi
+
+  node scripts/register-loom-hooks.ts --replace || \
+    echo "WARN: hook registration failed — rerun 'node scripts/register-loom-hooks.ts --replace' from project root."
+fi
+```
+
+Non-blocking on failure (same pattern as wiki-hook registration in `/loom-init`). See `/loom-init` Step 6 for the canonical version of this flow with the user-prompt details.
+
 ### Step 1: Codebase Context Gathering
 
 Scan the project before generating the plan. The orchestrator does this directly (no agent):

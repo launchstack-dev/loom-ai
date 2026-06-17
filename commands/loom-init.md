@@ -362,21 +362,51 @@ Skip this step entirely if the legacy layout is already in use (i.e., a non-stub
    - Fix mode: `fix` (auto-fix any orphaned entries or count drift from the initial ingest)
    - Wiki path: `.loom/wiki`
 
-6. Register wiki health hooks in `.claude/settings.json`. The wiki only earns its keep if the SessionStart status line, PreToolUse impact warnings, and PostToolUse commit ledger actually fire — and those need entries in `.claude/settings.json`. Run the deterministic helper:
+6. Register Loom enforcement hooks in `.claude/settings.json`. README pillar #3 ("Hook-enforced discipline — file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus the ambient monitors") only fires if the 14 hooks are wired into PreToolUse / PostToolUse / Stop / SessionStart. The curl installer staged inert hook templates under `~/.claude/templates/`; this step copies them into the project and registers them.
+
+   **Prompt the user:** "Register Loom enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus 7 more)? [Y/n]" — default Y. The user already opted into Loom by running this command; this prompt exists so power-users can decline if they have their own enforcement layer.
+
+   On decline (`n`): skip the rest of this step. Surface a recovery hint: "Hooks not registered. Run `node scripts/register-loom-hooks.ts --replace` from the project root later to enable enforcement." Continue with the rest of `/loom-init`.
+
+   On accept (default):
 
    ```bash
-   node scripts/register-wiki-hooks.ts --replace
+   # Copy templates into the project. Use cp -n (no-clobber) so any pre-existing
+   # hook file the user has customized is preserved. To force a refresh from the
+   # latest templates, the user can delete the file (or whole hooks/ dir) first,
+   # or run `cp -rf ~/.claude/templates/hooks/. hooks/` manually.
+   mkdir -p hooks scripts
+   if [ -d "$HOME/.claude/templates/hooks" ]; then
+     cp -rn "$HOME/.claude/templates/hooks/." hooks/
+   fi
+   if [ ! -f scripts/register-loom-hooks.ts ] && [ -f "$HOME/.claude/templates/scripts/register-loom-hooks.ts" ]; then
+     cp "$HOME/.claude/templates/scripts/register-loom-hooks.ts" scripts/
+   fi
+
+   # Back up existing settings.json before merge (timestamped)
+   if [ -f .claude/settings.json ]; then
+     ts=$(date -u +"%Y%m%dT%H%M%SZ")
+     cp .claude/settings.json ".claude/settings.json.bak-${ts}"
+     echo "Backed up settings.json to .claude/settings.json.bak-${ts}"
+   fi
+
+   # Register the 14 hooks (merges into existing settings.json; preserves unrelated entries)
+   node scripts/register-loom-hooks.ts --replace
    ```
 
    The script auto-detects:
-   - **mode**: `local` (project-relative `hooks/<name>.ts` paths) when this project IS the loom dev checkout; `plugin` (`${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts`) when loom is installed as a Claude Code plugin.
-   - **runner**: `bunx tsx` if bun is on PATH, else `npx --yes tsx`.
+   - **mode**: `local` (project-relative `hooks/<name>.ts` paths) when this project IS a loom checkout; `plugin` (`${CLAUDE_PLUGIN_ROOT}/hooks/<name>.ts`) otherwise.
+   - **runner**: dispatches via `hooks/run-hook.sh` (which prefers `bun`, falls back to `npx --yes tsx`).
 
-   `--replace` purges any stale wiki hook entries first, then writes fresh ones — safe to re-run, idempotent when settings already match. If the user declined hooks on a prior run, they'll be registered now. **`--force` is NOT needed here** — Rule 9's confirmation prompt is only for `/loom-upgrade` (where settings.json already exists); during `/loom-init` the user has already opted into Loom by running this command.
+   `--replace` purges any stale Loom hook entries first, then writes fresh ones — safe to re-run, idempotent when settings already match. Unrelated hook entries (other projects' hooks, custom user hooks) are preserved verbatim. **`--force` is NOT needed here.**
 
-   On any failure (script exit != 0), print the error and continue — hooks are additive, never gating. Surface the recovery hint: "Wiki hooks were not registered. Re-run `/loom-upgrade --register-hooks` later, or invoke `node scripts/register-wiki-hooks.ts` directly."
+   On any failure (script exit != 0), print the error and continue — hooks are additive, never gating. Surface the recovery hint: "Loom hooks were not registered. Re-run `node scripts/register-loom-hooks.ts --replace` from the project root, or `/loom-upgrade --register-hooks` later."
 
-   If the script reports `mode: plugin` and the user's actual deployment is a dev checkout (or vice versa), they can override: `node scripts/register-wiki-hooks.ts --mode local --replace`.
+   Print summary on success: "Registered N hooks into .claude/settings.json. Backup: .claude/settings.json.bak-{ts} (if pre-existing)."
+
+   If the script reports `mode: plugin` and the user's actual deployment is a dev checkout (or vice versa), they can override: `node scripts/register-loom-hooks.ts --mode local --replace`.
+
+   > **Note:** The legacy `scripts/register-wiki-hooks.ts` (3 wiki-specific hooks only) is superseded by `register-loom-hooks.ts` (all 14 hooks, including the 3 wiki ones). The legacy script remains callable for backwards compatibility but new projects should use the generalized version.
 
 #### Step 5: Summary and Next Steps
 

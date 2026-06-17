@@ -1,0 +1,48 @@
+schemaVersion: 1
+reviewedPlan: planning/plans/PLAN-plugin-marketplace-migration.md
+reviewDate: 2026-06-17
+pass: 2
+integratorRef: b43075b
+mode: planning
+reviewers[6]: feature-coverage-agent, strategy-agent, ux-agent, phasing-agent, parallelization-agent, agentic-workflow-agent
+
+# Per-dimension verdict
+dimensionalConvergence{dimension,blocking,highOpen,mediumOpen,verdict}:
+  feature-coverage,1,1,2,NOT_CONVERGED
+  strategy,0,0,2,converged
+  ux,0,0,3,converged
+  phasing,0,0,0,converged
+  parallelization,0,0,2,APPROVED_FOR_EXECUTION
+  agentic-workflow,0,0,1,execution-ready
+
+# Pass-2 blocking finding (single, from feature-coverage)
+blockingFindings[1]{id,severity,description,fix}:
+  HF-04,blocking,"Four doctor error codes missing from section 7 error catalog (DOCTOR_HOOK_TIMEOUT, DOCTOR_PERMISSIONS_MISMATCH, DOCTOR_VERSION_SKEW, DOCTOR_UPDATE_AVAILABLE). Live production failure modes fall through to exit code 2 (internal error), making CI gating unreliable. Originally raised pass-1 as high; not applied in integrator pass; now blocking on convergence loop.",Add 4 rows to section 7 error table with severity + exit code + remediation columns
+
+# High-priority items raised pass-1, still open after integrator
+highFindings[2]{id,severity,description,fix}:
+  HF-05,high,"Tier passthrough audit incomplete. Phase 3 covers loom-init, loom-auto, loom-roadmap/init but loom-quick, loom-change, loom-plan also trigger registration paths and bypass the --tier flag.",Extend Phase 3 deliverables + section 9 ownership matrix with the 3 missing command files; add Phase 3 acceptance criterion covering all entry-point commands
+  HF-10,high,"Differentiation gap. Section 1 Vision describes mechanics but omits explicit differentiator (loom-doctor TOON output composing with /loom-converge vs GSD/cc-plugins).",Add one sentence to section 1 Vision: 'Unlike generic Claude Code plugins, Loom ships /loom-doctor whose TOON output pipes directly into /loom-converge — the install health check is a first-class convergence signal, not a diagnostic sidebar.' Also add to Phase 4a README acceptance criteria.
+
+# Medium findings that pass-2 reviewers explicitly recommend addressing before specific waves
+mediumFindings[6]{id,severity,description,wavePrerequisite,fix}:
+  MF-03,medium,"--fix --force escape hatch present in section 7 + section 10 risks but no resolution recorded. Either remove (manual resolution path) or add --yes confirmation + diff-first UX.",Wave 2,Pick one; document choice in section 5 + section 7
+  MF-04,medium,"--fix --force destructive overwrite has no confirmation guard (composes with MF-03 — single resolution).",Wave 2,(co-resolved with MF-03)
+  MF-05,medium,"loom-doctor TOON default rendering contract absent. commands/loom-doctor.md is a deliverable but no header/icon/footer spec exists.",Wave 2,Add rendering contract (header line + per-check icon + footer summary) to section 5 or commands/loom-doctor.md deliverable spec
+  MF-06,medium,"PreToolUse hook failure footer not specified. Primary discoverability vector for existing users with failing hooks.",Wave 2,Add one-line spec: 'PreToolUse hook failure emits Tip: run /loom-doctor to diagnose hook health' to section 2 scope or section 7 remediation
+  RU-01,medium,"Wave 4a runtime-equivalence.spec.ts mock boundary undefined. Plugin path mocked but the mock contract (which subprocess call gets intercepted and what fixture response) is not specified.",Wave 4a,Add fixture spec to section 5.5 describing the mock entry point (e.g. stub /plugin install loom as shell script that writes a fixture .claude-plugin/ tree)
+  NI-01,medium,"Cross-Plan Dependencies note about installSource follow-up has no owner or tracking reference.",before M-07 sign-off,Add concrete reference (GitHub issue or roadmap backlog entry) to the prose note
+
+# Low / cosmetic
+lowFindings[2]{id,description,fix}:
+  NI-02,"upstream/plugin.schema.json present in Phase 0 deliverables table but missing from section 9 file-ownership matrix.",Add the path to wave-0-schemas-agent owned-paths list in section 9
+  NR-01,"migration-runner.ts exported interface not pinned in any Phase 0 schema. Risk materializes only if a future wave directly calls runMigration() and the interface has drifted.",Either add migration-runner.schema.md to Phase 0, or add a vitest type-check contract test in Wave 2
+
+# Convergence summary
+summary:
+  pass1Blocking: 6
+  pass2Blocking: 1
+  delta: -5
+  trajectory: converging
+  iterationsRemaining: 1 (apply HF-04 + HF-05 + selected mediums)
+  recommendation: "Run integrator pass 2 to apply HF-04 (blocking) + HF-05 (high). Optionally batch in HF-10 (differentiator), MF-03/04 (--fix --force resolution), MF-05 (TOON rendering), MF-06 (discoverability), RU-01 (mock contract), NI-01/02 (housekeeping). After integration, run pass-3 review to verify zero-blocking and declare convergence."
