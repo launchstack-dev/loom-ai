@@ -1,0 +1,24 @@
+# Roadmap archetypes — enumeration + detection hints
+#
+# Five archetypes plus `default`. The archetype detector (Phase 4) inspects
+# the repo for the keywords below and ranks candidates by hit count. Ties
+# or below-confidence-threshold results trigger ARCHETYPE_LOW_CONFIDENCE
+# and the user is asked to disambiguate via `--archetype <name>`.
+#
+# Each row:
+#   name           — archetype identifier; matches RoadmapReadinessSchema.archetype
+#   description    — one-line semantic gloss
+#   detectionHints — pipe-delimited substring list. Match is case-insensitive
+#                    and may scan file paths, package.json keys, README, or
+#                    top-level directory names. Order is informational only —
+#                    detector treats hits as an unordered set.
+
+schemaVersion: 1
+
+archetypes[6]{name,description,detectionHints}:
+  cli,Command-line tool or executable shipped as a binary,bin/|cli|argv|commander|yargs|clap|cobra
+  web-app,Browser-facing application with UI routes,next|react|vite|svelte|nuxt|remix|app/page|pages/
+  library,Reusable package consumed by other projects,exports|main|types|peerDependencies|publishConfig|.npmignore
+  data-pipeline,ETL or workflow-orchestrated data processing,airflow|dagster|dbt|prefect|luigi|kafka|spark
+  research,Notebook-driven exploratory or scientific work,notebooks/|.ipynb|data/|experiments/|papers/|jupyter
+  default,Fallback when no archetype hits with sufficient confidence,—
