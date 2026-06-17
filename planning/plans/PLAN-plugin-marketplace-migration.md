@@ -3,8 +3,8 @@ planVersion: 2
 name: plugin-marketplace-migration
 status: draft
 created: 2026-06-16
-lastReviewed: 2026-06-16
-lastIntegrated: 2026-06-16
+lastReviewed: 2026-06-17
+lastIntegrated: 2026-06-17
 blockedUntil: M-06-Phase-1
 roadmapRef: planning/ROADMAP.md
 milestoneRef: M-07
@@ -27,7 +27,7 @@ convergenceTiers:
 
 ## 1. Vision
 
-Align Loom's install model with Anthropic's documented Claude Code plugin format (`.claude-plugin/plugin.json` + `hooks/hooks.json`) so users can `/plugin marketplace add launchstack-dev/loom-ai` and `/plugin install loom` to get a fully-wired Loom toolchain — agents, skills, commands, hooks, MCP servers — without any mutation of `~/.claude/settings.json`. The curl `install.sh` path remains supported for users on **enterprise / MDM-managed machines where Claude Code's plugin marketplace is blocked at the network layer**. Other users — including those who want a tagged signed release — should prefer the plugin path once M-06 Phase 1 ships signed releases. README restructure (Phase 4a) leads with the plugin path; curl is documented as the enterprise/blocked-network alternative. <!-- applied: HF-08 --> Both install paths produce equivalent runtime behavior, differing only in the anchor variable (`${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_PROJECT_DIR}`). A new `/loom-doctor` skill replaces the existing ad-hoc `cp -n` / `--replace` heuristics with a deterministic, evidence-guarded health check and SessionStart auto-migration. Per-project hook registration defaults to `.claude/settings.local.json` (machine-local, gitignored), with explicit team opt-in to the committed `.claude/settings.json` tier.
+Align Loom's install model with Anthropic's documented Claude Code plugin format (`.claude-plugin/plugin.json` + `hooks/hooks.json`) so users can `/plugin marketplace add launchstack-dev/loom-ai` and `/plugin install loom` to get a fully-wired Loom toolchain — agents, skills, commands, hooks, MCP servers — without any mutation of `~/.claude/settings.json`. Unlike generic Claude Code plugins, Loom ships `/loom-doctor` whose TOON output pipes directly into `/loom-converge` — the install health check is a first-class convergence signal, not a diagnostic sidebar. <!-- applied: HF-10 --> The curl `install.sh` path remains supported for users on **enterprise / MDM-managed machines where Claude Code's plugin marketplace is blocked at the network layer**. Other users — including those who want a tagged signed release — should prefer the plugin path once M-06 Phase 1 ships signed releases. README restructure (Phase 4a) leads with the plugin path; curl is documented as the enterprise/blocked-network alternative. <!-- applied: HF-08 --> Both install paths produce equivalent runtime behavior, differing only in the anchor variable (`${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_PROJECT_DIR}`). A new `/loom-doctor` skill replaces the existing ad-hoc `cp -n` / `--replace` heuristics with a deterministic, evidence-guarded health check and SessionStart auto-migration. Per-project hook registration defaults to `.claude/settings.local.json` (machine-local, gitignored), with explicit team opt-in to the committed `.claude/settings.json` tier.
 
 ## 2. Scope
 
@@ -43,6 +43,7 @@ Align Loom's install model with Anthropic's documented Claude Code plugin format
 - Three E2E specs (vitest + subprocess invocation of `loom-doctor` CLI per section 5.5): plugin install path (Phase 4b — blocked on M-06 Phase 1), curl install path, runtime equivalence <!-- applied: CB-04 -->
 - README restructure documenting both install paths and decision matrix
 - `planning/notes/plugin-marketplace-rationale.md` for kit authors
+- `hooks/run-hook.sh` (edit, Wave 2-A) — emit `Tip: run /loom-doctor to diagnose hook health` to stderr when any dispatched hook exits non-zero. Single line, appended after the hook's own stderr. <!-- applied: MF-06 -->
 
 ### Out of Scope (Non-Goals)
 
@@ -70,6 +71,7 @@ Establish TOON/markdown schemas before any implementation so all downstream wave
 | `agents/protocols/migration-evidence.schema.md` | wave-0-schemas-agent | Hash-based ownership evidence record |
 | `agents/protocols/settings-tier.schema.md` | wave-0-schemas-agent | SettingsTier enum + TierResolution algorithm |
 | `agents/protocols/upstream/plugin.schema.json` | wave-0-schemas-agent | Fetched snapshot of Anthropic's plugin manifest JSON Schema from `code.claude.com/docs/en/plugins-reference`; pinned with snapshotDate in a sibling `.meta.toon` file | <!-- applied: CB-02 -->
+| `agents/protocols/migration-runner.schema.md` | wave-0-schemas-agent | Type-level contract for the `runMigration()` signature exported by `scripts/lib/migration-runner.ts` (Wave 2). Wave 2 vitest type-check asserts the implementation conforms. | <!-- applied: NR-01 -->
 
 **Acceptance Criteria**
 
@@ -115,6 +117,7 @@ Replace ad-hoc install heuristics with a deterministic health check and ownershi
 | `scripts/lib/migration-runner.ts` | wave-2-doctor-agent | Shared migration logic imported by BOTH `hooks/loom-migration.ts` and `scripts/loom-doctor.ts --fix`. Eliminates the impossible "doctor imports stdin-reading hook" coupling | <!-- applied: HF-07 -->
 | `test/loom-doctor.test.ts` | wave-2-doctor-agent | Vitest: health checks (hook files, runner resolution, anchor form, orphans) | <!-- applied: CB-01 -->
 | `test/loom-migration.test.ts` | wave-2-doctor-agent | Vitest: migration is idempotent, refuses ownership-divergent files, emits MigrationEvidence | <!-- applied: CB-01 -->
+| `hooks/run-hook.sh` (edit) | wave-2-doctor-agent | Append doctor-discoverability footer (`Tip: run /loom-doctor to diagnose hook health`) to stderr on hook failure. | <!-- applied: MF-06 -->
 
 **Acceptance Criteria**
 
@@ -139,6 +142,9 @@ Default per-project hook registration into `.claude/settings.local.json`; provid
 | `commands/loom-init.md` (edit) | wave-3-tier-agent | Pass through tier flag |
 | `commands/loom-auto.md` (edit) | wave-3-tier-agent | Pass through tier flag |
 | `commands/loom-roadmap/init.md` (edit) | wave-3-tier-agent | Pass through tier flag |
+| `commands/loom-quick.md` (edit) | wave-3-tier-agent | Pass through `--tier` flag to register-loom-hooks invocations | <!-- applied: HF-05 -->
+| `commands/loom-change.md` (edit) | wave-3-tier-agent | Pass through `--tier` flag to register-loom-hooks invocations | <!-- applied: HF-05 -->
+| `commands/loom-plan.md` (edit) | wave-3-tier-agent | Pass through `--tier` flag to register-loom-hooks invocations | <!-- applied: HF-05 -->
 | `test/tier-resolution.test.ts` | wave-3-tier-agent | Vitest: auto-resolution, explicit overrides, conflict detection | <!-- applied: CB-01 -->
 | `test/register-loom-hooks-tier.test.ts` | wave-3-tier-agent | Vitest: writes to settings.local.json by default; project tier opt-in writes settings.json | <!-- applied: CB-01 -->
 
@@ -149,6 +155,7 @@ Default per-project hook registration into `.claude/settings.local.json`; provid
 - `--tier auto` resolves to `local` unless `.claude/settings.json` already contains Loom entries (unit tier)
 - Tier conflict (entries in both files) surfaces `MIGRATION_TIER_AMBIGUOUS` and refuses to write without explicit `--tier` (integration tier)
 - Re-running on an existing project preserves prior tier choice (integration tier)
+- All entry-point commands that trigger hook registration (loom-init, loom-auto, loom-roadmap/init, loom-quick, loom-change, loom-plan) pass --tier through to register-loom-hooks.ts (integration tier) <!-- applied: HF-05 -->
 
 ### Phase 4a — Docs + curl-path E2E (Wave 4a)  <!-- applied: CB-03 -->
 
@@ -169,6 +176,7 @@ Document both install paths and prove curl-path equivalence with E2E stories. Sh
 - `planning/notes/plugin-marketplace-rationale.md` covers the decision tree for kit authors (qa-review tier)
 - Curl-install E2E spec runs green on CI (e2e tier)
 - Runtime-equivalence spec asserts identical hook fire order and identical agent registration list (e2e tier)
+- README "Hook enforcement" or "Differentiators" section surfaces the /loom-doctor + /loom-converge composability claim (qa-review tier) <!-- applied: HF-10 -->
 
 ### Phase 4b — Plugin-path E2E + Marketplace Publication (Wave 4b)  <!-- applied: CB-03 -->
 
@@ -291,6 +299,15 @@ loom-doctor [--json] [--fix] [--tier <auto|local|project>]
 
 **DoctorReport JSON output shape** — mirrors the DoctorReport TOON schema above; emitted to stdout when `--json` set. stderr reserved for human-readable progress lines.
 
+### Human-readable TOON output rendering  <!-- applied: MF-05 -->
+
+Default (no `--json`) output is human-readable TOON. Required rendering:
+- Header line: `[loom-doctor v{version}] installSource={plugin|curl}  tier={local|project}  status={clean|warnings|problems}`
+- Per-check line: `{icon} {id} ({category}) — {message}` where icon is `✓` for pass, `⚠` for warn, `✗` for fail
+- Footer: `Summary: N checks passed, M warnings, K errors. Exit code: {exitCode}.`
+
+This contract is enforced in `test/loom-doctor.test.ts` via snapshot test of a representative DoctorReport.
+
 ### CLI: `register-loom-hooks.ts`
 
 ```
@@ -326,6 +343,8 @@ Loom MUST treat these schemas as upstream. The plan's data model snapshots known
 - **Runner:** vitest + subprocess invocation of the `loom-doctor` CLI (matches existing `test/e2e/convergence/` pattern). No Playwright or Chrome MCP required.
 - **Fixture:** temp project directory + simulated `.claude/` skeleton + a fake `plugin.json` used to exercise the install.sh mutual-exclusion path.
 - **CI strategy:** specs run as part of `bun test`. No real Claude Code installation required. Anything that depends on `/plugin install loom` (Phase 4b) is mocked at the subprocess boundary; the plugin-path spec only un-mocks once a signed release is available.
+
+**Runtime-equivalence mock contract.** `test/e2e/runtime-equivalence.spec.ts` invokes `loom-doctor` against two fixture projects: (a) `fixtures/plugin-install/` — a temp dir pre-populated with `.claude-plugin/plugin.json` + `hooks/hooks.json` + fixture `.claude/settings.json` containing `${CLAUDE_PLUGIN_ROOT}`-anchored entries; (b) `fixtures/curl-install/` — a temp dir pre-populated with `hooks/run-hook.sh` + fixture `.claude/settings.local.json` containing `${CLAUDE_PROJECT_DIR}`-anchored entries. The spec asserts `loom-doctor --json` produces identical `checks[].id` arrays from both fixtures (same checks, same pass/fail outcomes). No live `/plugin install` invocation; the plugin path is a static fixture stub. <!-- applied: RU-01 -->
 
 ## 6. State Machines
 
@@ -365,10 +384,14 @@ transitions[]{from,to,trigger}:
 | `DOCTOR_RUNNER_UNRESOLVED` | error | 1 | Install `bun` or ensure `npx tsx` works; `hooks/run-hook.sh` could not locate a runner |
 | `DOCTOR_BARE_ANCHOR` | warning | 1 | Run `/loom-doctor --fix` to rewrite legacy entries to anchored form |
 | `DOCTOR_ORPHAN_ENTRY` | warning | 1 | Run `/loom-doctor --fix`; an entry references a hook file Loom no longer owns |
-| `MIGRATION_OWNERSHIP_DIVERGED` | warning | 1 | Settings file hash differs from recorded evidence; review diff and re-run with `--fix --force` |
+| `MIGRATION_OWNERSHIP_DIVERGED` | warning | 1 | Settings file hash differs from recorded evidence. To resolve: (1) inspect the diff with `diff <(bun scripts/loom-doctor.ts --json \| jq .checks) .claude/loom-migration.log.toon`; (2) if the on-disk file is your intentional edit, manually remove the recorded evidence for that entry from `.claude/loom-migration.log.toon` and re-run `/loom-doctor`; (3) if unexpected, restore from backup. No automated `--force` override — by design. | <!-- applied: MF-03 MF-04 -->
 | `MIGRATION_SETTINGS_CORRUPT` | error | 2 | Settings JSON unparseable; manual repair required |
 | `MIGRATION_TIER_AMBIGUOUS` | error | 1 | Loom entries found in BOTH `.claude/settings.json` (N entries) and `.claude/settings.local.json` (M entries). To resolve: (1) run `bun scripts/loom-doctor.ts --tier auto` to see the resolution report listing sample conflicting hook names from each file; (2) re-run register with explicit `--tier local` (keep machine-local) or `--tier project` (commit to repo). | <!-- applied: HF-12 -->
 | `MANIFEST_INVALID` | error | 2 | `plugin.json` or `hooks.json` fails schema validation; reinstall from tagged release |
+| `DOCTOR_HOOK_TIMEOUT` | warning | 1 | A hook exceeded its declared `timeoutMs` during the doctor health-check probe. Re-run with `--check &lt;id&gt;` to isolate; consider raising the timeout in `hooks.json` if the hook genuinely needs more time. | <!-- applied: HF-04 -->
+| `DOCTOR_PERMISSIONS_MISMATCH` | warning | 1 | The matchers declared in `hooks.json` `permissions[]` differ from the matchers actually registered in `settings.json`. Run `/loom-doctor --fix` to re-sync. | <!-- applied: HF-04 -->
+| `DOCTOR_VERSION_SKEW` | warning | 1 | Installed Loom version differs from the version recorded in `MigrationEvidence`. Re-run `/plugin install loom` or `install.sh` to align. | <!-- applied: HF-04 -->
+| `DOCTOR_UPDATE_AVAILABLE` | info | 0 | Newer Loom version detected by `loom-update-checker.cjs`. Exit code is 0 (healthy); informational only. Run `/loom-upgrade` to apply. | <!-- applied: HF-04 -->
 | `INSTALL_CONFLICT_PLUGIN_AND_CURL` | error | 9 | Plugin already registered; uninstall plugin or skip curl install |
 
 ## 8. Acceptance Criteria
@@ -413,10 +436,10 @@ transitions[]{from,to,trigger}:
 
 | Wave | Agent | Owned Paths |
 |---|---|---|
-| 0 | wave-0-schemas-agent | `agents/protocols/plugin-manifest.schema.md`, `agents/protocols/hook-manifest.schema.md`, `agents/protocols/doctor-report.schema.md`, `agents/protocols/migration-evidence.schema.md`, `agents/protocols/settings-tier.schema.md` |
+| 0 | wave-0-schemas-agent | `agents/protocols/plugin-manifest.schema.md`, `agents/protocols/hook-manifest.schema.md`, `agents/protocols/doctor-report.schema.md`, `agents/protocols/migration-evidence.schema.md`, `agents/protocols/settings-tier.schema.md`, `agents/protocols/upstream/plugin.schema.json`, `agents/protocols/migration-runner.schema.md` | <!-- applied: NI-02 NR-01 -->
 | 1 | wave-1-manifest-agent | `.claude-plugin/plugin.json`, `hooks/hooks.json`, `install.sh`, `test/plugin-manifest.test.ts`, `test/install-mutual-exclusion.test.ts` | <!-- applied: CB-01 -->
 | 2 | wave-2-doctor-agent | `commands/loom-doctor.md`, `scripts/loom-doctor.ts`, `hooks/loom-migration.ts`, `scripts/lib/ownership-evidence.ts`, `scripts/lib/migration-runner.ts`, `test/loom-doctor.test.ts`, `test/loom-migration.test.ts` | <!-- applied: CB-01, HF-07 -->
-| 3 | wave-3-tier-agent | `scripts/register-loom-hooks.ts`, `scripts/lib/tier-resolution.ts`, `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md`, `test/tier-resolution.test.ts`, `test/register-loom-hooks-tier.test.ts` | <!-- applied: CB-01 -->
+| 3 | wave-3-tier-agent | `scripts/register-loom-hooks.ts`, `scripts/lib/tier-resolution.ts`, `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md`, `commands/loom-quick.md`, `commands/loom-change.md`, `commands/loom-plan.md`, `test/tier-resolution.test.ts`, `test/register-loom-hooks-tier.test.ts` | <!-- applied: CB-01 HF-05 -->
 | 4a | wave-4-docs-agent | `README.md`, `planning/notes/plugin-marketplace-rationale.md` |
 | 4a | wave-4-e2e-agent | `test/e2e/curl-install.spec.ts`, `test/e2e/runtime-equivalence.spec.ts` | <!-- applied: CB-01, CB-03 -->
 | 4b | wave-4b-e2e-agent | `test/e2e/plugin-install.spec.ts` | <!-- applied: CB-01, CB-03 -->
@@ -433,13 +456,15 @@ transitions[]{from,to,trigger}:
 
 F-15's `DoctorReport.installSource` (`plugin | curl`) is derived dynamically per session. The existing `agents/protocols/install-state.schema.md` (v3, shipped under M-06 F-13) has no corresponding persisted field. Open a follow-up PR to add `installSource` to install-state v3.1 so `/loom-upgrade` can route plugin-path vs curl-path updates. This plan does not own that change but flags it for M-07 sign-off.
 
+**Tracking:** the install-state v3.1 `installSource` field is tracked as a follow-up roadmap entry. Add F-18 to `planning/ROADMAP.md` under M-07 (or a new M-08 follow-up milestone) covering: (a) extend `agents/protocols/install-state.schema.md` with `installSource: plugin | curl` (v3.1 minor version bump), (b) populate the field in `install.sh` (curl path) and the SessionStart hook (plugin path) at registration time, (c) `/loom-upgrade` reads the field and dispatches plugin-tier vs curl-tier update logic. Blocks M-07 sign-off. <!-- applied: NI-01 -->
+
 ## 10. Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Anthropic plugin manifest schema evolves mid-implementation | medium | high | Snapshot current schema in `agents/protocols/plugin-manifest.schema.md`; pin to documented version; doctor surfaces `MANIFEST_INVALID` on drift |
 | Curl users miss the migration path to plugin | high | low | `/loom-doctor` prints one-shot migration recipe when curl install detected and plugin available; README decision matrix |
-| Ownership-evidence false positives block legitimate migrations | medium | medium | `--fix --force` escape hatch; advisory (not blocking) surfacing of divergence; evidence log preserves before/after for forensic review |
+| Ownership-evidence false positives block legitimate migrations | medium | medium | Advisory (not blocking) surfacing of divergence; evidence log preserves before/after for forensic review; user manually edits log when intentional edit is the source of divergence. <!-- applied: MF-03 MF-04 --> |
 | Tier flip surprises existing users on re-init | medium | medium | TierResolution preserves prior tier choice; `MIGRATION_TIER_AMBIGUOUS` refuses to write without explicit flag when both tiers populated |
 | Plugin marketplace publication blocked by M-06 Phase 1 delay | low | high | Phases 0–3 ship independently; Phase 4 publication step is the only one gated on signed-release infrastructure |
 | `${CLAUDE_PLUGIN_ROOT}` not set in non-plugin contexts | low | medium | `hooks/run-hook.sh` already falls back to `${CLAUDE_PROJECT_DIR}` (F-14); doctor verifies anchor resolution |
