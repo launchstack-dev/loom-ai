@@ -1,0 +1,98 @@
+review:
+  date: 2026-06-17
+  planRef: planning/plans/PLAN-plugin-marketplace-merged.md
+  planVersion: 2
+  reviewMode: 6-agent-parallel
+  status: blocking-findings
+  totalFindings: 49
+  blockingFindings: 4
+  criticalFindings: 8
+  highFindings: 13
+  mediumFindings: 12
+  lowFindings: 12
+
+structuralPrecheck:
+  stage1Structure: pass
+  stage2Dependencies: pass
+  stage3FileOwnership: pass
+  stage4Sizing:
+    status: blocking
+    blocking[1]: Phase-9-has-20-deliverables-exceeds-cap-of-12
+    warnings[4]: 15-phases-at-warning-band-ceiling, Phase-0-9-deliverables, Phase-2-11-deliverables, Phase-10-11-deliverables
+
+crossCuttingFindings[12]{rank,issue,flaggedBy,severity,recommendedAction}:
+  1,Phase-9-must-split-into-doctor-surface-and-migration-runner-surface,phasing-and-parallelization-and-agentic-workflow,blocking,Split-into-9A-doctor-engine-9B-migration-subsystem-9C-command-md
+  2,Wave-5-not-parallel-P10-imports-migration-runner-from-P9,phasing-and-parallelization-and-agentic-workflow,blocking,Split-Wave-5-into-5a-P9-then-5b-P10
+  3,Wave-3-and-Wave-6-declared-parallel-but-have-hard-serial-dependencies,phasing-and-parallelization,blocking,Split-Wave-3-into-3a-3b-Split-Wave-6-into-6a-6b
+  4,Phase-3-integrates-Phase-5-output-but-does-not-declare-Phase-5-as-dependency,phasing-and-agentic-workflow,blocking,Add-Phase-5-to-Phase-3-dependencies-or-split-Phase-3-into-3a-3b
+  5,loom-doctor-fix-reconcile-flag-referenced-in-error-codes-and-Phase-9-AC-but-not-defined-in-CLI-contract,feature-coverage-and-ux,critical,Add-reconcile-to-loom-doctor-flag-table-with-explicit-behavior
+  6,loom-update-check-json-format-contradiction-between-line-212-says-JSON-and-line-1295-says-TOON,feature-coverage-and-ux,critical,Standardize-on-JSON-across-both-loom-doctor-and-loom-update
+  7,No-rollback-flag-on-loom-update-despite-snapshot-infrastructure-in-on-disk-install-state-schema,feature-coverage-and-ux,critical,Add-loom-update-rollback-or-explicitly-document-manual-fallback-in-runbook
+  8,MS-F-marketplace-listing-live-before-MS-G-update-and-uninstall-strands-users,strategy-and-ux,high,Move-Phases-13-14-to-Wave-6-so-update-uninstall-ship-with-listing
+  9,Curl-to-plugin-migration-UX-entirely-absent-despite-installtoon-migratedFrom-schema-field,strategy-and-ux,high,Add-CHANNEL_UPGRADE_AVAILABLE-info-check-to-doctor-and-proactive-prompt
+  10,Non-automatable-criteria-marked-as-automatable-Phase-5-Phase-6-Phase-11-Phase-12,parallelization-and-agentic-workflow,high,Flip-automatable-flag-to-false-or-replace-with-grep-verifiable-assertions
+  11,Telemetry-deferred-but-source-marketplace-browse-field-retained-creates-false-attribution-confidence,strategy-and-feature-coverage,high,Either-remove-the-field-or-add-cheap-aggregation-path-GHA-cron-reading-install-logs
+  12,loom-converge-cited-in-Phase-11-README-Differentiators-but-not-shipped-by-this-plan,strategy-and-ux,high,Either-add-as-Phase-8-harness-check-or-remove-from-README-contract
+
+schemaConflicts[2]{conflict,severity,location}:
+  InstallState-plan-defines-new-channel-tracking-envelope-on-disk-schema-is-v3-component-inventory,critical,planning/plans/PLAN-plugin-marketplace-merged.md-Schema-section-vs-agents/protocols/install-state.schema.md
+  DoctorReport-category-enum-plan-channel-hook-wiring-on-disk-files-runtime,critical,planning/plans/PLAN-plugin-marketplace-merged.md-line-72-vs-agents/protocols/doctor-report.schema.md
+
+uxWalkabilityIssues[3]{issue,phase,severity}:
+  MIGRATION_OWNERSHIP_DIVERGED-remediation-uses-broken-diff-and-undefined-evidence-editor,9,critical
+  loom-doctor-symbols-no-text-fallback-breaks-enterprise-SSH-CI-screen-readers,9,critical
+  install.sh-references-loom-uninstall-which-ships-in-Wave-7-creating-broken-remediation-in-ship-window,2,high
+
+phaseModifications[6]{phase,modification}:
+  3,Add-Phase-5-as-dependency-OR-split-into-3a-without-loom-init-md-and-3b-with-loom-init-md-after-Phase-5
+  4,Specify-which-InstallState-fields-are-frozen-post-first-write-vs-which-update-on-re-invocation
+  9,Split-into-9A-doctor-engine-and-9B-migration-subsystem-and-9C-command-md
+  10,Split-into-10A-tier-resolution-logic-and-10B-command-file-passthrough-edits-also-modify-hooks-json-for-plugin-path-migration-wiring
+  12,Reclassify-as-human-gate-phase-not-implementer-agent-task-convergence-targets-not-agent-executable
+  13,Add-Phase-10-as-dependency-curl-update-must-call-register-loom-hooks-with-tier-flag
+
+waveRestructure[6]{currentWave,newWaves,reason}:
+  3,3a-and-3b,P7-sigstore-workflow-referenced-by-name-in-P6-open-marketplace-pr-script
+  5,5a-and-5b,P10-imports-scripts-lib-migration-runner-ts-which-P9-creates-compile-time-dependency
+  6,6a-and-6b,P12-submission-PR-links-P11-decision-matrix-P12-E2E-verifies-P11-canonical-flow
+
+contextBudgetWarnings[3]{phase,estimatedTokens,issue}:
+  9,65000,20-deliverables-and-two-unrelated-subsystems-will-exceed-100k-cap-with-tool-overhead
+  10,67000,Six-existing-command-files-total-139k-bytes-read-overhead-loom-auto-md-alone-is-14-percent-of-budget
+  11,67000,README-73k-bytes-plus-5-phase-outputs-plus-execution-conventions
+
+deferredButLoadBearing[2]{deferredItem,loadBearingClaim}:
+  F-11-install-telemetry,marketplace-browse-attribution-field-retained-without-aggregation-path
+  loom-converge,cited-in-Phase-11-README-Differentiators-but-this-plan-does-not-deliver-it
+
+automatabilityCorrections[5]{phase,scenario,currentlyAutomatable,actuallyAutomatable}:
+  5,outcomes-not-features-checklist,true,false-LLM-judge-required
+  5,maintainer-review-gate,true,false-human-action-required
+  6,S-01-GHA-secrets-configured,true,false-external-precondition
+  11,Differentiators-surfaces-composability-claim,qa-review,false-human-or-LLM-judge
+  12,Marketplace-listing-accepted-by-Anthropic-registry,qa-review,false-third-party-decision
+
+apiSurfaceGaps[6]{cli,gap,severity}:
+  loom-doctor,--reconcile-flag-undefined,critical
+  loom-doctor,--quiet-flag-missing,important
+  loom-doctor,--output-file-path-flag-missing,important
+  loom-update,--rollback-flag-missing-despite-snapshot-infra,critical
+  loom-uninstall,--channel-flag-missing-for-mixed-channel-targeted-removal,important
+  register-loom-hooks,--list-flag-missing-for-pre-registration-inspection,nice-to-have
+
+missingSchemas[2]{path,purpose}:
+  agents/protocols/update-check.schema.md,Schema-for-loom-update-check-json-output-currentVersion-latestVersion-behind-pinnedVersion
+  agents/protocols/submission-evidence.schema.md,Schema-for-marketplace-submission-evidence-toon-durable-artifact
+
+executionReadiness:
+  phasesReady[9]: 0, 1, 2, 4, 5, 7, 8, 13, 14
+  phasesNeedFixesBeforeExecution[6]: 3, 6, 9, 10, 11, 12
+  blockingForWave1[0]:
+  blockingForWave5[2]: 9-must-split, 10-must-wait-for-9
+
+nextSteps[5]{step,owner}:
+  1,Apply-blocking-structural-fixes-Phase-9-split-Wave-3-5-6-decoupling-Phase-3-Phase-5-dep,plan-author
+  2,Resolve-schema-conflicts-InstallState-and-DoctorReport-before-Phase-0-runs,plan-author
+  3,Define-reconcile-flag-or-remove-it-from-error-codes-Standardize-json-output-format,plan-author
+  4,Decide-on-design-questions-curl-to-plugin-migration-UX-scope-MS-F-vs-MS-G-ordering-telemetry-stance-loom-converge-shipping-window,user
+  5,Re-review-after-integration-pass-target-zero-blocking-findings,review-orchestrator

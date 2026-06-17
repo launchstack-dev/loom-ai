@@ -1,0 +1,65 @@
+# Keep agents/protocols/upstream/plugin.schema.json in sync with Anthropic's
+# published Claude Code plugin manifest reference. Wave 1 of M-07 (plugin
+# marketplace migration) validates Loom's own .claude-plugin/plugin.json
+# against this snapshot; without a real upstream schema, the validation is a
+# no-op.
+#
+# Two modes:
+#   - schedule + manual dispatch: run the refresh script and, if it produces
+#     drift, open a PR with the refreshed schema and .meta.toon.
+#   - pull_request on the snapshot file: --check mode, fail PRs that hand-edit
+#     the snapshot away from what the upstream docs currently say.
+
+name: refresh-upstream-schemas
+
+on:
+  schedule:
+    # Weekly, Mondays 09:00 UTC. Anthropic docs don't change daily; weekly is
+    # enough to catch drift without spamming PRs.
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'agents/protocols/upstream/plugin.schema.json'
+      - 'agents/protocols/upstream/.meta.toon'
+      - 'scripts/refresh-upstream-schemas.sh'
+      - '.github/workflows/refresh-upstream-schemas.yml'
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify upstream snapshot matches live docs
+        run: scripts/refresh-upstream-schemas.sh --check
+
+  refresh:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Refresh snapshot
+        run: scripts/refresh-upstream-schemas.sh
+      - name: Open PR if drift detected
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/refresh-upstream-schemas
+          commit-message: 'chore(upstream): refresh plugin.schema.json snapshot'
+          title: 'chore(upstream): refresh plugin.schema.json snapshot'
+          body: |
+            Automated refresh of `agents/protocols/upstream/plugin.schema.json`
+            from Anthropic's plugin reference docs.
+
+            Review the diff for upstream changes that affect Wave 1 manifest
+            validation (`PLAN-plugin-marketplace-migration.md`).
+          delete-branch: true

@@ -1,0 +1,68 @@
+review:
+  date: 2026-06-17
+  pass: 2
+  planRef: planning/plans/PLAN-plugin-marketplace-merged.md
+  planLineCount: 1637
+  reviewMode: 6-agent-parallel
+  predecessor: planning/history/reviews/2026-06-17-PLAN-plugin-marketplace-merged-review.toon
+  status: blocking-findings-remain
+  totalFindings: 19
+  blockingFindings: 3
+  criticalFindings: 4
+  highFindings: 7
+  mediumFindings: 5
+
+pass1FixesConfirmedLanded[18]:
+  InstallState-schema-conflict-resolved
+  DoctorReport-category-enum-reconciled
+  --reconcile-flag-defined-in-CLI-contract
+  --rollback-flag-added-with-rollback.ts-deliverable
+  --quiet-and-output-file-flags-added
+  permissions-derived-check-added-to-registry
+  update-check-schema-added-to-Phase-0
+  submission-evidence-schema-added-to-Phase-0
+  Wave-3-split-into-3a-and-3b
+  Wave-6-split-into-6a-and-6b
+  Phase-3-dependency-on-Phase-5-added
+  Phase-3-action-Create-changed-to-Modify
+  Phase-10-modifies-hooks.json-symmetric-with-curl-path
+  Phase-13-dependency-on-Phase-10-added
+  install-source-digest-aggregator-added-to-Phase-4
+  loom-converge-presence-check-added-to-Phase-8
+  Phase-13-and-Phase-14-moved-into-Wave-6a-MS-G-removed-MS-F-full-lifecycle
+  Phase-12-reclassified-as-human-gate-for-convergence
+
+blockingFindingsRemaining[3]{id,description,flaggedBy,fix}:
+  B-2-1,Wave-5a-Phase-9B-imports-migration-runner.interface.ts-which-is-Phase-9A-deliverable-tsc-noEmit-fails-if-9A-has-not-written-it-before-9B-agent-starts,parallelization-and-phasing,Move-the-interface-file-to-Phase-0-contracts-agent-OR-add-Phase-9A-to-Phase-9B-dependency-list-and-serialize-9A-then-9B-within-Wave-5a
+  B-2-2,Wave-2-P3-depends-on-P5-but-both-in-same-wave-recreates-forward-reference,parallelization,Split-Wave-2-into-2a-P4-plus-P5-parallel-then-2b-P3-serial-after-2a
+  B-2-3,Phase-9A-still-has-20-deliverables-exceeds-12-cap-not-fully-split,agentic-workflow,Further-split-9A-into-9A1-dispatcher-CLI-render-bundle-and-9A2-check-modules-or-into-3-check-subgroups
+
+criticalFindingsRemaining[4]{id,description,flaggedBy,fix}:
+  C-2-1,Phase-13-acceptance-criterion-bullet-still-says-returns-TOON-CLI-contract-and-scenario-already-say-JSON-this-is-the-final-residual-from-pass-1-finding-6,feature-coverage-and-phasing-and-strategy-and-agentic-workflow-FOUR-AGENTS,Replace-TOON-with-JSON-in-Phase-13-AC-bullet-for-check-json-output
+  C-2-2,Review-integration-note-at-line-35-says-Phase-9-split-into-9A-9B-9C-but-there-is-no-9C-in-the-plan-body,feature-coverage-and-phasing,Update-the-integration-note-to-say-9A-9B-only-and-clarify-that-commands/loom-doctor.md-is-9A-owned
+  C-2-3,Phase-9B-scenarios-S-01-through-S-04-test-doctor-engine-behaviors-not-migration-runner-behaviors-misplaced-during-split,feature-coverage,Move-S-01-through-S-04-to-Phase-9A-Phase-9B-keeps-only-S-05-and-S-06-which-are-genuinely-migration-scenarios
+  C-2-4,Phase-10-context-bloat-NOT-addressed-six-large-command-files-still-read-by-single-agent-pass-1-finding-survived,agentic-workflow,Split-Phase-10-into-10A-tier-resolution-logic-and-10B-command-file-passthrough-edits-six-files-in-parallel
+
+highFindingsRemaining[7]{id,description,flaggedBy,fix}:
+  H-2-1,Phase-9B-AC-references-scripts/lib/__tests__/migration-runner.test.ts-but-the-file-is-not-in-Phase-9B-deliverables-or-File-Ownership,feature-coverage,Add-the-test-file-to-Phase-9B-deliverables-table
+  H-2-2,Phase-11-Dependencies-still-says-Phase-9-not-Phase-9A-or-Phase-9B-or-Phase-10-ambiguous-after-split,feature-coverage,Replace-Phase-9-with-Phase-9A-Phase-9B-Phase-10-in-Phase-11-dependency-list
+  H-2-3,arrow-character-contradiction-CLI-contract-says-ASCII-arrow-for-terminal-portability-Phase-13-scenario-S-01-uses-Unicode-arrow,feature-coverage-and-phasing,Update-S-01-to-use-ASCII-arrow-matching-the-CLI-contract
+  H-2-4,channel-upgrade-available-fires-only-on-explicit-loom-doctor-invocation-not-proactively-curl-users-without-doctor-habit-never-see-the-upgrade-path,ux,Add-a-SessionStart-one-time-notice-or-document-that-the-quickstart-flow-naturally-surfaces-the-check
+  H-2-5,Loom-applied-hook-migration-notice-goes-to-stderr-which-is-hidden-in-Claude-Code-normal-operation-the-non-silent-mutation-goal-is-not-met,ux,Route-the-notice-to-a-user-visible-channel-PostToolUse-stdout-or-a-persistent-marker-doctor-surfaces,
+  H-2-6,Wave-5a-compile-gate-not-defined-as-explicit-verification-step-the-split-relies-on-tsc-but-no-named-gate-exists-between-9A-9B-merge-and-Phase-10-start,agentic-workflow,Add-an-explicit-Wave-5a-end-gate-tsc-noEmit-over-combined-doctor-and-migration-runner-trees
+  H-2-7,install.sh-tarball-sha256-verification-still-absent-deliberately-deferred-pass-1-but-not-tracked-in-Deferred-section,feature-coverage,Either-add-Phase-2-AC-item-for-sha256-verification-or-explicitly-list-in-Deferred-section
+
+mediumFindingsRemaining[5]{id,description,flaggedBy,fix}:
+  M-2-1,--reset-evidence-confirmation-prompt-UX-unspecified-no-prompt-text-no-timeout-no-yes-bypass-no-non-TTY-behavior,ux,Specify-prompt-text-and-yes-bypass-and-non-TTY-auto-refuse
+  M-2-2,--reconcile-confirmation-prompt-UX-unspecified-same-deficiency-as-reset-evidence-but-for-destructive-channel-file-removal,ux,Specify-prompt-text-timeout-yes-bypass-non-TTY-behavior
+  M-2-3,Phase-4-deliverables-missing-test/fixtures/discussion-thread.json-AC-references-it-but-it-is-not-listed,agentic-workflow,Add-fixture-file-to-Phase-4-deliverables-table
+  M-2-4,Phase-13-rollback.ts-needs-explicit-pointer-to-agents/protocols/install-state.schema.md-for-v3-snapshot-format,agentic-workflow,Add-notes-line-to-Phase-13-pointing-rollback-implementer-at-the-schema
+  M-2-5,install-source-digest-opt-in-friction-will-produce-sparse-skewed-data-source-enum-precision-not-matched-by-measurement-precision,strategy,Add-measurement-honesty-note-treating-signal-as-indicative-not-statistically-representative-until-organic-volume-threshold
+
+verdict:
+  converged: false
+  recommendation: Apply-3-blocking-fixes-and-4-critical-fixes-in-pass-3-then-re-review
+  highestLeverageFixes[3]:
+    1: Move-migration-runner-interface-to-Phase-0-B-2-1-unblocks-Wave-5a-parallelism
+    2: Phase-13-AC-bullet-TOON-to-JSON-C-2-1-four-agents-flag-this
+    3: Split-Wave-2-into-2a-2b-B-2-2-eliminates-Phase-3-Phase-5-race
