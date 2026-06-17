@@ -1,0 +1,53 @@
+type: roadmap-review
+roadmapFile: planning/ROADMAP-plugin-distribution.md
+reviewedAt: 2026-06-15
+agentCount: 4
+structuralErrors: 0
+structuralWarnings: 0
+notes: scope-feasibility-agent unavailable in environment — ran via general-purpose with equivalent rubric
+
+agents[4]{name,findingCount,blockingCount,warningCount,infoCount}:
+  scope-feasibility,12,4,6,2
+  feature-coverage,12,5,4,3
+  strategy,11,2,5,4
+  ux,18,3,9,6
+
+crossCuttingThemes[8]{id,theme,flaggedBy,severity}:
+  CC-01,F-10 CI fixture must move to M-01 — without it F-02 marketplace gate is unverifiable,scope+strategy,blocker
+  CC-02,Open Question 1 (F-02 auto-run vs graceful no-op) blocks too much — decide before M-01,ux+scope,blocker
+  CC-03,Schema definitions missing for install.toon plugin manifest doctor-report .loom/plugin-root,scope+feature-coverage,blocker
+  CC-04,Open Question 3 kill criterion must be promoted to constraint C-09 with numbers,scope+strategy,warning
+  CC-05,F-09 listing copy needs to move into M-01 — it is the demand-validation instrument,strategy+feature-coverage,warning
+  CC-06,Partial-failure and mixed-channel states undefined across migrate and doctor,ux+scope,blocker
+  CC-07,Marketplace install telemetry availability unconfirmed — C-03 sunset may be unmeasurable,scope+strategy+feature-coverage,warning
+  CC-08,Missing user-facing commands (update uninstall dry-run rollback),feature-coverage+ux,warning
+
+findings[20]{id,agent,severity,dimension,title,recommendation}:
+  SF-01,scope,blocker,contradiction,F-10 sequencing contradicts C-02 precondition,Move F-10 (or minimal first-invocation subset) to M-01 P0 — split into F-10a (M-01) and F-10b (M-02)
+  SF-02,scope,blocker,sizing,M-01 carries 6 P0 features for unfunded OSS,Demote F-05 to M-02; reduce F-04 doctor v1 scope to channel+version only
+  SF-03,scope,blocker,sequencing,F-05 unlocks sunset clock but no feature owns telemetry collection,Add F-11 Sunset telemetry collection feature owning install-count source and parity records
+  SF-04,scope,blocker,coverage,Data model artifacts referenced but never defined,Add Data Model section with TOON schemas for install.toon doctor-report plugin-root pointer
+  SF-05,scope,warning,contradiction,F-07 (resolver) M-02 but F-02 M-01 uses .loom/plugin-root,Pull minimal resolver into M-01 alongside F-02; F-07 extends it in M-02
+  SF-06,scope,warning,sequencing,F-02 gates submission but nothing gates F-02,Convert F-02 into F-02a (decide UX model) + F-02b (implement); deadline before M-01 start
+  FC-01,feature-coverage,blocker,api-surface,No /loom-update command defined,Add F-12 update path: claude plugin update loom OR /loom-update
+  FC-02,feature-coverage,blocker,coverage,Plugin manifest schema undefined — minClaudeCodeVersion missing,Add manifest schema with manifestVersion loomVersion sha256 attestationUrl minClaudeCodeVersion compatibilityMatrix
+  FC-03,feature-coverage,blocker,api-surface,/loom-migrate-to-plugin has no --dry-run,Add --dry-run flag with diff preview before mutation
+  FC-04,feature-coverage,blocker,api-surface,No uninstall path,Add /loom-uninstall or claude plugin remove loom cleanup with --keep-project-state flag
+  FC-05,feature-coverage,blocker,api-surface,No --json on /loom-doctor — F-10 must screen-scrape TOON,Add --json flag for machine-readable doctor output
+  FC-06,feature-coverage,warning,coverage,No changelog/release-notes surface,Generate CHANGELOG entry as part of atomic release pipeline F-03
+  FC-07,feature-coverage,warning,coverage,No beta/pre-release channel,Add github:loom-ai/loom@beta or separate loom-preview listing
+  ST-01,strategy,blocker,positioning,Audience never named,Name primary persona before F-09 copy drafted — solo/small-team dev using Claude Code for serious feature work
+  ST-02,strategy,blocker,risk,Marketplace fails to become discovery surface — missing risk,Add named risk with mitigation (reactivate curl prominence if browse-attributed installs below threshold at 90 days)
+  ST-03,strategy,warning,sequencing,F-09 listing copy in M-02 but listing IS Phase 1 instrument,Move outcome-led listing copy into M-01 parallel to F-01
+  ST-04,strategy,warning,measurement,Self-hosted plugin conflated with marketplace browse in telemetry,Add source sub-field (marketplace-browse self-hosted-url direct-link) to install.toon
+  UX-01,ux,blocker,decision,F-02 implementation choice left open,Resolve OQ-1 before M-01 planning; document state machine for chosen path
+  UX-02,ux,blocker,state-coverage,F-02 no error state for failed auto-init,Specify behavior for no-git-repo network-error missing-orchestration cases
+  UX-03,ux,blocker,state-coverage,/loom-migrate-to-plugin partial-failure undefined,Add migration-in-progress marker that loom doctor detects and surfaces
+
+recommendedActions[6]{priority,action,resolves}:
+  P0,Resolve OQ-1 (F-02 implementation choice) and split into F-02a decision + F-02b implementation,CC-02 UX-01 SF-06
+  P0,Move F-10 (or first-invocation subset) into M-01 as F-10a,CC-01 SF-01
+  P0,Add Data Model section with TOON schemas for install.toon manifest doctor-report plugin-root,CC-03 SF-04 FC-02
+  P0,Add missing P0 features — F-11 telemetry collection, F-12 update path, F-13 uninstall, F-14 dry-run on migrate, F-15 doctor --json,CC-08 FC-01 FC-03 FC-04 FC-05
+  P1,Promote OQ-3 kill criterion to constraint C-09 with concrete thresholds,CC-04 SF-11
+  P1,Move F-09 outcome-led listing copy into M-01 parallel to F-01; name primary persona in Positioning,CC-05 ST-01 ST-03
