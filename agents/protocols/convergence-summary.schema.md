@@ -60,7 +60,7 @@ tokensUsed: 145000
 
 ## Status Enum (locked C-11)
 
-The `status` field has exactly 6 values. Any other value is a `FINDINGS_SCHEMA_INVALID`-class defect.
+The `status` field has exactly 7 values. Any other value is a `FINDINGS_SCHEMA_INVALID`-class defect.
 
 | Value | Meaning | `finalBlockingCount` | `haltReason` |
 |-------|---------|----------------------|--------------|
@@ -70,6 +70,7 @@ The `status` field has exactly 6 values. Any other value is a `FINDINGS_SCHEMA_I
 | `halted-budget` | BUDGET_EXHAUSTED tripped (cumulative agent spawns exceeded `converge.config.agentBudget`) | >= 0 | `BUDGET_EXHAUSTED` |
 | `halted-max-iter` | MAX_ITERATIONS tripped (`iterationsRun == converge.config.maxIterations` and `blockingCount > 0`) | > 0 | `MAX_ITERATIONS` |
 | `halted-scope-expansion` | SCOPE_EXPANSION tripped (integrator added top-level structural section per C-06) | >= 0 | `SCOPE_EXPANSION` |
+| `halted-validation` | Post-converge validation gate (Step 5.5 of `/loom-plan create --autoconverge`) re-entered the loop once and the plan STILL failed `validation-rules.md` stages 1–4 (structure / deps / ownership / sizing). The driver itself converged cleanly; the wrapper sets this status after re-entry exhaustion. | > 0 (validation blockers) | `VALIDATION_EXHAUSTED` |
 
 **Note:** Preflight failures (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`, `INTEGRATOR_MODE_AMBIGUOUS`) do NOT produce a `ConvergenceSummary` — the run never reached a terminal-state transition. The driver writes only an `AgentResult` with the preflight `issues[]` row in those cases.
 
@@ -86,6 +87,7 @@ The `haltReason` field is the same enum used by `ConvergenceIterationSummary.hal
 | `BUDGET_EXHAUSTED` | Cumulative agent spawns exceeded `converge.config.agentBudget` | Increase `agentBudget`, then `/loom-converge --resume` |
 | `MAX_ITERATIONS` | Iteration count reached `converge.config.maxIterations` without convergence | Accept current draft, raise `--max-iterations`, or revert |
 | `SCOPE_EXPANSION` | Integrator added a new top-level Phase/Feature/Milestone (C-06) | Approve scope OR `cp` snapshot back; re-invoke |
+| `VALIDATION_EXHAUSTED` | Post-converge validation (Step 5.5 of `/loom-plan create --autoconverge`) found blocking structural issues, re-entered the driver once, and validation STILL failed. The driver-owned loop itself converged on reviewer agreement; the wrapper sets this haltReason after re-entry exhaustion. | Run `/loom-plan review --integrate` manually, or `/loom-roadmap refine`, to resolve the structural blockers in `.plan-execution/convergence/validation-failures.toon`, then re-invoke `/loom-plan create --review-integrate --autoconverge`. |
 | `INTEGRATOR_NOT_FOUND` | `converge.config.integrator` does not resolve | Fix `integrator` field |
 | `HARNESS_MISSING` | `converge.config.harness` path missing OR no `findings.toon` produced | Fix `harness` field or repair harness |
 | `FINDINGS_SCHEMA_INVALID` | Harness wrote `findings.toon` failing schema validation | Inspect harness aggregator |
@@ -100,7 +102,7 @@ The last three (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVA
 2. **`status` consistency.**
    - If `status == converged`, then `finalBlockingCount == 0` AND `haltReason` is null.
    - If `status` starts with `halted-`, then `finalBlockingCount` may be any non-negative integer AND `haltReason` MUST be present.
-3. **`status` <-> `haltReason` mapping.** When `status == halted-stall`, `haltReason == STALL`. When `status == halted-regression`, `haltReason == REGRESSION`. When `status == halted-budget`, `haltReason == BUDGET_EXHAUSTED`. When `status == halted-max-iter`, `haltReason == MAX_ITERATIONS`. When `status == halted-scope-expansion`, `haltReason == SCOPE_EXPANSION`. Other `haltReason` values (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`) may appear only via `ConvergenceIterationSummary`, not in `ConvergenceSummary` (the run never terminated cleanly).
+3. **`status` <-> `haltReason` mapping.** When `status == halted-stall`, `haltReason == STALL`. When `status == halted-regression`, `haltReason == REGRESSION`. When `status == halted-budget`, `haltReason == BUDGET_EXHAUSTED`. When `status == halted-max-iter`, `haltReason == MAX_ITERATIONS`. When `status == halted-scope-expansion`, `haltReason == SCOPE_EXPANSION`. When `status == halted-validation`, `haltReason == VALIDATION_EXHAUSTED` (set by the `/loom-plan create --autoconverge` wrapper, NOT the driver). Other `haltReason` values (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`) may appear only via `ConvergenceIterationSummary`, not in `ConvergenceSummary` (the run never terminated cleanly).
 4. **`subject` mode consistency.** Required (non-null path) iff `convergenceMode == document`. MUST equal `converge.config.subject` when present.
 5. **`iterationsRun` bounds.** `1 <= iterationsRun <= converge.config.maxIterations`.
 6. **Timestamps ordered.** `completedAt > startedAt`.

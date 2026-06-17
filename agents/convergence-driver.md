@@ -254,7 +254,7 @@ In document mode the breakers operate on `blockingCount` (derived per `agents/pr
 
 ### Halt Messages and Recovery (locked C-10)
 
-When any breaker fires the driver emits TWO strings to stdout (in addition to writing `haltReason` to disk per § Terminal-State Transition): a one-sentence `cause` explaining what happened, and a one-line `recovery` command/action the operator can run next. The exact strings are **locked under C-10** and sourced from `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` — the driver MUST NOT paraphrase them or omit either string. The full enum of 8 halt reasons (the same enum used by `ConvergenceIterationSummary.haltReason` and `ConvergenceSummary.haltReason`) is:
+When any breaker fires the driver emits TWO strings to stdout (in addition to writing `haltReason` to disk per § Terminal-State Transition): a one-sentence `cause` explaining what happened, and a one-line `recovery` command/action the operator can run next. The exact strings are **locked under C-10** and sourced from `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` — the driver MUST NOT paraphrase them or omit either string. The full enum of 9 halt reasons (the same enum used by `ConvergenceIterationSummary.haltReason` and `ConvergenceSummary.haltReason`) is:
 
 | `haltReason` | Origin | Cause (emitted on halt) | Recovery (emitted on halt) |
 |---|---|---|---|
@@ -263,19 +263,22 @@ When any breaker fires the driver emits TWO strings to stdout (in addition to wr
 | `BUDGET_EXHAUSTED` | breaker (mid-loop) | Cumulative agent spawns exceeded `converge.config.agentBudget` | Increase `agentBudget`, then `/loom-converge --resume` |
 | `MAX_ITERATIONS` | breaker (mid-loop) | Iteration count reached `converge.config.maxIterations` without convergence | Accept current draft, raise `--max-iterations`, or revert |
 | `SCOPE_EXPANSION` | document-mode guard (C-06) | Integrator added a new top-level Phase/Feature/Milestone (C-06) | Approve scope OR `cp` snapshot back; re-invoke |
+| `VALIDATION_EXHAUSTED` | post-converge wrapper (`/loom-plan create --autoconverge` Step 5.5) — NOT the driver | Post-converge validation gate (`validation-rules.md` stages 1–4) found blocking structural issues, re-entered the driver once, and validation still failed | Run `/loom-plan review --integrate` manually (or `/loom-roadmap refine`) to resolve `.plan-execution/convergence/validation-failures.toon`, then re-invoke `/loom-plan create --review-integrate --autoconverge` |
 | `INTEGRATOR_NOT_FOUND` | preflight (or mid-loop re-resolution) | `converge.config.integrator` does not resolve | Fix `integrator` field |
 | `HARNESS_MISSING` | preflight (or mid-loop on missing `findings.toon`) | `converge.config.harness` path missing OR no `findings.toon` produced | Fix `harness` field or repair harness |
 | `FINDINGS_SCHEMA_INVALID` | mid-loop (post-harness validation) | Harness wrote `findings.toon` failing schema validation | Inspect harness aggregator |
 
-The first four are the in-scope circuit breakers documented above. `SCOPE_EXPANSION` is the document-mode-only guard (locked C-06) and is documented in its own section. The last three (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`) are preflight or harness-side failures: when they surface during preflight they emit an `AgentResult` envelope to `.plan-execution/convergence-preflight.toon` (NOT `convergence-summary.toon`); when they surface mid-loop they may appear as `haltReason` on a per-iteration `iter-{N}.toon` row per the uniform-shape contract. The full per-breaker cause/recovery strings are normative in `convergence-summary.schema.md § Halt Reason Cross-Reference` — do NOT duplicate or paraphrase them at additional emission sites.
+The first four are the in-scope circuit breakers documented above. `SCOPE_EXPANSION` is the document-mode-only guard (locked C-06) and is documented in its own section. `VALIDATION_EXHAUSTED` is **wrapper-set only** — the `/loom-plan create --autoconverge` Step 5.5 post-converge validation gate writes this haltReason directly into `convergence-summary.toon` after re-entry exhaustion; the driver itself never emits it (the driver-owned loop converged cleanly before the wrapper took over). Driver-side code MUST NOT recognize `VALIDATION_EXHAUSTED` as a mid-loop halt trigger. The last three (`INTEGRATOR_NOT_FOUND`, `HARNESS_MISSING`, `FINDINGS_SCHEMA_INVALID`) are preflight or harness-side failures: when they surface during preflight they emit an `AgentResult` envelope to `.plan-execution/convergence-preflight.toon` (NOT `convergence-summary.toon`); when they surface mid-loop they may appear as `haltReason` on a per-iteration `iter-{N}.toon` row per the uniform-shape contract. The full per-breaker cause/recovery strings are normative in `convergence-summary.schema.md § Halt Reason Cross-Reference` — do NOT duplicate or paraphrase them at additional emission sites.
 
 Halt-message stdout format (locked):
 
 ```
-[autoconverge] HALT haltReason={STALL|REGRESSION|BUDGET_EXHAUSTED|MAX_ITERATIONS|SCOPE_EXPANSION|INTEGRATOR_NOT_FOUND|HARNESS_MISSING|FINDINGS_SCHEMA_INVALID}
+[autoconverge] HALT haltReason={STALL|REGRESSION|BUDGET_EXHAUSTED|MAX_ITERATIONS|SCOPE_EXPANSION|VALIDATION_EXHAUSTED|INTEGRATOR_NOT_FOUND|HARNESS_MISSING|FINDINGS_SCHEMA_INVALID}
   cause: {one-sentence cause from C-10 table}
   recovery: {one-line recovery command from C-10 table}
 ```
+
+`VALIDATION_EXHAUSTED` halt-message lines are emitted by the wrapper (Step 5.5), not by the driver — they follow the same locked format above for consistency with downstream parsers.
 
 Both the `cause` and `recovery` strings ALSO appear (verbatim) in the iteration `summary` field of the halt-iteration `iter-{N}.toon` so a fresh-context resume can recover them without re-reading the schema doc.
 

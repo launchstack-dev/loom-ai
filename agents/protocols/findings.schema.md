@@ -64,13 +64,13 @@ Each row in the `findings[]` typed array has these columns:
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `id` | string | yes | Unique finding identifier within the run (e.g., `F-01`, `C-04`, `T-12`). |
-| `dimension` | string | yes | Source dimension. For document-mode plan-review harness, one of the 6 locked dimensions (`feature-coverage`, `strategy`, `ux`, `phasing`, `parallelization`, `agentic-workflow`). For target/criteria modes, harness-defined (e.g., `target-diff`, `test-failure`). |
+| `dimension` | string | yes | Source dimension. For document-mode plan-review harness, one of the 6 locked reviewer dimensions (`feature-coverage`, `strategy`, `ux`, `phasing`, `parallelization`, `agentic-workflow`) OR the synthetic dimension `structural-validation` emitted by the `/loom-plan create --autoconverge` Step 5.5 post-converge validation gate. For target/criteria modes, harness-defined (e.g., `target-diff`, `test-failure`). |
 | `severity` | enum | yes | One of: `blocking`, `warning`, `info`, `advisory`. See Severity Mapping below. |
 | `locationPath` | string (path) | yes | File path where the finding applies. For document mode, equals `subject`. For target/criteria modes, the affected source file. |
 | `locationAnchor` | string | no | Sub-file locator (heading path, line range, function name). Empty string when whole-file. |
 | `summary` | string | yes | One-line statement of the issue. |
 | `suggestion` | string | no | Recommended remedy. Consumed by the integrator agent. |
-| `reviewerAgent` | string | no | Reviewer attribution (locked W-03). Populated by plan-review harness with one of the 6 reviewer agent names (`feature-coverage-reviewer-agent`, `strategy-reviewer-agent`, `ux-reviewer-agent`, `phasing-reviewer-agent`, `parallelization-reviewer-agent`, `agentic-workflow-reviewer-agent`). Optional for non-harness contexts (e.g., when a single-agent harness writes findings directly). |
+| `reviewerAgent` | string | no | Reviewer attribution (locked W-03). Populated by plan-review harness with one of the 6 reviewer agent names (`feature-coverage-reviewer-agent`, `strategy-reviewer-agent`, `ux-reviewer-agent`, `phasing-reviewer-agent`, `parallelization-reviewer-agent`, `agentic-workflow-reviewer-agent`) OR the synthetic identifier `validation-rules-stages-1-4` when the row is written by the `/loom-plan create --autoconverge` Step 5.5 post-converge validation gate (NOT a real agent — names the rule set that produced the finding). Optional for non-harness contexts (e.g., when a single-agent harness writes findings directly). |
 
 ---
 
@@ -120,7 +120,8 @@ A mismatch on any of the above invariants is a `FINDINGS_SCHEMA_INVALID` blockin
 7. **`producedAt` precision (locked W-01).** Timestamp MUST be ISO 8601 with millisecond precision (format `YYYY-MM-DDTHH:mm:ss.sssZ`). The driver uses this for stall-detection regression checks; uniform precision is required so timestamp comparisons across iterations are deterministic. A timestamp at second precision (`...Z` without milliseconds) is a `FINDINGS_SCHEMA_INVALID` defect.
 8. **Severity enum.** Each finding's `severity` MUST be one of: `blocking`, `warning`, `info`, `advisory`.
 9. **No duplicate IDs.** Two findings with the same `id` within a single `findings.toon` is a `FINDINGS_SCHEMA_INVALID` defect.
-10. **`reviewerAgent` enum (when populated).** When the harness is the plan-review harness, `reviewerAgent` MUST be one of the 6 locked reviewer agent names (see findings[] row schema). For other harnesses, `reviewerAgent` is free-form or omitted.
+10. **`reviewerAgent` enum (when populated).** When the harness is the plan-review harness, `reviewerAgent` MUST be one of the 6 locked reviewer agent names (see findings[] row schema). The synthetic identifier `validation-rules-stages-1-4` is ALSO permitted on rows whose `dimension == structural-validation` — these rows are written by the `/loom-plan create --autoconverge` Step 5.5 wrapper, not by a reviewer agent, but co-mingle in the same `findings.toon` so the integrator can resolve them through the existing convergence loop. For other harnesses, `reviewerAgent` is free-form or omitted.
+11. **`structural-validation` dimension coupling.** A row with `dimension == structural-validation` MUST have `reviewerAgent == validation-rules-stages-1-4` (or omit `reviewerAgent`). A row with any other `dimension` MUST NOT use `validation-rules-stages-1-4` as its `reviewerAgent`. This coupling makes the wrapper-vs-reviewer origin of each row unambiguous to the integrator and to downstream tooling.
 
 ---
 
