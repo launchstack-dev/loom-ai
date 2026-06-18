@@ -1,39 +1,43 @@
-schemaVersion: 1
 wave: 3
-runId: kit-native-skills-20260612-001
-status: success
-gateMode: auto
-phases[1]: 6
-startedAt: 2026-06-12T23:50:00Z
-completedAt: 2026-06-12T23:55:00Z
-durationMs: 300000
+phase: 3
+status: complete
+completedAt: 2026-06-18
+agent: implementer-agent
 
-agentResults[1]{taskId,agent,status,durationMs}:
-  wave3-phase6-schema-docs,implementer-agent,success,180000
+filesCreated[4]:
+  commands/loom-roadmap/status.md
+  scripts/roadmap-converge/digest.ts
+  scripts/roadmap-converge/resume-delegate.ts
+  test/roadmap-converge/digest-purity.test.ts
 
-filesCreated[2]: .plan-execution/stage-context/phase-6.toon, .plan-execution/stage-context/wave-3-gate.toon
-filesModified[3]: agents/protocols/change-proposal.schema.md, agents/protocols/kit.schema.md, commands/loom-upgrade.md
-filesRegenerated[0]:
+filesModified[0]:
 
-exportsAdded: 0
-
-schemaDocChanges:
-  deltaBlockSeed: "deliverableId? optional field added with RFC 2119 'validators MUST ignore' / 'tooling MUST NOT branch on it' semantics"
-  kitIncludesType: "widened from string[] to (string | TypedInclude)[]; new ## Typed Includes (v4+) section with python-conventions example + 5-type dispatch table + v5 removal timeline"
-  loomUpgradeV4Awareness: "library-catalog detection now declares Current = catalog_version: 4 with library.protocols: + library.skills: markers. Rule 13 generalized to cover v2→v3→v4 chained walk."
-
-crossBoundaryRequests:
-  filed: 0
-  resolved: 0
+testsPassingTotal: 93
+testsPassingNew: 32
+exportsAdded: 11
 
 verification:
-  status: pass
-  waveGateStatus: passed
-  fullSuiteStatus: 1-deferred-pre-existing
-  preExistingFailures[1]: "vi.resetModules infra in test/loom-change/lifecycle.test.ts (pre-Wave-1; unrelated)"
+  typecheck: skipped (no tsconfig.json at repo root)
+  bun_test: pass (93/93)
+  sign_off_purity_grep: pass
 
-nextWave:
-  number: 4
-  phases[1]: 7
-  description: "M-02 Gate — wiring-agent runs full smoke test + install verification + /loom-upgrade dry-run + back-compat check"
-  m02GateItem: "Manual smoke test: open scratch.py in Claude Code with python-conventions installed; confirm activation on .py but not .ts"
+summary: |
+  Wave 3 ships /loom-roadmap status as a pure read over state.toon, a
+  reusable digest renderer (buildDigest + renderDigest), and resume-delegate
+  for /loom-resume dual-state ordering. digest.ts is I/O-free; a grep guard
+  test asserts zero write primitives. resume-delegate.ts orders pipeline-state
+  and roadmap-converge state by mtime, most-recently-modified first.
+
+keyDecisions[3]:
+  digest.ts kept I/O-free; readState lives in state-io.ts so digest module is trivially testable and provably pure
+  Purity enforced via grep guard test (digest-purity.test.ts) that scans digest.ts for fs write primitives
+  Dual-state resume ordering uses mtime descending — recent state wins regardless of which pipeline produced it
+
+nextStageHints[3]:
+  Phase 4 (multi-roadmap) plumbs --roadmap path through status; slug-derived paths feed digest builder
+  Phase 6 (/loom-resume integration) wires resume-delegate.ts into the resume command
+  --all CLI runner is described in status.md but a CLI entrypoint script may need wiring in Phase 6
+
+crossBoundaryRequests[2]:
+  skills/library.yaml: register commands/loom-roadmap/status.md under library.prompts
+  .claude/orchestration.toml: register status command alongside converge and sign-off
