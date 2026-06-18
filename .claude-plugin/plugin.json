@@ -1,0 +1,33 @@
+{
+  "name": "loom",
+  "version": "0.1.0",
+  "description": "Loom — meta-orchestration platform for Claude Code. Plans, executes, reviews, and tests software changes with multi-agent pipelines, hook-enforced contracts, and a pull-on-demand library.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "loom",
+    "orchestration",
+    "planning",
+    "agents",
+    "hooks",
+    "claude-code"
+  ],
+  "author": {
+    "name": "LaunchStack",
+    "url": "https://github.com/launchstack-dev/loom-ai"
+  },
+  "repository": "https://github.com/launchstack-dev/loom-ai",
+  "agents": [
+    "./agents"
+  ],
+  "commands": [
+    "./commands"
+  ],
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json",
+  "permissions": [
+    "hooks:SessionStart",
+    "hooks:PreToolUse",
+    "hooks:PostToolUse",
+    "hooks:Stop"
+  ]
+}

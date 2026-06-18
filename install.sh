@@ -9,6 +9,28 @@
 
 set -euo pipefail
 
+# ── Exit codes ──
+# 0 — success
+# 1 — generic failure (network, missing files, MANIFEST_INVALID)
+# 9 — INSTALL_CONFLICT_PLUGIN_AND_CURL (Loom already installed as a plugin)
+
+# ── Pre-flight: refuse to install over a plugin install ──
+# The curl-installed Loom (~/.claude/) and the marketplace plugin install
+# (~/.claude/plugins/loom/) write to overlapping locations and ship distinct
+# update paths. Running both leaves the user with two copies fighting over the
+# same settings.json — silent hook duplication, partial upgrades. Refuse early.
+if command -v claude >/dev/null 2>&1; then
+  if claude plugin list 2>/dev/null | grep -q '\bloom\b'; then
+    cat >&2 <<'EOF'
+INSTALL_CONFLICT_PLUGIN_AND_CURL
+Loom is already installed as a Claude Code plugin. The curl path and the
+plugin path are mutually exclusive.
+Migration: run `/loom-uninstall` first, then re-run this installer.
+EOF
+    exit 9
+  fi
+fi
+
 REPO="launchstack-dev/loom-ai"
 BRANCH="main"
 BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
@@ -23,6 +45,7 @@ declare -a INFRA_FILES=(
   "hooks/statusline-command.sh:${CLAUDE_DIR}/statusline-command.sh"
   "hooks/loom-update-checker.cjs:${CLAUDE_DIR}/loom-update-checker.cjs"
   "hooks/run-hook.sh:${CLAUDE_DIR}/run-hook.sh"
+  "scripts/probe-hook-runtime.sh:${CLAUDE_DIR}/scripts/probe-hook-runtime.sh"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -109,6 +132,7 @@ mkdir -p "${CLAUDE_DIR}/commands"
 mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
 mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
 mkdir -p "${CLAUDE_DIR}/config"
+mkdir -p "${CLAUDE_DIR}/scripts"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CLAUDE_DIR}/templates/hooks"
 mkdir -p "${CLAUDE_DIR}/templates/scripts"
@@ -152,6 +176,35 @@ fetch_file() {
   mv "${tmp}" "${dst}"
   return 0
 }
+
+# ── Optional tarball sha256 verification (forward-compatible) ──
+# When invoked with LOOM_RELEASE_TARBALL pointing at a downloaded release
+# tarball and LOOM_RELEASE_MANIFEST pointing at the matching manifest.toon,
+# verify the tarball's sha256 against the manifest's `sha256:` field BEFORE
+# any extraction. On mismatch: exit with MANIFEST_INVALID without extracting.
+# This guards the future per-release tarball install path; the legacy
+# file-by-file fetch below remains the default.
+if [ -n "${LOOM_RELEASE_TARBALL:-}" ] && [ -n "${LOOM_RELEASE_MANIFEST:-}" ]; then
+  if [ ! -f "${LOOM_RELEASE_TARBALL}" ]; then
+    echo "MANIFEST_INVALID: tarball not found at ${LOOM_RELEASE_TARBALL}" >&2
+    exit 1
+  fi
+  if [ ! -f "${LOOM_RELEASE_MANIFEST}" ]; then
+    echo "MANIFEST_INVALID: manifest not found at ${LOOM_RELEASE_MANIFEST}" >&2
+    exit 1
+  fi
+  expected_sha=$(grep -E '^sha256:' "${LOOM_RELEASE_MANIFEST}" | awk '{print $2}' | head -n 1)
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_sha=$(sha256sum "${LOOM_RELEASE_TARBALL}" | awk '{print $1}')
+  else
+    actual_sha=$(shasum -a 256 "${LOOM_RELEASE_TARBALL}" | awk '{print $1}')
+  fi
+  if [ -z "${expected_sha}" ] || [ "${expected_sha}" != "${actual_sha}" ]; then
+    echo "MANIFEST_INVALID: sha256 mismatch (expected ${expected_sha:-<none>}, got ${actual_sha})" >&2
+    exit 1
+  fi
+  echo "  OK   tarball sha256 verified against manifest"
+fi
 
 # ── Fetch checksums manifest ──
 CHECKSUMS_FILE="${CACHE_DIR}/checksums.sha256"
@@ -327,6 +380,35 @@ elif command -v npx >/dev/null 2>&1; then
   hook_runtime="npx tsx (fallback; ~1-2s cold start per hook — install bun for ~50ms)"
 else
   hook_runtime="NONE"
+fi
+
+# ── Post-install probe: verify hook wrapper resolves under a stripped PATH ──
+# Confirms PR #9's PATH-salvage works on this machine. Non-blocking: a probe
+# failure prints a warning and points the user at /loom-doctor.
+PROBE_SCRIPT="${CLAUDE_DIR}/scripts/probe-hook-runtime.sh"
+# In a fresh curl install, scripts/probe-hook-runtime.sh isn't fetched into
+# ~/.claude/. Fall back to running it from the source checkout if present.
+if [ ! -f "${PROBE_SCRIPT}" ]; then
+  if [ -f "scripts/probe-hook-runtime.sh" ]; then
+    PROBE_SCRIPT="scripts/probe-hook-runtime.sh"
+  else
+    PROBE_SCRIPT=""
+  fi
+fi
+if [ -n "${PROBE_SCRIPT}" ]; then
+  echo ""
+  echo "Running hook-runtime probe..."
+  if sh "${PROBE_SCRIPT}" >/dev/null 2>&1; then
+    echo "  OK   hook wrapper resolves runtime under stripped PATH"
+  else
+    probe_rc=$?
+    if [ "${probe_rc}" -eq 2 ]; then
+      echo "  SKIP probe target hook missing (non-fatal)"
+    else
+      echo "  WARN hook-runtime probe failed (exit ${probe_rc})"
+      echo "       Run /loom-doctor for diagnostics."
+    fi
+  fi
 fi
 
 # ── Done ──
