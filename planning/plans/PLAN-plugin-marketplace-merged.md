@@ -14,7 +14,7 @@ featureRefs:
 supersedes:
   - planning/plans/PLAN-plugin-distribution.md
   - planning/plans/PLAN-plugin-marketplace-migration.md
-totalPhases: 18
+totalPhases: 21
 totalWaves: 12
 lastReviewed: 2026-06-17
 lastIntegrated: 2026-06-17
@@ -318,12 +318,14 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 
 ## Execution Phases
 
-### Phase 0 — Wave 0: Contracts & Schemas
+### Phase 0A — Wave 0: Ratify & modify existing schemas
+
+> **Split note (validation gate fix, 2026-06-17):** The original Phase 0 had 13 deliverables, exceeding the `validation-rules.md` Stage 4 cap of 12. Phase 0 was split into 0A (modify/verify existing schemas, 6 deliverables) and 0B (create new schemas, interfaces, validator, upstream refresh, 7 deliverables). Both run parallel in Wave 0 — disjoint file ownership. Downstream "Dependencies: Phase 0" references are interpreted as "Phase 0A AND Phase 0B" (the umbrella).
 
 **Agent:** contracts-agent
-**Objective:** Verify and ratify the Wave 0 schemas already on disk; reconcile the DoctorReport `category` enum with this plan's check registry; add two new schemas (`update-check.schema.md`, `submission-evidence.schema.md`); refresh the upstream snapshot.
+**Objective:** Verify the 3 schemas already on disk that need no changes; modify the 3 existing schemas that need plan-specific changes (plugin-manifest permissions field, doctor-report enum + registry, settings-tier managed-tier note).
 **Dependencies:** None
-**File Ownership:** agents/protocols/plugin-manifest.schema.md, agents/protocols/hook-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/migration-evidence.schema.md, agents/protocols/settings-tier.schema.md, agents/protocols/migration-runner.schema.md, agents/protocols/update-check.schema.md, agents/protocols/submission-evidence.schema.md, agents/protocols/upstream/plugin.schema.json, agents/protocols/upstream/.meta.toon, scripts/validate-toon-schemas.ts
+**File Ownership:** agents/protocols/plugin-manifest.schema.md, agents/protocols/hook-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/migration-evidence.schema.md, agents/protocols/settings-tier.schema.md, agents/protocols/migration-runner.schema.md
 
 #### Deliverables
 
@@ -335,6 +337,33 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 | agents/protocols/migration-evidence.schema.md | Verify | contracts-agent |
 | agents/protocols/settings-tier.schema.md | Modify — document `managed` tier as immutable for Loom; reference `managed-tier-detected` check | contracts-agent |
 | agents/protocols/migration-runner.schema.md | Verify | contracts-agent |
+
+#### Acceptance Criteria
+
+- [ ] `agents/protocols/doctor-report.schema.md` `category` enum matches this plan's check registry exactly (`channel \| hook-wiring \| settings \| tier`); the exemplar block uses the new enum values
+- [ ] `agents/protocols/doctor-report.schema.md` includes the 12-check registry from this plan (3 new entries: `channel-upgrade-available`, `permissions-derived`, `managed-tier-detected`)
+- [ ] `agents/protocols/plugin-manifest.schema.md` declares `permissions: string[]` as a required field
+- [ ] `agents/protocols/settings-tier.schema.md` documents the `managed` tier as immutable for Loom
+- [ ] The 3 verify-only schemas (`hook-manifest`, `migration-evidence`, `migration-runner`) are unchanged on disk (`git diff --stat` reports 0 lines)
+- [ ] `tsc --noEmit` exits 0
+
+#### Convergence Targets
+
+- The 3 modified schemas reflect plan-specific changes
+- The 3 verified schemas remain unchanged
+- DoctorReport exemplar block parses against the regenerated category enum
+
+### Phase 0B — Wave 0: Create new schemas, interfaces, validator, upstream refresh
+
+**Agent:** contracts-agent
+**Objective:** Create the 2 new schemas (`update-check`, `submission-evidence`), the 2 new TypeScript interfaces (`Check`, `MigrationRunner`) that 9A2 and 9B compile against in parallel, the TOON schema validator script, and the upstream snapshot refresh (live docs → snapshot file + meta).
+**Dependencies:** None (parallel with Phase 0A)
+**File Ownership:** agents/protocols/update-check.schema.md, agents/protocols/submission-evidence.schema.md, scripts/lib/doctor/migration-runner.interface.ts, scripts/lib/doctor/check.interface.ts, agents/protocols/upstream/plugin.schema.json, agents/protocols/upstream/.meta.toon, scripts/validate-toon-schemas.ts
+
+#### Deliverables
+
+| File | Action | Owner hint |
+|---|---|---|
 | agents/protocols/update-check.schema.md | **Create** — schema for `/loom-update --check --json` output: `{currentVersion, latestVersion, behind: int, pinnedVersion: string \| null}` | contracts-agent |
 | agents/protocols/submission-evidence.schema.md | **Create** — schema for `marketplace/submission-evidence.toon`: `{submittedAt, releaseTag, sigstoreAttestationUrl, marketplacePrUrl, maintainerApprovalIssueUrl, outcome: pending \| accepted \| rejected}` | contracts-agent |
 | scripts/lib/doctor/migration-runner.interface.ts | **Create (moved from Phase 9A, pass 2 fix B-2-1)** — TypeScript interface `MigrationRunner { run(): Promise<MigrationEvidence>; reconcile(channel): Promise<void>; resetEvidence(checkId): Promise<void> }` consumed by Phase 9A1's `--fix` dispatch and implemented by Phase 9B's `scripts/lib/migration-runner.ts`. Lives in Phase 0 so 9A1 and 9B compile against it in parallel without a sibling dependency. | contracts-agent |
@@ -346,19 +375,17 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 #### Acceptance Criteria
 
 - [ ] `bunx tsx scripts/validate-toon-schemas.ts` exits 0
-- [ ] Every schema file has a TOON-format exemplar block
-- [ ] `agents/protocols/doctor-report.schema.md` `category` enum matches this plan's check registry exactly (`channel \| hook-wiring \| settings \| tier`); the exemplar block uses the new enum values
-- [ ] `agents/protocols/doctor-report.schema.md` includes the 12-check registry from this plan (3 new entries: `channel-upgrade-available`, `permissions-derived`, `managed-tier-detected`)
-- [ ] `agents/protocols/plugin-manifest.schema.md` declares `permissions: string[]` as a required field
+- [ ] Every schema file has a TOON-format exemplar block (verified by the new validator)
 - [ ] **InstallState reconciliation acknowledged:** the existing on-disk `agents/protocols/install-state.schema.md` (v3 component-inventory at `~/.claude/skills/library/install-state.toon`) is preserved unchanged; this plan's `InstallState` (channel envelope at `~/.loom/install.toon`) is a separate concern. A new note at the top of `install-state.schema.md` documents the relationship: v3 is consumed only by `loom-update --rollback`; channel envelope is consumed by doctor + update CLIs.
 - [ ] `agents/protocols/update-check.schema.md` and `agents/protocols/submission-evidence.schema.md` exist and validate
 - [ ] `scripts/refresh-upstream-schemas.sh --check` exits 0 on CI (snapshot in sync with live docs)
+- [ ] Both new TypeScript interfaces (`Check`, `MigrationRunner`) compile under `tsc --noEmit`
 - [ ] `tsc --noEmit` exits 0
 
 #### Convergence Targets
 
-- All nine schema files (7 existing + 2 new) pass the validator
-- DoctorReport exemplar block parses against the regenerated category enum
+- Both new schemas pass the validator
+- Both new TypeScript interfaces compile and are importable
 - Upstream snapshot extracted from live docs without manual edits
 - Schema linter reports zero references to undefined types
 
@@ -366,7 +393,7 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 
 **Agent:** implementer-agent
 **Objective:** Implement `hooks/lib/plugin-root-resolver.ts` as the single resolution layer for plugin-root-relative paths.
-**Dependencies:** Phase 0
+**Dependencies:** Phase 0A, Phase 0B
 **File Ownership:** hooks/lib/plugin-root-resolver.ts, hooks/lib/plugin-root-resolver.test.ts
 
 #### Deliverables
@@ -435,7 +462,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship `.claude-plugin/plugin.json`, `hooks/hooks.json`, the PR #9 hook-PATH-wrapper verification, fail-loud logger, and `install.sh` mutual-exclusion probe (exit code 9 on plugin presence).
-**Dependencies:** Phase 0
+**Dependencies:** Phase 0A, Phase 0B
 **File Ownership:** .claude-plugin/plugin.json, hooks/hooks.json, hooks/run-hook.sh, hooks/lib/fail-loud-logger.ts, hooks/lib/fail-loud-logger.test.ts, install.sh, scripts/probe-hook-runtime.sh, loom-init-audit-notes.md, test/fixtures/hook-input.json, test/plugin-manifest.test.ts, test/install-mutual-exclusion.test.ts
 
 #### Deliverables
@@ -520,7 +547,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Implement graceful no-op for all `/loom-*` commands, 24h suppression marker, and author `commands/loom-init.md` (SOLE writer per Wave 2 ownership resolution).
-**Dependencies:** Phase 0, Phase 1, Phase 2, Phase 5 (consumes `marketplace/loom-init-success-output.toon`)
+**Dependencies:** Phase 0A, Phase 0B, Phase 1, Phase 2, Phase 5 (consumes `marketplace/loom-init-success-output.toon`)
 **File Ownership:** hooks/lib/init-guard.ts, hooks/lib/init-guard.test.ts, hooks/lib/dismissal-marker.ts, hooks/lib/dismissal-marker.test.ts, commands/_loom-init-guard.md, commands/loom-init.md
 
 > **Forward-reference resolution (review finding):** v1 of this plan listed `commands/loom-init.md` as `Create` but the file already exists at 22,769 bytes. Phase 3 MODIFIES the existing file: replaces the body to integrate the init-guard snippet, the Phase 2 audit notes, and the Phase 5 success-output spec. The wave-wiring step is folded into Phase 3's own implementer-agent action (no separate wiring agent needed), since the agent already reads Phase 5's output as a dependency.
@@ -610,7 +637,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** On first invocation (either channel), write `~/.loom/install.toon` with channel, source, runtime version, and timestamps. Detect resumed install state via `updateInProgress` and `installError`. Ship a cheap weekly GHA cron that aggregates opt-in `install.toon.source` reports posted to a GitHub Discussions thread — closes the "lying schema" gap from the strategy review without standing up a telemetry server.
-**Dependencies:** Phase 0, Phase 1
+**Dependencies:** Phase 0A, Phase 0B, Phase 1
 **File Ownership:** scripts/lib/install-state.ts, scripts/lib/install-state.test.ts, scripts/lib/first-run.ts, scripts/lib/first-run.test.ts, scripts/install-source-digest.ts, .github/workflows/install-source-digest.yml
 
 #### Deliverables
@@ -690,7 +717,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Author marketplace listing copy AND the canonical `/loom-init` success-output reference artifact. **This phase fixes the listing-side gap that PLAN-plugin-marketplace-migration left under-specified.**
-**Dependencies:** Phase 0
+**Dependencies:** Phase 0A, Phase 0B
 **File Ownership:** marketplace/listing.md, marketplace/listing-checklist.md, marketplace/listing-content-spec.md, marketplace/loom-init-success-output.toon
 
 #### Deliverables
@@ -764,7 +791,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Single GHA workflow triggered by `git tag vX.Y.Z`: build tarball, upload to GitHub Releases, generate manifest with sha256, open marketplace-repo PR (gated on passing sigstore workflow), auto-generate CHANGELOG. Convergence target runs locally via `act`.
-**Dependencies:** Phase 0, Phase 2, Phase 4
+**Dependencies:** Phase 0A, Phase 0B, Phase 2, Phase 4
 **File Ownership:** .github/workflows/release.yml, scripts/build-release-tarball.ts, scripts/generate-manifest.ts, scripts/generate-changelog.ts, scripts/open-marketplace-pr.ts, fixtures/v0.1.0-test-event.json, docs/release-runbook.md
 
 #### Deliverables
@@ -829,7 +856,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** CI check on every tagged release computes sha256 of the Release asset vs manifest and fails on mismatch; sigstore/cosign attestation on the Release asset. **This phase IS M-06 Phase 1 (signed releases) — the `blockedUntil` dependency from PLAN-plugin-marketplace-migration is self-contained.**
-**Dependencies:** Phase 0, Phase 6
+**Dependencies:** Phase 0A, Phase 0B, Phase 6
 **File Ownership:** .github/workflows/manifest-drift.yml, .github/workflows/sigstore-attest.yml, scripts/verify-manifest-drift.ts, scripts/sigstore-attest.sh
 
 #### Deliverables
@@ -886,7 +913,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Containerized clean-machine harness — Docker base image, install Claude Code, run `/plugin install loom` against a local tarball fixture (or live registry), exercise first-invocation flow with stripped subprocess PATH.
-**Dependencies:** Phase 0, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6
+**Dependencies:** Phase 0A, Phase 0B, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6
 **File Ownership:** test/docker/Dockerfile, test/docker/run-harness.sh, test/plugin-install-e2e.test.ts, test/worktree-init.test.ts, test/fixtures/expected-init-output.txt
 
 #### Deliverables
@@ -961,7 +988,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship the `/loom-doctor` CLI entry, check-module dispatcher, rendering, bundle, and integration test. Does NOT implement check modules (Phase 9A2) or migration runner (Phase 9B). All three Wave 5a phases run in parallel, compiling against Phase 0 interfaces.
-**Dependencies:** Phase 0 (consumes `check.interface.ts`, `migration-runner.interface.ts`, all schemas), Phase 1, Phase 2, Phase 4
+**Dependencies:** Phase 0A, Phase 0B (consumes `check.interface.ts`, `migration-runner.interface.ts`, all schemas), Phase 1, Phase 2, Phase 4
 
 > **Pass 3 split (B-2-3):** Original Phase 9A had 20 deliverables — over the 12-cap. Split into 9A1 (CLI surface, **6 deliverables**) and 9A2 (12 check modules + test, 13 deliverables). Both reference the `Check` interface declared in Phase 0; the dispatcher uses dynamic `import.meta.glob` (or equivalent) to load `scripts/lib/doctor/checks/*.ts` at runtime, so 9A1 and 9A2 compile independently. **`test/loom-doctor.test.ts` (9A1-owned) MUST NOT statically import any `scripts/lib/doctor/checks/*.ts` file** — it exercises the dispatcher only; static imports would defeat the parallel-compile pattern (parallelization-agent finding).
 
@@ -1004,13 +1031,15 @@ automatable: true
 
 (S-01..S-05 from prior 9A section apply — moved here unchanged.)
 
-### Phase 9A2 — Wave 5a: /loom-doctor check modules
+### Phase 9A2a — Wave 5a: /loom-doctor check modules (channel + tier)
+
+> **Split note (validation gate fix, 2026-06-17):** The original Phase 9A2 had 13 deliverables (12 check modules + 1 test file), exceeding the `validation-rules.md` Stage 4 cap of 12. It was split by check category into 9A2a (channel + tier checks, 7 deliverables) and 9A2b (hook-wiring + settings checks, 7 deliverables). Both run parallel in Wave 5a — disjoint file ownership (each owns its category's check modules and its own test file). Downstream "Dependencies: Phase 9A2" references are interpreted as "Phase 9A2a AND Phase 9A2b" (the umbrella). The single `checks.test.ts` file becomes two category-scoped test files.
 
 **Agent:** implementer-agent
-**Objective:** Implement all 12 check modules under `scripts/lib/doctor/checks/`. Each module exports a class conforming to Phase 0's `Check` interface. Pure-function check logic; no dispatcher concerns.
-**Dependencies:** Phase 0 (consumes `check.interface.ts`, all schemas), Phase 1, Phase 2, Phase 4
+**Objective:** Implement the 6 `channel` and `tier` category check modules under `scripts/lib/doctor/checks/`. Each module exports a class conforming to Phase 0B's `Check` interface. Pure-function check logic; no dispatcher concerns.
+**Dependencies:** Phase 0B (consumes `check.interface.ts`), Phase 0A (consumes `doctor-report.schema.md` registry), Phase 1, Phase 2, Phase 4
 
-**File Ownership:** scripts/lib/doctor/checks/*.ts (12 modules), scripts/lib/doctor/__tests__/checks.test.ts
+**File Ownership:** scripts/lib/doctor/checks/version-drift.ts, scripts/lib/doctor/checks/channel-files.ts, scripts/lib/doctor/checks/install-interrupted.ts, scripts/lib/doctor/checks/channel-upgrade-available.ts, scripts/lib/doctor/checks/tier-ambiguous.ts, scripts/lib/doctor/checks/managed-tier-detected.ts, scripts/lib/doctor/__tests__/channel-tier-checks.test.ts
 
 #### Deliverables
 
@@ -1020,33 +1049,61 @@ automatable: true
 | scripts/lib/doctor/checks/channel-files.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/install-interrupted.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/channel-upgrade-available.ts | Create — fires on curl machines where Claude Code plugin marketplace is reachable; severity info, exit 0; remediation directs user to `/loom-uninstall` then `/plugin install loom` | implementer-agent |
+| scripts/lib/doctor/checks/tier-ambiguous.ts | Create | implementer-agent |
+| scripts/lib/doctor/checks/managed-tier-detected.ts | Create — detects Loom entries in `managed-settings.json`; info-severity; does NOT trigger tier-ambiguous | implementer-agent |
+| scripts/lib/doctor/__tests__/channel-tier-checks.test.ts | Create — one test per channel/tier check; uses injectable fetch / fs / install-state fixtures | implementer-agent |
+
+#### Acceptance Criteria
+
+- [ ] Each of the 6 check files exports a default class implementing Phase 0B's `Check` interface; verified by `tsc --noEmit` against `scripts/lib/doctor/check.interface.ts`
+- [ ] Each check has a corresponding test fixture with at least one happy-path and one fail/warn case
+- [ ] `bunx vitest run scripts/lib/doctor/__tests__/channel-tier-checks.test.ts` exits 0
+- [ ] `channel-upgrade-available` fires on a curl machine when the plugin marketplace is reachable; info severity; exit code 0
+- [ ] `managed-tier-detected` fires when `managed-settings.json` has Loom entries; does NOT trigger `tier-ambiguous`
+- [ ] Network failure on `version-drift` check yields warn, not fail (graceful degradation); uses injectable fetch interface
+
+#### Convergence Targets
+
+- All 6 channel + tier check modules implement the Check interface
+- Each module passes its dedicated test
+- Coverage: every channel/tier check ID in the doctor-report.schema.md registry has a corresponding `scripts/lib/doctor/checks/{id}.ts` file
+
+### Phase 9A2b — Wave 5a: /loom-doctor check modules (hook-wiring + settings)
+
+**Agent:** implementer-agent
+**Objective:** Implement the 6 `hook-wiring` and `settings` category check modules under `scripts/lib/doctor/checks/`. Each module exports a class conforming to Phase 0B's `Check` interface. Pure-function check logic; no dispatcher concerns.
+**Dependencies:** Phase 0B (consumes `check.interface.ts`), Phase 0A (consumes `doctor-report.schema.md` registry), Phase 1, Phase 2, Phase 4
+
+**File Ownership:** scripts/lib/doctor/checks/hook-files-present.ts, scripts/lib/doctor/checks/runner-resolution.ts, scripts/lib/doctor/checks/anchor-form.ts, scripts/lib/doctor/checks/orphan-entries.ts, scripts/lib/doctor/checks/bare-anchor.ts, scripts/lib/doctor/checks/permissions-derived.ts, scripts/lib/doctor/__tests__/hook-settings-checks.test.ts
+
+#### Deliverables
+
+| File | Action | Owner hint |
+|---|---|---|
 | scripts/lib/doctor/checks/hook-files-present.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/runner-resolution.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/anchor-form.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/orphan-entries.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/bare-anchor.ts | Create | implementer-agent |
 | scripts/lib/doctor/checks/permissions-derived.ts | Create — validates `plugin.json#permissions[]` matches the union of `hooks.json` matchers | implementer-agent |
-| scripts/lib/doctor/checks/tier-ambiguous.ts | Create | implementer-agent |
-| scripts/lib/doctor/checks/managed-tier-detected.ts | Create — detects Loom entries in `managed-settings.json`; info-severity; does NOT trigger tier-ambiguous | implementer-agent |
-| scripts/lib/doctor/__tests__/checks.test.ts | Create — one test per check; uses injectable fetch / fs / install-state fixtures | implementer-agent |
+| scripts/lib/doctor/__tests__/hook-settings-checks.test.ts | Create — one test per hook-wiring/settings check; uses injectable fetch / fs / install-state fixtures | implementer-agent |
 
 #### Acceptance Criteria
 
-- [ ] Each of the 12 check files exports a default class implementing Phase 0's `Check` interface; verified by `tsc --noEmit` of every module against `scripts/lib/doctor/check.interface.ts`
+- [ ] Each of the 6 check files exports a default class implementing Phase 0B's `Check` interface; verified by `tsc --noEmit` against `scripts/lib/doctor/check.interface.ts`
 - [ ] Each check has a corresponding test fixture with at least one happy-path and one fail/warn case
-- [ ] `bunx vitest run scripts/lib/doctor/__tests__/checks.test.ts` exits 0
-- [ ] `channel-upgrade-available` fires on a curl machine when the plugin marketplace is reachable; info severity; exit code 0
+- [ ] `bunx vitest run scripts/lib/doctor/__tests__/hook-settings-checks.test.ts` exits 0
 - [ ] `permissions-derived` fires when `plugin.json#permissions[]` does not match the matcher union from `hooks.json`
-- [ ] `managed-tier-detected` fires when `managed-settings.json` has Loom entries; does NOT trigger `tier-ambiguous`
-- [ ] Network failure on `version-drift` check yields warn, not fail (graceful degradation); uses injectable fetch interface
 
 #### Convergence Targets
 
-- All 12 check modules implement the Check interface
+- All 6 hook-wiring + settings check modules implement the Check interface
 - Each module passes its dedicated test
-- Coverage: every check ID in the doctor-report.schema.md registry has a corresponding `scripts/lib/doctor/checks/{id}.ts` file
+- Coverage: every hook-wiring/settings check ID in the doctor-report.schema.md registry has a corresponding `scripts/lib/doctor/checks/{id}.ts` file
 
-#### Scenarios
+#### Scenarios (shared across Phase 9A2a + 9A2b)
+
+> Integration-tier scenarios spanning the dispatcher (Phase 9A1) and the check modules from both 9A2a (channel: S-02, S-05; tier: S-04) and 9A2b (hook-wiring: S-03). S-01 is the dispatcher-level clean-install scenario. These scenarios are owned by both 9A2 sub-phases for acceptance purposes and verified at integration-tier convergence.
 
 ```toon
 id: S-01
@@ -1117,7 +1174,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Implement the migration subsystem that `/loom-doctor --fix` (Phase 9A) and the SessionStart hook both delegate to. Idempotent legacy rewrites, ownership-evidence enforcement, `MIGRATION_OWNERSHIP_DIVERGED` walkable recovery via `--reset-evidence`.
-**Dependencies:** Phase 0, Phase 1, Phase 2, Phase 4
+**Dependencies:** Phase 0A, Phase 0B, Phase 1, Phase 2, Phase 4
 **File Ownership:** scripts/lib/migration-runner.ts, scripts/lib/ownership-evidence.ts, hooks/loom-migration.ts, test/loom-migration.test.ts
 
 #### Deliverables
@@ -1191,7 +1248,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Implement the TierResolution algorithm and the `--tier` flag on `register-loom-hooks.ts`. Append the `loom-migration` SessionStart entry to LOOM_HOOKS for curl users. NO command-file edits (Phase 10B) and NO `hooks/hooks.json` modification (Phase 10B). Tight context budget — only reads `register-loom-hooks.ts` + Phase 9B outputs.
-**Dependencies:** Phase 0, Phase 9B (consumes `scripts/lib/migration-runner.ts` and `hooks/loom-migration.ts` paths for the LOOM_HOOKS append)
+**Dependencies:** Phase 0A, Phase 0B, Phase 9B (consumes `scripts/lib/migration-runner.ts` and `hooks/loom-migration.ts` paths for the LOOM_HOOKS append)
 
 > **Pass 3 split (C-2-4):** Original Phase 10 read 6 large command files (~35k tokens) before any write. Split into 10A (core logic, ~5k context) and 10B (mechanical command-file passthroughs + hooks.json mod, surgical reads only). 10A produces the `--tier` flag contract; 10B applies it to call sites.
 
@@ -1228,7 +1285,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Apply the `--tier` flag passthrough mechanically to 6 entry-point command files; modify `hooks/hooks.json` to register the `loom-migration` SessionStart entry (symmetric with 10A's register-loom-hooks change). Each command file is a 1-line edit; use targeted `Read` operations (offset/limit) to avoid full-file context bloat.
-**Dependencies:** Phase 0, Phase 2 (hooks/hooks.json creator), Phase 3 (commands/loom-init.md creator), Phase 10A (consumes `--tier` flag contract)
+**Dependencies:** Phase 0A, Phase 0B, Phase 2 (hooks/hooks.json creator), Phase 3 (commands/loom-init.md creator), Phase 10A (consumes `--tier` flag contract)
 
 **File Ownership:** hooks/hooks.json (Modify), commands/loom-init.md (Modify), commands/loom-auto.md (Modify), commands/loom-roadmap/init.md (Modify), commands/loom-quick.md (Modify), commands/loom-change.md (Modify), commands/loom-plan.md (Modify), test/hooks-json-migration.test.ts
 
@@ -1307,17 +1364,16 @@ testTier: integration
 automatable: true
 ```
 
-### Phase 11 — Wave 6a: Docs + curl-path E2E
+### Phase 11A — Wave 6a: Docs restructure (README + decision matrix + rationale)
 
-> **Wave 6a (review finding):** Phases 11, 13, and 14 all run in Wave 6a in parallel — disjoint file ownership (README/docs vs scripts/lib/update vs scripts/lib/uninstall). Wave 6b runs Phase 12 (marketplace submission) serial-after 6a so the submission PR can reference the canonical README/decision-matrix from P11 AND assert a complete user lifecycle (install + doctor + update + uninstall) is shipped at MS-F.
+> **Split note (validation gate fix, 2026-06-17):** The original Phase 11 was counted at 14 deliverables by the validation gate (the 5-row deliverables table PLUS the 8-row README section-list contract treated as separate deliverables PLUS scenarios). Phase 11 was split into 11A (docs: README + decision matrix + kit-author rationale, 3 file deliverables) and 11B (E2E specs: 2 file deliverables). Both run parallel in Wave 6a — disjoint file ownership (docs/README vs test/e2e). Downstream "Dependencies: Phase 11" references are interpreted as "Phase 11A AND Phase 11B" (the umbrella). The README section-list contract is owned by 11A.
+
+> **Wave 6a (review finding):** Phases 11A, 11B, 13, and 14 all run in Wave 6a in parallel — disjoint file ownership (README/docs vs E2E specs vs scripts/lib/update vs scripts/lib/uninstall). Wave 6b runs Phase 12 (marketplace submission) serial-after 6a so the submission PR can reference the canonical README/decision-matrix from P11A AND assert a complete user lifecycle (install + doctor + update + uninstall) is shipped at MS-F.
 
 **Agent:** implementer-agent
-**Dependencies:** Phase 0, Phase 2, Phase 3, Phase 9A1, Phase 9A2, Phase 9B, Phase 10A, Phase 10B (pass 2 fix H-2-2 + pass 3 split: was ambiguously "Phase 9" → "Phase 9A, Phase 9B, Phase 10" → now correctly references the 5 leaf phases)
-
-**Agent:** implementer-agent
-**Objective:** Restructure README with explicit plugin-path / curl-path sections, decision matrix, and three E2E specs verifying curl-path correctness AND runtime equivalence. **This phase fixes the docs-side gap that PLAN-plugin-marketplace-migration left under-specified.**
-**Dependencies (pass 3 cleanup R3-3):** ~~Phase 0, Phase 2, Phase 3, Phase 9, Phase 10~~ — superseded by the corrected dependency block above (Phase 0, Phase 2, Phase 3, Phase 9A1, Phase 9A2, Phase 9B, Phase 10A, Phase 10B). Stale block retained as a strike-through for changelog clarity; execution agents MUST use the corrected dependency list.
-**File Ownership:** README.md, planning/notes/plugin-marketplace-rationale.md, test/e2e/curl-install.spec.ts, test/e2e/runtime-equivalence.spec.ts, docs/install-decision-matrix.md
+**Objective:** Restructure README with explicit plugin-path / curl-path sections; author the decision-matrix and the kit-author rationale guide. **This phase fixes the docs-side gap that PLAN-plugin-marketplace-migration left under-specified.**
+**Dependencies:** Phase 0A, Phase 0B, Phase 2, Phase 3, Phase 9A1, Phase 9A2a, Phase 9A2b, Phase 9B, Phase 10A, Phase 10B
+**File Ownership:** README.md, planning/notes/plugin-marketplace-rationale.md, docs/install-decision-matrix.md
 
 #### Deliverables
 
@@ -1325,8 +1381,6 @@ automatable: true
 |---|---|---|
 | README.md | Modify — restructure per the section-list contract below | implementer-agent |
 | planning/notes/plugin-marketplace-rationale.md | Create — kit-author guide; why both paths; how to author kits that work under both anchor variables | implementer-agent |
-| test/e2e/curl-install.spec.ts | Create — fresh project → `curl install.sh` → run `/loom-doctor` → zero problems | implementer-agent |
-| test/e2e/runtime-equivalence.spec.ts | Create — same `/loom-quick` task under each install path produces equivalent hook fire sequence | implementer-agent |
 | docs/install-decision-matrix.md | Create — decision tree referenced from README and the marketplace listing | implementer-agent |
 
 **README section-list contract (acceptance reads against this contract — NOT a one-line "restructure"):**
@@ -1348,15 +1402,13 @@ automatable: true
 - [ ] README Quickstart presents the plugin path FIRST, curl path SECOND
 - [ ] Decision matrix is referenced from both README and `marketplace/listing.md`
 - [ ] `planning/notes/plugin-marketplace-rationale.md` covers the decision tree for kit authors
-- [ ] Curl-install E2E spec runs green on CI (e2e tier)
-- [ ] Runtime-equivalence spec asserts identical hook fire order and identical agent registration list across both install paths (e2e tier)
 - [ ] README "Differentiators" section surfaces the `/loom-doctor` + `/loom-converge` composability claim (qa-review tier)
 
 #### Convergence Targets
 
 - README section-header grep produces the 8 section markers in order
-- Curl E2E spec exits 0
-- Runtime-equivalence spec produces matching `checks[].id` arrays from plugin-fixture and curl-fixture invocations
+- Decision-matrix doc is reachable from both README and `marketplace/listing.md`
+- Kit-author rationale guide covers the cross-path authoring decision tree
 
 #### Scenarios
 
@@ -1373,8 +1425,34 @@ testTier: unit
 automatable: true
 ```
 
+### Phase 11B — Wave 6a: Cross-path E2E specs
+
+**Agent:** implementer-agent
+**Objective:** Author the two E2E specs that verify curl-path correctness AND cross-path runtime equivalence (same `/loom-quick` task under each install path produces an equivalent hook fire sequence).
+**Dependencies:** Phase 0A, Phase 0B, Phase 2, Phase 3, Phase 9A1, Phase 9A2a, Phase 9A2b, Phase 9B, Phase 10A, Phase 10B
+**File Ownership:** test/e2e/curl-install.spec.ts, test/e2e/runtime-equivalence.spec.ts
+
+#### Deliverables
+
+| File | Action | Owner hint |
+|---|---|---|
+| test/e2e/curl-install.spec.ts | Create — fresh project → `curl install.sh` → run `/loom-doctor` → zero problems | implementer-agent |
+| test/e2e/runtime-equivalence.spec.ts | Create — same `/loom-quick` task under each install path produces equivalent hook fire sequence | implementer-agent |
+
+#### Acceptance Criteria
+
+- [ ] Curl-install E2E spec runs green on CI (e2e tier)
+- [ ] Runtime-equivalence spec asserts identical hook fire order and identical agent registration list across both install paths (e2e tier)
+
+#### Convergence Targets
+
+- Curl E2E spec exits 0
+- Runtime-equivalence spec produces matching `checks[].id` arrays from plugin-fixture and curl-fixture invocations
+
+#### Scenarios
+
 ```toon
-id: S-02
+id: S-01
 title: Curl install passes loom-doctor on fresh project
 given[1]: A fresh temp project directory with no .claude/
 when: curl install.sh is invoked then /loom-doctor is run
@@ -1387,7 +1465,7 @@ automatable: true
 ```
 
 ```toon
-id: S-03
+id: S-02
 title: Runtime equivalence between install paths
 given[2]: A fixture project plugin-install/ with .claude-plugin/plugin.json and ${CLAUDE_PLUGIN_ROOT}-anchored settings, A fixture project curl-install/ with hooks/run-hook.sh and ${CLAUDE_PROJECT_DIR}-anchored settings
 when: /loom-doctor --json is invoked against both fixtures
@@ -1403,7 +1481,7 @@ automatable: true
 
 **Agent:** implementer-agent for artifact authoring; **human-gate for convergence** (marketplace acceptance is a third-party decision)
 **Objective:** Submit Loom to the Anthropic plugin marketplace registry against a signed release tag (Phase 7 is M-06 Phase 1 self-contained); ship the plugin-path E2E spec. **Per the review finding, this phase produces artifacts that an agent can build but the convergence outcome (`outcome=accepted`) is decided by Anthropic. Convergence is qa-review tier; the agent is done when the submission PR opens with all `submission-evidence.toon` fields populated and `cosign verify` passes.**
-**Dependencies:** Phase 0, Phase 5 (listing-content-spec), Phase 7 (signed release), Phase 8 (harness), Phase 11 (decision matrix), Phase 13 (loom-update shipped), Phase 14 (loom-uninstall shipped — MS-F is full-lifecycle ship per user decision Q2)
+**Dependencies:** Phase 0A, Phase 0B, Phase 5 (listing-content-spec), Phase 7 (signed release), Phase 8 (harness), Phase 11A, Phase 11B (decision matrix), Phase 13 (loom-update shipped), Phase 14 (loom-uninstall shipped — MS-F is full-lifecycle ship per user decision Q2)
 **File Ownership:** test/e2e/plugin-install.spec.ts, marketplace/submission-pr.md, marketplace/submission-evidence.toon
 
 #### Deliverables
@@ -1462,7 +1540,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Ship `/loom-update` with `--check`, `--channel`, `--resume`, `--pin`, `--json`; writes `install.toon.updateInProgress` marker; explicit `Claude Code restart required` final line for plugin updates.
-**Dependencies:** Phase 0, Phase 1, Phase 4, Phase 9A1, Phase 9A2, Phase 10A (curl-path update calls `register-loom-hooks.ts` with `--tier` flag added by P10A; pass 3 split)
+**Dependencies:** Phase 0A, Phase 0B, Phase 1, Phase 4, Phase 9A1, Phase 9A2a, Phase 9A2b, Phase 10A (curl-path update calls `register-loom-hooks.ts` with `--tier` flag added by P10A; pass 3 split)
 **File Ownership:** commands/loom-update.md, scripts/loom-update.ts, scripts/lib/update/check.ts, scripts/lib/update/apply.ts, scripts/lib/update/resume.ts, scripts/lib/update/rollback.ts, scripts/lib/update/__tests__/*.test.ts, test/loom-update.test.ts
 
 #### Deliverables
@@ -1555,7 +1633,7 @@ automatable: true
 
 **Agent:** implementer-agent
 **Objective:** Inverse of install; removes `~/.claude/plugins/loom/`, settings.json hook entries, and `~/.loom/`; preserves project-root state by default; `--purge-project-state` requires typed literal confirmation.
-**Dependencies:** Phase 0, Phase 1, Phase 4
+**Dependencies:** Phase 0A, Phase 0B, Phase 1, Phase 4
 **File Ownership:** commands/loom-uninstall.md, scripts/loom-uninstall.ts, scripts/lib/uninstall/index.ts, scripts/lib/uninstall/confirm.ts, scripts/lib/uninstall/__tests__/*.test.ts, test/loom-uninstall.test.ts
 
 #### Deliverables
