@@ -1,0 +1,40 @@
+{
+  "ref": "refs/tags/v0.1.0-test",
+  "ref_type": "tag",
+  "ref_name": "v0.1.0-test",
+  "before": "0000000000000000000000000000000000000000",
+  "after": "deadbeefcafebabefeedfacefeedfacefeedfacef",
+  "created": true,
+  "deleted": false,
+  "forced": false,
+  "base_ref": null,
+  "compare": "https://github.com/launchstack-dev/loom-ai/compare/v0.0.0...v0.1.0-test",
+  "head_commit": {
+    "id": "deadbeefcafebabefeedfacefeedfacefeedfacef",
+    "tree_id": "0000000000000000000000000000000000000000",
+    "message": "release: v0.1.0-test (dry-run fixture)",
+    "timestamp": "2026-06-17T00:00:00Z",
+    "author": {
+      "name": "loom-release-bot",
+      "email": "loom-release-bot@users.noreply.github.com"
+    },
+    "committer": {
+      "name": "loom-release-bot",
+      "email": "loom-release-bot@users.noreply.github.com"
+    }
+  },
+  "pusher": {
+    "name": "loom-release-bot",
+    "email": "loom-release-bot@users.noreply.github.com"
+  },
+  "repository": {
+    "id": 0,
+    "name": "loom-ai",
+    "full_name": "launchstack-dev/loom-ai",
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "loom-release-bot",
+    "type": "Bot"
+  }
+}

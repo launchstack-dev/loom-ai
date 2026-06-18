@@ -1,0 +1,44 @@
+wave: 3a
+label: Wave 3a
+phases[1]: Phase 6
+agents[1]: implementer-agent (P6)
+status: complete
+verificationStatus: pass
+
+filesCreated[7]:
+  .github/workflows/release.yml
+  scripts/build-release-tarball.ts
+  scripts/generate-manifest.ts
+  scripts/generate-changelog.ts
+  scripts/open-marketplace-pr.ts
+  fixtures/v0.1.0-test-event.json
+  docs/release-runbook.md
+
+filesModified[1]:
+  .gitignore
+
+verifyCommands[4]{cmd,exit,note}:
+  bunx tsx scripts/build-release-tarball.ts --dry-run,0,dist/loom-local-test.tar.gz 1078649 bytes
+  bunx tsx scripts/generate-manifest.ts,0,sha256 ccd953ac6b3382245dbb8ec75f1b990d03b39d05195a329587d4d27b0b6129d1
+  shasum -a 256 dist/loom-local-test.tar.gz,0,matches manifest sha256
+  bunx tsx scripts/generate-changelog.ts --dry-run,0,grouped 21 commits since v0.0.1
+
+wiringApplied[1]{file,change,source}:
+  .gitignore,Added dist/ under Release build artifacts header,Phase 6 crossBoundaryRequest
+
+contractsLocked[3]{name,value,consumer}:
+  marketplaceRegistryFilename,marketplace-registry.toon,Phase 12 (marketplace submission)
+  sigstoreWorkflowName,sigstore-attest,Phase 7 must name workflow exactly this
+  dryRunArtifactPath,dist/loom-local-test.tar.gz,Phase 8 Docker harness
+
+keyDecisions[3]:
+  Dry-run triggered by tag suffix `-test` OR LOOM_DRY_RUN=true OR --dry-run flag.
+  open-marketplace-pr.ts exits 2 with SIGSTORE_NOT_VERIFIED if no successful sigstore-attest run on commit SHA.
+  Required prod secrets: vars.LOOM_MARKETPLACE_REPO, secrets.LOOM_MARKETPLACE_PR_TOKEN.
+
+deferredWork[1]:
+  act and actionlint not installed locally; CI runner is authoritative validator. Optional pre-merge: install actionlint and run `act push --eventpath fixtures/v0.1.0-test-event.json`.
+
+nextStageHints[2]:
+  Phase 7 workflow file name MUST be `.github/workflows/sigstore-attest.yml` and the workflow name MUST be `sigstore-attest` (verified by open-marketplace-pr.ts gh run list call).
+  Phase 12 submission PR appends to `marketplace-registry.toon` per the open-marketplace-pr.ts contract.

@@ -2,6 +2,9 @@ node_modules/
 .plan-execution/
 test/results/*.jsonl
 
+# Release build artifacts (Phase 6)
+dist/
+
 # Git worktrees managed by wt.sh
 .worktrees/
 
