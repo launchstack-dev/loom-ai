@@ -4,7 +4,7 @@
  * Wave 1 ships single-roadmap (slug defaults to "ROADMAP") and orchestrates:
  *
  *   1. Lock acquire (atomic O_EXCL; 10-min stale window; --force escape hatch)
- *   2. Archetype-detection hook seam (default no-op; Phase 4 fills the impl)
+ *   2. Archetype-detection hook seam (Phase 4: wired to archetype-detector.ts)
  *   3. Content-hash invalidation check + line-diff stderr notice
  *   4. Reviewer fan-out (one virtual call per dimension via spawnReviewer)
  *   5. Per-dimension AgentResult parsing — non-envelope = skip with
@@ -25,6 +25,8 @@
 
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+
+import { archetypeDetectionHook as defaultArchetypeDetectionHook } from "./archetype-detector.js";
 
 import {
   acquireLock,
@@ -172,7 +174,7 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
   const now = opts.now ?? (() => new Date());
   const passLimit = clamp(opts.passLimit ?? 3, 1, 5);
   const lockPath = lockFileFor(opts.slug);
-  const archetypeHook = opts.archetypeDetectionHook ?? noopArchetypeDetectionHook;
+  const archetypeHook = opts.archetypeDetectionHook ?? defaultArchetypeDetectionHook;
 
   const startedAt = now();
   const startedAtMs = startedAt.getTime();

@@ -20,10 +20,8 @@ applies only to Agent tool calls; sign-off runs as a deterministic script.
 
 | Flag | Default | Behaviour |
 |------|---------|-----------|
+| `--roadmap <path>` | `planning/ROADMAP.md` | Target a specific roadmap. Slug derived as filename without extension; state path resolved as `.roadmap-converge/{slug}/state.toon`. |
 | `--yes` | off | Skip the interactive y/n confirmation. The diff view still renders so the user can audit before confirming via the flag in CI. |
-
-`--roadmap <path>` plumbing arrives in Phase 4; v1 ships with the single
-default slug `ROADMAP` (the script reads `.roadmap-converge/ROADMAP/state.toon`).
 
 ### What this command does
 
@@ -70,8 +68,8 @@ Reason codes: `STATE_MISSING`, `SIGNOFF_NOT_ELIGIBLE:NO_PASS`,
 
 ### What this command does NOT do (deferred)
 
-- Multi-roadmap support beyond default slug (Phase 4 plumbs `--roadmap <path>`).
 - Status digest of the signed-off roadmap (Phase 3 wires this into `/loom-roadmap status`).
+- Batch sign-off across multiple roadmaps (planned for a later phase).
 
 ### Example
 
