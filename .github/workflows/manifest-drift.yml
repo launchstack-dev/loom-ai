@@ -1,0 +1,101 @@
+# manifest-drift — guards against the on-repo manifest.toon and the latest
+# published Release asset diverging. Two ways drift creeps in:
+#   1. A hotfix updates manifest.toon's sha256 without rebuilding the release
+#      asset (or pushes a new asset without regenerating the manifest).
+#   2. The release tarball is regenerated on a fork / wrong toolchain and the
+#      digest no longer matches what shipped.
+#
+# This workflow downloads the most recent Release asset, recomputes its sha256
+# via scripts/verify-manifest-drift.ts, and compares it to the on-repo
+# manifest.toon. Exits with the literal error code `MANIFEST_DRIFT` on stderr
+# when digests diverge — grep-asserted by downstream tooling.
+#
+# Bootstrap behavior: if no Release exists yet (first push to main on a fresh
+# repo), the job logs and exits 0 — there is nothing to compare against.
+
+name: manifest-drift
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-no-drift:
+    name: Verify manifest matches latest Release asset
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Locate latest Release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # `gh release view` returns non-zero if no release exists. Capture and
+          # branch on it for bootstrap-friendly skip.
+          if ! gh release view --json tagName,assets > release.json 2>release.err; then
+            if grep -qi "release not found" release.err || grep -qi "no releases" release.err; then
+              echo "manifest-drift: no Release found yet — skipping (bootstrap)" >&2
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            cat release.err >&2
+            exit 1
+          fi
+          TAG=$(jq -r '.tagName' release.json)
+          # Pick the tarball asset; manifest.toon contract names it loom-<ver>.tar.gz
+          # but we just take the first .tar.gz to remain version-agnostic.
+          ASSET=$(jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .name' release.json | head -n1)
+          if [ -z "${ASSET}" ] || [ "${ASSET}" = "null" ]; then
+            echo "manifest-drift: Release ${TAG} has no .tar.gz asset — skipping" >&2
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "asset=${ASSET}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "manifest-drift: comparing Release ${TAG} asset ${ASSET}"
+
+      - name: Download Release asset
+        if: steps.rel.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p _drift
+          gh release download "${{ steps.rel.outputs.tag }}" \
+            --pattern "${{ steps.rel.outputs.asset }}" \
+            --dir _drift
+
+      - name: Verify manifest sha256 matches Release asset
+        if: steps.rel.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          # Non-zero exit prints `MANIFEST_DRIFT` on stderr — grep-asserted by
+          # downstream tooling (per Phase 7 acceptance criteria).
+          bunx tsx scripts/verify-manifest-drift.ts \
+            --release-asset "_drift/${{ steps.rel.outputs.asset }}" \
+            --manifest manifest.toon
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.rel.outputs.skip }}" = "true" ]; then
+            echo "manifest-drift: skipped (no Release to compare)"
+          else
+            echo "manifest-drift: checked Release ${{ steps.rel.outputs.tag }} asset ${{ steps.rel.outputs.asset }}"
+          fi
