@@ -1,0 +1,42 @@
+# SubmissionEvidence — marketplace/submission-evidence.toon
+#
+# Schema: agents/protocols/submission-evidence.schema.md (schemaVersion 1).
+# Written by the Phase 12 marketplace submission flow; consumed by maintainer
+# dashboards and `/loom-marketplace status` (future).
+#
+# PLACEHOLDER STATE — pre-submission. The following fields contain TBD markers
+# and MUST be replaced before this file is committed alongside the marketplace
+# submission PR:
+#
+#   - submittedAt          — set to the actual UTC ISO8601 timestamp when the
+#                            marketplace PR is opened (placeholder value below
+#                            is documented as TBD in the inline comment).
+#   - sigstoreAttestationUrl
+#                          — replace `example.invalid/sigstore-TBD` with the
+#                            Sigstore transparency-log URL for the release
+#                            artifact (search.sigstore.dev/?logIndex=...).
+#                            CI gates submission on `cosign verify` exit 0
+#                            against this artifact.
+#   - marketplacePrUrl     — replace `example.invalid/pr-TBD` with the actual
+#                            Anthropic marketplace-registry PR URL once opened
+#                            (e.g. github.com/anthropics/claude-code-marketplace/pull/N).
+#   - maintainerApprovalIssueUrl
+#                          — replace `example.invalid/issue-TBD` with the
+#                            resolved internal Maintainer Review Gate issue
+#                            (e.g. github.com/launchstack-dev/loom-ai/issues/N).
+#                            MUST be closed before submission; the Phase 12
+#                            submission CI check (S-02) blocks on this.
+#
+# `outcome` starts as `pending` and is updated to `accepted` (PR merged) or
+# `rejected` (PR closed without merge) post-decision by the marketplace status
+# poller. `releaseTag` is set to the actual semver tag (e.g. 0.1.0) — drop the
+# leading `v` per schema regex `^\d+\.\d+\.\d+(-[\w.]+)?$`.
+
+SubmissionEvidence:
+  schemaVersion: 1
+  submittedAt: 2026-06-17T00:00:00Z
+  releaseTag: 0.1.0
+  sigstoreAttestationUrl: https://example.invalid/sigstore-TBD
+  marketplacePrUrl: https://example.invalid/pr-TBD
+  maintainerApprovalIssueUrl: https://example.invalid/issue-TBD
+  outcome: pending
