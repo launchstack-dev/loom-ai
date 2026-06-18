@@ -14,8 +14,16 @@
  *      yellow; both bands for red — dispatched on RoadmapDimension.status
  *      + parsed rubric sections
  *   8. Atomic state write
- *   9. Atomic StageContext write to .plan-execution/stage-context/execute.toon
- *   10. Lock release
+ *   9. Integrator-pass: apply resolved open_questions to ROADMAP.md surgically
+ *      (Phase 5). Validates IntegratorEnvelope; halts with INTEGRATOR_NO_ENVELOPE
+ *      on invalid return. Handles INTEGRATOR_NO_ENVELOPE and retains state.
+ *   10. Stall detection (Phase 5): two passes with identical dimension statuses
+ *       and no resolved questions → halted-stalled, STALL_DETECTED stderr, exit 1.
+ *   11. Pass-cap halt (Phase 5): round == passLimit and not all-green →
+ *       halted-pass-cap, PASS_CAP_REACHED stderr, exit 1.
+ *   12. Atomic StageContext write to .plan-execution/stage-context/execute.toon
+ *       and .plan-execution/stage-context/execute-integrator.toon
+ *   13. Lock release
  *
  * The driver is invoked by `commands/loom-roadmap/converge.md` (which talks
  * to `agents/roadmap-converge-driver.md`). The reviewer agent is invoked
@@ -44,6 +52,17 @@ import {
   stateFileFor,
   writeState,
 } from "./state-io.js";
+import {
+  autoResolveArchivedDimensions,
+  defaultIntegratorInvoker,
+  isIntegratorEnvelope,
+  type IntegratorEnvelope,
+  type IntegratorInvoker,
+} from "./integrator.js";
+import {
+  checkPassCap,
+  checkStall,
+} from "./stall-detector.js";
 import type {
   OpenQuestionV1,
   RoadmapConvergeStateV1,
@@ -61,6 +80,9 @@ export const PER_DIMENSION_FINDING_CAP = 5;
 
 /** Stage-context output path for the execute stage. */
 export const EXECUTE_STAGE_CONTEXT_PATH = ".plan-execution/stage-context/execute.toon";
+
+/** Stage-context output path for the integrator-pass stage (Phase 5). */
+export const EXECUTE_INTEGRATOR_STAGE_CONTEXT_PATH = ".plan-execution/stage-context/execute-integrator.toon";
 
 // ---------------------------------------------------------------------------
 // Reviewer envelope — minimal contract surface we consume from AgentResult
@@ -148,6 +170,12 @@ export interface DriverOptions {
   invokeReviewer: ReviewerInvoker;
   /** Archetype-detection seam. Default = no-op. */
   archetypeDetectionHook?: ArchetypeDetectionHook;
+  /**
+   * Integrator invoker seam (Phase 5). Production wires to a real agent call
+   * that spawns roadmap-converge-integrator.md. Tests inject deterministic mocks.
+   * Default = defaultIntegratorInvoker (in-process surgical edit).
+   */
+  invokeIntegrator?: IntegratorInvoker;
   /** Receives stderr lines (banner, advisories, footers). */
   stderr?: (line: string) => void;
   /** Deterministic clock for tests. */
@@ -157,9 +185,15 @@ export interface DriverOptions {
 }
 
 export interface DriverResult {
-  /** 0 on success, 1 on lock conflict / pre-flight failure. */
+  /** 0 on success, 1 on lock conflict / pre-flight failure / stall / pass-cap. */
   exitCode: number;
-  /** Optional reason code (LOCK_CONFLICT, ROADMAP_MISSING, etc.). */
+  /**
+   * Optional reason code:
+   *   LOCK_CONFLICT, ROADMAP_MISSING
+   *   INTEGRATOR_NO_ENVELOPE — integrator returned a non-envelope payload
+   *   STALL_DETECTED         — two identical passes, no questions resolved
+   *   PASS_CAP_REACHED       — round == passLimit and not all-green
+   */
   reason?: string;
   /** Final state — null when pre-flight halted before reading. */
   state: RoadmapConvergeStateV1 | null;
@@ -175,6 +209,7 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
   const passLimit = clamp(opts.passLimit ?? 3, 1, 5);
   const lockPath = lockFileFor(opts.slug);
   const archetypeHook = opts.archetypeDetectionHook ?? defaultArchetypeDetectionHook;
+  const invokeIntegrator = opts.invokeIntegrator ?? defaultIntegratorInvoker;
 
   const startedAt = now();
   const startedAtMs = startedAt.getTime();
@@ -351,10 +386,107 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
     state.suppressedFindings = [...state.suppressedFindings, ...newSuppressed];
     state.round = upcomingRound;
 
+    // ── FC-05: auto-resolve open_questions for archived dimensions ─────────
+    // Must happen BEFORE integrator-pass so the integrator sees the correct
+    // resolved/unresolved split and skips "dimension archived" questions.
+    state = autoResolveArchivedDimensions(state, now);
+
+    // ── Snapshot current dimension statuses (before integrator mutates) ────
+    // Written here (end of pass, before next-pass recomputation) per AC FC-03.
+    state.dimensionSnapshot = state.dimensions.map((d) => ({
+      name: d.name,
+      status: d.status,
+    }));
+
     // ── Atomic state write ──────────────────────────────────────────────
     writeState(opts.slug, state);
 
-    // ── Atomic StageContext write ───────────────────────────────────────
+    // ── Integrator-pass (Phase 5) ───────────────────────────────────────
+    // Count questions resolved during this round BEFORE calling integrator.
+    const resolvedThisRound = state.open_questions.filter(
+      (q) => q.resolved_at && q.resolution !== "dimension archived"
+    ).length;
+
+    // Only run integrator when there are resolved questions to apply.
+    const resolvedQuestions = state.open_questions.filter((q) => q.resolved_at);
+    let integratorFilesModified: string[] = [];
+
+    if (resolvedQuestions.length > 0) {
+      let integratorResult: unknown;
+      try {
+        integratorResult = await invokeIntegrator({
+          roadmapPath: opts.roadmapPath,
+          resolvedQuestions,
+          state,
+          now,
+        });
+      } catch (err) {
+        stderr(
+          `[roadmap-converge] INTEGRATOR_NO_ENVELOPE — integrator threw: ${(err as Error).message}`
+        );
+        return { exitCode: 1, reason: "INTEGRATOR_NO_ENVELOPE", state };
+      }
+
+      if (!isIntegratorEnvelope(integratorResult)) {
+        stderr(
+          `[roadmap-converge] INTEGRATOR_NO_ENVELOPE — integrator returned non-envelope payload`
+        );
+        return { exitCode: 1, reason: "INTEGRATOR_NO_ENVELOPE", state };
+      }
+
+      const envelope = integratorResult as IntegratorEnvelope;
+      if (!envelope.ok) {
+        stderr(
+          `[roadmap-converge] INTEGRATOR_NO_ENVELOPE — integrator returned ok=false: ${envelope.summary}`
+        );
+        return { exitCode: 1, reason: "INTEGRATOR_NO_ENVELOPE", state };
+      }
+
+      // Update content_hash to reflect ROADMAP.md edits.
+      if (envelope.newContentHash) {
+        state.content_hash = envelope.newContentHash;
+        writeState(opts.slug, state);
+      }
+
+      integratorFilesModified = envelope.filesModified;
+
+      if (envelope.unapplied.length > 0) {
+        stderr(
+          `[roadmap-converge] integrator could not apply questions: ${envelope.unapplied.join(", ")}`
+        );
+      }
+    }
+
+    // ── Stall detection (Phase 5) ──────────────────────────────────────
+    const stallResult = checkStall({ state, resolvedThisRound });
+    if (stallResult.stalled) {
+      state.next_action_hint =
+        "Retire stale dimensions with /loom-roadmap retire-dimension or re-run with --force";
+      writeState(opts.slug, state);
+      stderr(`[roadmap-converge] STALL_DETECTED — ${stallResult.reason}`);
+      return { exitCode: 1, reason: "STALL_DETECTED", state };
+    }
+
+    // ── Pass-cap halt (Phase 5) ────────────────────────────────────────
+    const passCapResult = checkPassCap(state);
+    if (passCapResult.exceeded) {
+      state.next_action_hint =
+        "Resolve blockers or /loom-roadmap sign-off manually";
+      writeState(opts.slug, state);
+      stderr(`[roadmap-converge] PASS_CAP_REACHED — ${passCapResult.reason}`);
+      // Write integrator StageContext before returning.
+      const completedAtCap = now();
+      writeIntegratorStageContext({
+        startedAt,
+        completedAt: completedAtCap,
+        state,
+        integratorFilesModified,
+        extraDecisions: [passCapResult.reason],
+      });
+      return { exitCode: 1, reason: "PASS_CAP_REACHED", state };
+    }
+
+    // ── Atomic StageContext writes ──────────────────────────────────────
     const completedAt = now();
     writeStageContext({
       stage: "execute",
@@ -363,7 +495,7 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
       completedAt,
       summary: `roadmap-converge pass ${state.round} for ${opts.slug} — ${state.dimensions.length} dimensions reviewed`,
       filesChanged: [stateFileFor(opts.slug)],
-      findingsResolved: 0,
+      findingsResolved: resolvedThisRound,
       findingsRemaining: state.open_questions.filter((q) => !q.resolved_at).length,
       keyDecisions: invalidated
         ? [`content-hash mismatch — all dimensions invalidated (${hashCheck.lineDiff})`]
@@ -373,6 +505,14 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
           ? "pass limit reached — user should run /loom-roadmap sign-off or extend [roadmap.converge].maxPasses"
           : "ready for next pass — re-run /loom-roadmap converge",
       ],
+    });
+
+    writeIntegratorStageContext({
+      startedAt,
+      completedAt,
+      state,
+      integratorFilesModified,
+      extraDecisions: [],
     });
 
     return { exitCode: 0, state };
@@ -526,6 +666,74 @@ export function renderFinding(
     parts.push(`--- Red-band exemplar ---\n${rubric.red}`);
   }
   return parts.join("\n\n");
+}
+
+// ---------------------------------------------------------------------------
+// Integrator StageContext writer (atomic) — Phase 5
+// ---------------------------------------------------------------------------
+
+interface IntegratorStageContextInput {
+  startedAt: Date;
+  completedAt: Date;
+  state: RoadmapConvergeStateV1;
+  integratorFilesModified: string[];
+  extraDecisions: string[];
+}
+
+/**
+ * Write execute-integrator.toon atomically. Must include filesModified[] from
+ * the integrator's result for auditability (AC AW-06 / F-31).
+ */
+function writeIntegratorStageContext(input: IntegratorStageContextInput): void {
+  const { startedAt, completedAt, state, integratorFilesModified, extraDecisions } = input;
+  mkdirSync(dirname(EXECUTE_INTEGRATOR_STAGE_CONTEXT_PATH), { recursive: true });
+
+  const filesChanged = [
+    stateFileFor(state.roadmapSlug),
+    ...integratorFilesModified,
+  ];
+  const findingsRemaining = state.open_questions.filter((q) => !q.resolved_at).length;
+  const findingsResolved = state.open_questions.filter((q) => !!q.resolved_at).length;
+
+  const keyDecisions: string[] = [
+    ...extraDecisions,
+  ];
+  if (integratorFilesModified.length > 0) {
+    keyDecisions.push(`integrator modified: ${integratorFilesModified.join(", ")}`);
+  }
+
+  const lines: string[] = [];
+  lines.push(`stage: execute-integrator`);
+  lines.push(`wave: 5`);
+  lines.push(`iteration: 0`);
+  lines.push(`startedAt: ${startedAt.toISOString()}`);
+  lines.push(`completedAt: ${completedAt.toISOString()}`);
+  lines.push(
+    `durationMs: ${completedAt.getTime() - startedAt.getTime()}`
+  );
+  lines.push(`inputTokensEstimate: 0`);
+  lines.push(`outputTokensEstimate: 0`);
+  lines.push(`findingsResolved: ${findingsResolved}`);
+  lines.push(`findingsRemaining: ${findingsRemaining}`);
+  lines.push(
+    `summary: integrator-pass round ${state.round} for ${state.roadmapSlug} — ${integratorFilesModified.length > 0 ? "ROADMAP.md mutated" : "no ROADMAP.md edits"}`
+  );
+  lines.push("");
+  lines.push(`filesChanged[${filesChanged.length}]: ${filesChanged.join(",")}`);
+  lines.push(`exportsAdded[0]:`);
+  lines.push("");
+  lines.push(`keyDecisions[${keyDecisions.length}]:`);
+  for (const d of keyDecisions) lines.push(`  ${d}`);
+  lines.push("");
+  lines.push(`nextStageHints[1]:`);
+  lines.push(
+    `  ${findingsRemaining > 0 ? "resolve open questions and re-run /loom-roadmap converge" : "all questions resolved — ready for sign-off"}`
+  );
+
+  const body = lines.join("\n") + "\n";
+  const tmp = EXECUTE_INTEGRATOR_STAGE_CONTEXT_PATH + ".tmp";
+  writeFileSync(tmp, body, "utf-8");
+  renameSync(tmp, EXECUTE_INTEGRATOR_STAGE_CONTEXT_PATH);
 }
 
 // ---------------------------------------------------------------------------
