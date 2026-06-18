@@ -60,6 +60,22 @@ kits:
     suggestedConfig: kits/data-engineering/orchestration-fragment.toml
 ```
 
+## TOON Exemplar (for schema validators)
+
+Per project convention `skills/library.yaml` itself stays YAML (tooling-config exception). The TOON projection below is the canonical shape the validator (`scripts/validate-toon-schemas.ts`) checks against:
+
+```toon
+LibraryCatalog:
+  catalog_version: 3
+  repo: https://github.com/launchstack-dev/loom-ai
+  loomCoreVersion: 0.1.0
+  loomHooksVersion: 0.1.0
+  releases[1]{version,coreTarball,hooksTarball,cosignSignature,sha256Manifest,releasedAt}:
+    0.1.0,https://example/core.tgz,https://example/hooks.tgz,https://example/core.sig,https://example/SHA256SUMS,2026-05-07T00:00:00Z
+  kits[1]{name,description,version,minLoomVersion,minCoreVersion,minHooksVersion,command,suggestedConfig}:
+    data-engineering,Data pipeline quality gates,1.1.0,3,0.1.0,0.1.0,loom-data.md,kits/data-engineering/orchestration-fragment.toml
+```
+
 ## v3 Top-Level Fields
 
 | Field | Required | Type | Description |

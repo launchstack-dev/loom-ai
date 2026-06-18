@@ -34,7 +34,22 @@ TierResolution:
 | `user` | `~/.claude/settings.json` | Global per-user. Loom NEVER writes here. |
 | `project` | `.claude/settings.json` | Committed to repo. Team-wide opt-in. |
 | `local` | `.claude/settings.local.json` | Gitignored, machine-local. **Default for `register-loom-hooks.ts`.** |
-| `managed` | `/Library/Application Support/ClaudeCode/managed-settings.json` | MDM policy. Out of scope for M-07. |
+| `managed` | `/Library/Application Support/ClaudeCode/managed-settings.json` | MDM policy. **Immutable for Loom** — see "Managed Tier (Immutable)" below. |
+
+## Managed Tier (Immutable)
+
+The `managed` tier represents settings deployed by an MDM (Mobile Device Management) policy or other administrator-controlled mechanism. **Loom NEVER writes to the managed tier and NEVER modifies entries present there**, including under `/loom-doctor --fix`, `register-loom-hooks.ts`, and the SessionStart migration runner.
+
+### Rules
+
+1. **No writes.** No Loom code path may open `managed-settings.json` for write. The path is not in any Loom file-ownership manifest.
+2. **No fix.** `/loom-doctor --fix` MUST skip any check whose `evidence.paths[]` resolves into the managed-settings path.
+3. **Detection-only.** The `managed-tier-detected` check (see `doctor-report.schema.md` registry) emits an `info`-severity `MANAGED_TIER_DETECTED` finding when Loom entries are found in the managed tier. The finding informs the user that tier changes require their MDM admin; doctor does not propose remediation Loom can execute.
+4. **Precedence semantics preserved.** The managed tier still wins on read precedence (`managed > project > local > user`) — Loom respects whatever the admin set; it just refuses to participate in modifying it.
+
+### Cross-reference
+
+- `doctor-report.schema.md` — `managed-tier-detected` check (category `tier`, severity `info`); `MANAGED_TIER_DETECTED` error code row.
 
 ### Precedence
 
