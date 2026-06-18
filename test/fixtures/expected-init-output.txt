@@ -1,0 +1,13 @@
+Files written:
+- .claude/settings.json
+- .claude/orchestration.toml
+- CLAUDE.md
+- ROADMAP.md
+- .plan-execution/.gitkeep
+
+Next:
+```
+/loom-roadmap init --full
+```
+
+Run /loom-doctor to verify your install.
