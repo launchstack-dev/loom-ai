@@ -35,19 +35,34 @@
  *   node scripts/register-loom-hooks.ts --settings <path>
  *   node scripts/register-loom-hooks.ts --hooks-root <abs-path>
  *   node scripts/register-loom-hooks.ts --mode local|plugin|auto
+ *   node scripts/register-loom-hooks.ts --tier auto|local|project
  *   node scripts/register-loom-hooks.ts --runner bunx|npx|auto
  *   node scripts/register-loom-hooks.ts --command-prefix <prefix>
  *   node scripts/register-loom-hooks.ts --replace
  *   node scripts/register-loom-hooks.ts --dry-run
  *   node scripts/register-loom-hooks.ts --json
  *
+ * --mode vs --tier (these solve different problems):
+ *   --mode controls how hook COMMANDS resolve at runtime — i.e. whether the
+ *     command path is anchored at `${CLAUDE_PLUGIN_ROOT}` (plugin install)
+ *     or `${CLAUDE_PROJECT_DIR}` (local dev checkout).
+ *   --tier controls which SETTINGS FILE the hook entries get written into —
+ *     `.claude/settings.local.json` (per-user, gitignored; the new default)
+ *     or `.claude/settings.json` (shared, committed to git). Pass an explicit
+ *     `--settings <path>` to bypass tier resolution entirely.
+ *
  * Exit codes:
  *   0 — registered (or nothing to do)
  *   1 — settings file unparseable / write failure / no hook .ts files
+ *   2 — MIGRATION_TIER_AMBIGUOUS: Loom entries exist in both settings.json
+ *       and settings.local.json. Re-run with explicit `--tier local` or
+ *       `--tier project` to pick a winner.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import { resolveTier, type ExplicitTierFlag, type Tier } from "./lib/tier-resolution";
 
 type EventKind = "SessionStart" | "PreToolUse" | "PostToolUse" | "Stop";
 
@@ -92,6 +107,9 @@ const LOOM_HOOKS: HookEntry[] = [
   { hookName: "context-monitor",     event: "Stop",        matcher: "",           timeoutMs: 10000 },
   // SessionStart
   { hookName: "wiki-session-status", event: "SessionStart",                       timeoutMs: 5000  },
+  // SessionStart — one-shot migration of legacy on-disk state (Wave 5a).
+  // Idempotent; runs once per session and self-bails if no migration needed.
+  { hookName: "loom-migration",      event: "SessionStart",                       timeoutMs: 10000 },
 ];
 
 type Mode = "local" | "plugin" | "auto";
@@ -99,8 +117,15 @@ type RunnerChoice = "bunx" | "npx" | "auto";
 
 interface Options {
   settingsPath: string;
+  /** True iff the user passed `--settings <path>` explicitly. When true,
+   *  tier resolution is bypassed entirely — the explicit path wins. */
+  settingsPathExplicit: boolean;
   hooksRoot: string;
   mode: Mode;
+  /** `--tier` flag. `undefined` means flag was omitted (treated as "auto"
+   *  by the resolver). Kept distinct from "auto" so callers can tell
+   *  apart user-omitted vs. user-explicit-auto for logging. */
+  tier: ExplicitTierFlag | undefined;
   runner: RunnerChoice;
   commandPrefixOverride: string | null;
   replace: boolean;
@@ -110,9 +135,14 @@ interface Options {
 
 function parseArgs(argv: string[]): Options {
   const opts: Options = {
+    // Sentinel — replaced post-tier-resolution when --settings is not passed.
+    // Held here only so existing call sites that read opts.settingsPath
+    // before resolution still get a sensible-looking default.
     settingsPath: path.join(process.cwd(), ".claude", "settings.json"),
+    settingsPathExplicit: false,
     hooksRoot: path.resolve(__dirname, "..", "hooks"),
     mode: "auto",
+    tier: undefined,
     runner: "auto",
     commandPrefixOverride: null,
     replace: false,
@@ -127,7 +157,10 @@ function parseArgs(argv: string[]): Options {
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--settings") opts.settingsPath = path.resolve(requireValue("--settings", argv[++i]));
+    if (a === "--settings") {
+      opts.settingsPath = path.resolve(requireValue("--settings", argv[++i]));
+      opts.settingsPathExplicit = true;
+    }
     else if (a === "--hooks-root") opts.hooksRoot = path.resolve(requireValue("--hooks-root", argv[++i]));
     else if (a === "--mode") {
       const v = requireValue("--mode", argv[++i]);
@@ -135,6 +168,12 @@ function parseArgs(argv: string[]): Options {
         throw new Error(`--mode must be one of: local, plugin, auto (got "${v}")`);
       }
       opts.mode = v;
+    } else if (a === "--tier") {
+      const v = requireValue("--tier", argv[++i]);
+      if (v !== "auto" && v !== "local" && v !== "project") {
+        throw new Error(`--tier must be one of: auto, local, project (got "${v}")`);
+      }
+      opts.tier = v;
     } else if (a === "--runner") {
       const v = requireValue("--runner", argv[++i]);
       if (v !== "bunx" && v !== "npx" && v !== "auto") {
@@ -347,6 +386,65 @@ function purgeLoomEntries(settings: Settings): number {
   return removed;
 }
 
+/**
+ * Inspect `settingsPath` and return true if it contains any registered Loom
+ * hook entry. Used by tier resolution to decide whether a tier is "occupied".
+ * Returns false if the file is missing, empty, or unparseable — a tier we
+ * can't read is treated as not-occupied so re-runs never block on a corrupt
+ * sibling file. The unparseable case is also reported back to main() via the
+ * caller so it can warn (though we keep tier resolution non-fatal).
+ */
+function settingsContainsLoomEntries(settingsPath: string): boolean {
+  if (!fs.existsSync(settingsPath)) return false;
+  let content: string;
+  try {
+    content = fs.readFileSync(settingsPath, "utf-8").trim();
+  } catch {
+    return false;
+  }
+  if (!content) return false;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return false;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+  const hooks = (parsed as { hooks?: unknown }).hooks;
+  if (!hooks || typeof hooks !== "object" || Array.isArray(hooks)) return false;
+  const loomNames = Array.from(new Set(LOOM_HOOKS.map((e) => e.hookName)));
+  for (const event of Object.keys(hooks)) {
+    const bucket = (hooks as Record<string, unknown>)[event];
+    if (!Array.isArray(bucket)) continue;
+    for (const item of bucket) {
+      if (!item || typeof item !== "object") continue;
+      const inner = (item as { hooks?: unknown }).hooks;
+      if (!Array.isArray(inner)) continue;
+      for (const h of inner) {
+        if (!h || typeof h !== "object") continue;
+        const cmd = String((h as { command?: unknown }).command ?? "");
+        if (loomNames.some((name) => commandReferencesHook(cmd, name))) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Build the canonical pair of settings paths from cwd. The local-tier file is
+ * `.claude/settings.local.json` (gitignored, per-user); the project-tier file
+ * is `.claude/settings.json` (committed). Both live next to each other.
+ */
+function tierPaths(cwd: string): { local: string; project: string } {
+  const dir = path.join(cwd, ".claude");
+  return {
+    local: path.join(dir, "settings.local.json"),
+    project: path.join(dir, "settings.json"),
+  };
+}
+
 interface PlanItem {
   hookName: string;
   event: EventKind;
@@ -369,6 +467,54 @@ function main(): void {
       process.stderr.write(`[register-loom-hooks] ${msg}\n`);
     }
     process.exit(1);
+  }
+
+  // Tier resolution. Skipped entirely if --settings was passed explicitly:
+  // the user told us exactly which file to write, so respect that.
+  let resolvedTier: Tier | null = null;
+  let tierReason: "explicit" | "preserve" | "default-local" | "n/a" = "n/a";
+  if (!opts.settingsPathExplicit) {
+    const paths = tierPaths(process.cwd());
+    const existingLocal = settingsContainsLoomEntries(paths.local);
+    const existingProject = settingsContainsLoomEntries(paths.project);
+    const resolution = resolveTier({
+      explicitFlag: opts.tier,
+      existingLocalEntries: existingLocal,
+      existingProjectEntries: existingProject,
+    });
+    if (!resolution.ok) {
+      // MIGRATION_TIER_AMBIGUOUS — refuse to write without explicit --tier.
+      const msg =
+        `MIGRATION_TIER_AMBIGUOUS: Loom hook entries found in both ` +
+        `${paths.project} and ${paths.local}. Re-run with --tier local or ` +
+        `--tier project to pick a winner (use --tier project only if you want ` +
+        `the entries committed to git).`;
+      if (opts.json) {
+        process.stdout.write(
+          JSON.stringify({
+            ok: false,
+            error: "MIGRATION_TIER_AMBIGUOUS",
+            message: msg,
+            existingTiers: resolution.existingTiers,
+          }) + "\n"
+        );
+      } else {
+        process.stderr.write(`[register-loom-hooks] ${msg}\n`);
+      }
+      process.exit(2);
+    }
+    resolvedTier = resolution.tier;
+    tierReason = resolution.reason;
+    opts.settingsPath = resolution.tier === "local" ? paths.local : paths.project;
+
+    // Loud-on-stderr notice for the committed tier. Users need to know that
+    // `.claude/settings.json` is git-tracked before we shove a 14-hook block
+    // into it.
+    if (resolution.tier === "project") {
+      process.stderr.write(
+        `Loom: writing to .claude/settings.json — this file will be committed to git.\n`
+      );
+    }
   }
 
   const sourcesPresent = LOOM_HOOKS.filter((e) =>
@@ -502,6 +648,8 @@ function main(): void {
         settingsPath: opts.settingsPath,
         settingsExisted: existed,
         mode: resolvedMode,
+        tier: resolvedTier,
+        tierReason,
         runner: resolvedRunner,
         commandPrefix,
         dryRun: opts.dryRun,
@@ -512,7 +660,8 @@ function main(): void {
     );
   } else {
     const verb = opts.dryRun ? "would" : "did";
-    process.stdout.write(`[register-loom-hooks] ${opts.settingsPath} (mode: ${resolvedMode}, runner: ${resolvedRunner})\n`);
+    const tierSuffix = resolvedTier ? `, tier: ${resolvedTier}` : "";
+    process.stdout.write(`[register-loom-hooks] ${opts.settingsPath} (mode: ${resolvedMode}, runner: ${resolvedRunner}${tierSuffix})\n`);
     if (purgedCount > 0) {
       process.stdout.write(`  purged ${purgedCount} pre-existing Loom hook reference${purgedCount === 1 ? "" : "s"} (--replace)\n`);
     }
