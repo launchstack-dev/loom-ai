@@ -1,0 +1,39 @@
+{
+  "discussion": {
+    "id": "D_kwDOABCDEF",
+    "url": "https://github.com/launchstack-dev/loom-ai/discussions/42",
+    "title": "Weekly install-source self-report",
+    "comments": [
+      {
+        "id": "DC_1",
+        "createdAt": "2026-06-09T08:14:22Z",
+        "author": "alice-dev",
+        "body": "Hey team — installed via the marketplace browse flow.\n\n```toon\ninstall.toon.source: marketplace-browse\n```"
+      },
+      {
+        "id": "DC_2",
+        "createdAt": "2026-06-10T12:01:00Z",
+        "author": "bob-ops",
+        "body": "We're on a corp self-hosted relay.\n\ninstall.toon.source: self-hosted-url"
+      },
+      {
+        "id": "DC_3",
+        "createdAt": "2026-06-11T03:55:10Z",
+        "author": "carol-cli",
+        "body": "install.toon.source: curl-script\n\nWorked on Ubuntu 24.04 + bun 1.1.30."
+      },
+      {
+        "id": "DC_4",
+        "createdAt": "2026-06-12T17:30:00Z",
+        "author": "dave-link",
+        "body": "Saw the announcement and used the direct link.\n```\ninstall.toon.source: direct-link\n```"
+      },
+      {
+        "id": "DC_5",
+        "createdAt": "2026-06-13T22:00:00Z",
+        "author": "erin-eng",
+        "body": "Second install on a new laptop — install.toon.source: marketplace-browse again."
+      }
+    ]
+  }
+}

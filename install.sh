@@ -46,6 +46,9 @@ declare -a INFRA_FILES=(
   "hooks/loom-update-checker.cjs:${CLAUDE_DIR}/loom-update-checker.cjs"
   "hooks/run-hook.sh:${CLAUDE_DIR}/run-hook.sh"
   "scripts/probe-hook-runtime.sh:${CLAUDE_DIR}/scripts/probe-hook-runtime.sh"
+  "scripts/loom-first-run.ts:${CLAUDE_DIR}/scripts/loom-first-run.ts"
+  "scripts/lib/first-run.ts:${CLAUDE_DIR}/scripts/lib/first-run.ts"
+  "scripts/lib/install-state.ts:${CLAUDE_DIR}/scripts/lib/install-state.ts"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -133,6 +136,7 @@ mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
 mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
 mkdir -p "${CLAUDE_DIR}/config"
 mkdir -p "${CLAUDE_DIR}/scripts"
+mkdir -p "${CLAUDE_DIR}/scripts/lib"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CLAUDE_DIR}/templates/hooks"
 mkdir -p "${CLAUDE_DIR}/templates/scripts"
@@ -429,3 +433,12 @@ if [ "${hook_runtime}" = "NONE" ]; then
 fi
 echo ""
 echo "The status line will notify you when updates are available."
+
+# First-run: write ~/.loom/install.toon channel envelope (idempotent, no PII).
+# Skips silently if neither bun nor node is available — the envelope is opt-in
+# and not required for hook execution.
+if [ "${hook_runtime}" = "bun" ] && command -v bunx >/dev/null 2>&1; then
+  ( cd "${CLAUDE_DIR}" && bunx tsx scripts/loom-first-run.ts 2>/dev/null ) || true
+elif [ "${hook_runtime}" = "node" ] && command -v node >/dev/null 2>&1; then
+  ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
+fi

@@ -1,0 +1,49 @@
+wave: 2a
+label: Wave 2a
+phases[2]: Phase 4, Phase 5
+agents[2]: implementer-agent (P4), implementer-agent (P5)
+status: complete
+verificationStatus: pass
+
+filesCreated[12]:
+  scripts/lib/install-state.ts
+  scripts/lib/install-state.test.ts
+  scripts/lib/first-run.ts
+  scripts/lib/first-run.test.ts
+  scripts/install-source-digest.ts
+  .github/workflows/install-source-digest.yml
+  test/fixtures/discussion-thread.json
+  scripts/loom-first-run.ts
+  marketplace/listing.md
+  marketplace/listing-checklist.md
+  marketplace/listing-content-spec.md
+  marketplace/loom-init-success-output.toon
+
+filesModified[1]:
+  install.sh
+
+verifyCommands[2]{cmd,exit,note}:
+  bunx vitest run scripts/lib/install-state.test.ts scripts/lib/first-run.test.ts,0,35/35 tests pass
+  LOOM_HOME=/tmp/sandbox bunx tsx scripts/loom-first-run.ts,0,Shim wrote install.toon to sandbox
+
+wiringApplied[3]{file,change,source}:
+  scripts/loom-first-run.ts,Created CLI shim wrapping runFirstRun,Phase 4 crossBoundaryRequest
+  install.sh,Tail invocation of scripts/loom-first-run.ts (bun preferred, node fallback),Phase 4 crossBoundaryRequest
+  install.sh,Added 3 first-run scripts to INFRA_FILES + mkdir scripts/lib,Required for curl install to ship the shim
+
+infoFindings[2]:
+  Phase 4: actionlint not run locally on install-source-digest.yml (CI runs it)
+  Phase 4: install-source-digest.ts uses test fixture as stand-in for live GH Discussions API until the thread is provisioned
+
+deferredWork[1]:
+  SessionStart hook wiring of runFirstRun for plugin channel — to be handled by Phase 9B (SessionStart hook owner) or Phase 10A (register-loom-hooks core)
+
+keyDecisions[3]:
+  Frozen-field contract enforced: installTimestamp, installSourceUrl, source, channel are byte-for-byte stable across same-version re-invocations. Test asserts byte-equality AND mtime equality.
+  CLI shim (scripts/loom-first-run.ts) prefers bunx tsx, falls back to node --experimental-strip-types; skips silently if neither available (envelope is opt-in).
+  Phase 5: screenshots files under marketplace/screenshots/ are NOT created in this phase (copy-only); Phase 12 must verify existence before opening submission PR.
+
+nextStageHints[3]:
+  Phase 3 (Wave 2b): merge marketplace/loom-init-success-output.toon into commands/loom-init.md preserving the 3 top-level keys (filesWritten, suggestedNextCommand, doctorPrompt).
+  Phase 8: render the success-output artifact via the documented rules to produce test/fixtures/expected-init-output.txt. Use substring matching, not byte-for-byte.
+  Phase 12 marketplace submission: read listing-content-spec.md for section ordering + char budgets; run every checkbox in listing-checklist.md; verify screenshots exist; await Maintainer Review Gate resolution on exact commit SHA.
