@@ -23,11 +23,45 @@ Parse arguments after `init`:
 
 ### Instructions
 
+#### Step 0a: Idempotency Check (runs before anything else)
+
+**`/loom-init` does NOT invoke the shared init-guard** (see
+`commands/_loom-init-guard.md`). Instead it performs its own idempotency
+check first:
+
+1. If `.loom/plugin-root` already exists in the current working directory,
+   print the EXACT line below to stdout and exit 0. Do not run discovery,
+   do not spawn agents, do not write any files:
+
+   ```
+   Loom already initialized in this project. Use /loom-update to upgrade or /loom-doctor to diagnose.
+   ```
+
+2. If invoked with `--help`, print usage to stdout and exit 0 without
+   touching any files. Usage covers the argument list documented under
+   `### Arguments` above.
+
+3. Otherwise, proceed to Step 0.
+
+This is the same advisory layer the init-guard surfaces for other commands —
+re-running `/loom-init` on an already-initialized project must be a no-op,
+not a destructive re-init. Use `/loom-update` for upgrades and
+`/loom-doctor` for diagnostics.
+
 #### Step 0: Read Protocols
 
 Read these files for context on Loom conventions:
 - `~/.claude/agents/protocols/execution-conventions.md` -- directory structure, file naming
 - `~/.claude/agents/protocols/toon-format.md` -- TOON format reference
+
+#### Step 0b: First-Invocation Guard Context
+
+Every other `/loom-*` command embeds the prelude defined in
+`commands/_loom-init-guard.md` and refuses to mutate state when
+`.loom/plugin-root` is missing. `/loom-init` is the exception: this command
+*is* the entry point that creates `.loom/plugin-root`, so it intentionally
+runs in uninitialized projects. The guard's reference implementation lives
+in `hooks/lib/init-guard.ts`.
 
 #### Step 1: Pre-flight Check
 
@@ -404,27 +438,58 @@ Skip this step entirely if the legacy layout is already in use (i.e., a non-stub
 
    Print summary on success: "Registered N hooks into .claude/settings.json. Backup: .claude/settings.json.bak-{ts} (if pre-existing)."
 
+   **C-16 PATH probe (per `loom-init-audit-notes.md`).** Immediately after
+   hook registration, exercise `scripts/probe-hook-runtime.sh` to confirm
+   the hook wrapper can resolve `bun` or `node` on the user's actual PATH:
+
+   ```bash
+   if [ -x scripts/probe-hook-runtime.sh ]; then
+     scripts/probe-hook-runtime.sh || echo "Hook runtime probe failed. Run /loom-doctor to diagnose."
+   fi
+   ```
+
+   The probe is authoritative for C-16 health. Do NOT modify
+   `hooks/run-hook.sh` PATH order — its append-after-user-PATH semantics is
+   intentional (Homebrew loses to mise/asdf/volta/nvm/~/.bun/bin on purpose).
+   Fail-loud entries land in `~/.cache/loom/hook-failures.log` if the runtime
+   cannot be resolved at all.
+
    If the script reports `mode: plugin` and the user's actual deployment is a dev checkout (or vice versa), they can override: `node scripts/register-loom-hooks.ts --mode local --replace`.
 
    > **Note:** The legacy `scripts/register-wiki-hooks.ts` (3 wiki-specific hooks only) is superseded by `register-loom-hooks.ts` (all 14 hooks, including the 3 wiki ones). The legacy script remains callable for backwards compatibility but new projects should use the generalized version.
 
 #### Step 5: Summary and Next Steps
 
-Display what was created:
+The success output is rendered from
+`marketplace/loom-init-success-output.toon` — the canonical artifact owned
+by Phase 5. Three top-level keys under `successOutput` MUST appear in the
+rendered stdout verbatim (Phase 8's integration test asserts substring
+matches against the artifact, not byte-for-byte):
+
+  1. **`filesWritten[]`** — bulleted list under a `Files written:` header.
+  2. **`suggestedNextCommand`** — a single line printed verbatim under a
+     `Next:` header, inside a fenced code block.
+  3. **`doctorPrompt`** — printed verbatim on its own line after the
+     `Next:` block.
+
+Rendered output template (substitute the artifact's values; do not invent
+extra files in `filesWritten[]`):
 
 ```
 ## Onboarding Complete
 
-Files created:
-  CLAUDE.md     -- 94 lines (project guidance for Claude Code)
-  CONTEXT.md    -- 67 lines (project context and locked decisions)
-  .loom/wiki/   -- {N} pages ({breakdown by category})
+Files written:
+  - .claude/settings.json
+  - .claude/orchestration.toml
+  - CLAUDE.md
+  - ROADMAP.md
+  - .plan-execution/.gitkeep
 
 Discovery:
-  Tech stack:     TypeScript, Next.js, Prisma, PostgreSQL
-  API endpoints:  14 internal, 3 external integrations
-  Doc status:     README current, API docs missing, 0 ADRs
-  Conventions:    8 detected, 8 included in CLAUDE.md
+  Tech stack:     {languages, frameworks}
+  API endpoints:  {N} internal, {M} external integrations
+  Doc status:     {summary from docs-auditor}
+  Conventions:    {detected}/{included}
   Planning docs:  {N} found → {M} decisions, {K} requirements, {J} constraints extracted
   Gaps:           {list of areas needing discussion}
 
@@ -433,15 +498,38 @@ Wiki:
   Categories:       component({n}), concept({n}), decision({n}), convention({n}), api-surface({n}), tech-debt({n})
   Cross-references: {K}
   Lint result:      {blocking} blocking, {warning} warnings, {info} info
-  Hooks registered: {3 hooks: SessionStart, PreToolUse Write|Edit, PostToolUse Bash | or "skipped" with reason}
+  Hooks registered: {N hooks via register-loom-hooks.ts, or "skipped" with reason}
 
-Next steps:
-  /loom-roadmap init --brownfield       Create a roadmap informed by this analysis
-  /loom-roadmap init --brownfield --from "description"   Create with a specific goal
-  /loom-note "your observation"        Start capturing notes for the roadmap
-  /loom-wiki ingest --source <path>    Add more sources to the wiki
-  /loom-wiki lint --wiki               Run wiki health checks
+Next:
+
 ```
+/loom-roadmap init --full
+```
+
+Run /loom-doctor to verify your install.
+
+Other useful follow-ups:
+  /loom-roadmap init --brownfield                Create a brownfield roadmap explicitly
+  /loom-roadmap init --brownfield --from "..."  Pass a specific goal
+  /loom-note "your observation"                 Start capturing notes
+  /loom-wiki ingest --source <path>             Add more sources to the wiki
+  /loom-wiki lint --wiki                        Run wiki health checks
+
+Fail-loud log (if hooks misfire): ~/.cache/loom/hook-failures.log
+```
+
+**Rendering rules** (must be preserved across edits):
+
+- `filesWritten[]` → bulleted list under `Files written:`. Iterate the
+  artifact's array in order.
+- `suggestedNextCommand` → fenced code block under `Next:` header.
+  Currently `/loom-roadmap init --full`.
+- `doctorPrompt` → its own line after the code block. Currently
+  `Run /loom-doctor to verify your install.`
+
+Phase 8 generates `test/fixtures/expected-init-output.txt` from the same
+artifact; if the rendering rules above change, the artifact and the test
+fixture must be updated in lockstep.
 
 **If `--full`:** skip displaying next steps and immediately proceed:
 
