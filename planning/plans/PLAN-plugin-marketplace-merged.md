@@ -1,9 +1,10 @@
 ---
 planVersion: 2
 name: plugin-marketplace-merged
-status: approved
+status: completed
 created: 2026-06-17
 approvedAt: 2026-06-17
+completedAt: 2026-06-18T05:42:00Z
 lastReviewed: null
 roadmapRef: planning/ROADMAP.md
 milestoneRef: M-07
