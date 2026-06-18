@@ -22,6 +22,7 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 
 MODE=""
+INSTALL_MODE="plugin"
 TARBALL_PATH="$REPO_ROOT/dist/loom-local-test.tar.gz"
 RELEASE_TAG=""
 IMAGE_NAME="loom-harness:phase8"
@@ -38,6 +39,17 @@ while [ $# -gt 0 ]; do
     --tag)
       MODE="tag"
       RELEASE_TAG="$2"
+      shift 2
+      ;;
+    --mode)
+      # Install method: curl (run install.sh) or plugin (extract tarball
+      # under ~/.claude/plugins/loom). Phase 11B's curl-install spec passes
+      # --mode curl; phase 8's S-01 default is plugin.
+      INSTALL_MODE="$2"
+      case "$INSTALL_MODE" in
+        curl|plugin) ;;
+        *) printf 'invalid --mode: %s (expected curl|plugin)\n' "$INSTALL_MODE" >&2; exit 2 ;;
+      esac
       shift 2
       ;;
     --regen-fixture)
@@ -150,14 +162,35 @@ fi
 
 # Inner test driver: scripted commands the container runs in sequence.
 # Each block corresponds to a Phase 8 scenario (S-01, S-02, S-03).
+RUN_ARGS="$RUN_ARGS -e LOOM_INSTALL_MODE=$INSTALL_MODE"
+
 INNER_SCRIPT='
 set -eu
 
-# --- S-01: /plugin install + first-invocation graceful no-op -----------
+# --- S-01: install via configured mode + first-invocation graceful no-op ----
 if [ -n "${LOOM_INSTALL_SOURCE:-}" ]; then
-  echo "[S-01] installing from local tarball: $LOOM_INSTALL_SOURCE"
-  mkdir -p /root/.claude/plugins/loom
-  tar -xzf "$LOOM_INSTALL_SOURCE" -C /root/.claude/plugins/loom
+  case "${LOOM_INSTALL_MODE:-plugin}" in
+    plugin)
+      echo "[S-01] installing as PLUGIN from local tarball: $LOOM_INSTALL_SOURCE"
+      mkdir -p /root/.claude/plugins/loom
+      tar -xzf "$LOOM_INSTALL_SOURCE" -C /root/.claude/plugins/loom
+      ;;
+    curl)
+      echo "[S-01] installing via CURL path from local tarball: $LOOM_INSTALL_SOURCE"
+      mkdir -p /tmp/loom-curl-staging
+      tar -xzf "$LOOM_INSTALL_SOURCE" -C /tmp/loom-curl-staging
+      if [ -f /tmp/loom-curl-staging/install.sh ]; then
+        ( cd /tmp/loom-curl-staging && sh install.sh ) || { echo "install.sh failed" >&2; exit 5; }
+      else
+        echo "tarball does not contain install.sh for curl mode" >&2
+        exit 6
+      fi
+      ;;
+    *)
+      echo "unknown LOOM_INSTALL_MODE: ${LOOM_INSTALL_MODE}" >&2
+      exit 2
+      ;;
+  esac
 else
   echo "[S-01] installing from live tag: $LOOM_INSTALL_TAG (network required)"
   # Live-tag fetch path; integration with /plugin install loom@TAG goes here.

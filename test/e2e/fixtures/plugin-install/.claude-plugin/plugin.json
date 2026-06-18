@@ -1,0 +1,10 @@
+{
+  "name": "loom",
+  "version": "0.0.0-fixture",
+  "description": "Fixture project — plugin-install path. Used by test/e2e/runtime-equivalence.spec.ts to assert that /loom-doctor produces the same checks[] across install paths.",
+  "license": "Apache-2.0",
+  "agents": ["./agents"],
+  "commands": ["./commands"],
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json"
+}

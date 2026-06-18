@@ -1,0 +1,17 @@
+{
+  "_comment": "Curl-install fixture: hooks are anchored via ${CLAUDE_PROJECT_DIR}. The runtime-equivalence spec only invokes /loom-doctor --json; these hook paths are inspected by channel-detection checks, not executed.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/contract-lock.ts\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
