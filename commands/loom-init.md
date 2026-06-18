@@ -425,7 +425,7 @@ Skip this step entirely if the legacy layout is already in use (i.e., a non-stub
    fi
 
    # Register the 14 hooks (merges into existing settings.json; preserves unrelated entries)
-   node scripts/register-loom-hooks.ts --replace
+   node scripts/register-loom-hooks.ts --replace --tier "${LOOM_TIER:-auto}"
    ```
 
    The script auto-detects:

@@ -2,10 +2,16 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/wiki-session-status.ts\""
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh loom-migration",
+            "timeout": 10000
           }
         ]
       }

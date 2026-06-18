@@ -1,0 +1,39 @@
+wave: 5c
+label: Wave 5c
+phases[1]: Phase 10B
+agents[1]: implementer-agent (P10B)
+status: complete (with plan-accuracy finding)
+verificationStatus: pass
+
+filesCreated[1]:
+  test/hooks-json-migration.test.ts
+
+filesModified[4]:
+  hooks/hooks.json
+  commands/loom-init.md
+  commands/loom-auto.md
+  commands/loom-roadmap/init.md
+
+verifyCommands[2]{cmd,exit,note}:
+  bunx vitest run test/hooks-json-migration.test.ts,0,2/2 pass
+  git diff --stat (3 command files),0,each shows 1+/1- (single-line edit per surgical rule)
+
+planAccuracyFindings[3]:
+  commands/loom-quick.md has no register-loom-hooks invocation — skipped per surgical-read rule. Plan acceptance criterion incorrectly listed it.
+  commands/loom-change.md has no register-loom-hooks invocation — skipped. Plan acceptance criterion incorrectly listed it.
+  commands/loom-plan.md has no register-loom-hooks invocation — skipped. Plan acceptance criterion incorrectly listed it.
+
+infoFindings[1]:
+  Phase 10B agent respected the surgical-read rule and refused to fabricate call sites. The plan over-scoped on this point. /loom-quick, /loom-change, /loom-plan delegate to /loom-init (which has the passthrough) or don't need hook registration — downstream behavior unchanged.
+
+contractsHonored[2]{contract,verification}:
+  --tier passthrough flag pattern --tier ${LOOM_TIER:-auto},Applied verbatim in 3 register-loom-hooks call sites
+  hooks/hooks.json SessionStart entry,Includes ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh loom-migration with timeout 10000
+
+keyDecisions[2]:
+  Wave 5c effectively narrowed to 3 command files (loom-init, loom-auto, loom-roadmap/init) per the actual call-site reality. The plan should be amended to remove the 3 phantom entries from Phase 10B's File Ownership in a future cleanup pass.
+  hooks.json merged the new SessionStart hook into the existing entry's hooks[] array (preserved shape; added matcher:"*").
+
+nextStageHints[2]:
+  Wave 6a: Phase 11A docs restructure, 11B E2E specs, 13 /loom-update, 14 /loom-uninstall. 4 parallel implementers.
+  Phase 12 (Wave 6b) marketplace submission depends on 11A's decision matrix being on disk.
