@@ -381,6 +381,12 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
       }
     }
 
+    // ── Preserve prior-pass snapshot for stall comparison ──────────────────
+    // checkStall (below) compares the current pass's statuses to the snapshot
+    // captured at the END of the prior pass. The new snapshot is written
+    // AFTER checkStall so this pass's statuses do not shadow the comparison.
+    const priorDimensionSnapshot = state.dimensionSnapshot;
+
     state.dimensions = nextDimensions;
     state.open_questions = renderedFindings;
     state.suppressedFindings = [...state.suppressedFindings, ...newSuppressed];
@@ -390,13 +396,6 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
     // Must happen BEFORE integrator-pass so the integrator sees the correct
     // resolved/unresolved split and skips "dimension archived" questions.
     state = autoResolveArchivedDimensions(state, now);
-
-    // ── Snapshot current dimension statuses (before integrator mutates) ────
-    // Written here (end of pass, before next-pass recomputation) per AC FC-03.
-    state.dimensionSnapshot = state.dimensions.map((d) => ({
-      name: d.name,
-      status: d.status,
-    }));
 
     // ── Atomic state write ──────────────────────────────────────────────
     writeState(opts.slug, state);
@@ -458,13 +457,25 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
     }
 
     // ── Stall detection (Phase 5) ──────────────────────────────────────
-    const stallResult = checkStall({ state, resolvedThisRound });
-    if (stallResult.stalled) {
-      state.next_action_hint =
-        "Retire stale dimensions with /loom-roadmap retire-dimension or re-run with --force";
-      writeState(opts.slug, state);
-      stderr(`[roadmap-converge] STALL_DETECTED — ${stallResult.reason}`);
-      return { exitCode: 1, reason: "STALL_DETECTED", state };
+    // Compare current dimensions against the PRIOR pass's snapshot, captured
+    // above before the reviewer fan-out overwrote state.dimensions.
+    // Skip the stall check when the pass converged (all dimensions green and
+    // no unresolved questions) — that is a success state, not a stall.
+    const allGreenForStall = state.dimensions.every((d) => d.status === "green");
+    const noUnresolvedForStall = state.open_questions.every((q) => q.resolved_at);
+    const converged = allGreenForStall && noUnresolvedForStall;
+    if (!converged) {
+      const stallResult = checkStall({
+        state: { ...state, dimensionSnapshot: priorDimensionSnapshot },
+        resolvedThisRound,
+      });
+      if (stallResult.stalled) {
+        state.next_action_hint =
+          "Retire stale dimensions with /loom-roadmap retire-dimension or re-run with --force";
+        writeState(opts.slug, state);
+        stderr(`[roadmap-converge] STALL_DETECTED — ${stallResult.reason}`);
+        return { exitCode: 1, reason: "STALL_DETECTED", state };
+      }
     }
 
     // ── Pass-cap halt (Phase 5) ────────────────────────────────────────
@@ -485,6 +496,24 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
       });
       return { exitCode: 1, reason: "PASS_CAP_REACHED", state };
     }
+
+    // ── Sign-off eligibility transition ─────────────────────────────────
+    // After all blocking checks pass, evaluate whether the roadmap is ready
+    // for sign-off. Driver owns the not-eligible ↔ eligible transition;
+    // sign-off.ts owns the eligible → signed-off transition (purity invariant).
+    if (converged && state.sign_off_state !== "signed-off") {
+      state.sign_off_state = "eligible";
+    } else if (state.sign_off_state === "eligible" && !converged) {
+      state.sign_off_state = "not-eligible";
+    }
+
+    // ── Snapshot current dimension statuses for NEXT pass's stall check ────
+    // Written at END of pass per AC FC-03; consumed by checkStall on pass N+1.
+    state.dimensionSnapshot = state.dimensions.map((d) => ({
+      name: d.name,
+      status: d.status,
+    }));
+    writeState(opts.slug, state);
 
     // ── Atomic StageContext writes ──────────────────────────────────────
     const completedAt = now();

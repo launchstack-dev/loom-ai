@@ -293,20 +293,12 @@ describe("roadmap-converge e2e — S-22", () => {
       // round must not exceed passLimit.
       expect(stateAfterPass2.round).toBeLessThanOrEqual(stateAfterPass2.passLimit);
 
-      // ── Transition to eligible — simulates the converge.md command wrapper ──
-      // The driver (driver.ts) does not set sign_off_state = "eligible" directly;
-      // that transition is the responsibility of the /loom-roadmap converge
-      // command layer (commands/loom-roadmap/converge.md) which sets eligible
-      // when all dimensions are green at end of pass. Here we simulate that by
-      // reading state, applying the transition, and writing it back atomically.
-      const { state: preSignOffState } = readState(SLUG);
-      expect(preSignOffState).not.toBeNull();
-      const allGreen = preSignOffState!.dimensions.every((d) => d.status === "green");
-      expect(allGreen).toBe(true);
-      preSignOffState!.sign_off_state = "eligible";
-      writeState(SLUG, preSignOffState!);
+      // Driver owns the not-eligible → eligible transition: when all dimensions
+      // are green and no open_questions remain unresolved at end of pass, the
+      // driver sets sign_off_state = "eligible". sign-off.ts owns the
+      // eligible → signed-off transition (purity invariant).
+      expect(stateAfterPass2.sign_off_state).toBe("eligible");
 
-      // sign_off_state must be "eligible" when all dimensions are green.
       const { state: diskState } = readState(SLUG);
       expect(diskState).not.toBeNull();
       expect(diskState!.sign_off_state).toBe("eligible");

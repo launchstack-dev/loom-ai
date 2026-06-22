@@ -357,6 +357,100 @@ describe("lock conflict abort path", () => {
   });
 });
 
+describe("sign-off eligibility transition", () => {
+  it("sets sign_off_state=eligible when all dimensions are green and no open questions", async () => {
+    const r = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("green") }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+    expect(r.exitCode).toBe(0);
+    expect(r.state?.sign_off_state).toBe("eligible");
+    const { state: disk } = readState("ROADMAP");
+    expect(disk?.sign_off_state).toBe("eligible");
+  });
+
+  it("keeps sign_off_state=not-eligible when any dimension is yellow", async () => {
+    const r = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("yellow") }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+    expect(r.state?.sign_off_state).toBe("not-eligible");
+  });
+
+  it("does not overwrite sign_off_state=signed-off (purity boundary)", async () => {
+    // First pass to green → eligible
+    await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("green") }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+    // Mutate to signed-off (simulating sign-off.ts having run)
+    const { state } = readState("ROADMAP");
+    state!.sign_off_state = "signed-off";
+    const { writeState } = await import("../../scripts/roadmap-converge/state-io.js");
+    writeState("ROADMAP", state!);
+
+    // Next driver pass MUST NOT downgrade signed-off
+    const r = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("green") }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+    expect(r.state?.sign_off_state).toBe("signed-off");
+  });
+});
+
+describe("stall detection — dimensionSnapshot ordering", () => {
+  it("does NOT false-fire when current pass's statuses match prior snapshot but no questions resolved (round 2 baseline)", async () => {
+    // Round 1: green pass — writes snapshot=[vision=green] at end.
+    await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("green") }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+
+    // Round 2: same green statuses, no resolutions.
+    // Pre-fix this would false-fire STALL_DETECTED because the snapshot was
+    // overwritten to the current pass's statuses before checkStall ran.
+    // Post-fix the prior snapshot is preserved across the reviewer fan-out.
+    const stderr: string[] = [];
+    const r = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: defaultEnvelope("green") }),
+      stderr: (s) => stderr.push(s),
+      now: () => new Date("2026-06-17T00:00:01Z"),
+    });
+
+    // All-green at round 2 is a converged state, not a stall.
+    expect(
+      r.exitCode,
+      `expected 0, got ${r.exitCode} reason=${r.reason} stderr=${stderr.join(" | ")}`
+    ).toBe(0);
+    expect(r.reason).toBeUndefined();
+    expect(stderr.some((l) => /STALL_DETECTED/.test(l))).toBe(false);
+    expect(r.state?.sign_off_state).toBe("eligible");
+  });
+});
+
 describe("pre-flight: missing roadmap", () => {
   it("exits 1 with ROADMAP_MISSING when the roadmap file is absent", async () => {
     const stderr: string[] = [];
