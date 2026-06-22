@@ -54,7 +54,10 @@ export default class VersionDriftCheck implements Check {
 
     try {
       const res = await fetchImpl(url, {
-        headers: { Accept: "application/vnd.github+json" },
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "loom-doctor",
+        },
       });
       if (!res.ok) {
         return {

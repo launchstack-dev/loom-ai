@@ -91,7 +91,11 @@ dispatch() {
   log_file="${log_dir}/hook-failures.log"
   if mkdir -p "$log_dir" 2>/dev/null; then
     ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
-    printf '%s,%s,%s,%s\n' "$ts" "$abs_hook" "no-runtime" "PATH=$PATH" >> "$log_file" 2>/dev/null || true
+    # Escape commas and newlines so a hook path or PATH containing them does not
+    # corrupt the CSV log structure (`,` → `\,`, newlines → space).
+    esc_hook=$(printf '%s' "$abs_hook" | tr '\n' ' ' | sed 's/,/\\,/g')
+    esc_path=$(printf '%s' "PATH=$PATH" | tr '\n' ' ' | sed 's/,/\\,/g')
+    printf '%s,%s,%s,%s\n' "$ts" "$esc_hook" "no-runtime" "$esc_path" >> "$log_file" 2>/dev/null || true
   fi
   return 0
 }

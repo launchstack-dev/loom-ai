@@ -14,6 +14,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   defaultInstallStatePath,
@@ -210,5 +211,7 @@ export function defaultPluginJsonPath(env: NodeJS.ProcessEnv = process.env): str
     return path.join(env.CLAUDE_PLUGIN_ROOT, ".claude-plugin", "plugin.json");
   }
   // Fallback: two levels up from scripts/lib/.
-  return path.resolve(__dirname, "..", "..", ".claude-plugin", "plugin.json");
+  // ESM-safe — __dirname is not defined under import.meta loaders.
+  const dirname = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(dirname, "..", "..", ".claude-plugin", "plugin.json");
 }
