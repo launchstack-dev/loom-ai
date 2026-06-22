@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://loom-ai.dev/schemas/upstream/plugin.schema.json",
   "title": "Anthropic Claude Code Plugin Manifest (Loom-side snapshot)",
-  "description": "Synthesized from example manifest at https://code.claude.com/docs/en/plugins-reference.md. snapshotDate: 2026-06-18. snapshotMethod: extract-example-and-infer-schema. Treat as guidance, not authoritative — additionalProperties=true so upstream changes do not break local validation.",
+  "description": "Synthesized from example manifest at https://code.claude.com/docs/en/plugins-reference.md. snapshotDate: 2026-06-22. snapshotMethod: extract-example-and-infer-schema. Treat as guidance, not authoritative — additionalProperties=true so upstream changes do not break local validation.",
   "type": "object",
   "required": [
     "name",
