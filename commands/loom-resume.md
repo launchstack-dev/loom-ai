@@ -21,6 +21,28 @@ Parse arguments after `resume`:
 
 #### Step 1: Locate Resumable State
 
+**Roadmap-converge delegate check (run first):**
+
+Before checking the standard pipeline state files, invoke the roadmap-converge resume delegate to discover any active roadmap-converge sessions:
+
+```typescript
+import { probeStatePaths, buildResumeDigests } from
+  "scripts/roadmap-converge/resume-delegate.js";
+import { renderDigestFromState } from
+  "scripts/roadmap-converge/digest.js";
+```
+
+Scan for roadmap-converge state files under `.roadmap-converge/*/state.toon`. For each found slug, call `probeStatePaths(slug)` to get mtime-tagged existence checks. Collect all checks (including the single `.plan-execution/pipeline-state.toon` check) into one array and pass to `buildResumeDigests(checks, { renderPipelineState })`.
+
+`buildResumeDigests` orders all discovered state files by mtime descending (most recently modified first) and renders each:
+
+- For `kind: "roadmap-converge"` entries: reads state via `readState(slug)` and renders with `renderDigestFromState(state)`.
+- For `kind: "pipeline-state"` entries: delegates to the `renderPipelineState` option if provided; otherwise emits a one-line placeholder directing the user to `/loom-status`.
+
+When digests are found, display them all in mtime-descending order (most recent first), separated by `---`. Then continue to Step 2 for standard pipeline state handling.
+
+**Standard pipeline state check:**
+
 Check for state files in this priority order:
 
 1. `.plan-execution/continue-here.toon` -- explicit pause snapshot (highest priority)
@@ -28,8 +50,14 @@ Check for state files in this priority order:
 3. `.plan-execution/state.toon` -- `/loom-plan execute` execution state
 4. `.plan-execution/convergence-state.toon` -- `/loom-converge` convergence state
 
-If NONE of these files exist:
+If NONE of these files exist AND no roadmap-converge state was found:
 - Print: "No resumable state found. Start a new workflow with `/loom-auto --from 'description'` or `/loom-plan execute`."
+- Stop.
+
+If only roadmap-converge state was found (no standard pipeline state files):
+- The roadmap digest(s) rendered above are the complete resume output.
+- Skip Steps 2–5.
+- Print: "To continue convergence: `/loom-roadmap converge --roadmap <path>`"
 - Stop.
 
 #### Step 2: Read and Validate State

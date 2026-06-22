@@ -1,29 +1,46 @@
-schemaVersion: 1
 wave: 6
-runId: kit-native-skills-20260612-001
-status: success
-gateMode: auto
-phases[1]: 10
-startedAt: 2026-06-13T00:22:00Z
-completedAt: 2026-06-13T00:23:00Z
-durationMs: 60000
+phase: 6
+status: complete
+completedAt: 2026-06-22
+agent: wiring-agent
 
-agentResults[1]{taskId,agent,status,durationMs}:
-  wave6-phase10-cross-ref,orchestrator-direct-edit,success,60000
+filesCreated[3]:
+  tests/integration/roadmap-converge-e2e.test.ts
+  tests/fixtures/roadmaps/example-cli.md
+  planning/history/post-mortems/2026-06-22-roadmap-converge-dogfood.md
 
-filesCreated[2]: .plan-execution/stage-context/phase-10.toon, .plan-execution/stage-context/wave-6-gate.toon
-filesModified[1]: commands/loom-agent.md
+filesModified[4]:
+  commands/loom-resume.md
+  .claude/orchestration.toml
+  skills/library.yaml
+  checksums.sha256
 
-crossBoundaryRequests:
-  filed: 0
-  resolved: 0
+testsPassingTotal: 162
+testsPassingNew: 3
+exportsAdded: 0
 
 verification:
-  status: pass
-  waveGateStatus: passed
-  acsAll: 5
+  bun_test: pass (exit 0)
+  sign_off_purity_grep: pass
+  library_yaml_lint: pass (122 entries, 0 warnings)
 
-nextWave:
-  number: 7
-  phases[1]: 11
-  description: "CLAUDE.md ### Authoring Resources decision tree (M-03 terminal — N-20 two-column structure required)"
+summary: |
+  Wave 6 wires /loom-resume to delegate to roadmap-converge digests via
+  resume-delegate.ts (dual-state ordering by mtime descending), registers
+  all 10 new resources in skills/library.yaml (4 agents, 3 prompts, 3
+  protocols), adds [roadmap.converge] config block and [execution.agents]
+  registrations to .claude/orchestration.toml, ships e2e integration test
+  against example-cli.md fixture (cold-start → pass 1 → integrator → pass 2 →
+  sign-off-eligible in < 120s), and documents dogfood readiness post-mortem
+  with two pre-existing implementation gaps flagged for the converge.md
+  command wrapper layer.
+
+keyDecisions[3]:
+  /loom-resume probes roadmap-converge state before pipeline-state — roadmap digest path is the priority surface when both exist
+  Dogfood post-mortem written as "readiness" document rather than live-run — agent cannot invoke slash commands; flags expected rubric drift for user verification
+  E2E test injects writeState transition for sign_off_state=eligible because driver.ts does not own that transition — gap documented in issues[]
+
+nextStageHints[1]:
+  Two driver.ts gaps flagged in wave-6 issues should be addressed in a follow-up plan: (1) sign_off_state=eligible transition ownership, (2) dimensionSnapshot ordering relative to stall check
+
+crossBoundaryRequests[0]:

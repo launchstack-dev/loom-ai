@@ -180,6 +180,19 @@ library:
       description: Schema for convergence-summary.toon — 11-field terminal-state envelope for any /loom-converge run (target/criteria/document); link-extraction readiness contract per C-11; halt-reason enum cross-referenced from convergence-driver.md circuit breakers
       source: agents/protocols/convergence-summary.schema.md
 
+    # Roadmap-converge protocols (Phase 0a/0b of PLAN-roadmap-converge-harness)
+    - name: roadmap-readiness
+      description: Schema for RoadmapReadinessSchema — MVP default 8 dimensions with rubricRef paths, archetype variants, DimensionDef columns, and dependsOn ordering for the roadmap-converge driver
+      source: agents/protocols/roadmap-readiness.schema.toon
+
+    - name: roadmap-converge-state
+      description: Schema for RoadmapConvergeState v1 — on-disk state.toon for roadmap convergence sessions; sign_off_state, round, passLimit, dimensions, open_questions, stall detector snapshot, and F-13 migrator contract
+      source: agents/protocols/roadmap-converge-state.schema.toon
+
+    - name: roadmap-rubrics
+      description: Per-dimension rubric files for the roadmap-converge harness — green/yellow/red exemplars for vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope; archetype overrides in roadmap-converge.rubricOverrides
+      source: agents/protocols/roadmap-rubrics/vision.md
+
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
     - name: python-conventions
@@ -295,6 +308,27 @@ library:
     - name: architecture-reviewer
       description: Architecture drift detection - dependency direction, pattern consistency, contracts
       source: agents/architecture-reviewer.md
+
+    # Roadmap-converge agents (PLAN-roadmap-converge-harness Phases 1-5)
+    - name: roadmap-converge-driver
+      description: Orchestrates a single roadmap convergence pass — reads state.toon, dispatches per-dimension reviewers (sonnet tier), writes state atomically, emits round-start banner, enforces pass-cap and stall-detector circuit breakers
+      source: agents/roadmap-converge-driver.md
+      requires: [protocol:roadmap-readiness, protocol:roadmap-converge-state, protocol:roadmap-rubrics, protocol:agent-result-schema]
+
+    - name: roadmap-converge-reviewer
+      description: Per-dimension reviewer for the roadmap-converge harness — reads the relevant roadmap section and rubric, returns a ReviewerEnvelope with status (green/yellow/red), findings, and open questions
+      source: agents/roadmap-converge-reviewer.md
+      requires: [protocol:roadmap-readiness, protocol:roadmap-converge-state, protocol:roadmap-rubrics, protocol:agent-result-schema]
+
+    - name: roadmap-converge-integrator
+      description: Integrator-pass agent for roadmap convergence — receives resolved open_questions, applies surgical edits to ROADMAP.md, returns IntegratorEnvelope; INTEGRATOR_NO_ENVELOPE guard rejects non-envelope returns
+      source: agents/roadmap-converge-integrator.md
+      requires: [protocol:roadmap-converge-state, protocol:agent-result-schema]
+
+    - name: roadmap-archetype-detector
+      description: Classifies a ROADMAP.md as one of {cli, web-app, library, data-pipeline, research, default} by scanning keyword hints and structural signals; returns confidence scores for the driver's archetype selection
+      source: agents/roadmap-archetype-detector.md
+      requires: [protocol:roadmap-readiness]
 
     # Roadmap agents
     - name: roadmap-builder-agent
@@ -511,6 +545,21 @@ library:
       description: "Roadmap lifecycle — init, review, approve, add, insert, remove, reorder, explore, refine, validate, status"
       source: commands/loom-roadmap.md
       requires: [agent:roadmap-builder-agent, agent:plan-builder-agent, agent:questioner-agent, agent:scope-feasibility-agent, agent:feature-coverage-agent, agent:strategy-agent, agent:ux-agent]
+
+    - name: loom-roadmap-converge
+      description: "Roadmap convergence command — runs multi-pass dimensional review loop against ROADMAP.md using per-dimension rubrics; options: --roadmap <path>, --archetype <name>, --pass-cap <N>, --force"
+      source: commands/loom-roadmap/converge.md
+      requires: [agent:roadmap-converge-driver, agent:roadmap-converge-reviewer, agent:roadmap-converge-integrator, agent:roadmap-archetype-detector, protocol:roadmap-readiness, protocol:roadmap-converge-state, protocol:roadmap-rubrics]
+
+    - name: loom-roadmap-sign-off
+      description: "Roadmap sign-off command — transitions sign_off_state to signed-off when all dimensions are green or user explicitly signs off; enforces sign-off purity (only sign-off.ts writes signed-off)"
+      source: commands/loom-roadmap/sign-off.md
+      requires: [protocol:roadmap-converge-state]
+
+    - name: loom-roadmap-status
+      description: "Roadmap convergence status command — pure read over state.toon; renders per-dimension status table, open questions, round/passLimit, and sign_off_state without modifying state"
+      source: commands/loom-roadmap/status.md
+      requires: [protocol:roadmap-converge-state]
 
     - name: loom
       description: "Root command — init, auto, converge, quick, pause, resume, do, next, profile, status, debate, chain, vote, triage"
