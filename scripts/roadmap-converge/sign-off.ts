@@ -136,7 +136,7 @@ export async function runSignOff(opts: SignOffOptions): Promise<SignOffResult> {
   // ── Eligibility precondition ──────────────────────────────────────────
   if (state.sign_off_state !== "eligible") {
     const blockers = resolveBlockers(state);
-    const primary = blockers[0];
+    const primary = blockers[0] ?? "RED_DIMENSIONS";
     const additional = blockers.slice(1);
     const code = `SIGNOFF_NOT_ELIGIBLE:${primary}`;
     stderr(
@@ -282,6 +282,8 @@ function describeBlocker(
 // Diff emission
 // ---------------------------------------------------------------------------
 
+const PAGER_SAFE_RE = /^[a-zA-Z0-9_\/-]+$/;
+
 function emitDiff(
   diffText: string,
   ctx: {
@@ -294,8 +296,16 @@ function emitDiff(
     ctx.stdout(diffText);
     return;
   }
+  // Validate pager before spawning. Fall back to 'less' on invalid characters.
+  let safePager = ctx.pager;
+  if (!PAGER_SAFE_RE.test(ctx.pager)) {
+    process.stderr.write(
+      `[roadmap-signoff] PAGER rejected: invalid characters — falling back to less\n`
+    );
+    safePager = "less";
+  }
   // Pipe through pager. If the pager fails to spawn, fall back to direct stdout.
-  const result = spawnSync(ctx.pager, [], {
+  const result = spawnSync(safePager, [], {
     input: diffText,
     stdio: ["pipe", "inherit", "inherit"],
     encoding: "utf-8",
@@ -384,8 +394,9 @@ function writeLastError(input: LastErrorInput): void {
   const body = lines.join("\n") + "\n";
   try {
     atomicWrite(LAST_ERROR_PATH, body);
-  } catch {
+  } catch (err) {
     // Best-effort: last-error is diagnostic, never gating.
+    console.error(`[roadmap-signoff] could not write last-error.toon: ${(err as Error).message}`);
   }
 }
 

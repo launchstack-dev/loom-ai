@@ -278,6 +278,16 @@ describe("createArchetypeDetectionHook — archetypeOverride", () => {
     const result = await hook("planning/ROADMAP.md", null);
     expect(result!.archetype).toBe("library");
   });
+
+  it("throws with a useful message when an invalid archetype override is passed", async () => {
+    const hook = createArchetypeDetectionHook({
+      archetypeOverride: "not-a-valid-archetype",
+      cwd: workdir,
+    });
+    await expect(hook("planning/ROADMAP.md", null)).rejects.toThrow(
+      /Invalid --archetype value: "not-a-valid-archetype"\. Valid: /
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

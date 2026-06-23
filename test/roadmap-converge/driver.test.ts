@@ -466,3 +466,76 @@ describe("pre-flight: missing roadmap", () => {
     expect(stderr.some((l) => /roadmap not readable/.test(l))).toBe(true);
   });
 });
+
+describe("no duplicate open_questions across passes (finding 1)", () => {
+  it("two passes against a dimension that stays yellow produce ONE question, not two", async () => {
+    const yellowEnvWithFinding: ReviewerEnvelope = {
+      ok: true,
+      status: "yellow",
+      findings: [{ severity: "warning", description: "still yellow" }],
+    };
+
+    // Pass 1: dimension is yellow, one finding emitted.
+    const r1 = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: yellowEnvWithFinding }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:00:00Z"),
+    });
+    expect(r1.exitCode).toBe(0);
+    expect(r1.state?.open_questions).toHaveLength(1);
+
+    // Pass 2: same dimension still yellow, same finding — should NOT duplicate.
+    // The stall detector fires (same statuses, no resolutions), so exitCode=1
+    // with reason STALL_DETECTED is expected. The key assertion is that the
+    // returned state has exactly 1 unresolved open question (not 2 accumulated).
+    const r2 = await runConvergePass({
+      roadmapPath,
+      slug: "ROADMAP",
+      dimensions: [{ name: "vision", rubricRef: rubricPath }],
+      invokeReviewer: buildInvoker({ vision: yellowEnvWithFinding }),
+      stderr: () => {},
+      now: () => new Date("2026-06-17T00:01:00Z"),
+    });
+    // Must still be 1 (the fresh finding from this pass), not 2 (accumulated).
+    expect(r2.state?.open_questions.filter((q) => !q.resolved_at)).toHaveLength(1);
+  });
+});
+
+describe("parseRubric — subheadings inside a band are preserved (finding 2)", () => {
+  it("### Subheading inside Green block is not truncated before ## Yellow", () => {
+    const rubricWithSubheadings = [
+      "# Rubric",
+      "",
+      "## Green",
+      "",
+      "Green intro.",
+      "",
+      "### Subheading",
+      "",
+      "More green content under subheading.",
+      "",
+      "## Yellow",
+      "",
+      "Yellow content.",
+      "",
+      "## Red",
+      "",
+      "Red content.",
+    ].join("\n");
+
+    const sections = parseRubric(rubricWithSubheadings);
+    // Green section must include content after the ### Subheading.
+    expect(sections.green).toMatch(/Green intro/);
+    expect(sections.green).toMatch(/Subheading/);
+    expect(sections.green).toMatch(/More green content under subheading/);
+    // Green section must NOT bleed into Yellow or Red.
+    expect(sections.green).not.toMatch(/Yellow content/);
+    expect(sections.green).not.toMatch(/Red content/);
+    // Yellow and Red must be parsed correctly too.
+    expect(sections.yellow).toMatch(/Yellow content/);
+    expect(sections.red).toMatch(/Red content/);
+  });
+});

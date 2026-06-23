@@ -311,7 +311,16 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
     const reviewerOutcomes = await Promise.all(reviewerPromises);
 
     // ── Apply outcomes: caps, suppression, rendering, deltas ────────────
-    const renderedFindings: OpenQuestionV1[] = [...state.open_questions];
+    // Seed renderedFindings with questions that either (a) are already resolved
+    // or (b) belong to a dimension NOT being evaluated this pass. This prevents
+    // sticky yellow/red dimensions from accumulating duplicate questions on each
+    // pass — previously `[...state.open_questions]` would re-include unresolved
+    // findings for every evaluated dimension, causing them to accumulate.
+    const evaluatedDimNames = new Set(opts.dimensions.map((d) => d.name));
+    const preservedQuestions = state.open_questions.filter(
+      (q) => q.resolved_at || !evaluatedDimNames.has(q.dimension)
+    );
+    const renderedFindings: OpenQuestionV1[] = [...preservedQuestions];
     const newSuppressed: SuppressedFindingV1[] = [];
     const nextDimensions: RoadmapDimensionV1[] = [];
 
@@ -427,8 +436,14 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
       }
 
       if (!isIntegratorEnvelope(integratorResult)) {
+        let payloadPreview: string;
+        try {
+          payloadPreview = JSON.stringify(integratorResult).slice(0, 200);
+        } catch {
+          payloadPreview = "<unserializable>";
+        }
         stderr(
-          `[roadmap-converge] INTEGRATOR_NO_ENVELOPE — integrator returned non-envelope payload`
+          `[roadmap-converge] INTEGRATOR_NO_ENVELOPE — integrator returned non-envelope payload — payload: ${payloadPreview}`
         );
         return { exitCode: 1, reason: "INTEGRATOR_NO_ENVELOPE", state };
       }
@@ -504,6 +519,11 @@ export async function runConvergePass(opts: DriverOptions): Promise<DriverResult
     if (converged && state.sign_off_state !== "signed-off") {
       state.sign_off_state = "eligible";
     } else if (state.sign_off_state === "eligible" && !converged) {
+      const nonGreenCount = state.dimensions.filter((d) => d.status !== "green").length;
+      const unresolvedCount = state.open_questions.filter((q) => !q.resolved_at).length;
+      stderr(
+        `[roadmap-converge] sign-off eligibility revoked — ${nonGreenCount} non-green dimensions or ${unresolvedCount} unresolved questions`
+      );
       state.sign_off_state = "not-eligible";
     }
 
@@ -639,21 +659,15 @@ export interface RubricSections {
 export function parseRubric(content: string): RubricSections {
   const sections: RubricSections = { green: "", yellow: "", red: "" };
   const re = /^##\s+(Green|Yellow|Red)\s*$/gim;
-  const matches: { name: keyof RubricSections; start: number }[] = [];
+  const matches: { name: keyof RubricSections; start: number; index: number }[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
-    const name = m[1].toLowerCase() as keyof RubricSections;
-    matches.push({ name, start: m.index + m[0].length });
+    matches.push({ name: m[1].toLowerCase() as keyof RubricSections, start: m.index + m[0].length, index: m.index });
   }
   for (let i = 0; i < matches.length; i++) {
     const { name, start } = matches[i];
-    const end = i + 1 < matches.length ? matches[i + 1].start : content.length;
-    // Strip the leading "## Name" header from end-of-section by finding the
-    // next "## " line within (we already skipped the header itself above).
-    let chunk = content.slice(start, end);
-    const nextHdr = chunk.search(/^##\s+/m);
-    if (nextHdr >= 0) chunk = chunk.slice(0, nextHdr);
-    sections[name] = chunk.trim();
+    const end = i + 1 < matches.length ? matches[i + 1].index : content.length;
+    sections[name] = content.slice(start, end).trim();
   }
   return sections;
 }
@@ -662,7 +676,13 @@ function loadRubricSections(rubricRef: string): RubricSections {
   try {
     const content = readFileSync(rubricRef, "utf-8");
     return parseRubric(content);
-  } catch {
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === "ENOENT") {
+      process.stderr.write(`[roadmap-converge] rubric not found: ${rubricRef}\n`);
+    } else {
+      process.stderr.write(`[roadmap-converge] rubric read error: ${rubricRef} — ${e.code ?? e.message}\n`);
+    }
     return { green: "", yellow: "", red: "" };
   }
 }

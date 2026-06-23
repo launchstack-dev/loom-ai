@@ -16,7 +16,7 @@
  * orchestrator can read it with grep if the runtime is unavailable.
  */
 
-import { closeSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
+import { linkSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 
 /** Time after which a held lock is considered stale and auto-cleared. */
 export const STALE_AFTER_MS = 10 * 60 * 1000;
@@ -79,50 +79,88 @@ export function acquireLock(
 
   // Up to two attempts: first attempt may race a stale-lock clear.
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Write the full lock body to a pid-suffixed tmp file first (no zero-byte
+    // window), then link() it into lockPath. link() fails with EEXIST on POSIX
+    // when the target already exists — giving us the same O_EXCL semantics as
+    // openSync("wx") but with the body already committed before we "publish".
+    const tmpLock = `${lockPath}.tmp.${pid}`;
+    const body = `pid: ${pid}\nstarted_at: ${startedAt}\n`;
+    writeFileSync(tmpLock, body, { flag: "w" });
+
+    let linkOk = false;
     try {
-      const fd = openSync(lockPath, "wx");
-      try {
-        const body = `pid: ${pid}\nstarted_at: ${startedAt}\n`;
-        writeSync(fd, body);
-      } finally {
-        closeSync(fd);
-      }
-      return { acquired: true, info: { pid, startedAt } };
+      linkSync(tmpLock, lockPath);
+      linkOk = true;
     } catch (err) {
       const e = err as NodeJS.ErrnoException;
-      if (e.code !== "EEXIST") throw err;
-
-      // Lock exists — inspect it.
-      const existing = readLockFile(lockPath);
-      const existingMs = existing ? Date.parse(existing.startedAt) : NaN;
-      const ageMs = Number.isFinite(existingMs) ? now() - existingMs : Infinity;
-
-      if (force) {
-        // Caller asked to steal the lock.
-        safeUnlink(lockPath);
-        opts.onAdvisory?.(
-          `force-clearing lock at ${lockPath} (was pid=${existing?.pid ?? "?"}, age=${formatAge(ageMs)})`
-        );
-        continue;
+      if (e.code !== "EEXIST") {
+        safeUnlink(tmpLock);
+        throw err;
       }
-
-      if (ageMs > STALE_AFTER_MS) {
-        // Stale — auto-clear and retry.
-        safeUnlink(lockPath);
-        opts.onAdvisory?.(
-          `stale lock auto-cleared at ${lockPath} (was pid=${existing?.pid ?? "?"}, age=${formatAge(ageMs)})`
-        );
-        continue;
-      }
-
-      // Fresh lock — conflict.
-      return {
-        acquired: false,
-        conflict: existing ?? { pid: -1, startedAt: "" },
-        ageMs: Number.isFinite(ageMs) ? ageMs : 0,
-        reason: "LOCK_CONFLICT",
-      };
+      // Lock already exists — fall through to conflict handling below.
+    } finally {
+      // tmpLock is no longer needed (lockPath now has its own inode via link).
+      safeUnlink(tmpLock);
     }
+
+    if (linkOk) {
+      return { acquired: true, info: { pid, startedAt } };
+    }
+
+    // Lock exists — inspect it.
+    const existing = readLockFile(lockPath);
+    const existingMs = existing ? Date.parse(existing.startedAt) : NaN;
+    const ageMs = Number.isFinite(existingMs) ? now() - existingMs : Infinity;
+
+    if (force) {
+      // Caller asked to steal the lock.
+      // Rename the existing lock to a temp path first (atomic on POSIX) to
+      // prevent TOCTOU: another process can't steal a lock we've already moved.
+      const staleTmp = `${lockPath}.stale.${pid}`;
+      try {
+        renameSync(lockPath, staleTmp);
+        safeUnlink(staleTmp);
+      } catch (renameErr) {
+        const re = renameErr as NodeJS.ErrnoException;
+        if (re.code === "ENOENT") {
+          // Another process already cleared it — retry from the top.
+          continue;
+        }
+        throw renameErr;
+      }
+      opts.onAdvisory?.(
+        `force-clearing lock at ${lockPath} (was pid=${existing?.pid ?? "?"}, age=${formatAge(ageMs)})`
+      );
+      continue;
+    }
+
+    if (ageMs > STALE_AFTER_MS) {
+      // Stale — rename to temp (atomic) then unlink, then retry.
+      const staleTmp = `${lockPath}.stale.${pid}`;
+      try {
+        renameSync(lockPath, staleTmp);
+        safeUnlink(staleTmp);
+      } catch (renameErr) {
+        const re = renameErr as NodeJS.ErrnoException;
+        if (re.code === "ENOENT") {
+          // Another process already cleared it — retry from the top.
+          continue;
+        }
+        throw renameErr;
+      }
+      opts.onAdvisory?.(
+        `stale lock auto-cleared at ${lockPath} (was pid=${existing?.pid ?? "?"}, age=${formatAge(ageMs)})`
+      );
+      continue;
+    }
+
+    // Fresh lock — conflict.
+    return {
+      acquired: false,
+      conflict: existing ?? { pid: -1, startedAt: "" },
+      ageMs: Number.isFinite(ageMs) ? ageMs : 0,
+      reason: "LOCK_CONFLICT",
+    };
   }
 
   // Unreachable in practice (loop exits via return). Surface as conflict for safety.

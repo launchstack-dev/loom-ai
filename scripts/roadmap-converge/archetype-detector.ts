@@ -411,6 +411,11 @@ export function createArchetypeDetectionHook(
 
     // --archetype override: skip detection, use the override verbatim.
     if (opts.archetypeOverride) {
+      if (!VALID_ARCHETYPES.includes(opts.archetypeOverride as ArchetypeName)) {
+        throw new Error(
+          `Invalid --archetype value: "${opts.archetypeOverride}". Valid: ${VALID_ARCHETYPES.join(", ")}`
+        );
+      }
       const result = { archetype: opts.archetypeOverride, confidence: 1 };
       writeArchetypeStageContext(result.archetype, result.confidence, startedAt, new Date());
       return result;

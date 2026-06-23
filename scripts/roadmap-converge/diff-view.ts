@@ -176,8 +176,13 @@ function findBlobByHash(currentPath: string, wantedHash: string): Buffer | null 
     .split("\n")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+  // Validate currentPath: colon or newline characters would corrupt the refspec.
+  const pathIsSafe = !currentPath.includes(":") && !currentPath.includes("\n");
   for (const sha of shas) {
-    const show = spawnSync("git", ["show", `${sha}:${currentPath}`], {
+    const args: string[] = pathIsSafe
+      ? ["show", `${sha}:${currentPath}`]
+      : ["show", sha, "--", currentPath];
+    const show = spawnSync("git", args, {
       encoding: "buffer",
     });
     if (show.error || show.status !== 0) continue;

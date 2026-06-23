@@ -193,4 +193,26 @@ describe("encoder edge cases", () => {
     const decoded = parseRoadmapConvergeStateToon(encoded);
     expect(decoded.dimensions[1].blockers).toEqual(["alpha|beta", "gamma"]);
   });
+
+  it("string containing literal \\c round-trips correctly (escape-sequence collision fix)", () => {
+    // A cell value that literally contains the two-char sequence backslash+c
+    // must not be corrupted by the unescape pass (old sequential replace would
+    // turn \c into a comma before the \\ pass could protect it).
+    const s = sampleState();
+    s.dimensions[0].evidence = "foo\\cbar";
+    const encoded = encodeRoadmapConvergeStateToon(s);
+    const decoded = parseRoadmapConvergeStateToon(encoded);
+    expect(decoded.dimensions[0].evidence).toBe("foo\\cbar");
+  });
+
+  it("list item containing literal \\v round-trips through joinList/splitList (escape-sequence collision fix)", () => {
+    // A blocker value that literally contains backslash+v must not be treated
+    // as a pipe character during splitList (old sequential replace would turn
+    // \v into | before the \\ pass could protect it).
+    const s = sampleState();
+    s.dimensions[1].blockers = ["foo\\vbar", "baz"];
+    const encoded = encodeRoadmapConvergeStateToon(s);
+    const decoded = parseRoadmapConvergeStateToon(encoded);
+    expect(decoded.dimensions[1].blockers).toEqual(["foo\\vbar", "baz"]);
+  });
 });

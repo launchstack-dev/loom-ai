@@ -102,6 +102,11 @@ export function readState(
   const detection = detectRoadmapConvergeStateVersion(raw);
   // detected=0 means no marker — treat as a corrupted/legacy file. Parse
   // into v1 shape best-effort; migrator no-op walker accepts it.
+  if (detection.detected === 0) {
+    console.error(
+      `[roadmap-converge] state.toon malformed at ${path} — using defaults; persisted history discarded`
+    );
+  }
   const parsed = parseRoadmapConvergeStateToon(raw);
   const detectedVersion = detection.detected || CURRENT_VERSION;
   const migrated = detectedVersion !== CURRENT_VERSION;
@@ -415,11 +420,15 @@ function escapeScalar(value: string): string {
 }
 
 function unescapeScalar(value: string): string {
-  return value
-    .replace(/\\n/g, "\n")
-    .replace(/\\r/g, "\r")
-    .replace(/\\t/g, "\t")
-    .replace(/\\\\/g, "\\");
+  return value.replace(/\\(.)/g, (match, char) => {
+    switch (char) {
+      case "n": return "\n";
+      case "r": return "\r";
+      case "t": return "\t";
+      case "\\": return "\\";
+      default: return match;
+    }
+  });
 }
 
 function escapeCell(value: string): string {
@@ -427,7 +436,17 @@ function escapeCell(value: string): string {
 }
 
 function unescapeCell(value: string): string {
-  return unescapeScalar(value.replace(/\\c/g, ",").replace(/\\p/g, "|"));
+  return value.replace(/\\(.)/g, (match, char) => {
+    switch (char) {
+      case "n": return "\n";
+      case "r": return "\r";
+      case "t": return "\t";
+      case "c": return ",";
+      case "p": return "|";
+      case "\\": return "\\";
+      default: return match;
+    }
+  });
 }
 
 function csv(values: string[]): string {
@@ -460,10 +479,15 @@ function joinList(values: string[]): string {
 
 function splitList(joined: string): string[] {
   if (!joined) return [];
-  // First split on raw `|`, then restore `\v → |` and `\\ → \`.
-  return joined
-    .split("|")
-    .map((v) => v.replace(/\\v/g, "|").replace(/\\\\/g, "\\"));
+  return joined.split("|").map((v) =>
+    v.replace(/\\(.)/g, (match, char) => {
+      switch (char) {
+        case "v": return "|";
+        case "\\": return "\\";
+        default: return match;
+      }
+    })
+  );
 }
 
 function escapeRegExp(s: string): string {

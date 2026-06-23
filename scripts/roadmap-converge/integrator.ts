@@ -6,8 +6,7 @@
  * questions the integrator:
  *   1. Writes ROADMAP.md atomically (.tmp + renameSync).
  *   2. Recomputes the content_hash via hashRoadmap.
- *   3. Increments state.round.
- *   4. Returns a standard AgentResult TOON envelope per
+ *   3. Returns a standard AgentResult TOON envelope per
  *      agents/protocols/agent-result.schema.md.
  *
  * FC-05 retire-dimension semantics: when a dimension name is added to
@@ -168,7 +167,10 @@ function applySurgicalEdit(content: string, question: OpenQuestionV1): EditResul
 
   if (!anchor) return { content, applied: false };
 
-  const lines = content.split("\n");
+  // Detect line ending from original content and use consistently throughout.
+  const eol = content.includes("\r\n") ? "\r\n" : "\n";
+
+  const lines = content.split(eol);
   // Find first heading whose normalised text matches the anchor.
   const headingIdx = lines.findIndex((line) => {
     const m = /^#{1,6}\s+(.+)$/.exec(line);
@@ -195,7 +197,7 @@ function applySurgicalEdit(content: string, question: OpenQuestionV1): EditResul
     insertAfter = i;
   }
 
-  // Build the resolution block to insert.
+  // Build the resolution block to insert (use detected EOL for consistency).
   const resolutionBlock = [
     "",
     `<!-- converge-resolution id=${question.id} resolved_at=${question.resolved_at ?? "unknown"} -->`,
@@ -209,7 +211,7 @@ function applySurgicalEdit(content: string, question: OpenQuestionV1): EditResul
     ...lines.slice(insertAfter + 1),
   ];
 
-  return { content: newLines.join("\n"), applied: true };
+  return { content: newLines.join(eol), applied: true };
 }
 
 // ---------------------------------------------------------------------------
