@@ -8,10 +8,11 @@ updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
 sourceRefs[2]: agents/convergence-planner-agent.md, agents/protocols/convergence-plan.schema.md
-crossRefs[3]{pageId,relationship}:
+crossRefs[4]{pageId,relationship}:
   concept-execution-pipeline,relates-to
   component-orchestration-patterns,relates-to
   structure-agent-taxonomy,relates-to
+  concept-roadmap-convergence,relates-to
 tags[5]: convergence, targets, delta, iteration, criteria
 staleness: fresh
 confidence: high

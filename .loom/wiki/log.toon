@@ -1,6 +1,12 @@
 schemaVersion: 1
-entryCount: 1
-lastEntry: 2026-04-25T22:00:00Z
+entryCount: 7
+lastEntry: 2026-06-17T00:00:00Z
 
-entries[1]{timestamp,operation,pageId,agent,summary}:
+entries[7]{timestamp,operation,pageId,agent,summary}:
   2026-04-25T22:00:00Z,bootstrap,*,human,Initial wiki bootstrap: 19 pages across 6 categories covering hooks/infrastructure + command dispatch + agents/protocols
+  2026-06-17T00:00:00Z,create,concept-roadmap-convergence,wiki-maintainer-agent,F-15/M-07 plan-created — capture roadmap convergence loop shape, dimensions/rubrics, sibling-to-code-convergence framing
+  2026-06-17T00:00:00Z,create,component-roadmap-converge-driver,wiki-maintainer-agent,F-15/M-07 plan-created — capture driver pipeline, three /loom-roadmap commands, 10-state machine, 10 error codes, configuration block
+  2026-06-17T00:00:00Z,create,component-roadmap-converge-state,wiki-maintainer-agent,F-15/M-07 plan-created — capture RoadmapConvergeState + RoadmapReadinessSchema + RoadmapDimension + RoadmapRubric + RoadmapConvergeDigest, lock-file, slug derivation, F-13 migration registration
+  2026-06-17T00:00:00Z,create,decision-sign-off-purity,wiki-maintainer-agent,F-15/M-07 plan-created — record structural guarantee that only /loom-roadmap sign-off writes signed-off (file isolation + grep guard)
+  2026-06-17T00:00:00Z,create,decision-archetype-rubrics,wiki-maintainer-agent,F-15/M-07 plan-created — record archetype-selected pedagogical rubrics with status-conditional inline rendering and retire/override hooks
+  2026-06-17T00:00:00Z,cross-ref-add,concept-convergence,wiki-maintainer-agent,Added relates-to ref to concept-roadmap-convergence (subjective sibling of code convergence)
