@@ -71,19 +71,25 @@ export interface InstallState {
   channel: Channel;
   /** Install origin (C-06). */
   source: Source;
-  /** Populated by F-05 when this install resulted from a cross-channel migration. */
-  migratedFrom: MigratedFrom | null;
+  /**
+   * Populated by F-05 when this install resulted from a cross-channel migration.
+   *
+   * Optional because `parseToon()` produces `undefined` for keys absent in the
+   * on-disk file; explicit `null` is reserved for "present, but cleared" once a
+   * nested-block-capable parser lands.
+   */
+  migratedFrom?: MigratedFrom | null;
   /** ISO 8601 / RFC 3339 datetime of last telemetry ping; null when `doNotTrack` is true. */
-  lastPing: string | null;
+  lastPing?: string | null;
   /** True after the user opts out of telemetry (F-11). Default false. */
   doNotTrack: boolean;
   /** See {@link UpdateInProgress}. */
-  updateInProgress: UpdateInProgress;
+  updateInProgress?: UpdateInProgress;
   /** Forensic trace of last partial install failure, or null when clean. */
-  installError: InstallError | null;
+  installError?: InstallError | null;
   /**
    * Semver `vX.Y.Z` if the user pinned a version via
    * `claude plugin add loom@<version>`. Honored by F-12 `/loom-update`.
    */
-  pinnedVersion: string | null;
+  pinnedVersion?: string | null;
 }

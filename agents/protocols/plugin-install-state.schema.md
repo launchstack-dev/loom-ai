@@ -6,6 +6,8 @@ Canonical TOON schema for the per-machine plugin install record at `~/.loom/inst
 
 Paired TypeScript type: `hooks/lib/types/plugin-install-state.ts`.
 
+> Parser note: the nested-block fields below (`migratedFrom`, `updateInProgress` object variant, `installError`) cannot be read by the current `hooks/lib/toon-reader.ts` — its `parseToon()` skips every indented line. Any consumer that materializes those fields must extend `parseToon()` to handle nested blocks or use a different parser. Absent fields surface as `undefined` (not `null`), which is why the corresponding interface fields are typed as optional.
+
 ## Fields
 
 | Field | Type | Constraints | Validation Rules |
