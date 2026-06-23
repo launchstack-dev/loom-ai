@@ -21,19 +21,7 @@
     "types": ["node"]
   },
   "include": [
-    "hooks/lib/types/**/*.ts",
-    "hooks/lib/plugin-root-resolver.ts",
-    "hooks/lib/plugin-root-resolver.test.ts",
-    "hooks/lib/fail-loud-logger.ts",
-    "hooks/lib/fail-loud-logger.test.ts",
-    "hooks/lib/init-guard.ts",
-    "hooks/lib/init-guard.test.ts",
-    "hooks/lib/dismissal-marker.ts",
-    "hooks/lib/dismissal-marker.test.ts",
-    "scripts/validate-toon-schemas.ts",
-    "scripts/generate-changelog.ts",
-    "test/plugin-install-e2e.test.ts",
-    "test/worktree-init.test.ts"
+    "hooks/lib/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
