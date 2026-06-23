@@ -1,0 +1,65 @@
+wave: 5a
+label: Wave 5a
+phases[4]: Phase 9A1, Phase 9A2a, Phase 9A2b, Phase 9B
+agents[4]: implementer-agent x4 (parallel)
+status: complete
+verificationStatus: pass
+
+filesCreated[25]:
+  commands/loom-doctor.md
+  scripts/loom-doctor.ts
+  scripts/lib/doctor/index.ts
+  scripts/lib/doctor/bundle.ts
+  scripts/lib/doctor/render.ts
+  test/loom-doctor.test.ts
+  scripts/lib/doctor/checks/version-drift.ts
+  scripts/lib/doctor/checks/channel-files.ts
+  scripts/lib/doctor/checks/install-interrupted.ts
+  scripts/lib/doctor/checks/channel-upgrade-available.ts
+  scripts/lib/doctor/checks/tier-ambiguous.ts
+  scripts/lib/doctor/checks/managed-tier-detected.ts
+  scripts/lib/doctor/__tests__/channel-tier-checks.test.ts
+  scripts/lib/doctor/checks/hook-files-present.ts
+  scripts/lib/doctor/checks/runner-resolution.ts
+  scripts/lib/doctor/checks/anchor-form.ts
+  scripts/lib/doctor/checks/orphan-entries.ts
+  scripts/lib/doctor/checks/bare-anchor.ts
+  scripts/lib/doctor/checks/permissions-derived.ts
+  scripts/lib/doctor/__tests__/hook-settings-checks.test.ts
+  scripts/lib/migration-runner.ts
+  scripts/lib/__tests__/migration-runner.test.ts
+  scripts/lib/ownership-evidence.ts
+  hooks/loom-migration.ts
+  test/loom-migration.test.ts
+
+filesModified[2]:
+  scripts/lib/doctor/index.ts
+  scripts/lib/migration-runner.ts
+
+verifyCommands[3]{cmd,exit,note}:
+  bunx vitest run (all 5 Wave 5a test files),0,72/72 pass
+  bunx tsx scripts/loom-doctor.ts --help,0,prints usage
+  bunx tsx scripts/loom-doctor.ts --json,1,12/12 checks discovered + executed; overallStatus=warnings on this worktree (no real install state) — exit code reflects real check results
+
+wiringApplied[2]{file,change,source}:
+  scripts/lib/migration-runner.ts,Added migrationRunner singleton export honoring 9A1's loadMigrationRunner contract (instance vs class shape reconciliation),wave-merge
+  scripts/lib/doctor/index.ts,Dispatcher accepts both pre-built instances AND zero-arg-default constructors (Phase 9A2a/b modules export classes; new exported() now happens at discovery time),wave-merge
+
+contractAmendments[1]{file,issue,resolution}:
+  scripts/lib/doctor/check.interface.ts,HealthCheck typed as unknown in Phase 0B; all 12 check modules duplicate an inline structural type to satisfy doctor-report.schema.md,Tracked. Tighten once agents/protocols/doctor-report.types.ts lands (out of scope for Wave 5a).
+
+deferredWork[3]:
+  package.json `bin` registration for loom-doctor (Phase 9A1 integrationNote)
+  commands/loom-doctor.md byte-embed of _loom-init-guard.md prelude (currently referenced by link)
+  VERSION constant in scripts/loom-doctor.ts is hardcoded "0.0.0" — wire to package.json or install.toon
+
+keyDecisions[4]:
+  Dispatcher dynamic discovery via fs.readdirSync + dynamic import(); ENOENT-tolerant so CLI ships before checks land. Now picks up all 12 modules + instantiates classes.
+  /loom-doctor render: glyphs only on TTY (process.stdout.isTTY); text labels (PASS|WARN|FAIL) always present.
+  Bundle redaction: strips installSourceUrl AND doNotTrack at every depth; keeps channel, source, version fields.
+  MigrationRunner singleton constructed lazily with env-based channel resolution (CLAUDE_PLUGIN_ROOT set → plugin; unset → curl).
+
+nextStageHints[3]:
+  Wave 5b (Phase 10A): tier-resolution + register-loom-hooks core. Adds --tier flag contract and appends loom-migration SessionStart hook to LOOM_HOOKS.
+  Wave 5c (Phase 10B): surgical --tier passthrough to 6 entry commands + hooks.json modification.
+  Phase 11A README/decision-matrix and Phase 11B E2E specs (Wave 6a) can verify /loom-doctor differentiator now that it ships end-to-end.

@@ -120,3 +120,31 @@ Loom is a platform you extend, not a fixed methodology. Every behavior is compos
 
 **Heuristic for choosing between skill and agent:** if a Claude Code user would want this knowledge to "just be there" whenever they open a relevant file, author a **skill**. If a Loom pipeline run would call it as a discrete stage, author an **agent**. When unsure, `/loom-library add <source>` runs a classification heuristic that prioritizes `triggers:` frontmatter (→ skill) over filename and surfaces an ambiguous-type prompt when the signal is unclear.
 
+
+<!-- WORKTREE-CONTEXT-INJECTED -->
+## Worktree Context -- READ THIS FIRST
+
+**You are in a worktree.** This is an isolated workspace.
+
+| Field | Value |
+|-------|-------|
+| Project | `loom-ai` |
+| Branch | `m07` |
+| Base branch | `main` |
+| Worktree path | `/Users/jensencarlsen/Projects/loom-ai/.worktrees/m07` |
+| Main repo | `/Users/jensencarlsen/Projects/loom-ai` |
+
+### Hard Rules
+1. **Stay in this directory.** Do not `cd` to the main repo or other worktrees.
+2. **Do not switch branches.** Never `git checkout` or `git switch`.
+3. **Do not read/modify files in other worktrees.** Those are other Claude instances' workspaces.
+4. **PRs target `main`.**
+5. **Do not create new branches** without explicit user instruction.
+6. **Verify at session start:** `pwd && git branch --show-current`
+7. **Do not modify this section.** It is auto-generated.
+
+### Lifecycle
+Tell the user to run these from the **main repo terminal** (not from within this worktree):
+- `wt rebase m07` — rebase onto latest `main`
+- `wt merge m07` — merge into `main` and optionally clean up
+- `wt done m07` — remove worktree, delete branch, checkout `main`

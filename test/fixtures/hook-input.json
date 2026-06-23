@@ -1,0 +1,10 @@
+{
+  "session_id": "test-session-0000",
+  "transcript_path": "/tmp/loom-probe-transcript.jsonl",
+  "cwd": "/tmp",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Read",
+  "tool_input": {
+    "file_path": "/tmp/loom-probe-target.txt"
+  }
+}

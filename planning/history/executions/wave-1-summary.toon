@@ -1,46 +1,47 @@
-schemaVersion: 1
 wave: 1
-runId: kit-native-skills-20260612-001
-status: success
-phases[2]: 1, 2
-startedAt: 2026-06-12T22:50:00Z
-completedAt: 2026-06-12T23:10:00Z
-durationMs: 1200000
+label: Wave 1
+phases[2]: Phase 1, Phase 2
+agents[2]: implementer-agent (P1), implementer-agent (P2)
+status: complete
+verificationStatus: pass
 
-agentResults[3]{taskId,agent,status,durationMs}:
-  wave1-phase1-migrator,implementer-agent,success,1200000
-  wave1-phase2-tests,implementer-agent,success,720000
-  wave1-wiring,wiring-agent,success,240000
+filesCreated[11]:
+  hooks/lib/plugin-root-resolver.ts
+  hooks/lib/plugin-root-resolver.test.ts
+  .claude-plugin/plugin.json
+  hooks/hooks.json
+  hooks/lib/fail-loud-logger.ts
+  hooks/lib/fail-loud-logger.test.ts
+  scripts/probe-hook-runtime.sh
+  loom-init-audit-notes.md
+  test/fixtures/hook-input.json
+  test/plugin-manifest.test.ts
+  test/install-mutual-exclusion.test.ts
 
-filesCreated[3]: .plan-execution/stage-context/phase-1.toon, .plan-execution/stage-context/phase-2.toon, .plan-execution/stage-context/wave-1-gate.toon
-filesModified[6]: hooks/lib/library-catalog-migrator.ts, agents/protocols/schema-versions.toon, skills/library.yaml, test/library-catalog-v3-to-v4.test.ts, test/protocol/schema-upgrade-v3.test.ts, scripts/validate-library-catalog.js
-filesRegenerated[1]: checksums.sha256
+filesModified[2]:
+  hooks/run-hook.sh
+  install.sh
 
-exportsAdded: 0
-exportsRetargeted[1]: 'MIGRATIONS["3->4"]' rewired from no-op passthrough to migrateLibraryCatalogV3ToV4
+verifyCommands[2]{cmd,exit,note}:
+  bunx vitest run [Wave 1 test files],0,30/30 tests pass
+  bunx tsc --noEmit (hooks/),2,pre-existing vitest type-decl gap; not Wave 1 regression
 
-versionBump:
-  CURRENT_VERSION: "3 -> 4"
-  schemaVersionsRow: "library-catalog currentVersion 3 -> 4"
-  liveLibraryYaml: "catalog_version 2 -> 4 (chained v2->v3->v4)"
+wiringApplied[1]{file,change,source}:
+  install.sh,Added scripts/probe-hook-runtime.sh to INFRA_FILES + mkdir for ${CLAUDE_DIR}/scripts,Phase 2 crossBoundaryRequest
 
-crossBoundaryRequests:
-  filed: 4
-  resolved: 4
-  resolver: wiring-agent
+reconciliationWarnings[0]:
 
-verification:
-  status: pass
-  waveGateStatus: passed
-  fullSuiteStatus: 2-deferred-pre-existing
-  preExistingFailures[2]: detectExistingSkill regex bug (Phase 0 -> defer to Phase 8), vi.resetModules infra (unrelated)
+infoFindings[3]:
+  Phase 1: 14 inline ${CLAUDE_PLUGIN_ROOT} matches in agents/protocols/*.schema.md + commands/loom-{auto,init}.md — schema refs are documentation fixtures (S-03 acceptable); 2 hits in command files worth migrating in a later phase
+  Phase 2: PR #9 wrapper APPENDS Homebrew paths (not prepends as plan said) — correct behavior so user pins win; left as-is and documented in loom-init-audit-notes.md
+  Phase 2: install.sh post-install probe fallback to source checkout path works today; wiring applied above to land the probe under ~/.claude/scripts/ for curl users
 
-f002RewriteApplied: true
-f002RewriteScope: 54 individual skill: tokens rewritten to protocol: across all sections of the migrated catalog (counted as in-memory token substitutions during the v2->v3->v4 chained walk). On-disk diff shows ~37 requires-line modifications because some entries had multiple skill: tokens on the same line and the chained walker counts each token once. First verified entry contracts-agent.requires now ['protocol:execution-protocols']. (Clarification added 2026-06-13 in response to plan-compliance-reviewer info-7 finding.)
+keyDecisions[3]:
+  Plugin manifest declares minimal initial permissions[] set (one per hook category). Later phases expand.
+  hooks.json registers 6 PreToolUse + 3 PostToolUse + 1 SessionStart + 2 Stop using ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh.
+  install.sh tarball sha256 verification is opt-in via LOOM_RELEASE_TARBALL + LOOM_RELEASE_MANIFEST env vars; default still file-by-file fetch.
 
-releaseConstraint: "F-010: Wave 1 + Wave 2 MUST ship as single merged release. Do NOT merge Wave 1 alone."
-
-nextWave:
-  number: 2
-  phases[3]: 3, 4, 5
-  description: "Installer routing for native skills + installer test suite + python-conventions sample skill kit"
+nextStageHints[3]:
+  Phase 3 (Wave 2b) consumes loom-init-audit-notes.md when authoring commands/loom-init.md.
+  Phase 4 (Wave 2a) consumes install.sh + the install state schema for first-run handler.
+  Phase 6 (Wave 3a) implements the release-pipeline that emits the manifest.toon consumed by install.sh's sha256 verification gate.

@@ -194,7 +194,7 @@ Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
        cp .claude/settings.json ".claude/settings.json.bak-${ts}"
      fi
 
-     node scripts/register-loom-hooks.ts --replace || \
+     node scripts/register-loom-hooks.ts --replace --tier "${LOOM_TIER:-auto}" || \
        echo "WARN: hook registration failed — pipeline will run without full enforcement. Rerun 'node scripts/register-loom-hooks.ts --replace' to fix."
    fi
    ```

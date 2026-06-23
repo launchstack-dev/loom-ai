@@ -1,0 +1,40 @@
+wave: 5b
+label: Wave 5b
+phases[1]: Phase 10A
+agents[1]: implementer-agent (P10A)
+status: complete
+verificationStatus: pass
+
+filesCreated[4]:
+  scripts/lib/tier-resolution.ts
+  scripts/lib/tier-resolution.test.ts
+  test/tier-resolution.test.ts
+  test/register-loom-hooks-tier.test.ts
+
+filesModified[2]:
+  scripts/register-loom-hooks.ts
+  hooks/__tests__/register-loom-hooks.test.ts
+
+verifyCommands[1]{cmd,exit,note}:
+  bunx vitest run (tier-resolution + register-loom-hooks),0,50/50 pass
+
+wiringApplied[3]{file,change,source}:
+  hooks/__tests__/register-loom-hooks.test.ts,LOOM_HOOK_NAMES appended loom-migration,Phase 10A crossBoundaryRequest
+  hooks/__tests__/register-loom-hooks.test.ts,changes count 15 -> 16 (two sites),Phase 10A crossBoundaryRequest
+  hooks/__tests__/register-loom-hooks.test.ts,SessionStart length 1 -> 2,Phase 10A crossBoundaryRequest
+
+contractsLocked[5]{name,value,consumer}:
+  tierFlagName,--tier,Phase 10B mechanical passthrough to 6 entry commands
+  tierFlagValues,auto|local|project,Phase 10B
+  tierDefault,auto resolves to local on greenfield,Phase 10B
+  ambiguousErrorCode,MIGRATION_TIER_AMBIGUOUS (exit 2),Phase 10B + /loom-doctor tier-ambiguous check (already on disk from 9A2a)
+  loomMigrationHookEntry,LOOM_HOOKS appended SessionStart entry pointing at hooks/loom-migration.ts (timeout 10000ms),Phase 10B (must mirror in hooks/hooks.json for plugin path)
+
+keyDecisions[3]:
+  Default flip: register-loom-hooks now writes to .claude/settings.local.json by default (was settings.json). --tier project opts in and emits the commit-notice on stderr.
+  TierResolution is a pure function exported from scripts/lib/tier-resolution.ts; slash-command passthroughs forward --tier literally instead of re-resolving.
+  --mode (runtime command anchor: PLUGIN_ROOT vs PROJECT_DIR) and --tier (which settings file to write) documented as orthogonal in script header.
+
+nextStageHints[2]:
+  Phase 10B (Wave 5c) applies --tier passthrough to 6 entry commands surgically (Read offset/limit anchored on register-loom-hooks invocation; <2k tokens per file). Also mirrors the loom-migration SessionStart in hooks/hooks.json for plugin path symmetry.
+  /loom-doctor tier-ambiguous check (9A2a, already on disk) consumes the same MIGRATION_TIER_AMBIGUOUS error semantics.

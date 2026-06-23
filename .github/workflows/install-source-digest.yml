@@ -1,0 +1,44 @@
+name: install-source-digest
+
+# Weekly opt-in aggregator for `install.toon.source` self-reports posted to a
+# designated GitHub Discussions thread. Posts a TOON-formatted summary as a
+# discussion comment. No PII; opt-in by user posting. See Phase 4 of
+# planning/plans/PLAN-plugin-marketplace-merged.md.
+
+on:
+  schedule:
+    # Mondays 10:00 UTC.
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+    inputs:
+      fixture:
+        description: "Optional path to a fixture JSON dump of the thread (for testing)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  discussions: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Run digest (fixture mode)
+        if: ${{ inputs.fixture != '' }}
+        run: bunx tsx scripts/install-source-digest.ts --fixture "${{ inputs.fixture }}"
+
+      - name: Run digest (default fixture for now)
+        if: ${{ inputs.fixture == '' }}
+        # The live GitHub API fetch path is not yet implemented in the script.
+        # Until the designated Discussions thread is provisioned, the scheduled
+        # run uses the test fixture to validate the pipeline end-to-end.
+        run: bunx tsx scripts/install-source-digest.ts --fixture test/fixtures/discussion-thread.json

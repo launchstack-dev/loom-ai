@@ -1,0 +1,41 @@
+wave: 6b
+label: Wave 6b
+phases[1]: Phase 12
+agents[1]: implementer-agent (P12)
+status: complete (human-gate phase)
+verificationStatus: pass
+
+filesCreated[3]:
+  test/e2e/plugin-install.spec.ts
+  marketplace/submission-pr.md
+  marketplace/submission-evidence.toon
+
+verifyCommands[3]{cmd,exit,note}:
+  bunx vitest run test/e2e/plugin-install.spec.ts,0,3 pass + 1 skipped (no docker)
+  bunx tsx scripts/validate-toon-schemas.ts,0,45 schemas validated
+  grep -E ^## marketplace/submission-pr.md,0,Outcomes Quickstart Decision-matrix Differentiation Support Submission-metadata
+
+humanGate: pending
+gateOwner: launchstack-dev maintainer + Anthropic marketplace registry
+gateActivity: |
+  Per plan line 1483: agent ships artifacts; outcome=accepted is a third-party Anthropic decision recorded later. Phase 12 is complete from the agent's perspective when the submission PR can be opened with all evidence.toon fields populated (placeholders OK with TBD markers until release time).
+
+operatorRunbookForSubmission[5]:
+  Replace TBD tokens in marketplace/submission-evidence.toon — submittedAt, releaseTag (drop leading v per schema regex), sigstoreAttestationUrl, marketplacePrUrl, maintainerApprovalIssueUrl
+  Replace TBD tokens in marketplace/submission-pr.md — sigstore attestation URL, Maintainer Review Gate issue URL, release tag mention
+  Ensure Maintainer Review Gate issue is CLOSED on the exact commit SHA before opening submission PR
+  Run release.yml against the signed release tag; verify sigstore-attest.yml completed successfully on that commit
+  Open the submission PR via scripts/open-marketplace-pr.ts — it will gate on the sigstore run via gh run list
+
+contractsHonored[3]{contract,verification}:
+  submission-evidence schema,All 6 required fields present (outcome=pending with TBD placeholders); validate-toon-schemas exit 0
+  submission-pr section ordering,Matches listing-content-spec.md (Outcomes Quickstart Decision-matrix Differentiation Support); section budgets respected (Outcomes <500, Differentiation <300, Support 51 verbatim)
+  plugin-install E2E pattern,Mirrors Phase 11B curl spec — bare assertions always run; heavy E2E delegates to harness with --mode plugin (default); skipIf no docker
+
+keyDecisions[3]:
+  outcome=accepted populated by marketplace status poller post-merge (out of scope here).
+  Trailing `## Submission metadata` section is meta/audit-trail; lives below `## Support`; does NOT violate listing section-ordering contract.
+  Per-section char budgets met: Outcomes condensed from listing.md to under 500; Differentiation under 300; Support is 51-char verbatim from listing.md.
+
+nextStageHints[1]:
+  Finalize step: set plan status=completed + completedAt in frontmatter; cascade to ROADMAP M-07 if matched.

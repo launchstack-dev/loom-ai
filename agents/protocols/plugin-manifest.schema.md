@@ -41,7 +41,7 @@ PluginManifest:
 | description | yes | string | Short marketplace summary. |
 | keywords[] | recommended | string[] | Marketplace search terms. Recommended: `meta-orchestration`, `claude-code`, `planning`, `agents`, `hooks`. |
 | license | recommended | string | SPDX identifier (e.g., `MIT`, `Apache-2.0`). |
-| permissions[] | derived | string[] | **Derived from `hooks/hooks.json` matchers.** Loom-specific constraint: this list MUST be the union of all `event` names plus all tool names appearing in `matcher` fields across `hooks.json`. The `wave-1-manifest-agent` computes this at build time; doctor validates the union in `DOCTOR_PERMISSIONS_MISMATCH`. |
+| permissions[] | yes (derived) | string[] | **Required field. Derived from `hooks/hooks.json` matchers.** Loom-specific constraint: this list MUST be the union of all `event` names plus all tool names appearing in `matcher` fields across `hooks.json`. The `wave-1-manifest-agent` computes this at build time and writes it into `plugin.json`; doctor validates the union via the `permissions-derived` check and surfaces `DOCTOR_PERMISSIONS_MISMATCH` on drift. Schema validators MUST reject any plugin manifest where `permissions` is missing, null, or not a string array. |
 | author | yes | string | GitHub org or user slug owning the plugin. |
 | repository | yes | url | HTTPS clone URL. |
 | entrypoints[] | yes | table | Maps resource `type` (agent, skill, command, hook, mcp) to a directory or file path within the plugin tarball. |

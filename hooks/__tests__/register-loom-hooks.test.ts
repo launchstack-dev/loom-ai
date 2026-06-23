@@ -34,6 +34,7 @@ const LOOM_HOOK_NAMES = [
   "status-updater",
   "quality-gate",
   "wiki-session-status",
+  "loom-migration",
 ];
 
 let tmpDir: string;
@@ -91,15 +92,16 @@ describe("scripts/register-loom-hooks.ts", () => {
     expect(result.exitCode).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report.ok).toBe(true);
-    // LOOM_HOOKS has 15 entries (context-monitor on both PostToolUse and Stop).
-    expect(report.changes).toBe(15);
+    // LOOM_HOOKS has 16 entries (context-monitor on both PostToolUse and Stop;
+    // loom-migration on SessionStart added in Phase 10A for curl-path migration).
+    expect(report.changes).toBe(16);
     expect(report.settingsExisted).toBe(false);
 
     const settings = readSettings();
     expect(settings.hooks.PreToolUse.length).toBeGreaterThanOrEqual(5);
     expect(settings.hooks.PostToolUse.length).toBeGreaterThanOrEqual(5);
     expect(settings.hooks.Stop.length).toBe(2);
-    expect(settings.hooks.SessionStart).toHaveLength(1);
+    expect(settings.hooks.SessionStart).toHaveLength(2);
 
     // Sanity: each hook name appears at least once in the rendered commands.
     const allCmds = JSON.stringify(settings.hooks);
@@ -243,7 +245,7 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(result.exitCode).toBe(0);
       const report = JSON.parse(result.stdout);
       expect(report.purged).toBeGreaterThanOrEqual(1);
-      expect(report.changes).toBe(15);
+      expect(report.changes).toBe(16);
 
       const settings = readSettings();
       const preCommands = settings.hooks.PreToolUse.flatMap((e: any) =>

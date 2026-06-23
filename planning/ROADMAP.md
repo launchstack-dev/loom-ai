@@ -627,10 +627,12 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 2. **Phase 1 (signed release):** Release tagging workflow, cosign signing in CI, install.sh `--ref vX.Y.Z` pinning, atomic file-scoped rollback, install-state v3 runtime wiring (Rule 12), library-catalog v3 runtime wiring (Rule 13), plan-artifact relocation (Rule 14).
 3. **Phase 2 (launch):** Public announcement, demand validation, post-launch iteration.
 
-### M-07: Plugin Marketplace Migration -- NOT STARTED
+### M-07: Plugin Marketplace Migration -- COMPLETED
 
 **Features:** F-15, F-16, F-17
-**Status:** Not started. Sourced from PR #8 deep-research synthesis (2026-06-16). Immediate-next after PR #8 merges — these were deliberately scoped out of PR #8 to keep that change reviewable, but address structural issues in the curl + template-copy install model the research identified.
+**Status:** Completed 2026-06-18. Shipped via PLAN-plugin-marketplace-merged (12 waves, 15 commits on branch m07). All MS-F lifecycle pieces on disk: install (curl + plugin paths, mutual-exclusion), /loom-doctor (12 check modules + dispatcher + bundle/render), /loom-update (--check/--channel/--resume/--pin/--rollback), /loom-uninstall (typed-literal confirm + 60s timeout), tier-default flip (settings.local.json), and Anthropic marketplace submission artifacts (plugin-install E2E + submission-pr.md + submission-evidence.toon). Outcome=accepted is third-party (Anthropic) and recorded post-merge by the marketplace status poller. Sourced from PR #8 deep-research synthesis (2026-06-16).
+**Plan:** planning/plans/PLAN-plugin-marketplace-merged.md
+**CompletedAt:** 2026-06-18T05:42:00Z
 **Depends on:** M-06 Phase 1 (signed release infrastructure — the plugin path is published alongside signed curl tags, not in place of them)
 **Acceptance:** Loom is installable via both `/plugin marketplace add launchstack-dev/loom-ai` (native path) and `curl install.sh | bash` (fallback), producing equivalent runtime behavior. `/loom-doctor` reports zero problems on a fresh install via either path. Default per-project hook tier is `.claude/settings.local.json` (machine-local) with explicit opt-in for committed `.claude/settings.json`. README and `planning/notes/` document the rationale for kit authors.
 **Effort:** M (plugin manifest auth + doctor skill + first-session migration + tier-default flip + docs)

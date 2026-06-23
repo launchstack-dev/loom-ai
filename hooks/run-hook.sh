@@ -49,25 +49,62 @@ for candidate in /opt/homebrew/bin /usr/local/bin; do
 done
 export PATH
 
-# Honor explicit runtime override first. Word-split intentionally so users can
-# set e.g. LOOM_HOOK_RUNTIME="npx --yes tsx" with arguments.
-if [ -n "${LOOM_HOOK_RUNTIME:-}" ]; then
-  # shellcheck disable=SC2086
-  exec $LOOM_HOOK_RUNTIME "$@"
+# Dispatch the hook. We deliberately do NOT `exec` so we can observe the child
+# exit code and append a "/loom-doctor" tip on failure. The trailing `exit $rc`
+# preserves the dispatched hook's exit code for Claude Code's hook protocol.
+
+hook_script="$1"
+
+dispatch() {
+  # Honor explicit runtime override first. Word-split intentionally so users can
+  # set e.g. LOOM_HOOK_RUNTIME="npx --yes tsx" with arguments.
+  if [ -n "${LOOM_HOOK_RUNTIME:-}" ]; then
+    # shellcheck disable=SC2086
+    $LOOM_HOOK_RUNTIME "$@"
+    return $?
+  fi
+
+  if command -v bun >/dev/null 2>&1; then
+    bun "$@"
+    return $?
+  fi
+
+  if command -v npx >/dev/null 2>&1; then
+    npx --yes tsx "$@"
+    return $?
+  fi
+
+  if command -v node >/dev/null 2>&1; then
+    echo "[loom:run-hook] npx not found; node present but cannot resolve tsx. Install bun or npm." >&2
+    return 0
+  fi
+
+  echo "[loom:run-hook] Neither bun nor node found in PATH — skipping hook $1" >&2
+  # Best-effort fail-loud log so /loom-doctor and the install probe can surface
+  # silent runtime gaps. Resolve hook script to an absolute path when possible.
+  abs_hook="$1"
+  case "$abs_hook" in
+    /*) ;;
+    *) abs_hook="$(pwd)/$1" ;;
+  esac
+  log_dir="${HOME:-/tmp}/.cache/loom"
+  log_file="${log_dir}/hook-failures.log"
+  if mkdir -p "$log_dir" 2>/dev/null; then
+    ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "unknown")
+    # Escape commas and newlines so a hook path or PATH containing them does not
+    # corrupt the CSV log structure (`,` → `\,`, newlines → space).
+    esc_hook=$(printf '%s' "$abs_hook" | tr '\n' ' ' | sed 's/,/\\,/g')
+    esc_path=$(printf '%s' "PATH=$PATH" | tr '\n' ' ' | sed 's/,/\\,/g')
+    printf '%s,%s,%s,%s\n' "$ts" "$esc_hook" "no-runtime" "$esc_path" >> "$log_file" 2>/dev/null || true
+  fi
+  return 0
+}
+
+dispatch "$@"
+rc=$?
+
+if [ "$rc" -ne 0 ]; then
+  echo "Tip: run /loom-doctor to diagnose hook health" >&2
 fi
 
-if command -v bun >/dev/null 2>&1; then
-  exec bun "$@"
-fi
-
-if command -v npx >/dev/null 2>&1; then
-  exec npx --yes tsx "$@"
-fi
-
-if command -v node >/dev/null 2>&1; then
-  echo "[loom:run-hook] npx not found; node present but cannot resolve tsx. Install bun or npm." >&2
-  exit 0
-fi
-
-echo "[loom:run-hook] Neither bun nor node found in PATH — skipping hook $1" >&2
-exit 0
+exit $rc

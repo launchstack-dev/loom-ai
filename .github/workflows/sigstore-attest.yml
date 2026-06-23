@@ -1,0 +1,137 @@
+# sigstore-attest — keyless cosign signing of every published Release asset.
+#
+# CONTRACT (do not rename): the workflow `name:` field below MUST be exactly
+# `sigstore-attest`. scripts/open-marketplace-pr.ts polls
+# `gh run list --workflow sigstore-attest` to gate the marketplace listing PR
+# on a successful run; renaming this workflow breaks the release pipeline.
+#
+# Trigger model:
+#   - release: types: [published]   primary — fires once a tag's Release lands
+#   - workflow_dispatch              manual re-sign for ops/recovery
+#
+# Ordering: this workflow does NOT need `needs:` on release.yml jobs. The
+# release pipeline ends by creating the Release, which fires
+# `release:published`, which triggers this workflow. open-marketplace-pr.ts
+# (run later in release.yml after the Release is created) polls for a
+# successful sigstore-attest run on the same commit SHA before proceeding.
+#
+# Idempotency: scripts/sigstore-attest.sh skips re-signing when
+# <asset>.sig and <asset>.cert already exist locally on the runner.
+# The upload step uses `gh release upload --clobber` so re-runs overwrite
+# stale signature artifacts cleanly.
+
+name: sigstore-attest
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to sign (e.g. v0.1.0). Required for manual runs.'
+        required: true
+
+permissions:
+  id-token: write   # required: cosign keyless Fulcio OIDC exchange
+  contents: write   # required: gh release upload .sig/.cert back to the Release
+
+jobs:
+  sign:
+    name: Sign release tarball with cosign (keyless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve tag
+        id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT_NAME}" = "release" ]; then
+            TAG="${RELEASE_TAG}"
+          else
+            TAG="${INPUT_TAG}"
+          fi
+          if [ -z "${TAG}" ]; then
+            echo "sigstore-attest: no tag resolved (event=${EVENT_NAME})" >&2
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "sigstore-attest: signing assets for ${TAG}"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Download Release tarball(s)
+        id: dl
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p _sign
+          # Download every .tar.gz asset on the release. The Phase 6 release
+          # pipeline publishes exactly one (loom-<ver>.tar.gz), but signing
+          # every tarball keeps us robust to future multi-artifact releases.
+          gh release download "${TAG}" --pattern "*.tar.gz" --dir _sign
+          ls -la _sign/
+          # Emit a newline-separated list of assets for the sign step.
+          ( cd _sign && ls *.tar.gz ) > _sign/_list.txt
+          echo "list=_sign/_list.txt" >> "$GITHUB_OUTPUT"
+
+      - name: Sign each tarball (sigstore keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          while IFS= read -r asset; do
+            [ -z "${asset}" ] && continue
+            echo "sigstore-attest: signing _sign/${asset}"
+            scripts/sigstore-attest.sh "_sign/${asset}"
+          done < "${{ steps.dl.outputs.list }}"
+          ls -la _sign/
+
+      - name: Verify signature locally before upload
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          while IFS= read -r asset; do
+            [ -z "${asset}" ] && continue
+            cosign verify-blob \
+              --signature "_sign/${asset}.sig" \
+              --certificate "_sign/${asset}.cert" \
+              --certificate-identity-regexp "^https://github\\.com/${{ github.repository }}/\\.github/workflows/sigstore-attest\\.yml@" \
+              --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+              "_sign/${asset}"
+            echo "sigstore-attest: verify-blob PASS for ${asset}"
+          done < "${{ steps.dl.outputs.list }}"
+
+      - name: Upload .sig and .cert back to the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r asset; do
+            [ -z "${asset}" ] && continue
+            # --clobber lets re-runs overwrite stale signature artifacts.
+            gh release upload "${TAG}" \
+              "_sign/${asset}.sig" \
+              "_sign/${asset}.cert" \
+              --clobber
+            echo "sigstore-attest: uploaded ${asset}.sig + ${asset}.cert"
+          done < "${{ steps.dl.outputs.list }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "sigstore-attest: tag=${{ steps.tag.outputs.tag }} repo=${{ github.repository }} run_id=${{ github.run_id }}"

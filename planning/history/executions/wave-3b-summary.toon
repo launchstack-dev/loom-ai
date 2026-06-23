@@ -1,0 +1,39 @@
+wave: 3b
+label: Wave 3b
+phases[1]: Phase 7
+agents[1]: implementer-agent (P7)
+status: complete
+verificationStatus: pass
+
+filesCreated[4]:
+  .github/workflows/manifest-drift.yml
+  .github/workflows/sigstore-attest.yml
+  scripts/verify-manifest-drift.ts
+  scripts/sigstore-attest.sh
+
+filesModified[0]:
+
+verifyCommands[7]{cmd,exit,note}:
+  bunx tsx scripts/build-release-tarball.ts --dry-run,0,dist/loom-local-test.tar.gz 1080811 bytes
+  bunx tsx scripts/generate-manifest.ts --out manifest.toon,0,sha256 9e64f22553631c616ea16596494ea75784f0c7709aeca46e32c928256f963ed7
+  bunx tsx scripts/verify-manifest-drift.ts (matching asset),0,OK manifest matches
+  bunx tsx scripts/verify-manifest-drift.ts (tampered asset),1,stderr contains MANIFEST_DRIFT
+  sh -n scripts/sigstore-attest.sh,0,syntax clean
+  scripts/sigstore-attest.sh (no args),1,usage message
+  scripts/sigstore-attest.sh /nonexistent.tar.gz,1,asset not found
+
+contractsHonored[2]{contract,verification}:
+  sigstore-attest.yml name field == sigstore-attest,Line 30 matches SIGSTORE_WORKFLOW_NAME in scripts/open-marketplace-pr.ts
+  Workflow ordering via release:published event + open-marketplace-pr gh run list poll,No `needs:` clause required
+
+deferredWork[1]:
+  manifest.toon at repo root is consumed by manifest-drift.yml but not produced by Phase 7. Phase 6 release.yml needs a commit step in production CI to land manifest.toon at repo root alongside each release tag. Bootstrap-friendly: drift check skips when no release exists.
+
+keyDecisions[3]:
+  Sigstore script idempotency: exits 0 if .sig and .cert already exist alongside asset; workflow uses gh release upload --clobber for clean re-runs.
+  Manifest-drift workflow detects "release not found" from gh release view and exits 0 with skip message (CI on fresh repos doesn't fail).
+  cosign verify-blob procedure documented inline in scripts/sigstore-attest.sh header comments with pinned certificate-identity-regexp.
+
+nextStageHints[2]:
+  Phase 8 (Docker harness) needs to install cosign and verify the signed asset as part of clean-machine validation if it covers signed releases (likely a v0.2 concern, not blocking MS-F).
+  Phase 12 marketplace submission PR can reference the sigstore-attest URL on the Release (populates submission-evidence.toon.sigstoreAttestationUrl).

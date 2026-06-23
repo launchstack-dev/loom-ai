@@ -1,0 +1,32 @@
+wave: 2b
+label: Wave 2b
+phases[1]: Phase 3
+agents[1]: implementer-agent (P3)
+status: complete
+verificationStatus: pass
+
+filesCreated[5]:
+  hooks/lib/dismissal-marker.ts
+  hooks/lib/dismissal-marker.test.ts
+  hooks/lib/init-guard.ts
+  hooks/lib/init-guard.test.ts
+  commands/_loom-init-guard.md
+
+filesModified[1]:
+  commands/loom-init.md
+
+verifyCommands[1]{cmd,exit,note}:
+  bunx vitest run hooks/lib/{init-guard,dismissal-marker}.test.ts,0,21/21 tests pass
+
+reconciliationWarnings[0]:
+crossBoundaryRequests[0]:
+contractAmendments[0]:
+
+keyDecisions[3]:
+  INIT_GUARD_PROMPT exported as const and asserted byte-for-byte in tests; callers MUST NOT paraphrase.
+  /loom-init is documented exempt from the shared _loom-init-guard.md prelude — runs its own Step 0a idempotency check.
+  loom-init.md success-output template replaced with render derived from marketplace/loom-init-success-output.toon — render rules embedded so Phase 8 fixture generator stays in lockstep.
+
+nextStageHints[2]:
+  Every /loom-* command body must embed the prelude in commands/_loom-init-guard.md by reference (Phase 9A1 dispatcher must honor this for /loom-doctor too).
+  Phase 8 test/fixtures/expected-init-output.txt generator uses the same render rules embedded in commands/loom-init.md against marketplace/loom-init-success-output.toon.

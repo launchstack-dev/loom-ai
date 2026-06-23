@@ -1,0 +1,85 @@
+review:
+  date: 2026-06-17
+  pass: 3
+  planRef: planning/plans/PLAN-plugin-marketplace-merged.md
+  planLineCount: 1730
+  reviewMode: 3-agent-targeted-verification
+  predecessor: planning/history/reviews/2026-06-17-PLAN-plugin-marketplace-merged-review-pass2.toon
+  status: structural-convergence-reached-cosmetic-cleanup-remains
+  blockingFindings: 0
+  cosmeticDefectsFlaggedAsBlocking: 2
+  highFindings: 6
+  mediumFindings: 2
+  lowFindings: 1
+
+pass2BlockersResolved[3]:
+  B-2-1-interface-to-Phase-0,CONFIRMED-RESOLVED,9A1-and-9B-compile-against-Phase-0-interfaces-parallel-safe
+  B-2-2-Wave-2-split,CONFIRMED-RESOLVED,Phase-3-Wave-2b-after-Phases-4-5-Wave-2a-no-forward-reference
+  B-2-3-Phase-9A-split,CONFIRMED-RESOLVED,9A1-CLI-surface-9A2-check-modules-both-Wave-5a-parallel
+
+parallelizationVerdict:
+  agent: parallelization-agent
+  blockers: 0
+  verdict: CONVERGED-on-parallelism
+  wave5aSafety: 9A1-9A2-9B-disjoint-file-ownership-dispatcher-uses-import-meta-glob-runtime-pattern
+  wave5b5cSafety: 10A-then-10B-serial-strictly-correct-3-sub-wave-labeling-acceptable
+  wave6aSafety: P11-P13-P14-disjoint-confirmed-9A1-9A2-split-introduces-no-new-coupling
+  oneStaleReference: Phase-9B-AC-says-Phase-9A-should-say-Phase-0
+
+phasingVerdict:
+  agent: phasing-agent
+  blockers: 0
+  verdict: CONVERGED-on-blockers-cosmetic-remains
+  resolvedThisPass[4]:
+    B-2-1-interface-Phase-0,confirmed
+    B-2-2-Wave-2-split,confirmed
+    B-2-3-9A-split-clean,confirmed
+    C-2-4-10A-10B-split-clean,confirmed
+  cosmeticIssues[5]:
+    R3-1,Phase-9B-three-stale-Phase-9A-references-should-be-Phase-0
+    R3-2,Phase-13-S-02-title-still-says-TOON-AC-and-body-correct
+    R3-3,Phase-11-has-duplicate-dependency-block-stale-and-corrected-both-present
+    R3-4,Phase-13-could-depend-on-10B-not-just-10A-low-risk-undocumented-assumption
+    R3-5,Integration-note-references-pass-2-not-pass-3-reviewRefs-frontmatter-needs-pass-2-and-pass-3
+
+agenticWorkflowVerdict:
+  agent: agentic-workflow-agent
+  blockers: 2
+  verdict: TWO-DOCUMENTATION-DEFECTS-FLAGGED-AS-BLOCKING-NO-STRUCTURAL-BLOCKERS
+  resolvedThisPass[4]:
+    C-2-2-integration-note-no-9C,confirmed
+    C-2-3-9B-scenarios-corrected,confirmed
+    M-2-4-rollback-schema-pointer,confirmed
+    C-2-4-10A-10B-clean,confirmed
+  openFindings[7]:
+    F-3-1,BLOCKING-cosmetic,9A1-split-note-says-7-deliverables-table-has-6
+    F-3-2,BLOCKING-cosmetic,Integration-note-line-35-still-says-9A-plus-9B-body-now-9A1-9A2-9B
+    F-3-3,HIGH,Phase-9B-AC-references-migration-runner-test-file-not-in-deliverables-table-H-2-1-from-pass-2-not-fixed
+    F-3-4,HIGH,Phase-13-S-01-arrow-character-Unicode-vs-CLI-contract-ASCII-H-2-3-from-pass-2-not-fixed
+    F-3-5,HIGH,install.sh-sha256-verification-absent-from-Phase-2-AC-and-Deferred-section-H-2-7-from-pass-2-not-fixed
+    F-3-6,HIGH,Wave-5a-compile-gate-not-explicitly-named-in-Verification-Commands-H-2-6-from-pass-2-not-fixed
+    F-3-7,MEDIUM,Phase-4-discussion-thread-fixture-not-in-deliverables-table-M-2-3-from-pass-2-not-fixed
+
+convergenceAnalysis:
+  trajectoryClear: true
+  pass1Blockers: 4
+  pass2Blockers: 3
+  pass3StructuralBlockers: 0
+  pass3DocumentationDefects: 2
+  remainingItems: All-one-line-fixes-no-structural-changes-needed
+  recommendation: Apply-the-7-cosmetic-and-high-fixes-from-this-pass-then-declare-converged-no-pass-4-needed
+
+actionPlan[7]:
+  1: Fix-9A1-deliverable-count-discrepancy-note-says-7-table-has-6
+  2: Update-integration-note-to-reference-9A1-9A2-split-and-pass-3-review
+  3: Add-scripts-lib-__tests__-migration-runner-test-ts-to-Phase-9B-deliverables
+  4: Change-Phase-13-S-01-arrow-from-Unicode-to-ASCII-matching-CLI-contract
+  5: Add-install.sh-tarball-sha256-verification-to-Phase-2-AC-OR-Deferred-section
+  6: Add-explicit-Wave-5a-compile-gate-to-Verification-Commands
+  7: Add-test-fixtures-discussion-thread-json-to-Phase-4-deliverables-and-fix-Phase-9B-Phase-9A-references-and-Phase-11-duplicate-dep-block
+
+verdict:
+  converged: structurally-yes-documentation-cleanup-pending
+  shipReady: after-7-mechanical-fixes
+  pass4Recommended: false
+  rationale: pass-3-found-only-documentation-defects-no-structural-correctness-issues-pass-4-would-find-diminishing-returns

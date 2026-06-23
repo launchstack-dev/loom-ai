@@ -33,7 +33,7 @@ else
     cp .claude/settings.json ".claude/settings.json.bak-${ts}"
   fi
 
-  node scripts/register-loom-hooks.ts --replace || \
+  node scripts/register-loom-hooks.ts --replace --tier "${LOOM_TIER:-auto}" || \
     echo "WARN: hook registration failed — rerun 'node scripts/register-loom-hooks.ts --replace' from project root."
 fi
 ```

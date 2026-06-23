@@ -15,8 +15,9 @@ Parse remaining arguments:
 - `--estimate`: print token cost estimate to stdout without spawning agents, then exit 0
 - `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
 - `--skip-critic`: skip the `plan-critic-agent` spawn in Step 1 AND the Step 1.7 Critic Revise Pass. Falls back to legacy dual-track behavior (plan-builder + criteria-planner only). Logs a warning to stderr: `"--skip-critic active: plan-critic-agent will not run; Step 1.7 Critic Revise Pass will be skipped."` See Step 1.7 for the flag combination matrix (interactions with `--autoconverge`, `--review-integrate`, `--estimate`, `--skip-test-gen`).
-- `--autoconverge`: after writing the plan in Step 4, generate a `converge.config` (document-mode) and invoke `/loom-converge --resume-config <path>` to drive the plan toward zero blocking findings. Defaults are LOCKED: `maxIterations: 3` (C-05), `scopeGuardEnabled: true` (C-06), `snapshotEnabled: true` (C-07), `integrator: plan-builder-agent`, `harness: scripts/plan-review-harness.ts`. See Step 5 for details, halt handling, and the flag-interaction matrix.
+- `--autoconverge`: after writing the plan in Step 4, generate a `converge.config` (document-mode) and invoke `/loom-converge --resume-config <path>` to drive the plan toward zero blocking findings. After the driver returns `status: converged`, a **post-converge validation gate** (Step 5.5) runs structural validation (`validation-rules.md` stages 1–4); on blocking validation, the loop is re-entered once with synthesized findings. Defaults are LOCKED: `maxIterations: 3` (C-05), `scopeGuardEnabled: true` (C-06), `snapshotEnabled: true` (C-07), `integrator: plan-builder-agent`, `harness: scripts/plan-review-harness.ts`. See Step 5 and Step 5.5 for details, halt handling, and the flag-interaction matrix.
 - `--max-iterations <N>`: override the default `maxIterations: 3` cap on `--autoconverge` runs. Range `1 <= N <= 10` per `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema § Validation Rules`. Values outside the range are rejected with an error. No-op when `--autoconverge` is not also set.
+- `--skip-validation`: skip the post-converge validation gate (Step 5.5). Reviewer convergence alone determines `nextLink`. Logs a warning to stderr: `"--skip-validation active: post-converge structural validation will be skipped; downstream /loom-plan execute may still abort on structural blockers."` No-op when `--autoconverge` is not also set.
 - `--dry-run`: when combined with `--autoconverge`, emit the generated `converge.config` TOON to stdout and exit 0 WITHOUT invoking the convergence-driver. Useful for previewing the generated config. No-op when `--autoconverge` is not also set.
 
 ### Instructions
@@ -490,6 +491,7 @@ The wrapper does NOT write its own halt-summary artifact. The authoritative "did
 | `--autoconverge` + `--skip-critic` | SUPPORTED. Critic skipped at Step 1 AND Step 1.7 (see Step 1.7 flag matrix); autoconverge still runs after Step 4. |
 | `--autoconverge` + `--dry-run` | Preview only. Emit generated `converge.config` TOON to stdout, exit 0. Driver is NOT invoked. No config is written to disk. |
 | `--autoconverge` + `--max-iterations N` | Override `maxIterations` ONLY. Bound `1 <= N <= 10`; out-of-range rejected with stderr error. Other defaults stay locked. |
+| `--autoconverge` + `--skip-validation` | Step 5.5 (post-converge validation gate) is skipped. Reviewer convergence alone is terminal. Warning logged to stderr. Downstream `/loom-plan execute` may still abort on structural blockers. |
 | `--autoconverge` + `--estimate` | NOT SUPPORTED. `--estimate` exits at Step 0.5 before Step 4 even runs — there is no plan to converge against. The `--autoconverge` flag is silently ignored under `--estimate`. |
 
 ##### Link-extraction readiness (locked C-11)
@@ -511,11 +513,96 @@ Step 5 explicitly documents that the wrapper's on-disk outputs MUST be sufficien
 - NO `pipeline-state.toon` mutation by this wrapper. The convergence-driver MUST NOT add convergence-internal fields to `pipeline-state.toon` per the forbidden-writes clause of `agents/protocols/convergence-summary.schema.md § Forbidden writes (C-11)`.
 - NO mid-flight orchestrator-side state changes. Step 5 does not maintain its own state — the driver's `convergence-state.toon` and the terminal `convergence-summary.toon` are the only state files.
 - The `convergence-summary.toon` `status` field is THE authoritative signal. A fresh-context link reads ONLY this file from disk and routes deterministically:
-  - `status: converged` -> `nextLink: done`
-  - `status: halted-stall` or `halted-regression` -> `nextLink: fix`
-  - `status: halted-scope-expansion`, `halted-max-iter`, or `halted-budget` -> `nextLink: planning` (revisit plan)
+  - `status: converged` -> Step 5.5 (post-converge validation gate) runs; final `nextLink` is set by Step 5.5 per its own routing table (CLEAN -> `done`; re-entry exhaustion -> `halted-validation` -> `planning`).
+  - `status: halted-stall` or `halted-regression` -> `nextLink: fix` (Step 5.5 skipped)
+  - `status: halted-scope-expansion`, `halted-max-iter`, or `halted-budget` -> `nextLink: planning` (revisit plan; Step 5.5 skipped)
+  - `status: halted-validation` (NEW, set by Step 5.5 on re-entry exhaustion) -> `nextLink: planning`
 
 This contract is what makes `--autoconverge` composable inside a future `loom-auto` planning-link / converge-link trampoline — the link can be invoked with no inherited conversational state and derive its next-step decision purely from on-disk artifacts.
+
+#### Step 5.5: Post-Converge Validation Gate (`--autoconverge` only)
+
+Runs after Step 5 IF AND ONLY IF the convergence-driver returned `status: converged`. Skipped on any halt status (halts already require operator attention; piling structural failures on top adds no value). Skipped entirely when `--skip-validation` is set.
+
+**Why this exists:** the convergence loop converges on **reviewer agreement** — zero blocking findings from the 6 review agents. Reviewer agreement is necessary but not sufficient for executability. The 6 reviewers critique content and design (coverage, strategy, UX, phasing, parallel safety, agentic workflow); none of them runs the deterministic structural checks in `validation-rules.md` stages 1–4 (frontmatter, dependency cycles, file-ownership overlaps, phase sizing). A plan can satisfy all 6 critics and still fail `/loom-plan execute`'s validation gate — and historically has (see ROOT CAUSE note below). Step 5.5 closes that gap by running the same gate `/loom-plan execute` runs, **before** execute is invoked, and looping back into reviewer convergence if blockers exist.
+
+**ROOT CAUSE this fixes:** prior `--autoconverge` runs treated "reviewers clean" as terminal success. Reviewer passes that split phases for parallel safety (e.g., 9A → 9A1+9A2 with 12 check modules) routinely produced phases that exceeded the 12-deliverable sizing cap — a Stage 4 blocker — without any in-loop reviewer flagging it. The blocker was only discovered downstream at `/loom-plan execute` time, after the plan was nominally "approved." Step 5.5 catches these in-loop and feeds them back to the integrator.
+
+##### Sequence
+
+1. **Skip clause.** If `convergence-summary.toon` `status` is anything other than `converged`, skip Step 5.5 entirely. Halt statuses fall through to existing C-10 / C-11 handling.
+2. **Run validation.** Execute `validation-rules.md` Section 6 stages 1–4 against the converged plan at `{planPath}`:
+   - Stage 1 (Structure): frontmatter, required sections, Phase 0 + contracts-agent.
+   - Stage 2 (Dependencies): cycle detection, self-deps, undefined refs.
+   - Stage 3 (Ownership): same-wave file-ownership overlaps, deliverable-vs-ownership coverage.
+   - Stage 4 (Sizing): >12 deliverables (BLOCKING), 0 acceptance criteria (BLOCKING), >8 deliverables (WARNING).
+3. **Classify result.**
+   - **CLEAN** (no blockers, no warnings) → Step 5.5 returns success. Proceed to Step 4.5.
+   - **WARNINGS only** → log warnings to stderr, write to `.plan-execution/convergence/validation-warnings.toon`, return success. Proceed to Step 4.5. Warnings never gate.
+   - **BLOCKING** → continue to step 4.
+
+##### Re-entry on blocking validation
+
+4. **Synthesize findings.** Format each blocking validation result as a row in `findings.toon` per `agents/protocols/findings.schema.md` § findings[] Row Schema. Column values:
+   - `id`: `V-{N}` (validation-prefixed, distinct from `F-` reviewer findings).
+   - `dimension: structural-validation` (synthetic dimension registered in `findings.schema.md` row schema — distinguishes wrapper-set rows from the 6 reviewer dimensions so the integrator can route appropriately).
+   - `severity: blocking`.
+   - `locationPath`: `{planPath}` (the subject).
+   - `locationAnchor`: the affected `##Phase N` heading (e.g., `##Execution Phases > Phase 9A2`).
+   - `summary`: one-line statement of the validation violation (e.g., `Phase 9A2 has 13 deliverables (>12 cap)`).
+   - `suggestion`: the validation-rules-derived fix (e.g., `Split Phase 9A2 into 9A2-i (channel-correctness checks) and 9A2-ii (hook-wiring checks)`).
+   - `reviewerAgent: validation-rules-stages-1-4` (synthetic identifier registered in `findings.schema.md` row schema — names the rule set, not a real agent).
+   - Atomic write to `.plan-execution/convergence/findings.toon` (overwrites the prior iteration's findings per existing C-11 contract). The wrapper MUST also recompute and write `blockingCount`, `advisoryCount`, and `producedAt` per the schema's count-consistency invariants.
+
+5. **Re-invoke the driver.** Call `/loom-converge --resume-config .plan-execution/convergence/converge.config.toon` again, passing through `--auto` and `--no-auto-commit` as in Step 5. The driver picks up the synthesized findings from disk and routes them to the integrator (`plan-builder-agent`) for resolution. `maxIterations` for the re-entry pass is **independent** from the initial pass and defaults to `2` (configurable later via `--validation-max-iterations`; not yet a flag — hard-coded for now).
+
+6. **Re-entry cap.** Step 5.5 re-entry is bounded at **ONE re-entry** (i.e., one initial converge pass + one validation-driven re-entry). If validation still BLOCKS after re-entry, exit per the §"Re-entry exhaustion" section below. The cap exists because structural blockers that survive one integrator pass are almost always plan-design problems requiring human triage, not loop-of-loop problems requiring more iterations.
+
+7. **Re-run validation after re-entry.** When the re-entered driver returns, re-run stages 1–4 once more. If CLEAN → success. If still BLOCKING → re-entry exhaustion.
+
+##### Re-entry exhaustion
+
+If validation still BLOCKS after the bounded re-entry:
+
+1. Write `.plan-execution/convergence/validation-failures.toon` with the final blocking findings and an `attempts: 2` field.
+2. Update `convergence-summary.toon` `status` to `halted-validation` (NEW terminal status — will be added to `convergence-summary.schema.md § Halt Reason Cross-Reference` and `convergence-driver.md § Halt Messages and Recovery (locked C-10)` in a follow-up edit; until then, downstream consumers see the new status as "unknown" and should default to the same handling as `halted-stall` → `nextLink: fix`).
+3. Surface to the user (or stderr under `--auto`) a clear message:
+   ```
+   Post-converge validation failed after 1 re-entry. {N} blocking structural finding(s) remain:
+     - Phase {id}: {description}
+     - ...
+   Run /loom-plan review --integrate manually, or /loom-roadmap refine, to resolve.
+   ```
+4. Under `--auto`, exit code 1 (parallels C-08 SCOPE_EXPANSION handling — non-interactive non-zero exit on terminal failure).
+5. Under interactive mode, exit 0 but with the validation-failures.toon on disk so the user knows to fix manually.
+
+##### `nextLink` routing impact (C-11)
+
+Step 5.5 extends the C-11 nextLink derivation:
+
+- `status: converged` AND validation CLEAN → `nextLink: done` (unchanged from current contract)
+- `status: converged` AND validation BLOCKING handled via re-entry, ends CLEAN → `nextLink: done`
+- `status: halted-validation` (re-entry exhaustion) → `nextLink: planning` (revisit plan — same as halted-scope-expansion)
+
+##### Flag interaction notes
+
+- `--autoconverge` + `--skip-validation` → SUPPORTED. Step 5.5 no-ops; Step 5 success leads directly to Step 4.5. Equivalent to old behavior. Logged warning on stderr.
+- `--autoconverge` + `--auto` + validation re-entry exhaustion → exit code 1 + stderr line per the §"Re-entry exhaustion" section above.
+- `--autoconverge` + `--dry-run` → Step 5.5 is not exercised (driver is never invoked).
+
+##### Deferred work (out of scope for this edit)
+
+The contract sister-edits LANDED as part of this change set (do NOT re-do; cross-references for code reviewers):
+
+- `convergence-summary.schema.md § Status Enum` — `halted-validation` row added; `§ Halt Reason Cross-Reference` — `VALIDATION_EXHAUSTED` row added; `§ Validation Rules` rule 3 extended for the new `status` <-> `haltReason` pair.
+- `convergence-driver.md § Halt Messages and Recovery (locked C-10)` — `VALIDATION_EXHAUSTED` row added with explicit "wrapper-set, not driver" annotation; stdout halt-message enum widened.
+- `findings.schema.md § findings[] Row Schema` — `dimension` column accepts `structural-validation`; `reviewerAgent` column accepts `validation-rules-stages-1-4`; § Validation Rules rule 10 extended and new rule 11 enforces the `structural-validation` <-> `validation-rules-stages-1-4` coupling.
+
+Genuinely deferred (out of scope for this edit):
+
+- Optional `--validation-max-iterations <N>` flag to override the hard-coded `1` re-entry cap (`2` total attempts).
+- Consider whether `/loom-plan review` should run stages 1–4 as a preflight (separate from autoconverge), so users running review directly also see structural blockers. Likely yes — but a separate edit.
+- Implementation in the wrapper itself: this file describes the contract; the executable steps (validation invocation, findings synthesis, re-entry, exhaustion handling) need to be wired into the `/loom-plan create` runtime by a follow-up implementation pass.
 
 #### Step 4.5: Wiki Update (non-blocking)
 

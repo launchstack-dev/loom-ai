@@ -4,21 +4,126 @@
 [![Version](https://img.shields.io/badge/version-v0.0.1-blue.svg)](https://github.com/launchstack-dev/loom-ai/releases)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
 
-**A discipline layer on top of Claude Code.** Give Loom a one-line idea — *"add user auth with RBAC and team management"* — and it drives a multi-agent pipeline from scope decisions, through wave-based execution, to passing tests and reviewed code. Tool-call-level hooks keep agents on-task, in-scope, and within budget. The artifacts you get back (plans, scenarios, contracts, wiki) keep working *after* the initial build, through structured change proposals.
+## Hero
 
-> **New here?** Start with [`docs/first-30-minutes.md`](docs/first-30-minutes.md) (narrated quickstart) and [`docs/concepts.md`](docs/concepts.md) (the five concepts you need before commands stop looking arbitrary). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
+**A discipline layer on top of Claude Code that ships its own enforcement.** Most multi-agent tools enforce boundaries with prompts. Loom enforces them at the tool-call level — file ownership, contract locks, context budget, and wiki integrity are Claude Code hooks, not instructions. Give Loom a one-line idea and it drives a hook-enforced multi-agent pipeline from scope decisions through wave-based execution to passing tests and reviewed code — and the artifacts (plans, scenarios, contracts, wiki) keep working after the initial build through structured change proposals.
 
-## Quickstart
+## Outcomes
 
-**1. Install** (assumes you already have [Claude Code](https://docs.claude.com/claude-code)):
+What you actually get when you run Loom on a project:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
+- **Wave-based execution** with file-ownership and contract-lock hooks that block off-task writes before they happen — not after a review catches them.
+- **Convergence loops** that iterate `do work → check work → remediate` until tests pass and reviewers approve, with circuit breakers (stalled, regression, budget-exhausted) instead of infinite spin.
+- **A repo-committed wiki** (`.loom/wiki/`) that captures scope decisions, contracts, scenarios, and per-domain `contract-*` pages — coherent across changes because `/loom-change` mutates atomically.
+- **Given/When/Then scenarios as the canonical testable unit** — the convergence-planner emits verification targets directly from scenarios at four tiers (unit / integration / e2e / qa-review).
+- **Tool-call-level discipline** — fourteen enforcement hooks plus a 100k-token context-budget cap per spawn keep long agentic runs predictable and auditable.
+
+## Quickstart — Plugin path
+
+The default path. Recommended for new users, casual evaluators, and anyone who wants a one-command install with registry-managed updates.
+
+```text
+/plugin marketplace add launchstack-dev/loom-ai
+/plugin install loom
+/loom-init
+/loom-doctor
 ```
 
-Restart your Claude Code session. Full install options (latest `main`, private repos, local-dev, non-pipe paths) in [Install](#install).
+What each step does:
 
-**2. Pick your starting point.** Loom forks on (a) is there existing code Loom should learn first, and (b) how deliberate do you want the build to be:
+1. **`/plugin marketplace add launchstack-dev/loom-ai`** — registers Loom's marketplace listing with your Claude Code plugin registry.
+2. **`/plugin install loom`** — installs Loom under `${CLAUDE_PLUGIN_ROOT}`. Restart your Claude Code session so the new commands and agents load.
+3. **`/loom-init`** — brownfield onboarding: scans your repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/`, and (with your consent) wires the per-project enforcement hooks. Skip if you're greenfield and want to go straight to `/loom-roadmap init --full`.
+4. **`/loom-doctor`** — verifies the install: checks anchor variables, hook registration, agent reachability, and prints a pass/fail summary. Run after every install or update.
+
+Update flow: `/plugin update loom`. Uninstall flow: `/plugin uninstall loom` then `/loom-uninstall` to clean per-project state.
+
+## Quickstart — Curl path
+
+For enterprise (MDM-blocked plugin install), air-gapped networks, pinned-version teams, contributors, and anyone authoring kits.
+
+```text
+curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
+/loom-init
+/loom-doctor
+```
+
+What each step does:
+
+1. **`curl … install.sh | bash`** — pinned-tag installer. Writes regular files into `~/.claude/` (anchored against `${CLAUDE_PROJECT_DIR}` per-project). Replace `v0.0.1` with `main` to track latest, or any tag for pinned-version installs. The installer fetches a small bootstrap and verifies it against `checksums.sha256` from the same ref; no `sudo`, no system paths, no shell-init writes. Inspect before piping — see [Install](#install).
+2. **`/loom-init`** — same as plugin path: brownfield onboarding + per-project hook bootstrap.
+3. **`/loom-doctor`** — same verification surface as the plugin path.
+
+Update flow: re-run the install one-liner, or `/loom-library sync` (auto-detects curl vs local-dev pattern). Uninstall flow: `/loom-uninstall` cleans both per-project and per-machine state.
+
+## Decision matrix
+
+When to use which path:
+
+| You are… | Recommended path | Reason |
+|---|---|---|
+| Default — single developer, latest stable | **Plugin** | One-command install, registry-managed updates, no manual checksum work |
+| Enterprise / MDM-restricted workstation | **Curl** | `/plugin install` is often blocked or audited; curl pulls files directly from a tag or your vendored mirror |
+| Air-gapped network | **Curl** | No outbound registry call required; vendor the tarball and install from a local file |
+| Customization-heavy kit work (forking agents, editing hooks, authoring private kits) | **Curl** (or local-dev clone) | Plugin files are registry-owned and overwritten on update; curl writes regular files you can edit |
+| Pinned-version team or CI | **Curl** pinned to a tag | Tag-pinned one-liner is reproducible across machines today |
+| Contributor / fork maintainer | **Curl** local-dev clone | `git clone` + symlinked `~/.claude/` lets edits show up live; `/loom-library sync` reconciles |
+
+See [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md) for the full decision tree, scenario-by-scenario fallbacks, and an at-a-glance path-summary table.
+
+## Differentiators
+
+The combination that matters: `/loom-doctor` and `/loom-converge` compose. `/loom-doctor` produces a deterministic diagnostic report; `/loom-converge` iterates any artifact (code, plan, document, PR head) toward a check passing. Run them together and you get a self-healing install + self-healing build: doctor surfaces drift, converge drives it to zero. That composability — diagnostics that emit findings + a generic convergence engine that consumes findings — is the load-bearing claim of Loom's tool-call-level discipline. Neither alone is the differentiator; together they let you wire `/loom-doctor` output straight into `/loom-converge` and watch the install heal itself.
+
+The convergence loop, applied everywhere:
+
+```
+   ┌─→  do work        execute, draft, generate
+   │
+   │   check           harness emits findings.toon
+   │                   (tests, reviewer fan-out, /loom-doctor report,
+   │                    doc-quality review, PR-bot output)
+   │
+   │   triage          driver: converged | continue | stalled |
+   │                   regression | budget_exhausted
+   │
+   └── remediate       integrator applies findings
+                       (fixer-agent in parallel, or a custom
+                        integrator that rewrites the artifact)
+```
+
+Three more pillars that fall out of that composability:
+
+1. **Pre-flight scope contract.** A Prompt Refiner + Scope Interrogator turn a loose prompt into a locked decision manifest (decisions, assumptions, non-goals, testable success criteria) before any code is written. Every downstream agent reads it.
+2. **Scenarios drive convergence.** Plans and roadmaps ship Given/When/Then scenarios under each phase and feature. The convergence-planner emits targets from scenarios; the verification pipeline gates on them at four tiers (unit / integration / e2e / qa-review) mapped to wave / phase / feature / milestone.
+3. **Change-proposal lifecycle.** After the initial materialize, `/loom-change init → review → approve → run → archive` mutates per-domain `contract-*` wiki pages atomically with drift validation. `/loom-quick` auto-emits a retroactive proposal so small work stays zero-ceremony.
+
+## Troubleshooting
+
+If something looks wrong:
+
+- **Run `/loom-doctor` first.** It checks anchor variables (`${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PROJECT_DIR}`), hook registration in `.claude/settings.json`, agent reachability, kit catalog integrity, and version skew. The output is a structured pass/fail list — each failure points at the remediation step.
+- **For filing issues, run `/loom-doctor --bundle`.** It writes a redacted diagnostic bundle (config snapshots, hook entries, install-state, recent agent results — secrets stripped) to a temp file and prints the path. Attach that file to the GitHub issue so we have everything we need without back-and-forth.
+- **Common gotchas:** `/loom` returns "Unknown command" → restart the Claude Code session so it picks up new commands. Hooks aren't firing → run `node scripts/register-loom-hooks.ts --replace` from the project root. Install drift after a `git pull` (local-dev) → `/loom-library sync --apply`.
+- **Deeper guidance:** [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes specific error messages and walks the diagnostic tree.
+
+## Support
+
+Community-supported. GitHub issues only. No SLA.
+
+Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https://github.com/launchstack-dev). File issues at [github.com/launchstack-dev/loom-ai/issues](https://github.com/launchstack-dev/loom-ai/issues). For kit authoring, see [`planning/notes/plugin-marketplace-rationale.md`](planning/notes/plugin-marketplace-rationale.md). For the install decision tree, see [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md).
+
+---
+
+## Status
+
+Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
+
+See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for v0.1.0 scope.
+
+## Starting points
+
+Loom forks on (a) is there existing code Loom should learn first, and (b) how deliberate do you want the build to be:
 
 | You are… | First command | What it does |
 |---|---|---|
@@ -27,28 +132,9 @@ Restart your Claude Code session. Full install options (latest `main`, private r
 | **Greenfield, fast** — fresh idea, willing to let the pipeline drive end-to-end | `/loom-auto --from "<idea>"` | Full pipeline: prompt refiner → scope contract → roadmap → plan → execute → converge → test → review → fix. Add `--auto` to accept defaults at every gate. |
 | **Tiny task in any repo** | `/loom-quick "<task>"` | Zero-ceremony: wiki-context aware, runs the work, emits a retroactive change-proposal so contract pages stay coherent. |
 
-For brownfield projects that *also* want to plan a new feature, run `/loom-init` first, then `/loom-roadmap init --brownfield --full` — the `--brownfield` flag adds a codebase-analysis step that shapes the roadmap around what already exists.
+For brownfield projects that *also* want to plan a new feature, run `/loom-init` first, then `/loom-roadmap init --brownfield --full` — the `--brownfield` flag adds a codebase-analysis step that shapes the roadmap around what already exists. For long `/loom-auto` runs, enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window.
 
-**3. Recommended for `/loom-auto`:** enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window. Without it, long runs hit context budget and require `/clear` + `--resume` between waves.
-
-For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the five concepts behind everything see [`docs/concepts.md`](docs/concepts.md).
-
-## What's different
-
-Most "multi-agent" tools rely on prompts to enforce boundaries. Loom blocks at the tool-call level: file ownership, contract locks, context budget, wiki integrity, and quality gates are Claude Code hooks, not instructions. Most BDD layers treat scenarios as documentation. Loom scenarios are the canonical leaf-level testable unit — the convergence-planner emits verification targets directly from them and the pipeline blocks until they pass. Most spec workflows stop at the initial plan. Loom adds an OpenSpec-style change-proposal lifecycle over per-domain contract pages so the spec keeps converging after launch.
-
-The four pillars:
-
-1. **Pre-flight scope contract.** A Prompt Refiner + Scope Interrogator turn a loose prompt into a locked decision manifest (decisions, assumptions, non-goals, testable success criteria) before any code is written. Every downstream agent reads it.
-2. **Scenarios drive convergence.** Plans and roadmaps ship Given/When/Then scenarios under each phase and feature. The convergence-planner emits targets from scenarios; the verification pipeline gates on them at four tiers (unit / integration / e2e / qa-review) mapped to wave / phase / feature / milestone.
-3. **Hook-enforced discipline.** Thirteen enforcement hooks block unauthorized writes, lock contracts after Wave 0, cap context budget at 100k per spawn, gate premature stops, and keep the wiki coherent.
-4. **Change-proposal lifecycle.** After the initial materialize, `/loom-change init → review → approve → run → archive` mutates per-domain `contract-*` wiki pages atomically with drift validation. `/loom-quick` auto-emits a retroactive proposal so small work stays zero-ceremony.
-
-## Status
-
-Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
-
-See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for v0.1.0 scope.
+For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the five concepts behind everything see [`docs/concepts.md`](docs/concepts.md). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
 
 ## Commands
 

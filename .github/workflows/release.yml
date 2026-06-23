@@ -1,0 +1,198 @@
+# Atomic release pipeline (Phase 6).
+#
+# Triggered by `git tag vX.Y.Z && git push --tags`. Produces exactly one
+# tarball, uploads it to a GitHub Release, generates a sha256 manifest, commits
+# a CHANGELOG entry, and (once the sigstore-attest workflow has signed the
+# same commit) opens a marketplace-repo PR.
+#
+# Dry-run: any tag matching `*-test` (e.g. `v0.1.0-test`) skips the marketplace
+# PR step and emits `dist/loom-local-test.tar.gz` instead of a versioned name.
+# This is the artifact Phase 8's Docker harness consumes.
+#
+# Local exercise via `act`:
+#   act push --eventpath fixtures/v0.1.0-test-event.json
+#
+# Required secrets in production:
+#   GITHUB_TOKEN  — provisioned automatically; needs `contents: write` for the
+#                   release upload and `pull-requests: write` for the
+#                   marketplace PR (write happens on the *marketplace* repo, so
+#                   use a PAT in LOOM_MARKETPLACE_PR_TOKEN).
+#   LOOM_MARKETPLACE_PR_TOKEN — fine-grained PAT with write access to the
+#                   marketplace registry repo.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build-tarball:
+    name: Build release tarball
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tarball: ${{ steps.meta.outputs.tarball }}
+      version: ${{ steps.meta.outputs.version }}
+      dry_run: ${{ steps.meta.outputs.dry_run }}
+      sha: ${{ steps.meta.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # CHANGELOG generation needs prior tags
+
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME:-v0.0.0-test}"
+          VERSION="${TAG#v}"
+          DRY_RUN="false"
+          case "$TAG" in
+            *-test) DRY_RUN="true" ;;
+          esac
+          if [ "$DRY_RUN" = "true" ]; then
+            TARBALL="loom-local-test.tar.gz"
+          else
+            TARBALL="loom-${VERSION}.tar.gz"
+          fi
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION"   >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN"   >> "$GITHUB_OUTPUT"
+          echo "tarball=$TARBALL"   >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA:-HEAD}" >> "$GITHUB_OUTPUT"
+
+      - name: Build tarball
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.meta.outputs.dry_run }}" = "true" ]; then
+            bunx tsx scripts/build-release-tarball.ts --dry-run
+          else
+            bunx tsx scripts/build-release-tarball.ts --tag "${{ steps.meta.outputs.tag }}"
+          fi
+          ls -la dist/
+
+      - name: Generate manifest
+        run: |
+          set -euo pipefail
+          bunx tsx scripts/generate-manifest.ts \
+            --tarball "dist/${{ steps.meta.outputs.tarball }}" \
+            --tag "${{ steps.meta.outputs.tag }}" \
+            --out dist/manifest.toon
+          cat dist/manifest.toon
+
+      - name: Upload artifacts (build job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            dist/${{ steps.meta.outputs.tarball }}
+            dist/manifest.toon
+          if-no-files-found: error
+          retention-days: 7
+
+  upload-release-asset:
+    name: Upload tarball to GitHub Releases
+    needs: build-tarball
+    runs-on: ubuntu-latest
+    if: needs.build-tarball.outputs.dry_run != 'true'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist
+      - name: Create release and upload tarball
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.build-tarball.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Loom $TAG" \
+            --notes-file dist/manifest.toon \
+            dist/${{ needs.build-tarball.outputs.tarball }} \
+            dist/manifest.toon
+
+  commit-changelog:
+    name: Generate and commit CHANGELOG entry
+    needs: build-tarball
+    runs-on: ubuntu-latest
+    if: needs.build-tarball.outputs.dry_run != 'true'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Generate CHANGELOG entry
+        run: bunx tsx scripts/generate-changelog.ts --tag "${{ needs.build-tarball.outputs.tag }}"
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged (idempotent path)"; exit 0
+          fi
+          git config user.name  "loom-release-bot"
+          git config user.email "loom-release-bot@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs(changelog): ${{ needs.build-tarball.outputs.tag }}"
+          git push origin HEAD:main
+
+  open-marketplace-pr:
+    name: Open marketplace registry PR
+    needs: [build-tarball, upload-release-asset]
+    runs-on: ubuntu-latest
+    if: needs.build-tarball.outputs.dry_run != 'true'
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist
+      - name: Open marketplace PR (sigstore-gated)
+        env:
+          GH_TOKEN: ${{ secrets.LOOM_MARKETPLACE_PR_TOKEN }}
+          LOOM_MARKETPLACE_REPO: ${{ vars.LOOM_MARKETPLACE_REPO }}
+          LOOM_REPO: ${{ github.repository }}
+        run: |
+          bunx tsx scripts/open-marketplace-pr.ts \
+            --tag "${{ needs.build-tarball.outputs.tag }}" \
+            --manifest dist/manifest.toon \
+            --sha "${{ needs.build-tarball.outputs.sha }}"
+
+  dry-run-summary:
+    name: Dry-run summary
+    needs: build-tarball
+    runs-on: ubuntu-latest
+    if: needs.build-tarball.outputs.dry_run == 'true'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist
+      - name: Show dry-run outputs
+        run: |
+          echo "Dry-run tag: ${{ needs.build-tarball.outputs.tag }}"
+          echo "Tarball: ${{ needs.build-tarball.outputs.tarball }}"
+          ls -la dist/
+          cat dist/manifest.toon
+          echo "Skipped: upload-release-asset, commit-changelog, open-marketplace-pr"

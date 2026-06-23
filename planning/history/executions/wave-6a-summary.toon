@@ -1,0 +1,65 @@
+wave: 6a
+label: Wave 6a
+phases[4]: Phase 11A, Phase 11B, Phase 13, Phase 14
+agents[4]: implementer-agent x4 (parallel)
+status: complete
+verificationStatus: pass
+
+filesCreated[23]:
+  docs/install-decision-matrix.md
+  planning/notes/plugin-marketplace-rationale.md
+  test/e2e/curl-install.spec.ts
+  test/e2e/runtime-equivalence.spec.ts
+  test/e2e/fixtures/plugin-install/.claude-plugin/plugin.json
+  test/e2e/fixtures/plugin-install/.claude/settings.json
+  test/e2e/fixtures/plugin-install/.loom/plugin-root
+  test/e2e/fixtures/curl-install/.claude/settings.json
+  test/e2e/fixtures/curl-install/hooks/run-hook.sh
+  commands/loom-update.md
+  scripts/loom-update.ts
+  scripts/lib/update/check.ts
+  scripts/lib/update/apply.ts
+  scripts/lib/update/resume.ts
+  scripts/lib/update/rollback.ts
+  scripts/lib/update/__tests__/update.test.ts
+  test/loom-update.test.ts
+  commands/loom-uninstall.md
+  scripts/loom-uninstall.ts
+  scripts/lib/uninstall/index.ts
+  scripts/lib/uninstall/confirm.ts
+  scripts/lib/uninstall/__tests__/uninstall.test.ts
+  test/loom-uninstall.test.ts
+
+filesModified[2]:
+  README.md
+  test/docker/run-harness.sh
+
+verifyCommands[3]{cmd,exit,note}:
+  bunx vitest run (all 6 Wave 6a + sibling files),0,92/94 pass + 2 skipped (no-docker E2E)
+  bunx tsx scripts/loom-update.ts --help,0,usage printed
+  bunx tsx scripts/loom-uninstall.ts --help,0,usage printed
+
+wiringApplied[1]{file,change,source}:
+  test/docker/run-harness.sh,Added --mode curl|plugin argparse + INSTALL_MODE branch in INNER_SCRIPT (plugin: tar-extract; curl: install.sh under tarball staging dir),Phase 11B crossBoundaryRequest
+
+contractsLocked[6]{contract,value}:
+  /loom-update --check text format,Loom vX installed -> vY available — run /loom-update to apply (ASCII arrow)
+  /loom-update --check JSON,Conforms to agents/protocols/update-check.schema.md (currentVersion latestVersion behind pinnedVersion + schemaVersion generatedAt channel)
+  Plugin update success final line,Claude Code restart required to load new plugin version
+  Unrecoverable resume stderr,Update unrecoverable. Run /loom-update --check OR /loom-doctor --bundle to file an issue.
+  Rollback chain error,ROLLBACK_HASH_MISMATCH (exit non-zero)
+  Uninstall --purge-project-state literal,uninstall (typed-literal confirm)
+
+deferredWork[3]:
+  Phase 14 cross-boundary refactor opportunity: extract commandReferencesHook + LOOM_HOOKS manifest from register-loom-hooks.ts as a shared module so /loom-uninstall doesn't duplicate LOOM_HOOK_NAMES. Future cleanup wave.
+  README references /loom-doctor and /loom-uninstall — lightweight wording sync may be needed if their final flags drift.
+  Phase 11A README absorbed the legacy Starting points/Status sections — wave-6 review should sanity-check that brownfield/greenfield routing reads well after the restructure.
+
+keyDecisions[3]:
+  test/docker/run-harness.sh --mode curl runs install.sh from a staging dir; --mode plugin extracts tarball under ~/.claude/plugins/loom. Defaults to plugin (preserves Phase 8 S-01 behavior).
+  /loom-update marker discipline: write before exec; clear on success; preserve for --resume on failure; terminal "failed" sentinel on unrecoverable resume.
+  /loom-uninstall strict-abort: --purge-project-state typed-literal failure aborts the WHOLE run (no mutation). Safe-by-default reading of S-02; flip the early return if partial-mutation is intended later.
+
+nextStageHints[2]:
+  Wave 6b: Phase 12 marketplace submission depends on all of Wave 6a being on disk (decision matrix, /loom-update + /loom-uninstall shipped, listing-checklist verified).
+  Finalize step (mandatory): set plan status=completed + completedAt in frontmatter and roadmap M-07.

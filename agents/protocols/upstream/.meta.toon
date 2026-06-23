@@ -1,2 +1,2 @@
 upstreamSchemas[1]{filename,sourceUrl,snapshotDate,snapshotMethod}:
-  plugin.schema.json,https://code.claude.com/docs/en/plugins-reference,2026-06-17,deferred-fetch-CI-workflow
+  plugin.schema.json,https://code.claude.com/docs/en/plugins-reference.md,2026-06-22,refresh-upstream-schemas.sh
