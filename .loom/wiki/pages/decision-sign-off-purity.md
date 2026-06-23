@@ -34,9 +34,11 @@ The guarantee is structural, not procedural:
 3. A vitest grep test enforces (2) by scanning every `.ts` file in `scripts/roadmap-converge/` except `sign-off.ts` for that literal and failing the suite on any match.
 4. The CI verification command makes the grep run during the standard pipeline:
    ```bash
-   ! grep -RIn 'sign_off_state\s*=\s*"signed-off"' scripts/roadmap-converge/ \
+   ! grep -E -RIn 'sign_off_state[[:space:]]*=[[:space:]]*"signed-off"' scripts/roadmap-converge/ \
        | grep -v 'scripts/roadmap-converge/sign-off.ts'
    ```
+
+   (Note: the shipped verification command in `PLAN-roadmap-converge-harness.md` and `library.yaml` still uses `\s`, which BSD grep on macOS does not reliably match. Switching to `grep -E` + `[[:space:]]` is portable across Linux and macOS and is the canonical form going forward.)
 
 ## Rationale
 

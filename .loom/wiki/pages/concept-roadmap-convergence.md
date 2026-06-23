@@ -44,7 +44,7 @@ Each pass:
 
 1. **Content-hash check** — sha256 of ROADMAP.md compared to `state.content_hash`. Mismatch flags every dimension as `delta_since_last = invalidated` and prints a one-line diff notice.
 2. **Reviewer fan-out** — one `roadmap-converge-reviewer` agent per dimension (model `sonnet`). Each reviewer sees only its dimension's section anchors plus its rubric file.
-3. **5-finding cap** — driver hard-caps reviewer output at 5 findings per pass at the output layer; overflow rows append to `suppressedFindings[]` with a `"N suppressed"` stderr footer.
+3. **5-finding cap** — driver hard-caps reviewer output at 5 findings **per dimension per pass** at the output layer (so the aggregate ceiling is `5 × |dimensions|`, e.g. 40 across the 8 MVP defaults); overflow rows append to `suppressedFindings[]` with a `"N suppressed"` stderr footer.
 4. **State write + batched questions** — open questions written into `state.open_questions[]` (max 5 per pass), `paused_at` set, lock released, control returned to the user.
 5. **Integrator pass** — when user re-runs `/loom-roadmap converge` after answering, the `roadmap-converge-integrator` agent applies resolutions as surgical ROADMAP.md edits (atomic via `.tmp` + rename).
 

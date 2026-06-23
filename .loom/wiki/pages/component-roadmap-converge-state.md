@@ -40,7 +40,7 @@ The durable side of F-15. Owns the per-roadmap state file, the readiness schema 
 
 ### RoadmapConvergeState fields (highlights)
 
-`schemaVersion` (= 1), `roadmapPath`, `roadmapSlug`, `archetype`, `round` (≥ 0; round=0 is init), `passLimit` (default 3, max 5), `dimensions[]`, `open_questions[]` (≤ 5 per pass), `archivedDimensions[]` (retire-dimension audit), `suppressedFindings[]` (overflow beyond 5-cap with `{id,dimension,severity,text,suppressed_at}`), `roadmap_diff_summary`, `paused_at`, `last_reviewer`, `next_action_hint`, `content_hash` (sha256 of ROADMAP.md), `sign_off_state` (`not-eligible` | `eligible` | `signed-off`), `sign_off_at`, `sign_off_diff_hash`.
+`schemaVersion` (= 1), `roadmapPath`, `roadmapSlug`, `archetype`, `round` (≥ 0; round=0 is init), `passLimit` (default 3, max 5), `dimensions[]`, `open_questions[]` (≤ 5 per dimension per pass; aggregate ceiling = `5 × |dimensions|`), `archivedDimensions[]` (retire-dimension audit), `suppressedFindings[]` (overflow beyond 5-cap with `{id,dimension,severity,text,suppressed_at}`), `roadmap_diff_summary`, `paused_at`, `last_reviewer`, `next_action_hint`, `content_hash` (sha256 of ROADMAP.md), `sign_off_state` (`not-eligible` | `eligible` | `signed-off`), `sign_off_at`, `sign_off_diff_hash`.
 
 `OpenQuestion`: `id` (format `Q-NN`, unique within state), `dimension`, `text` (≤ 500 chars), `asked_at`, `resolved_at`, `resolution`.
 
@@ -78,7 +78,7 @@ All writes are atomic per the project convention: write to `{path}.tmp`, then `f
 | Lock > 10 min old | Auto-clear with stderr advisory; proceed |
 | No lock | Acquire and proceed |
 
-`lockStaleSeconds` in `[roadmap.converge]` overrides the 10-minute default; minimum 60.
+The 10-minute stale window is currently **hardcoded** in `scripts/roadmap-converge/lock.ts` as `STALE_AFTER_MS = 10 * 60 * 1000`. Making this configurable via `[roadmap.converge].lockStaleSeconds` is planned but not yet wired through — neither `lock.ts` nor `driver.ts` reads the config value today.
 
 ## Multi-Roadmap Slugging
 
