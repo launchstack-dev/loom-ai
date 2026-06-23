@@ -20,3 +20,24 @@ lintSchedule = "post-wave"
 type = "code"
 contractType = "type-files"
 verificationPipeline = ["tsc --noEmit", "bun run lint", "bun test"]
+
+[roadmap.converge]
+maxPasses = 3                 # default 3; clamped to max 5
+defaultRoadmap = "planning/ROADMAP.md"
+stateRoot = ".roadmap-converge"
+lockStaleSeconds = 600        # 10 minutes
+reviewerModel = "sonnet"      # per C-05 — model for per-dimension reviewers
+driverModel = "opus"          # per C-05 — model for converge driver
+
+# Per-project retire-dimension overrides (one-liner per dimension)
+retire = []                   # dimensions to skip evaluation entirely
+
+# Optional per-archetype rubric overrides
+[roadmap.converge.rubricOverrides]
+# "vision" = "agents/protocols/roadmap-rubrics/vision-strict.md"
+
+[execution.agents]
+roadmap-converge-driver = "agents/roadmap-converge-driver.md"
+roadmap-converge-reviewer = "agents/roadmap-converge-reviewer.md"
+roadmap-converge-integrator = "agents/roadmap-converge-integrator.md"
+roadmap-archetype-detector = "agents/roadmap-archetype-detector.md"

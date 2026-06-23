@@ -1,0 +1,81 @@
+# RoadmapConvergeState — schema definition (v1)
+#
+# Durable runtime state for one roadmap's convergence loop. Persisted at
+# .roadmap-converge/{slug}/state.toon and registered with the F-13 migration
+# runtime via agents/protocols/schema-versions.toon under
+# `roadmapConvergeState` (currentVersion: 1, migratorKind: module,
+# migratorPath: scripts/migrators/roadmap-converge-state/index.ts).
+#
+# This file is the *schema* (field catalogue) — not an instance. Instances
+# live under .roadmap-converge/{slug}/state.toon and conform to the fields
+# enumerated below. See PLAN-roadmap-converge-harness.md § Schema/Type
+# Definitions for the canonical English-language spec.
+
+schemaVersion: 1
+entity: RoadmapConvergeState
+
+# Scalar fields on the state object.
+#   required: "true" → field MUST be present on every instance.
+#   default: "—" → no default; caller must supply.
+fields[18]{name,type,required,default,description}:
+  schemaVersion,integer,true,1,Current schema version. Mirrored from registry.
+  roadmapPath,string,true,—,Repo-relative path to the roadmap this state tracks.
+  roadmapSlug,string,true,—,Path-safe slug derived from roadmapPath sans extension.
+  archetype,string,true,default,One of {cli|web-app|library|data-pipeline|research|default}.
+  round,integer,true,0,Pass counter; round=0 is initial state.
+  passLimit,integer,true,3,Pass cap (max 5). Sourced from [roadmap.converge].maxPasses.
+  roadmap_diff_summary,string,true,—,"One-line +N -M lines summary since last pass."
+  paused_at,string,true,—,ISO 8601 timestamp set when pass completes with batched questions.
+  last_reviewer,string,true,—,Agent name that ran the most recent review.
+  next_action_hint,string,true,—,Copyable command suggested to the user next.
+  content_hash,string,true,—,sha256 of ROADMAP.md at time of last pass.
+  sign_off_state,enum,true,not-eligible,"One of {not-eligible|eligible|signed-off}."
+  sign_off_at,string,false,—,ISO 8601; set only when sign_off_state = signed-off.
+  sign_off_diff_hash,string,false,—,sha256 of ROADMAP.md at sign-off moment.
+  dimensions,array<RoadmapDimension>,true,[],"Per-dimension runtime status; mirrors schema dimensions minus archived."
+  dimensionSnapshot,array<DimensionSnapshot>,true,[],"Snapshot of prior pass dimensions written at END of pass; may be empty on round=0/1."
+  open_questions,array<OpenQuestion>,true,[],Length ≤ 5 per pass. Capped per dimension by driver.
+  archivedDimensions,array<ArchivedDimension>,true,[],Records retire-dimension actions.
+  suppressedFindings,array<SuppressedFinding>,true,[],Findings dropped beyond per-dimension 5-cap.
+
+# Sub-entity: RoadmapDimension (runtime entry under state.dimensions[])
+dimensionFields[6]{name,type,required,default,description}:
+  name,string,true,—,Matches a DimensionDef.name in the active schema.
+  status,enum,true,—,"One of {green|yellow|red}."
+  evidence,string,false,—,"Free text from reviewer; capped at 500 chars."
+  blockers,array<string>,false,[],Concrete issues holding back green; each ≤ 200 chars.
+  evidenceRef,array<string>,false,[],"Section anchors in ROADMAP.md, e.g. #vision."
+  delta_since_last,enum,true,new,"One of {improved|same|degraded|invalidated|new}."
+
+# Sub-entity: dimensionSnapshot[] entry
+snapshotFields[2]{name,type,required,default,description}:
+  name,string,true,—,Dimension name.
+  status,enum,true,—,"One of {green|yellow|red}; status at end of prior pass."
+
+# Sub-entity: OpenQuestion
+openQuestionFields[5]{name,type,required,default,description}:
+  id,string,true,—,"Format Q-NN; unique within state."
+  dimension,string,true,—,Matches a RoadmapDimension.name.
+  text,string,true,—,Question body; ≤ 500 chars.
+  asked_at,string,true,—,ISO 8601.
+  resolved_at,string,false,—,ISO 8601; set when user answers. Reserved value "dimension archived" sets this automatically when referenced dimension is archived.
+
+# Sub-entity: archivedDimensions[] entry
+archivedDimensionFields[3]{name,type,required,default,description}:
+  name,string,true,—,Archived dimension name.
+  reason,string,true,—,Why this dimension was retired.
+  timestamp,string,true,—,ISO 8601 archive time.
+
+# Sub-entity: suppressedFindings[] entry
+suppressedFindingFields[5]{name,type,required,default,description}:
+  id,string,true,—,"Reviewer-issued finding id, e.g. F-03."
+  dimension,string,true,—,Source dimension.
+  severity,enum,true,—,"One of {blocking|warning|nit}."
+  text,string,true,—,Finding body verbatim.
+  suppressed_at,string,true,—,ISO 8601 suppression time.
+
+# Indexes (informational; enforced by the I/O layer in scripts/roadmap-converge/state-io.ts)
+indexes[3]{name,fields,kind,purpose}:
+  pk_state,roadmapSlug,PRIMARY,One state per roadmap.
+  idx_open_questions_unresolved,open_questions[].resolved_at IS NULL,PARTIAL,Fast resume — fetch unresolved questions.
+  uq_question_id,open_questions[].id,UNIQUE,No id collisions within state.
