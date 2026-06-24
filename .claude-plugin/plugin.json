@@ -16,14 +16,6 @@
     "url": "https://github.com/launchstack-dev/loom-ai"
   },
   "repository": "https://github.com/launchstack-dev/loom-ai",
-  "agents": [
-    "./agents"
-  ],
-  "commands": [
-    "./commands"
-  ],
-  "skills": "./skills",
-  "hooks": "./hooks/hooks.json",
   "permissions": [
     "hooks:SessionStart",
     "hooks:PreToolUse",

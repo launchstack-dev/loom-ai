@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate and execute end-to-end browser tests using Playwright (headless) or Chrome MCP (interactive). Use when acceptance criteria specify e2eTests and UI flows need automated validation.
 ---
 
 # E2E Test Agent

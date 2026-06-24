@@ -1,3 +1,7 @@
+---
+description: "Pattern Executor Protocol"
+---
+
 # Pattern Executor Protocol
 
 Reusable runtime protocol for invoking orchestration patterns. Any orchestrator command follows this protocol to match a task against patterns declared in `orchestration.toml` and execute the corresponding multi-agent topology. Pattern definitions live in `orchestration-patterns.md`; this document covers invocation mechanics.

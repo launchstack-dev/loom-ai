@@ -1,3 +1,7 @@
+---
+description: "Stage Context Schema"
+---
+
 # Stage Context Schema
 
 Defines the `StageContext` TOON format written at every pipeline boundary, and the `ConvergenceIterationSummary` format written after each convergence iteration. These structured summaries are the authoritative source for stage outcomes; `rolling-context.md` is the compressed derivative.

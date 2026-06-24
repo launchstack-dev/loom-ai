@@ -1,3 +1,7 @@
+---
+description: "Mark a roadmap as converged — the only path from sign_off_state=eligible to signed-off."
+---
+
 ## Command: `sign-off`
 
 Mark a roadmap as `converged`. Sign-off is the ONLY path from

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Orchestrate the convergence iteration loop — run harness, analyze delta, spawn fixers or integrator, re-run, check convergence — across target, criteria, and document modes with circuit breakers for stall, regression, and budget limits.
 ---
 
 # Convergence Driver

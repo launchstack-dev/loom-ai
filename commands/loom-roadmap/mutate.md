@@ -1,3 +1,7 @@
+---
+description: "Append a new feature and phase to ROADMAP.md without regenerating the document."
+---
+
 ## Command: `add`
 
 Appends a new feature and phase to ROADMAP.md without regenerating the entire document.

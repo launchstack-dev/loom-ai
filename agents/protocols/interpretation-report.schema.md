@@ -1,3 +1,7 @@
+---
+description: "Interpretation Report Schema"
+---
+
 # Interpretation Report Schema
 
 Defines the `interpretation-report.toon` format produced by the interpretation-reviewer-agent. The interpretation report is the envelope that wraps conflicts and coverage gaps discovered by cross-referencing plan deliverables against test criteria.

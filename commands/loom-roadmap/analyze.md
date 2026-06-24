@@ -1,3 +1,7 @@
+---
+description: "Synthesize a unified roadmap + plan + execution view — pure data, no agents spawned."
+---
+
 ## Command: `status` (default)
 
 Pure data synthesis — no agents spawned. Read all sources and render a unified view.

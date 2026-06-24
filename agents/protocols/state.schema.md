@@ -1,3 +1,7 @@
+---
+description: "Execution State Schema"
+---
+
 # Execution State Schema
 
 Tracks execution progress for resume, auditing, and orchestrator decision-making. Written to `.plan-execution/state.toon`.

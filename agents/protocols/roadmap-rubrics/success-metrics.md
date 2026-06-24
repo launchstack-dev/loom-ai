@@ -1,3 +1,7 @@
+---
+description: "Rubric: Success Metrics"
+---
+
 # Rubric: Success Metrics
 
 Success Metrics define the project-level outcomes that determine whether the roadmap was a success. A strong metric has a **name**, a **target value**, and a **measurement method** that references a concrete tool or command. Metrics must be objectively measurable — no "good performance" or "reliable" — and they feed directly into PLAN.md acceptance criteria during plan generation. The set of metrics should cover both correctness (does it work?) and quality (is it well-built?) dimensions.

@@ -1,3 +1,7 @@
+---
+description: "Flaky Test Schema"
+---
+
 # Flaky Test Schema
 
 Defines the `FlakyTest` record format for tracking tests that fail intermittently across convergence iterations. Flaky tests are detected by the convergence driver and optionally quarantined so they do not block wave progression.

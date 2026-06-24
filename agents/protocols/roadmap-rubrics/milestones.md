@@ -1,3 +1,7 @@
+---
+description: "Rubric: Milestones"
+---
+
 # Rubric: Milestones
 
 Milestones group features into ordered, deliverable units. A strong milestone set forms a DAG (no cycles, no forward references), names what is acceptable at each boundary, and sizes effort honestly. Each milestone should be independently demoable or describable as a coherent slice of value — if removing a milestone would leave a half-built scaffold rather than a smaller working system, the milestone boundary is wrong.

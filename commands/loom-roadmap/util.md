@@ -1,3 +1,7 @@
+---
+description: "Utility ops over a plan: split a large plan into independently-executable sub-plans."
+---
+
 ## Command: `split [path]`
 
 1. Read the plan

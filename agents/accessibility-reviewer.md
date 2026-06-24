@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit changed code for WCAG 2.1 AA compliance — semantic HTML, ARIA, keyboard navigation, color contrast, and focus management. Use PROACTIVELY when reviewing UI changes affecting interactive elements.
 ---
 
 # Accessibility Reviewer

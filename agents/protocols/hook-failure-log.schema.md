@@ -1,3 +1,7 @@
+---
+description: "HookFailureLog Schema"
+---
+
 # HookFailureLog Schema
 
 Canonical TOON schema for the machine-wide hook failure log at `~/.cache/loom/hook-failures.log`. Append-only; rotated when the file exceeds 1 MB. Written by `hooks/run-hook.sh` when the runtime probe (F-15) cannot locate a usable interpreter. Consumed by `/loom-doctor` F-04 `hooks` category red check.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Discover, propose, and refine convergence targets through interactive interview — analyzing the codebase and plan to determine comparison methods, tolerances, and golden sources. Emits convergence-plan.toon for target-parser and harness-builder.
 ---
 
 # Convergence Planner Agent

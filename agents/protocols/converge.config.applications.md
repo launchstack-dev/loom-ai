@@ -1,3 +1,7 @@
+---
+description: "ConvergeConfig — Per-Application Field Extensions (F-01..F-04)"
+---
+
 # ConvergeConfig — Per-Application Field Extensions (F-01..F-04)
 
 This document is a **non-modifying companion** to the locked `agents/protocols/converge.config.schema.md`. It does NOT add, rename, remove, or retype any field in the canonical `converge.config` schema. It only documents the **per-application field values** that the four new applications shipped by the convergence-applications plan supply when generating a `converge.config` file.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit project dependencies for known CVEs, license compliance, abandoned packages, version drift, and duplicates. Use PROACTIVELY when dependency manifests or lockfiles change.
 ---
 
 # Dependency Auditor

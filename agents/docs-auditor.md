@@ -1,5 +1,6 @@
 ---
 model: haiku
+description: Audit project documentation in brownfield or greenfield mode, flagging staleness, gaps, and contradictions against current code. Use PROACTIVELY to keep docs accurate and Loom-agent-ready.
 ---
 
 # Documentation Auditor

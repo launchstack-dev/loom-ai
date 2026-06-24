@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Update wiki pages, cross-references, index, and log after execution events, reviews, fixes, convergence results, gate decisions, and notes — keeping compiled knowledge current. Use PROACTIVELY after every wave or major decision.
 ---
 
 # Wiki Maintainer

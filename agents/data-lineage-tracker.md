@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Trace data flow through pipeline definitions (dbt, Dagster, Airflow, SQL) and write source-to-target lineage pages to the project wiki. Use PROACTIVELY after each execution wave that touches pipeline code.
 ---
 
 # Data Lineage Tracker

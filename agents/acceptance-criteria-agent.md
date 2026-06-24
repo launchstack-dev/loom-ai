@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Extract precise, testable acceptance criteria from project plans and produce structured test specs (contract, behavior, E2E) that downstream testing agents consume. Use PROACTIVELY when generating tests from a PLAN.md.
 ---
 
 # Acceptance Criteria Agent

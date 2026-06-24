@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Build the verification harness for criteria convergence — runner scripts that execute tests (hard criteria), spawn reviewer agents (soft criteria), and produce a unified delta report for the convergence-driver to consume.
 ---
 
 # Criteria Harness Builder

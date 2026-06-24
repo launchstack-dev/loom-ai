@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate internal API route handlers, request validation, response shaping, and middleware from contract-defined schemas — filing crossBoundaryRequests for the wiring-agent to register routes. Spawned by /loom-execute-plan at the post-contracts phase.
 ---
 
 # API Route Creator

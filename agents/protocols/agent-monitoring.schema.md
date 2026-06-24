@@ -1,3 +1,7 @@
+---
+description: "Agent Monitoring Protocol"
+---
+
 # Agent Monitoring Protocol
 
 Canonical specification for runtime monitoring of background agents. This protocol enables the orchestrator to track agent progress, detect hung agents, and intervene when necessary.

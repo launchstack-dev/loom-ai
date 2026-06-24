@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Identify scalability bottlenecks, N+1 queries, algorithmic complexity issues, rendering inefficiencies, bundle bloat, and missing pagination or indexing in changed code. Use when reviewing hot-path or data-access changes.
 ---
 
 # Performance Reviewer

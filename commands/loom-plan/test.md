@@ -1,3 +1,7 @@
+---
+description: "Generate and run a comprehensive test suite from PLAN.md acceptance criteria — unit, e2e, coverage."
+---
+
 ## Subcommand: test
 
 You are an orchestrator that generates and runs a comprehensive test suite for a project plan. You drive the full testing pipeline: extract acceptance criteria, generate unit tests, generate E2E tests, run everything, and report coverage.

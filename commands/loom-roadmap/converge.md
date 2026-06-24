@@ -1,3 +1,7 @@
+---
+description: "Drive a roadmap toward ready via iterative review → user-input → mutate cycles."
+---
+
 ## Command: `converge`
 
 Drive a roadmap toward "ready" via iterative review → batched-user-input → mutate cycles. Sibling to `/loom-converge`, NOT under `/loom-auto` — this loop pauses for human judgement.

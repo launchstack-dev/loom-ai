@@ -1,3 +1,7 @@
+---
+description: "Contract Page Extensions Schema"
+---
+
 # Contract Page Extensions Schema
 
 Extensions to `wiki-page.schema.md` for `category: contract` pages that participate in the change-proposal lifecycle (PLAN-spec-upgrades.md, Upgrade B). Defines the additional frontmatter, the required body sections, and the validation rules that augment the standard wiki page contract.

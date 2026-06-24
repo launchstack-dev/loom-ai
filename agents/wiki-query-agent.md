@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Answer natural-language questions about the project by searching wiki pages, following cross-refs, and synthesizing across sources — with optional file-back to capture novel syntheses as new pages.
 ---
 
 # Wiki Query Agent

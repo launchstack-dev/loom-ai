@@ -1,3 +1,7 @@
+---
+description: "ConvergenceFindings — Per-Application Row Variants (F-01..F-04)"
+---
+
 # ConvergenceFindings — Per-Application Row Variants (F-01..F-04)
 
 This document is a **non-modifying companion** to the locked `agents/protocols/findings.schema.md`. It does NOT add, rename, remove, or retype any column in the canonical `ConvergenceFindings` row. It only documents how each of the four new applications shipped by the convergence-applications plan populates the existing columns.

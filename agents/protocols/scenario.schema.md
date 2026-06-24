@@ -1,3 +1,7 @@
+---
+description: "Scenario Schema"
+---
+
 # Scenario Schema
 
 Defines the BDD-shaped Given/When/Then scenario block — the canonical leaf-level testable unit across Loom. Scenarios appear under acceptance criteria in plans, under key behaviors in roadmap features, inside change proposals, and inside `contract-*` wiki pages. The convergence-planner emits targets directly from scenarios; the verification pipeline blocks on them. All scenario-emitting agents and all validators MUST read this schema.

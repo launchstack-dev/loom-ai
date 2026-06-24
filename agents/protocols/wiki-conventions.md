@@ -1,3 +1,7 @@
+---
+description: "Wiki Conventions"
+---
+
 # Wiki Conventions
 
 Shared rules that all wiki agents and wiki-aware orchestrators follow. Reference this document in every wiki agent's instructions.

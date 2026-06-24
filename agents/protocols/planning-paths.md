@@ -1,3 +1,7 @@
+---
+description: "Planning Artifact Path Resolution"
+---
+
 # Planning Artifact Path Resolution
 
 Loom commands resolve planning artifacts in a deterministic order, preferring the modern `planning/` layout but falling back to legacy root paths so projects that haven't run `/loom-upgrade` continue to work.
