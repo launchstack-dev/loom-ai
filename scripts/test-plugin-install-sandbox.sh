@@ -193,10 +193,11 @@ import json, sys
 with open(sys.argv[1]) as f:
     d = json.load(f)
 for k, entries in d.get("plugins", {}).items():
-    if k.startswith("loom@"):
+    if k.startswith("loom@") and isinstance(entries, list):
         for e in entries:
-            print(e.get("installPath", ""))
-            sys.exit(0)
+            if isinstance(e, dict) and e.get("installPath"):
+                print(e["installPath"])
+                sys.exit(0)
 sys.exit(1)
 PY
 )
