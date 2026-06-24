@@ -17,7 +17,7 @@
  */
 
 import { runHook, allow, block } from "./lib/run-hook.js";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 // --- Git push protection ---
 
@@ -163,23 +163,18 @@ function extractBranchDelete(command: string): string | undefined {
   // which we need to look up. The command itself doesn't name the branch.
   if (/\bgh\s+pr\s+merge\b.*--delete-branch\b/.test(command)) {
     const prNum = command.match(/\bgh\s+pr\s+merge\s+(\d+)/)?.[1];
-    if (!prNum) {
-      // `gh pr merge --delete-branch` with no PR number uses the current branch's PR
-      try {
-        const head = execSync(
-          `gh pr view --json headRefName --jq .headRefName`,
-          { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5_000 },
-        ).trim();
-        return head || undefined;
-      } catch {
-        return undefined;
-      }
-    }
+    // execFileSync passes args as an argv array (no shell), so even if prNum
+    // somehow contained shell metacharacters they cannot affect command parsing.
+    // The /(\d+)/ regex already guarantees digits-only, but defense in depth.
+    const ghArgs = prNum
+      ? ["pr", "view", prNum, "--json", "headRefName", "--jq", ".headRefName"]
+      : ["pr", "view", "--json", "headRefName", "--jq", ".headRefName"];
     try {
-      const head = execSync(
-        `gh pr view ${prNum} --json headRefName --jq .headRefName`,
-        { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5_000 },
-      ).trim();
+      const head = execFileSync("gh", ghArgs, {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 5_000,
+      }).trim();
       return head || undefined;
     } catch {
       return undefined;
@@ -200,8 +195,12 @@ interface DependentPr {
  */
 function findDependentPrs(branch: string): DependentPr[] {
   try {
-    const json = execSync(
-      `gh pr list --base ${JSON.stringify(branch)} --state open --json number,title`,
+    // execFileSync — branch name goes through argv as a literal, NEVER through
+    // the shell. Defense against command injection if a branch name contains
+    // shell metacharacters (`; rm -rf $HOME`, etc.).
+    const json = execFileSync(
+      "gh",
+      ["pr", "list", "--base", branch, "--state", "open", "--json", "number,title"],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 10_000 },
     );
     const parsed = JSON.parse(json);

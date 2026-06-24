@@ -89,13 +89,15 @@ RESULT=$(python3 -c "..." 2>/dev/null)
 **Do** (capture, then surface on failure):
 ```sh
 PY_ERR=$(mktemp)
+# `trap` guarantees cleanup on ANY exit — success, error, signal — so the
+# tempfile never leaks even when the failure path takes `exit 1`.
+trap 'rm -f "$PY_ERR"' EXIT
 RESULT=$(python3 -c "..." 2>"$PY_ERR" || true)
 if [ -z "$RESULT" ]; then
   echo "FAIL: parse returned empty" >&2
   [ -s "$PY_ERR" ] && { echo "  underlying error:" >&2; sed 's/^/    /' "$PY_ERR" >&2; }
   exit 1
 fi
-rm -f "$PY_ERR"
 ```
 
 The ONLY legitimate use of `2>/dev/null` is when you know exactly which
