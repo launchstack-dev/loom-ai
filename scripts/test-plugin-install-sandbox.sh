@@ -238,12 +238,13 @@ fi
 # as the grep below.
 LOOM_BLOCK=$(echo "$LIST_OUT" | LC_ALL=C awk '/loom@/,/^[[:space:]]*$/' || true)
 [ -z "$LOOM_BLOCK" ] && LOOM_BLOCK="$LIST_OUT"
-# Filter out path-containing lines before the error grep — the loom row
-# (`loom@...`) and Status row carry the signal, but `claude plugin list` also
-# prints absolute paths for the install location, which can legitimately
-# contain words like "error" (e.g. ~/work/error-tracking/loom-ai) and would
-# otherwise false-positive.
-if echo "$LOOM_BLOCK" | grep -v "/" | LC_ALL=C grep -qiE "fail|error|disabled|inactive"; then
+# Strip ONLY the `Path:` metadata line before the error grep. `claude plugin
+# list` prints the absolute install path on a row like `    Path: /var/...`
+# which can legitimately contain words like "error" (e.g. a checkout at
+# ~/work/error-tracking/loom-ai). Filtering only that line preserves real
+# multi-line error messages that happen to mention paths (e.g.
+# "Error: Failed to load /path/to/hooks.json").
+if echo "$LOOM_BLOCK" | grep -viE '^[[:space:]]*path:' | LC_ALL=C grep -qiE "fail|error|disabled|inactive"; then
   echo "FAIL: loom plugin loaded with errors" >&2
   echo "$LIST_OUT" | sed 's/^/  /' >&2
   exit 1
