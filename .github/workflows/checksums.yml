@@ -54,3 +54,6 @@ jobs:
 
       - name: Verify install.sh and manifest are in sync
         run: bash scripts/check-install-manifest-drift.sh
+
+      - name: End-to-end install sandbox (local mode)
+        run: bash scripts/test-install-sandbox.sh --local

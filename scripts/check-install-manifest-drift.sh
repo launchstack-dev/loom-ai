@@ -36,20 +36,36 @@ trap 'rm -rf "${TMP}"' EXIT
 # We don't try to be clever — grep for both patterns and union them.
 # Exclude checksums.sha256 itself (fetched separately as the integrity manifest)
 # and any '$' variable reference (e.g. the fetch_file function definition).
+# LC_ALL=C pins byte-order sort so the comm comparison is deterministic across
+# locales (a macOS contributor's default locale orders punctuation differently
+# from Ubuntu CI's; without this, drift detection can disagree by platform).
 {
   grep -oE '"[^"]+:\$\{CLAUDE_DIR\}' "${INSTALL}" | sed 's/:.*//; s/^"//'
   grep -oE 'fetch_file "[^"$]+"' "${INSTALL}" | sed 's/^fetch_file "//; s/"$//'
-} | grep -vE '^(checksums\.sha256|\$)' | sort -u > "${TMP}/install-files.txt"
+} | grep -vE '^(checksums\.sha256|\$)' | LC_ALL=C sort -u > "${TMP}/install-files.txt"
 
-awk 'NF==2 && $1 !~ /^#/ {print $2}' "${MANIFEST}" | sort -u > "${TMP}/manifest-files.txt"
+# Sanity check the parser. If both greps stop matching (install.sh refactored
+# to a shape we don't recognize), an empty install-files.txt would silently
+# look "in sync" against an also-empty manifest — exactly the false-negative
+# this guard exists to prevent.
+if [ ! -s "${TMP}/install-files.txt" ]; then
+  echo "ERROR: extracted zero fetch targets from install.sh — parser likely broken" >&2
+  echo "       (check the grep patterns in this script against install.sh's array syntax)" >&2
+  exit 1
+fi
+
+awk 'NF==2 && $1 !~ /^#/ {print $2}' "${MANIFEST}" | LC_ALL=C sort -u > "${TMP}/manifest-files.txt"
 
 # Files install.sh fetches but the manifest doesn't track (unverified shipping).
-MISSING=$(comm -23 "${TMP}/install-files.txt" "${TMP}/manifest-files.txt" || true)
+# Drop the defensive `|| true` — comm doesn't exit non-zero on empty output, so
+# the only thing `|| true` would mask is a real comm failure (unreadable input,
+# OOM), which we want to propagate under pipefail.
+MISSING=$(comm -23 "${TMP}/install-files.txt" "${TMP}/manifest-files.txt")
 
 # Files the manifest tracks but install.sh doesn't fetch. Less critical (users
 # won't get them) but still drift — either install.sh forgot to add the file or
 # the manifest has stale entries.
-ORPHANS=$(comm -13 "${TMP}/install-files.txt" "${TMP}/manifest-files.txt" || true)
+ORPHANS=$(comm -13 "${TMP}/install-files.txt" "${TMP}/manifest-files.txt")
 
 FAIL=0
 
