@@ -1,3 +1,7 @@
+---
+description: "Launch 4 parallel agents to review ROADMAP.md from strategy, scope, feasibility, and UX perspectives."
+---
+
 ## Command: `review`
 
 Launches 4 specialized agents in parallel to review the ROADMAP.md from strategy, scope, feasibility, and UX perspectives. This is the roadmap-level equivalent of `/loom-plan review` (which reviews PLAN.md with 6 agents).

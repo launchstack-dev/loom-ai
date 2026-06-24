@@ -1,3 +1,7 @@
+---
+description: "Wiki Maintainer Triggers"
+---
+
 # Wiki Maintainer Triggers
 
 Defines the events that trigger wiki-maintainer-agent invocations, the wiki page types it produces, the conflict persistence directory structure, and the query protocol agents use to look up prior decisions.

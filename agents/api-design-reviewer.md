@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit API changes for REST conventions, HTTP method correctness, error envelope consistency, versioning, and pagination patterns. Use PROACTIVELY when reviewing route handlers, controllers, or API schema changes.
 ---
 
 # API Design Reviewer

@@ -1,3 +1,7 @@
+---
+description: "Validation Rules"
+---
+
 # Validation Rules
 
 Rules that orchestrators enforce when collecting agent output and reading configuration. Every orchestrator command (`execute-plan`, `review-plan`, `test-plan`, `review-code`, `roadmap`) MUST apply these validations.

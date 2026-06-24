@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Verify that implemented code actually delivers what PLAN.md promised — deliverables, schemas, endpoints, acceptance criteria, and contracts. Use after a wave executes to gate plan conformance.
 ---
 
 # Plan Compliance Reviewer

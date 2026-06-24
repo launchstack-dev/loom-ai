@@ -1,3 +1,7 @@
+---
+description: "Shared init-guard prelude included by every /loom-* command (except /loom-init)."
+---
+
 <!--
   Shared init-guard prelude for every `/loom-*` command (except `/loom-init`).
 

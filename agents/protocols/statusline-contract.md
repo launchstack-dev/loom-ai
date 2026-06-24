@@ -1,3 +1,7 @@
+---
+description: "Statusline Output Format Contract"
+---
+
 # Statusline Output Format Contract
 
 Shell output contract for the Claude Code status line integration. The statusline command prints a single line to stdout, suitable for embedding in Starship, Oh My Posh, or any prompt that supports custom commands.

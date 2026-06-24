@@ -107,10 +107,15 @@ describe("plugin.json", () => {
     }
   });
 
-  it("references hooks/hooks.json as the hook manifest", () => {
-    const manifest = readJson(manifestPath) as PluginManifest;
-    expect(manifest.hooks).toBe("./hooks/hooks.json");
+  it("ships hooks/hooks.json at the convention path Claude Code auto-discovers", () => {
+    // Claude Code auto-loads hooks/hooks.json from the plugin root; declaring
+    // it in manifest.hooks causes a duplicate-load failure (the manifest field
+    // is reserved for *additional* hook files outside the standard path).
+    // The contract is therefore "hooks/hooks.json must exist on disk" rather
+    // than "manifest declares the hook path".
     expect(fs.existsSync(hooksManifestPath)).toBe(true);
+    const manifest = readJson(manifestPath) as PluginManifest;
+    expect(manifest.hooks).toBeUndefined();
   });
 });
 

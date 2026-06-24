@@ -1,3 +1,7 @@
+---
+description: "Wiki Lint Rules"
+---
+
 # Wiki Lint Rules
 
 Structural health check rules for the wiki-lint-agent and `/loom-lint` command. These rules detect inconsistencies, staleness, and drift across wiki pages and execution artifacts.

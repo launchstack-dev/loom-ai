@@ -1,3 +1,7 @@
+---
+description: "Interpretation Conflict & Coverage Gap Schema"
+---
+
 # Interpretation Conflict & Coverage Gap Schema
 
 Defines the TOON schemas for tracking conflicts between plan interpretation and test interpretation, and for gaps where coverage exists in only one side.

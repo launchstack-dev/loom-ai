@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Discover and map all API boundaries in a brownfield codebase — internal endpoints, external integrations, webhooks, auth flows — and surface contract candidates. Spawned by /loom-review-code as part of the parallel review fan-out.
 ---
 
 # API Explorer

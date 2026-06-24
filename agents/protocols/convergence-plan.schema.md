@@ -1,3 +1,7 @@
+---
+description: "Convergence Plan Schema"
+---
+
 # Convergence Plan Schema
 
 Defines the `convergence-plan.toon` format produced by the convergence-planner-agent. The convergence plan is the single source of truth for what outputs to verify, how to compare them, and what tolerances to apply. Downstream agents (target-parser, harness-builder, convergence-driver) read this plan.

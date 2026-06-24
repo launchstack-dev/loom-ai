@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate typed third-party API client wrappers with auth handling, retry/timeout logic, rate-limit handling, and structured error types. Spawned by /loom-execute-plan at the post-contracts phase for external service integration work.
 ---
 
 # API Connector

@@ -1,3 +1,7 @@
+---
+description: "Quick Task Contract"
+---
+
 # Quick Task Contract
 
 Shared protocols for the `/loom-quick` command. Defines the QuickTaskLog format, mode detection, plan injection, verification reuse, log naming, and flag parsing. All implementers must follow these conventions.

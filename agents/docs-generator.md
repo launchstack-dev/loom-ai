@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate README, API docs, ADRs, and Loom guidance from codebase analysis and plan files in greenfield or brownfield mode. Use PROACTIVELY when documentation is missing, stale, or needs scaffolding.
 ---
 
 # Documentation Generator

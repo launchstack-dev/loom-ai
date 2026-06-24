@@ -1,3 +1,7 @@
+---
+description: "Change State Schema"
+---
+
 # Change State Schema
 
 Runtime state file for a change-proposal's lifecycle. Lives at `.plan-execution/ephemeral/changes/{changeId}.toon`. Tracks status transitions, conflict detection against other in-flight changes, and supersession discovery.

@@ -1,3 +1,7 @@
+---
+description: "PluginInstallState Schema"
+---
+
 # PluginInstallState Schema
 
 Canonical TOON schema for the per-machine plugin install record at `~/.loom/install.toon`. Tracks what Loom version is installed, how it was installed (curl vs plugin channel), partial-install forensics, and any in-flight update state. Consumed by `/loom-doctor` (F-04), `/loom-update` (F-12), and the F-05 migration flow.

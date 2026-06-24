@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit structured logging, metrics, tracing, health checks, and error tracking for gaps that hinder debugging and incident response. Use when code touching critical paths or monitoring surfaces changes.
 ---
 
 # Observability Reviewer

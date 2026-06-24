@@ -1,3 +1,7 @@
+---
+description: "MigrationMarker Schema"
+---
+
 # MigrationMarker Schema
 
 Canonical TOON schema for the per-project file at `.loom/migration-in-progress`. Written by F-05 `/loom-migrate-to-plugin` (and the F-12 `/loom-update` flow) BEFORE any mutation, so a crash leaves a resumable marker. Cleared on success.

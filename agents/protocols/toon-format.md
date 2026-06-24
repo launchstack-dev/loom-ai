@@ -1,3 +1,7 @@
+---
+description: "TOON Format Protocol"
+---
+
 # TOON Format Protocol
 
 Authoritative reference for TOON (Token-Oriented Object Notation) usage across all agents and orchestrators.

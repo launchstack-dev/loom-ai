@@ -1,3 +1,7 @@
+---
+description: "Execution Conventions"
+---
+
 # Execution Conventions
 
 Shared rules that all execution agents and the orchestrator follow. Reference this document in every agent's instructions.

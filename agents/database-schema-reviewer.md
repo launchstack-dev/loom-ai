@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Review database schema definitions, migrations, and ORM models for normalization, indexing, migration safety, and constraint completeness. Use PROACTIVELY when migration or schema files change.
 ---
 
 # Database Schema Reviewer

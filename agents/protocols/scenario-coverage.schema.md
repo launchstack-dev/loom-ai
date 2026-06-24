@@ -1,3 +1,7 @@
+---
+description: "Scenario Coverage Report Schema"
+---
+
 # Scenario Coverage Report Schema
 
 Traceability artifact at `.plan-execution/ephemeral/scenario-coverage.toon`. Emitted by the `convergence-planner-agent` alongside the criteria-plan. Maps every requirement (`R-NN` from a `contract-*` wiki page or PLAN.md acceptance criterion) to the scenarios that cover it. Flags uncovered requirements as warnings — the report is the audit trail proving the convergence-planner's claim of ≥2× target density vs. acceptance-criteria-only seeding.

@@ -1,3 +1,7 @@
+---
+description: "Convert an approved roadmap + completed plan into per-domain contract-* wiki pages."
+---
+
 ## Subcommand: materialize
 
 You are the materializer dispatcher for the contract-page lifecycle. Per D-02 in PLAN-spec-upgrades.md, this command is the **primary trigger surface** for converting an approved roadmap + completed plan into per-domain `contract-*` wiki pages.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit Dockerfiles, CI pipelines, IaC, and secrets handling for security risks, inefficiency, and operational gaps. Use when infrastructure or pipeline configs change.
 ---
 
 # Infrastructure Reviewer

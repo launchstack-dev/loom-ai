@@ -1,3 +1,7 @@
+---
+description: "E2E Story & Playwright Test Schema"
+---
+
 # E2E Story & Playwright Test Schema
 
 Defines the TOON schemas for end-to-end user stories and their corresponding Playwright test configurations. E2E stories operate at the milestone convergence tier (see `taxonomy.md`) and describe complete user workflows that span multiple features.

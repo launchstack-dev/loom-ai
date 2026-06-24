@@ -1,3 +1,7 @@
+---
+description: "Create a new ROADMAP.md with codebase awareness, validation, and optional agent review."
+---
+
 ## Command: `init`
 
 Creates a new ROADMAP.md with codebase awareness, validation, and optional agent review. To create a PLAN.md from an approved roadmap, use `/loom-plan create`.

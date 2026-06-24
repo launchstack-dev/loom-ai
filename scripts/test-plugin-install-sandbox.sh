@@ -79,14 +79,28 @@ echo "  OK   manifest validates cleanly"
 echo ""
 echo "step 2: build local marketplace wrapping $REPO_ROOT"
 mkdir -p "$MARKETPLACE/.claude-plugin" "$MARKETPLACE/plugins/loom"
-# Symlink so the marketplace's plugin tree IS the live repo. Symlink is fine
-# because Claude Code copies into its plugin cache during install.
-ln -s "$REPO_ROOT/.claude-plugin/plugin.json" "$MARKETPLACE/plugins/loom/.claude-plugin/plugin.json" 2>/dev/null \
-  || { mkdir -p "$MARKETPLACE/plugins/loom/.claude-plugin"; \
-       ln -sf "$REPO_ROOT/.claude-plugin/plugin.json" "$MARKETPLACE/plugins/loom/.claude-plugin/plugin.json"; }
-for sub in agents commands hooks scripts skills config CLAUDE.md; do
-  [ -e "$REPO_ROOT/$sub" ] && ln -sf "$REPO_ROOT/$sub" "$MARKETPLACE/plugins/loom/$sub"
-done
+# Copy (not symlink) the plugin tree into the marketplace dir. Claude Code's
+# plugin install reads the source dir directly and does not follow symlinks
+# pointing outside the marketplace root — symlinks land in the cache as
+# unresolved targets and the install ends up with an empty plugin shell.
+mkdir -p "$MARKETPLACE/plugins/loom/.claude-plugin"
+cp "$REPO_ROOT/.claude-plugin/plugin.json" "$MARKETPLACE/plugins/loom/.claude-plugin/plugin.json"
+# rsync handles excludes cleanly; fall back to cp -R if rsync is absent.
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --exclude='.git' --exclude='node_modules' --exclude='.worktrees' \
+    --exclude='.plan-execution' --exclude='dist' --exclude='.loom' \
+    "$REPO_ROOT/agents/" "$MARKETPLACE/plugins/loom/agents/"
+  rsync -a "$REPO_ROOT/commands/" "$MARKETPLACE/plugins/loom/commands/"
+  rsync -a "$REPO_ROOT/hooks/"    "$MARKETPLACE/plugins/loom/hooks/"
+  rsync -a "$REPO_ROOT/scripts/"  "$MARKETPLACE/plugins/loom/scripts/"
+  [ -d "$REPO_ROOT/skills" ] && rsync -a "$REPO_ROOT/skills/" "$MARKETPLACE/plugins/loom/skills/"
+  [ -d "$REPO_ROOT/config" ] && rsync -a "$REPO_ROOT/config/" "$MARKETPLACE/plugins/loom/config/"
+  [ -f "$REPO_ROOT/CLAUDE.md" ] && cp "$REPO_ROOT/CLAUDE.md" "$MARKETPLACE/plugins/loom/CLAUDE.md"
+else
+  for sub in agents commands hooks scripts skills config CLAUDE.md; do
+    [ -e "$REPO_ROOT/$sub" ] && cp -R "$REPO_ROOT/$sub" "$MARKETPLACE/plugins/loom/$sub"
+  done
+fi
 
 cat > "$MARKETPLACE/.claude-plugin/marketplace.json" <<EOF
 {
@@ -139,12 +153,28 @@ assert_path() {
   fi
 }
 
-# Claude installs plugins under $CLAUDE_CONFIG_DIR/plugins/<marketplace>/<name>/
-# Wildcard the marketplace dir because Claude renames it internally.
-PLUGIN_ROOT=$(find "$CONFIG_DIR/plugins" -maxdepth 3 -type d -name loom 2>/dev/null | head -1)
-if [ -z "$PLUGIN_ROOT" ]; then
-  echo "FAIL: could not locate installed plugin root under $CONFIG_DIR/plugins" >&2
-  find "$CONFIG_DIR/plugins" -maxdepth 4 -type d 2>/dev/null | sed 's/^/  /' >&2
+# Claude records install paths in installed_plugins.json. Parse it to find
+# the real install location — the path includes a version subdirectory and
+# changes shape over Claude Code versions, so introspecting is more robust
+# than guessing the layout.
+INSTALLED_JSON="$CONFIG_DIR/plugins/installed_plugins.json"
+if [ ! -f "$INSTALLED_JSON" ]; then
+  echo "FAIL: $INSTALLED_JSON not written by install — install may not have completed" >&2
+  exit 1
+fi
+PLUGIN_ROOT=$(python3 -c "
+import json, sys
+d = json.load(open('$INSTALLED_JSON'))
+for k, entries in d.get('plugins', {}).items():
+    if k.startswith('loom@'):
+        for e in entries:
+            print(e.get('installPath', ''))
+            sys.exit(0)
+sys.exit(1)
+" 2>/dev/null)
+if [ -z "$PLUGIN_ROOT" ] || [ ! -d "$PLUGIN_ROOT" ]; then
+  echo "FAIL: could not resolve loom installPath from $INSTALLED_JSON" >&2
+  cat "$INSTALLED_JSON" | sed 's/^/  /' >&2
   exit 1
 fi
 echo "  plugin root: $PLUGIN_ROOT"
@@ -157,11 +187,22 @@ assert_path "$PLUGIN_ROOT/agents"
 
 echo ""
 echo "step 5: claude plugin list shows loom enabled"
-if ! claude plugin list 2>&1 | tee -a "$LOG" | grep -q "loom"; then
+# Capture the list output without piping; pipefail + tee chained with grep
+# can swallow the loom match when claude emits informational status to stderr.
+LIST_OUT=$(claude plugin list 2>&1)
+echo "$LIST_OUT" >> "$LOG"
+if ! echo "$LIST_OUT" | grep -q "loom"; then
   echo "FAIL: 'claude plugin list' does not include loom" >&2
+  echo "$LIST_OUT" | sed 's/^/  /' >&2
   exit 1
 fi
-echo "  OK   loom is listed"
+# Check for plugin load errors in the output (e.g. duplicate hooks file).
+if echo "$LIST_OUT" | grep -qE "✘ failed to load|Status:.*✘"; then
+  echo "FAIL: loom plugin loaded with errors" >&2
+  echo "$LIST_OUT" | sed 's/^/  /' >&2
+  exit 1
+fi
+echo "  OK   loom is listed and loaded cleanly"
 
 echo ""
 if [ "$FAIL" = "0" ]; then

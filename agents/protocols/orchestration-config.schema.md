@@ -1,3 +1,7 @@
+---
+description: "Orchestration Config Schema"
+---
+
 # Orchestration Config Schema
 
 Projects declare a `.claude/orchestration.toml` at the project root to register app-specific agents and orchestration patterns into the standard pipelines.

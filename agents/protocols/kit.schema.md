@@ -1,3 +1,7 @@
+---
+description: "Kit Schema"
+---
+
 # Kit Schema
 
 Canonical schema for the kit abstraction. Kits are installable bundles of domain-specific agents, gates, and commands that plug into the Loom orchestration pipeline via insertion points.

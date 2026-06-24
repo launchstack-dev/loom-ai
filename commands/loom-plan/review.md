@@ -1,3 +1,7 @@
+---
+description: "Launch 6 parallel planning-review agents and synthesize a unified plan-quality report."
+---
+
 ## Subcommand: review
 
 You are an orchestrator that launches 6 specialized planning agents in parallel to review, improve, or create a project plan.

@@ -1,3 +1,7 @@
+---
+description: "Entity Domain Partition Schema"
+---
+
 # Entity Domain Partition Schema
 
 Explicit partitioning manifest at `.loom/wiki/contract-partition.toon`. Removes heuristic risk from the materializer (Phase 4 of PLAN-spec-upgrades.md). Authored manually or scaffolded via `/loom-plan materialize --propose-partition` before first materialization. Each domain entry becomes one `contract-{domain}` wiki page.

@@ -1,3 +1,7 @@
+---
+description: "Rubric: Risks & Mitigations"
+---
+
 # Rubric: Risks & Mitigations
 
 The Risks & Mitigations section enumerates known risks alongside concrete mitigation strategies. A strong risk entry has three fields: a specific risk description (not a generic category), a severity rating (high/medium/low), and an actionable mitigation that names what will be done if the risk materializes. Risk identification is a maturity signal — claiming zero risks suggests insufficient analysis, while listing only abstract "unknowns" suggests the team hasn't engaged seriously with the project's actual failure modes.

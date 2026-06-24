@@ -1,3 +1,7 @@
+---
+description: "Rubric: Constraints & Decisions"
+---
+
 # Rubric: Constraints & Decisions
 
 The Constraints & Decisions section captures locked architectural decisions and non-negotiable requirements as numbered records (C-01, C-02, ...). Each entry has four required fields: **Decision** (the chosen approach), **Rationale** (why this was chosen), **Alternatives considered** (what was evaluated and rejected, with reasons), and **Impact** (high/medium/low). A strong constraints section makes downstream plan phases predictable — a reader can anticipate which approaches will be rejected at code-review time because the rationale already foreclosed them.

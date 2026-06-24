@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Conduct structured multi-persona (advocate/skeptic/pragmatist) debates to stress-test technology decisions in greenfield or brownfield mode. Use PROACTIVELY when choosing or re-evaluating a stack component.
 ---
 
 # Tech Stack Debater

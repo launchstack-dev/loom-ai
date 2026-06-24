@@ -1,3 +1,7 @@
+---
+description: "Convergence Tier Schema"
+---
+
 # Convergence Tier Schema
 
 Defines the 4 convergence tiers that map to the planning hierarchy levels defined in `taxonomy.md`. Each tier specifies how convergence is verified at its scope level, which agent or tool runs the verification, and how failures gate downstream execution.

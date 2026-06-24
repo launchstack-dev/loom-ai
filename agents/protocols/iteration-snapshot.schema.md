@@ -1,3 +1,7 @@
+---
+description: "IterationSnapshot Schema"
+---
+
 # IterationSnapshot Schema
 
 Defines the `IterationSnapshot` TOON artifact written by `hooks/lib/iteration-snapshot.ts` (Phase 11 deliverable) before each integrator invocation in document-mode convergence runs. Per locked decision C-07, snapshots are written before every integrator pass and retained forever — they are the rollback safety net for `--autoconverge` and the audit trail for plan evolution.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Review ROADMAP.md for scope realism, feature conflicts, milestone sizing, risk completeness, and constraint compliance. One of four parallel roadmap reviewers; lens is feasibility and internal consistency.
 ---
 
 # Scope Feasibility Agent

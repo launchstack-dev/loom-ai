@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate data-specific tests covering schema conformance, row counts, null checks, freshness, and referential integrity across dbt, Dagster, Airflow, and Great Expectations stacks. Use PROACTIVELY at post-verify for data pipelines.
 ---
 
 # Data Test Generator

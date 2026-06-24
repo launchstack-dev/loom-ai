@@ -1,3 +1,7 @@
+---
+description: "Execution Log Schema"
+---
+
 # Execution Log Schema
 
 Defines the structure of `.loom/wiki/execution-log.toon` — the narrative history of decisions, pivots, milestones, and observations across all executions. Unlike wave summaries (which track state), the execution log captures **rationale and reasoning** — why things happened, what was tried and failed, and what was learned.

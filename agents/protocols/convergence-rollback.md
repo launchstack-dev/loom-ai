@@ -1,3 +1,7 @@
+---
+description: "Convergence Rollback Protocol"
+---
+
 # Convergence Rollback Protocol
 
 Defines the rollback behavior when a convergence loop fails to reach its pass condition within `maxIterations`. Rollback restores the codebase to the last known-good checkpoint while preserving diagnostic artifacts for post-mortem analysis.

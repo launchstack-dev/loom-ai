@@ -2,6 +2,7 @@
 schemaName: converge.config
 version: 1
 status: locked
+description: "Schema: converge.config — locked v1 contract for convergence-loop configuration consumed by /loom-converge."
 ---
 
 # converge.config Schema
