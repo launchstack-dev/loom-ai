@@ -57,3 +57,12 @@ jobs:
 
       - name: End-to-end install sandbox (local mode)
         run: bash scripts/test-install-sandbox.sh --local
+
+      # Plugin install path surfacing — non-blocking until the manifest is fixed.
+      # As of this commit the test fails because .claude-plugin/plugin.json has a
+      # schema mismatch ("agents: Invalid input") and many commands lack required
+      # frontmatter. Removing continue-on-error is the acceptance signal for the
+      # follow-up "fix plugin manifest for marketplace distribution" PR.
+      - name: End-to-end plugin install sandbox (surfacing only)
+        run: bash scripts/test-plugin-install-sandbox.sh
+        continue-on-error: true

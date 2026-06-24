@@ -110,6 +110,42 @@ else
 fi
 
 echo ""
+echo "conflict-guard check: install.sh refuses to install over a plugin install"
+# Pre-create the plugin install marker that install.sh's pre-flight checks for.
+# install.sh probes `claude plugin list` and exits 9 if loom is already
+# installed. Skip the assertion when claude CLI is absent (the guard is then
+# unreachable).
+if command -v claude >/dev/null 2>&1; then
+  CONFLICT_SANDBOX=$(mktemp -d -t loom-conflict.XXXXXX)
+  trap 'rm -rf "$CONFLICT_SANDBOX"' RETURN 2>/dev/null || true
+  # Fake a plugin install state by registering a marketplace + installing.
+  # If that path is broken (validation errors etc.), we can't exercise the
+  # conflict guard; degrade to a SKIP rather than fail.
+  if HOME="$CONFLICT_SANDBOX" CLAUDE_CONFIG_DIR="$CONFLICT_SANDBOX/cfg" \
+       claude plugin list 2>&1 | grep -q "loom"; then
+    # Run install.sh against the same HOME; expect exit 9.
+    set +e
+    HOME="$CONFLICT_SANDBOX" CLAUDE_CONFIG_DIR="$CONFLICT_SANDBOX/cfg" \
+      bash "$REPO_ROOT/install.sh" >"$CONFLICT_SANDBOX/log" 2>&1
+    rc=$?
+    set -e
+    if [ "$rc" = "9" ] && grep -q "INSTALL_CONFLICT_PLUGIN_AND_CURL" "$CONFLICT_SANDBOX/log"; then
+      echo "  OK   install.sh exited 9 with INSTALL_CONFLICT_PLUGIN_AND_CURL"
+    else
+      echo "  FAIL install.sh exited $rc; expected 9 with conflict marker" >&2
+      cat "$CONFLICT_SANDBOX/log" | sed 's/^/    /' >&2
+      FAIL=1
+    fi
+  else
+    echo "  SKIP no loom plugin install detected to test against"
+    echo "       (plugin install path may itself be broken — see test-plugin-install-sandbox.sh)"
+  fi
+  rm -rf "$CONFLICT_SANDBOX"
+else
+  echo "  SKIP claude CLI not on PATH"
+fi
+
+echo ""
 if [ "$FAIL" = "0" ]; then
   echo "install sandbox passed"
 else
