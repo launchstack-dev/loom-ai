@@ -1059,8 +1059,14 @@ node scripts/lint-library-yaml.js
 # Schema lint (TOON parser smoke)
 node scripts/lint-protocol-schemas.js agents/protocols/roadmap-*.toon
 
-# Sign-off purity grep: ensure only sign-off.ts writes signed-off
-! grep -RIn 'sign_off_state\s*=\s*"signed-off"' scripts/roadmap-converge/ \
+# Sign-off purity grep: ensure only sign-off.ts writes signed-off.
+# Uses POSIX-portable form (grep -E + [[:space:]]) — BSD grep on macOS
+# does not reliably match \s, so the GNU-only form silently passed on
+# darwin CI even when violations were present. The vitest test at
+# test/roadmap-converge/sign-off-purity.test.ts uses JS regex and is
+# the authoritative gate; this shell command exists as a quick
+# manual / CI smoke check.
+! grep -E -RIn 'sign_off_state[[:space:]]*=[[:space:]]*"signed-off"' scripts/roadmap-converge/ \
     | grep -v 'scripts/roadmap-converge/sign-off.ts'
 
 # Dogfood smoke
