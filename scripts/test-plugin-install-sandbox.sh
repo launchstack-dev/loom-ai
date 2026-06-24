@@ -97,23 +97,20 @@ cp "$REPO_ROOT/.claude-plugin/plugin.json" "$MARKETPLACE/plugins/loom/.claude-pl
 EXCLUDES=(--exclude='.git' --exclude='node_modules' --exclude='.worktrees'
           --exclude='.plan-execution' --exclude='dist' --exclude='.loom')
 
-if command -v rsync >/dev/null 2>&1; then
-  for sub in agents commands hooks scripts skills config; do
-    [ -d "$REPO_ROOT/$sub" ] && rsync -a "${EXCLUDES[@]}" "$REPO_ROOT/$sub/" "$MARKETPLACE/plugins/loom/$sub/"
-  done
-  [ -f "$REPO_ROOT/CLAUDE.md" ] && cp "$REPO_ROOT/CLAUDE.md" "$MARKETPLACE/plugins/loom/CLAUDE.md"
-else
-  # cp -R "src" "dst" nests as "dst/src/..." on GNU when dst exists; pass the
-  # parent dir so cp creates the leaf either way. The trailing slash here is
-  # load-bearing.
-  for sub in agents commands hooks scripts skills config; do
-    if [ -d "$REPO_ROOT/$sub" ]; then
-      cp -R "$REPO_ROOT/$sub" "$MARKETPLACE/plugins/loom/" \
-        || { echo "FAIL: cp -R $sub failed" >&2; exit 1; }
-    fi
-  done
-  [ -f "$REPO_ROOT/CLAUDE.md" ] && cp "$REPO_ROOT/CLAUDE.md" "$MARKETPLACE/plugins/loom/CLAUDE.md"
+if ! command -v rsync >/dev/null 2>&1; then
+  # The earlier cp-fallback didn't honor EXCLUDES — would copy node_modules,
+  # .git, .loom, etc. into the marketplace tree (gigabytes, silent breakage).
+  # rsync ships with every macOS install and every Ubuntu CI image we target,
+  # so requiring it (and SKIPping cleanly when absent) is honest. Mirrors the
+  # `claude` and `python3` SKIP pattern at the top of this script.
+  echo "SKIP: rsync not on PATH — needed to populate the marketplace with excludes."
+  exit 0
 fi
+
+for sub in agents commands hooks scripts skills config; do
+  [ -d "$REPO_ROOT/$sub" ] && rsync -a "${EXCLUDES[@]}" "$REPO_ROOT/$sub/" "$MARKETPLACE/plugins/loom/$sub/"
+done
+[ -f "$REPO_ROOT/CLAUDE.md" ] && cp "$REPO_ROOT/CLAUDE.md" "$MARKETPLACE/plugins/loom/CLAUDE.md"
 
 # Post-copy verification — rsync exit 23/24 (partial transfer) and cp partial
 # failures both abort the script under set -e, but the silent-corruption case

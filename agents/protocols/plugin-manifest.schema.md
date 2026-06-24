@@ -37,7 +37,7 @@ PluginManifest:
     name: LaunchStack
     url: https://github.com/launchstack-dev/loom-ai
   repository: https://github.com/launchstack-dev/loom-ai
-  permissions[6]: hooks:SessionStart, hooks:PreToolUse, hooks:PostToolUse, hooks:Stop
+  permissions[4]: hooks:SessionStart, hooks:PreToolUse, hooks:PostToolUse, hooks:Stop
 ```
 
 ## Field Reference
