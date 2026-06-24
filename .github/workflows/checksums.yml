@@ -20,23 +20,23 @@ on:
   pull_request:
     paths:
       - 'checksums.sha256'
+      - 'install.sh'
       - 'hooks/**'
       - 'commands/**'
       - 'config/**'
+      - 'scripts/**'
       - 'skills/**'
-      - 'scripts/generate-checksums.sh'
-      - 'scripts/verify-checksums.sh'
       - '.github/workflows/checksums.yml'
   push:
     branches: [main]
     paths:
       - 'checksums.sha256'
+      - 'install.sh'
       - 'hooks/**'
       - 'commands/**'
       - 'config/**'
+      - 'scripts/**'
       - 'skills/**'
-      - 'scripts/generate-checksums.sh'
-      - 'scripts/verify-checksums.sh'
       - '.github/workflows/checksums.yml'
 
 permissions:
@@ -49,5 +49,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run scripts/verify-checksums.sh
+      - name: Verify checksum hashes are accurate
         run: bash scripts/verify-checksums.sh
+
+      - name: Verify install.sh and manifest are in sync
+        run: bash scripts/check-install-manifest-drift.sh
+
+      - name: End-to-end install sandbox (local mode)
+        run: bash scripts/test-install-sandbox.sh --local
+
+      # Plugin install path surfacing — non-blocking until the manifest is fixed.
+      # As of this commit the test fails because .claude-plugin/plugin.json has a
+      # schema mismatch ("agents: Invalid input") and many commands lack required
+      # frontmatter. Removing continue-on-error is the acceptance signal for the
+      # follow-up "fix plugin manifest for marketplace distribution" PR.
+      - name: End-to-end plugin install sandbox (surfacing only)
+        run: bash scripts/test-plugin-install-sandbox.sh
+        continue-on-error: true
