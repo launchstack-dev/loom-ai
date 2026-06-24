@@ -20,23 +20,23 @@ on:
   pull_request:
     paths:
       - 'checksums.sha256'
+      - 'install.sh'
       - 'hooks/**'
       - 'commands/**'
       - 'config/**'
+      - 'scripts/**'
       - 'skills/**'
-      - 'scripts/generate-checksums.sh'
-      - 'scripts/verify-checksums.sh'
       - '.github/workflows/checksums.yml'
   push:
     branches: [main]
     paths:
       - 'checksums.sha256'
+      - 'install.sh'
       - 'hooks/**'
       - 'commands/**'
       - 'config/**'
+      - 'scripts/**'
       - 'skills/**'
-      - 'scripts/generate-checksums.sh'
-      - 'scripts/verify-checksums.sh'
       - '.github/workflows/checksums.yml'
 
 permissions:
@@ -49,5 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run scripts/verify-checksums.sh
+      - name: Verify checksum hashes are accurate
         run: bash scripts/verify-checksums.sh
+
+      - name: Verify install.sh and manifest are in sync
+        run: bash scripts/check-install-manifest-drift.sh

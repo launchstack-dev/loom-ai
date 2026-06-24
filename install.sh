@@ -84,6 +84,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-agent.md:${CLAUDE_DIR}/commands/loom-agent.md"
   "commands/loom-git.md:${CLAUDE_DIR}/commands/loom-git.md"
   "commands/loom-data.md:${CLAUDE_DIR}/commands/loom-data.md"
+  "commands/loom-skill.md:${CLAUDE_DIR}/commands/loom-skill.md"
   # Progressive disclosure sub-files for loom-plan
   "commands/loom-plan/create.md:${CLAUDE_DIR}/commands/loom-plan/create.md"
   "commands/loom-plan/review.md:${CLAUDE_DIR}/commands/loom-plan/review.md"
