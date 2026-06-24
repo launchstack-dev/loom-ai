@@ -231,7 +231,10 @@ fi
 # `✘` glyph (unicode handling varies across runners; LANG=C containers break
 # the multi-byte match). Anchor on the loom row so a different plugin's failure
 # doesn't get attributed to loom.
-LOOM_BLOCK=$(echo "$LIST_OUT" | awk '/^[[:space:]]*❯[[:space:]]*loom/,/^[[:space:]]*$/' || true)
+# Anchor on `loom@` (the plugin@marketplace form `claude plugin list` prints)
+# rather than the `❯` glyph that prefixes it — same locale-stability concern
+# as the grep below.
+LOOM_BLOCK=$(echo "$LIST_OUT" | LC_ALL=C awk '/loom@/,/^[[:space:]]*$/' || true)
 [ -z "$LOOM_BLOCK" ] && LOOM_BLOCK="$LIST_OUT"
 if echo "$LOOM_BLOCK" | LC_ALL=C grep -qiE "fail|error|disabled|inactive"; then
   echo "FAIL: loom plugin loaded with errors" >&2
