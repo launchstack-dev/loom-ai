@@ -1,3 +1,7 @@
+---
+description: "Rubric: Out of Scope"
+---
+
 # Rubric: Out of Scope
 
 The Out of Scope section explicitly lists things NOT being built. Its purpose is to prevent scope creep during planning and execution by naming plausible feature requests that someone might assume are included. A strong Out-of-Scope list is calibrated to the project's specific domain — generic exclusions ("we won't build a flight simulator") do no work. The items should be the requests most likely to surface during review or convergence so reviewers can immediately cite the section and refuse expansion without re-litigating.

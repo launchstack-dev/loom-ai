@@ -1,3 +1,7 @@
+---
+description: "Git Command Contract"
+---
+
 # Git Command Contract
 
 Shared patterns for the `/loom-git` command. All subcommand implementers must follow these conventions to ensure consistent behavior, safe error handling, and predictable user interaction.

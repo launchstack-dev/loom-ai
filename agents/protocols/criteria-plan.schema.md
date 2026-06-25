@@ -1,3 +1,7 @@
+---
+description: "Criteria Plan Schema"
+---
+
 # Criteria Plan Schema
 
 Defines the `criteria-plan.toon` format produced by the criteria-planner-agent. The criteria plan is the source of truth for what conditions must be satisfied, how to verify them, and what review dimensions apply. Downstream agents (criteria-harness-builder, convergence-driver) read this plan.

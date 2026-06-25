@@ -1,3 +1,7 @@
+---
+description: "Change Proposal Schema"
+---
+
 # Change Proposal Schema
 
 Per-change artifact directory at `.loom/changes/{change-id}/`. Defines the proposal envelope and the per-domain `DeltaBlock` sub-schema that drives mutations into `contract-*` wiki pages. The change-proposal lifecycle is the **only** writer of contract pages after greenfield materialization (PLAN-spec-upgrades.md, Upgrade B).

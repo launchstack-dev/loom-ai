@@ -1,3 +1,7 @@
+---
+description: "Scope Contract Schema"
+---
+
 # Scope Contract Schema
 
 Defines the `scope-contract.toon` format produced by the pre-flight scope system (Prompt Refiner + Scope Interrogator). The scope contract is the single source of truth for what is being built, what decisions have been made, and how completion is verified. Every downstream agent (roadmap, plan, execution, review) reads this contract.

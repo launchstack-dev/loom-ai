@@ -1,3 +1,7 @@
+---
+description: "Render the convergence digest from state.toon — pure read, never writes state."
+---
+
 ## Command: `status`
 
 Render the convergence digest from `state.toon` — pure read, never writes state.

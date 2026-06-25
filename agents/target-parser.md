@@ -1,5 +1,6 @@
 ---
 model: haiku
+description: Normalize a deterministic source (screenshots, OpenAPI specs, golden files, reference implementations, SQL result sets, or convergence plans) into a structured target manifest the convergence harness can diff against.
 ---
 
 # Target Parser

@@ -1,3 +1,7 @@
+---
+description: "AgentResult Schema"
+---
+
 # AgentResult Schema
 
 Standard return envelope for all execution agents. Every agent MUST return valid TOON matching this schema as the last content block in its response.

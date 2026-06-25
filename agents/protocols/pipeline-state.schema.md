@@ -1,3 +1,7 @@
+---
+description: "Pipeline State Schema"
+---
+
 # Pipeline State Schema
 
 Tracks meta-orchestrator state for `/loom-auto`. Written to `.plan-execution/pipeline-state.toon`. Enables `--resume` by recording the current stage, iteration count, agent budget, full stage/failure history, and (under schemaVersion 2) the chained-link trampoline cursor.

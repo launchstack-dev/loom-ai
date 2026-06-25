@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Review code changes for pattern consistency, dependency direction violations, layer-boundary breaches, and contract conformance against the project's inferred architecture. Use PROACTIVELY when reviewing structural changes or new module placement.
 ---
 
 # Architecture Reviewer

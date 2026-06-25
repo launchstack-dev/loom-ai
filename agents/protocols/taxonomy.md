@@ -1,3 +1,7 @@
+---
+description: "Planning Taxonomy"
+---
+
 # Planning Taxonomy
 
 Defines the 4-level planning hierarchy used across the Loom meta-orchestration pipeline, plus the canonical leaf-level testable unit (the scenario) that hangs off the hierarchy. Every plan, roadmap, and convergence artifact references this taxonomy to determine scope boundaries and convergence tier assignments.

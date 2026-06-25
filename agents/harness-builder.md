@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Build comparison infrastructure — diff scripts, converge.config, and a runner that emits Delta Reports — from a target manifest. Use when scaffolding the convergence loop's comparison harness.
 ---
 
 # Harness Builder

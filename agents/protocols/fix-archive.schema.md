@@ -1,3 +1,7 @@
+---
+description: "Fix Archive Schema"
+---
+
 # Fix Archive Schema
 
 Defines the structure of fix archive entries stored in `.loom/fix-archive/`. Each entry is a short TOON summary of a bug fix — NOT a git diff, but a human-readable record of what broke, why, what was done, and what else might be affected.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Analyze a codebase and produce AI-assistant guidance files — CLAUDE.md, AGENTS.md, subdirectory guidance, and optional Cursor/Cline/Windsurf rules. Use for --init, --update, or --audit of project guidance.
 ---
 
 # Project Guidance Agent

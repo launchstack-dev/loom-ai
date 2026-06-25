@@ -1,3 +1,7 @@
+---
+description: "Explore roadmap shape and surface alternatives via multi-agent ideation."
+---
+
 ## Command: `explore`
 ### Protocols
 

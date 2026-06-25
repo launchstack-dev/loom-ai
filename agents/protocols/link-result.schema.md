@@ -1,3 +1,7 @@
+---
+description: "Link Result Schema"
+---
+
 # Link Result Schema
 
 The envelope every `/loom-auto` link writes to `.plan-execution/link-result.toon` before returning. The trampoline reads this file (not the agent's text return) to decide which link to dispatch next.

@@ -1,3 +1,7 @@
+---
+description: "PlanCritique Schema"
+---
+
 # PlanCritique Schema
 
 Defines the `PlanCritique` TOON artifact written by `plan-critic-agent`. The critic is a haiku-tier advisory agent that runs against a draft plan BEFORE the first formal review pass, predicting findings that the 6 reviewer agents are likely to raise. Its goal is to let `plan-builder-agent` self-correct cheaply, reducing the blocking-finding count entering the formal review.

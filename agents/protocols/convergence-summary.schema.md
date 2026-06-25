@@ -1,3 +1,7 @@
+---
+description: "ConvergenceSummary Schema"
+---
+
 # ConvergenceSummary Schema
 
 Defines the `ConvergenceSummary` TOON artifact written by `convergence-driver` exactly ONCE per convergence run, at the terminal-state transition (converged OR halted). Per locked decision C-11, this file is the AUTHORITATIVE "did we converge" signal for downstream consumers — read by `verify-link` today and by the future `converge-link` when the `/loom-auto` trampoline-link refactor extracts `/loom-plan create`.

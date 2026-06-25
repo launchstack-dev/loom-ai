@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Design phased migration plans (brownfield) or evolvable initial architectures (greenfield), including risk assessment, rollback strategy, and Loom-ready guidance. Use when migrating systems or architecting for future change.
 ---
 
 # Migration Architect

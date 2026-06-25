@@ -1,5 +1,6 @@
 ---
 model: haiku
+description: Discover existing planning, design, and requirements documents in a codebase and convert them into structured Loom-compatible data. Use during brownfield onboarding so the roadmap honors prior decisions.
 ---
 
 # Planning Documents Agent

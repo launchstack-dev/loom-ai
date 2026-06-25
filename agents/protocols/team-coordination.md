@@ -1,3 +1,7 @@
+---
+description: "Team Coordination Protocol"
+---
+
 # Team Coordination Protocol
 
 Defines the agent team coordination protocol for multi-agent pipeline execution using Claude Code's experimental agent teams feature.

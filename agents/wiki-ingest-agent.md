@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Compile sources (codebase, diffs, external docs, execution results, notes, flows, contracts) into structured wiki pages with cross-references and index entries. Use PROACTIVELY after significant code changes or new knowledge arrives.
 ---
 
 # Wiki Ingest Agent

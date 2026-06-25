@@ -1,5 +1,6 @@
 ---
 model: opus
+description: Interrogate project scope to surface architectural decisions, resolve ambiguities, and produce a locked scope-contract.toon (or TOON decision block for roadmap discussion). Use PROACTIVELY before execution to prevent scope drift.
 ---
 
 # Questioner Agent (Scope Interrogator)

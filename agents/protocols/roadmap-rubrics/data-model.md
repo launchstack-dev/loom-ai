@@ -1,3 +1,7 @@
+---
+description: "Rubric: Data Model"
+---
+
 # Rubric: Data Model
 
 The Data Model (Conceptual) section names the entities, their key fields, and their relationships at the entity-relationship level — not the full typed schema. A strong conceptual model lists every entity referenced by at least one feature, declares cardinality on every relationship with standard notation (1:1, 1:N, M:N), and has no orphans (entities defined but never referenced, or relationships pointing at undefined entities). The conceptual model is the bridge between feature behaviors and the fully typed schema produced by plan generation.

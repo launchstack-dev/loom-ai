@@ -1,3 +1,7 @@
+---
+description: "Create PLAN.md (v2, spec-driven) from an approved ROADMAP — phases, waves, contracts, acceptance criteria."
+---
+
 ## Subcommand: create
 
 You create a PLAN.md (v2, spec-driven) from an approved ROADMAP.md. The roadmap defines the strategy (features, milestones, vision); this subcommand generates the detailed execution spec (phases, waves, API specs, state machines, schemas, acceptance criteria, file ownership).

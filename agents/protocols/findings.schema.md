@@ -1,3 +1,7 @@
+---
+description: "ConvergenceFindings Schema"
+---
+
 # ConvergenceFindings Schema
 
 Defines the `ConvergenceFindings` TOON artifact written by every convergence harness. ConvergenceFindings is the uniform contract between harnesses (which produce findings) and the convergence-driver (which consumes them) — replacing per-mode result shapes that previously lived only inside the driver.

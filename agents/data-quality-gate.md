@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Validate pipeline source code against data contracts for schema conformance, nullability, type safety, and freshness SLAs before execution begins. Use PROACTIVELY as a pre-execute gate that halts on violations.
 ---
 
 # Data Quality Gate

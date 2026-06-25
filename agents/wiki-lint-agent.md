@@ -1,5 +1,6 @@
 ---
 model: haiku
+description: Run structural health checks across the wiki and execution artifacts — orphans, missing pages, staleness, broken cross-refs, contradictions, contract drift, and plan-reality divergence — producing reviewer-format findings.
 ---
 
 # Wiki Lint Agent

@@ -1,3 +1,7 @@
+---
+description: "Wiki Log Schema"
+---
+
 # Wiki Log Schema
 
 Defines the structure of `.loom/wiki/log.toon` — the append-only chronological record of all wiki operations. Provides a timeline of wiki evolution and helps agents understand recent activity.

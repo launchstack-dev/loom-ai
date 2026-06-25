@@ -1,3 +1,7 @@
+---
+description: "Context Budget"
+---
+
 # Context Budget
 
 Defines the context budget system for estimating and enforcing token budgets when spawning agents. The budget system is **additive and fail-open** -- it never blocks agent spawns when data is unavailable.

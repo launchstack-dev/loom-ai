@@ -1,3 +1,7 @@
+---
+description: "Show plan progress from execution state; --reconcile detects and fixes stale plan frontmatter."
+---
+
 ## Subcommand: status
 
 Show plan progress by reading execution state. Optionally reconciles stale frontmatter against the execution record.

@@ -1,3 +1,7 @@
+---
+description: "Roadmap Format Specification"
+---
+
 # Roadmap Format Specification
 
 Canonical specification for ROADMAP.md files consumed by the meta-orchestration pipeline. This document is to ROADMAP.md what `plan.schema.md` is to PLAN.md — the authoritative format reference.

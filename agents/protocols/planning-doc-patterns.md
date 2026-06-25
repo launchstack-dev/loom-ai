@@ -1,3 +1,7 @@
+---
+description: "Planning Document Discovery Patterns"
+---
+
 # Planning Document Discovery Patterns
 
 Canonical list of glob patterns and exclusions for discovering existing planning, design, requirements, and strategy documents in a codebase. Referenced by `planning-docs-agent`, `docs-auditor`, and `loom-init` pre-flight.

@@ -1,3 +1,7 @@
+---
+description: "PluginRootPointer Schema"
+---
+
 # PluginRootPointer Schema
 
 Canonical TOON schema for the per-project pointer file at `.loom/plugin-root`. Written by `/loom-init`. Read by the F-07a plugin-root resolver (Wave 1) to translate plugin-relative paths into absolute paths at runtime. Worktree-aware — each worktree has its own pointer.

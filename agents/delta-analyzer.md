@@ -1,5 +1,6 @@
 ---
 model: haiku
+description: Analyze a convergence Delta Report, filter noise from real gaps, and produce a prioritized fix list routed to the right fixer agents. Use PROACTIVELY inside the convergence loop after each harness run.
 ---
 
 # Delta Analyzer

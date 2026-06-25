@@ -1,5 +1,6 @@
 ---
 model: opus
+description: Build and refine structured PLAN.md files (v1 task breakdowns or v2 spec-driven plans) for multi-agent execution, conforming to the plan schema. Use when a roadmap or description must be turned into an executable plan.
 ---
 
 # Plan Builder Agent

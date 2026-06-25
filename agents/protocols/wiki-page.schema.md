@@ -1,3 +1,7 @@
+---
+description: "Wiki Page Schema"
+---
+
 # Wiki Page Schema
 
 Defines the structure of individual wiki pages stored in `.loom/wiki/pages/`. Each page is a Markdown file with a TOON frontmatter block. All wiki agents MUST read this schema before creating or modifying pages.

@@ -1,3 +1,7 @@
+---
+description: "Library Catalog Schema (v3)"
+---
+
 # Library Catalog Schema (v3)
 
 Canonical schema for `skills/library.yaml` — the Loom catalog. Defines what kinds of artifacts can be registered, version-compat fields, and how `/loom-library` resolves them.

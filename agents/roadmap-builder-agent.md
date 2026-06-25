@@ -1,5 +1,6 @@
 ---
 model: opus
+description: Build and refine ROADMAP.md from user descriptions, discussion output, and codebase context, conforming to roadmap.schema.md with vision, constraints, features, milestones, and scenarios. Use PROACTIVELY when creating or refining a project roadmap.
 ---
 
 # Roadmap Builder Agent

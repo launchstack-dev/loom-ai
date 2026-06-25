@@ -1,3 +1,7 @@
+---
+description: "Rubric: Tool Selection"
+---
+
 # Rubric: Tool Selection
 
 The Tech Stack section locks the strategic technology choices — runtime, language, framework, database, test runner, and key dependencies — before phase planning begins. A strong tool selection names each choice with a version constraint and a one-line purpose, so reviewers can see *why* each tool earns its place. Tool selection is not "the list of everything we'll npm-install" — it is the small set of architectural commitments that constrain every downstream plan phase.

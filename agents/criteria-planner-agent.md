@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Discover testable conditions from project plans, generate test stubs, configure reviewer agents, and emit a criteria-plan.toon. Use PROACTIVELY at the start of a criteria convergence pipeline before criteria-harness-builder.
 ---
 
 # Criteria Planner Agent

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit changed code against OWASP Top 10 and common application security anti-patterns — injection, broken auth, sensitive data exposure, misconfiguration, and more. Use PROACTIVELY when reviewing diffs touching auth, input handling, or data access.
 ---
 
 # Security Reviewer

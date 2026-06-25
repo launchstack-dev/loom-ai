@@ -1,3 +1,7 @@
+---
+description: "Orchestration Patterns"
+---
+
 # Orchestration Patterns
 
 Reusable multi-agent coordination patterns that orchestrator commands can invoke. Each pattern defines a specific interaction topology between agents, with deterministic orchestration logic that the orchestrator executes step-by-step.

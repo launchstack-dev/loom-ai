@@ -1,3 +1,7 @@
+---
+description: "Behavioral Guidelines"
+---
+
 # Behavioral Guidelines
 
 Behavioral guardrails for all Loom agents, derived from Andrej Karpathy's observations on common LLM coding mistakes. Agents with identified gaps reference this document in their instructions.

@@ -1,3 +1,7 @@
+---
+description: "Install State Schema"
+---
+
 # Install State Schema
 
 > **Reconciliation note (PLAN-plugin-marketplace-merged, Phase 0B):** This v3 component-inventory at `~/.claude/skills/library/install-state.toon` is preserved unchanged and is consumed only by `loom-update --rollback`. The per-machine channel envelope at `~/.loom/install.toon` introduced by the plugin-marketplace plan is a **separate concern** consumed by the doctor and update CLIs (channel detection, pinning, freshness checks). The two artifacts do not overlap and must not be merged.

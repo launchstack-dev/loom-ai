@@ -1,3 +1,7 @@
+---
+description: "Spec Section Reference"
+---
+
 # Spec Section Reference
 
 Detailed format specification for the spec-level sections introduced in `planVersion: 2`. These sections transform PLAN.md from a task breakdown into a complete implementation specification.

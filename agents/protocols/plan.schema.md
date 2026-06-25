@@ -1,3 +1,7 @@
+---
+description: "Plan Format Specification"
+---
+
 # Plan Format Specification
 
 Canonical specification for PLAN.md files consumed by the meta-orchestration pipeline. This document is to PLAN.md what `agent-result.schema.md` is to AgentResult — the authoritative format reference.

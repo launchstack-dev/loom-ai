@@ -1,3 +1,7 @@
+---
+description: "Wiki Index Schema"
+---
+
 # Wiki Index Schema
 
 Defines the structure of `.loom/wiki/index.toon` — the categorical catalog of all wiki pages. The index is the primary navigation tool for wiki agents and the entry point for queries. As of `schemaVersion: 2`, the index also carries enough information (`summary`, `estimatedTokens`, `subtype`) for the rolling-context packer to make O(1) packing decisions without reading page bodies.

@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Generate comprehensive unit and contract test files from acceptance-criteria specs, contract definitions, and implemented source — supporting vitest, jest, and mocha.
 ---
 
 # Unit Test Agent

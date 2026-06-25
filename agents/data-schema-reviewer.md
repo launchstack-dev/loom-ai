@@ -1,5 +1,6 @@
 ---
 model: sonnet
+description: Audit data pipeline schemas, migrations, and dbt models for normalization, indexing, migration safety, idempotency, and schema evolution risks. Use PROACTIVELY at pre-verify on data-engineering changes.
 ---
 
 # Data Schema Reviewer

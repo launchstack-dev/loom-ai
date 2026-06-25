@@ -1,3 +1,7 @@
+---
+description: "Plan-Critic Concerns Checklist"
+---
+
 # Plan-Critic Concerns Checklist
 
 A distilled checklist of common issues across the 6 reviewer dimensions. The `plan-critic-agent` walks this list against a draft plan and emits a `predictedFindings[]` row for each match.

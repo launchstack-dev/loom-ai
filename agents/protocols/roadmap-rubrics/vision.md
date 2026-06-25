@@ -1,3 +1,7 @@
+---
+description: "Rubric: Vision"
+---
+
 # Rubric: Vision
 
 The Vision section answers three coupled questions in 2-5 sentences: **what** is being built, **for whom**, and **why now**. A strong vision is falsifiable (a different audience or different timing would change the answer), bounded (it implies what is NOT being built), and grounded (it names a concrete pain or shift in the world, not a generic aspiration). It is the document's hardest-to-revise commitment — everything downstream inherits its framing.

@@ -1,3 +1,7 @@
+---
+description: "Schema Upgrade Protocol"
+---
+
 # Schema Upgrade Protocol
 
 Defines migration rules for upgrading old-format Loom project artifacts to current schema versions. The governing principle is **automatic detection with explicit migration**: agents detect old formats at read-time and warn on stderr, but only `/loom-upgrade` performs the actual transformation.
