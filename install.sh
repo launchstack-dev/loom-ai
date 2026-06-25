@@ -131,7 +131,10 @@ echo "Target: ${CLAUDE_DIR}"
 echo ""
 
 # ── Create directories ──
-mkdir -p "${CLAUDE_DIR}/agents/protocols"
+# Note: no mkdir for ~/.claude/agents/ — install.sh doesn't fetch agent files
+# (the marketplace path / /loom-library ships those). A vestigial
+# `agents/protocols/` here would also reintroduce the path-misclassification
+# the protocols-at-root move fixes.
 mkdir -p "${CLAUDE_DIR}/commands"
 mkdir -p "${CLAUDE_DIR}/commands/loom-plan"
 mkdir -p "${CLAUDE_DIR}/commands/loom-roadmap"
