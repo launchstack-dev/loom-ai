@@ -68,50 +68,74 @@ fi
 # catch-net for everything else — manual edits, merge resolution, scripted
 # changes. Each gate skips silently when its tool isn't installed so the
 # hook doesn't impose tooling on contributors who haven't opted in.
-# Override with `git commit --no-verify` for emergencies only.
+# Override with `git commit --no-verify` (or LOOM_SKIP_PRECOMMIT_QUALITY=1).
+#
+# Implementation notes:
+# - Use git diff -z + NUL-delimited read to handle filenames with spaces /
+#   tabs / glob chars. Unquoted `for f in $STAGED_SH` was an SC2086 in a PR
+#   that introduces shellcheck-on-write. The irony was real.
+# - Portability scanning delegates to scripts/portability-scan.sh which
+#   shares the rule set with hooks/bash-portability-on-write.ts (single
+#   source of truth at hooks/lib/portability-rules.ts).
 
-STAGED_SH=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(sh|bash)$' || true)
-STAGED_PY=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.py$' || true)
+if [ "${LOOM_SKIP_PRECOMMIT_QUALITY:-0}" = "1" ]; then
+  exit 0
+fi
+
+# Collect staged files into NUL-delimited variables.
+collect_staged() {
+  local pattern="$1"
+  local out=""
+  local f
+  while IFS= read -r -d '' f; do
+    case "${f}" in
+      *${pattern}) out="${out}${f}"$'\0' ;;
+    esac
+  done < <(git diff --cached -z --name-only --diff-filter=ACMR 2>/dev/null)
+  printf '%s' "${out}"
+}
+
+STAGED_SH=$(collect_staged '.sh' ; collect_staged '.bash')
+STAGED_PY=$(collect_staged '.py')
 GATE_FAIL=0
 
 if [ -n "${STAGED_SH}" ] && command -v shellcheck >/dev/null 2>&1; then
   echo "[shellcheck] linting staged shell scripts..."
-  for f in ${STAGED_SH}; do
+  while IFS= read -r -d '' f; do
     shell=bash
-    if head -1 "${f}" 2>/dev/null | grep -qE '^#!\s*/(usr/)?bin/sh\b'; then
+    if head -c 64 -- "${f}" 2>/dev/null | grep -qE '^#!\s*/(usr/)?bin/sh\b'; then
       shell=sh
     fi
-    if ! shellcheck -s "${shell}" -f gcc "${f}"; then
+    if ! shellcheck -s "${shell}" -f gcc -- "${f}"; then
       GATE_FAIL=1
     fi
-  done
+  done < <(printf '%s' "${STAGED_SH}")
 fi
 
 if [ -n "${STAGED_SH}" ]; then
   echo "[portability] scanning staged shell scripts for BSD/GNU divergences..."
-  for f in ${STAGED_SH}; do
-    if grep -nE '\bmktemp\s+(-d\s+)?-t\s+[A-Za-z0-9_.-]*[^X]$' "${f}" >/dev/null 2>&1; then
-      grep -nE '\bmktemp\s+(-d\s+)?-t\s+[A-Za-z0-9_.-]*[^X]$' "${f}" | sed "s|^|  ${f}:|"
-      echo "    Fix: append .XXXXXX to the template (GNU mktemp requires >=3 trailing X)."
+  # Pull the files into an argv array, NUL-safely.
+  files=()
+  while IFS= read -r -d '' f; do
+    files+=("${f}")
+  done < <(printf '%s' "${STAGED_SH}")
+  if [ "${#files[@]}" -gt 0 ]; then
+    if ! "${REPO_ROOT}/scripts/portability-scan.sh" "${files[@]}"; then
       GATE_FAIL=1
     fi
-    if grep -nE '\breadlink\s+-f\b' "${f}" >/dev/null 2>&1; then
-      grep -nE '\breadlink\s+-f\b' "${f}" | sed "s|^|  ${f}:|"
-      echo "    Fix: readlink -f is GNU-only; use a pure-shell equivalent."
-      GATE_FAIL=1
-    fi
-    if grep -nE '\bgrep\s+(-[A-Za-z]*P|--perl-regexp)\b' "${f}" >/dev/null 2>&1; then
-      grep -nE '\bgrep\s+(-[A-Za-z]*P|--perl-regexp)\b' "${f}" | sed "s|^|  ${f}:|"
-      echo "    Fix: grep -P is GNU-only; use grep -E with POSIX regex."
-      GATE_FAIL=1
-    fi
-  done
+  fi
 fi
 
 if [ -n "${STAGED_PY}" ] && command -v ruff >/dev/null 2>&1; then
   echo "[ruff] linting staged Python files..."
-  if ! ruff check --no-fix --output-format=concise ${STAGED_PY}; then
-    GATE_FAIL=1
+  py_files=()
+  while IFS= read -r -d '' f; do
+    py_files+=("${f}")
+  done < <(printf '%s' "${STAGED_PY}")
+  if [ "${#py_files[@]}" -gt 0 ]; then
+    if ! ruff check --no-fix --output-format=concise -- "${py_files[@]}"; then
+      GATE_FAIL=1
+    fi
   fi
 fi
 
@@ -119,5 +143,6 @@ if [ "${GATE_FAIL}" -ne 0 ]; then
   echo ""
   echo "[pre-commit] Quality gate failed. Address the findings above and re-stage." >&2
   echo "[pre-commit] To bypass (rare): git commit --no-verify" >&2
+  echo "[pre-commit] To skip just this section: LOOM_SKIP_PRECOMMIT_QUALITY=1 git commit ..." >&2
   exit 1
 fi

@@ -76,7 +76,9 @@ summary:
   cleanFiles: <count of files in diff with no findings>
 ```
 
-When no findings: emit an empty `findings[0]:` array and the summary block with all counts at 0. Calling code uses the blocking count to decide whether to abort the push.
+When no findings: emit the literal line `findings[0]{severity,category,location,description,recommendation}:` (typed header, no data rows) followed by the summary block with all counts at 0. This is the canonical empty form — calling code only ever parses one shape.
+
+**Quoting**: when a finding's `description` or `recommendation` contains a literal `"`, double it (`""`) to escape. Collapse internal newlines to a single space — multi-line fields are not supported in the TOON row format used here.
 
 ## Triggering
 

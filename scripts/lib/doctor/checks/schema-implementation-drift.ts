@@ -62,8 +62,10 @@ const SKIP_DIRS = new Set([
 ]);
 
 /**
- * Walk a directory and collect TS/TSX file paths. Bounded — does not follow
- * symlinks, skips well-known non-source dirs.
+ * Walk a directory and collect TS/TSX file paths. Bounded — uses lstatSync
+ * (does NOT follow symlinks) and skips well-known non-source dirs. Skipping
+ * symlinks keeps the walker from escaping the repo if a contributor has e.g.
+ * `scripts/local -> /home/me/projects/...` in their checkout.
  */
 function collectTsFiles(
   dir: string,
@@ -78,7 +80,15 @@ function collectTsFiles(
     let entries: string[];
     try {
       entries = readdir(cur);
-    } catch {
+    } catch (err: any) {
+      // ENOENT/ELOOP after a race is fine to skip silently; surface other
+      // errors so the user can correlate spurious orphan-flag results with
+      // a real filesystem issue (EACCES, EIO, EMFILE).
+      if (err?.code && !["ENOENT", "ELOOP"].includes(err.code)) {
+        process.stderr.write(
+          `[schema-implementation-drift] readdir ${cur} failed: ${err.code}\n`,
+        );
+      }
       continue;
     }
     for (const name of entries) {
@@ -86,8 +96,17 @@ function collectTsFiles(
       const full = path.join(cur, name);
       let stat: fsSync.Stats;
       try {
-        stat = fsSync.statSync(full);
-      } catch {
+        stat = fsSync.lstatSync(full);
+      } catch (err: any) {
+        if (err?.code && !["ENOENT", "ELOOP"].includes(err.code)) {
+          process.stderr.write(
+            `[schema-implementation-drift] lstat ${full} failed: ${err.code}\n`,
+          );
+        }
+        continue;
+      }
+      if (stat.isSymbolicLink()) {
+        // Skip symlinks to avoid walking outside the repo.
         continue;
       }
       if (stat.isDirectory()) {

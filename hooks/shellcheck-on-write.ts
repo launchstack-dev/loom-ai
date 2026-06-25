@@ -6,10 +6,16 @@
  * unquoted variable expansions into Python -c, masked `2>/dev/null`, etc.
  *
  * Skipped silently when:
- *   - file is not a shell script (extension check + shebang check),
+ *   - file is not a shell script (extension + shebang check via file-probe),
  *   - LOOM_SKIP_SHELLCHECK env var is set,
- *   - shellcheck binary is not installed (fail-open),
- *   - shellcheck takes longer than SHELLCHECK_TIMEOUT (10s).
+ *   - shellcheck binary is not installed (probed once, cached).
+ *
+ * Tool failure vs findings:
+ *   shellcheck exits 1 on findings, 2-4 on fatal/support errors, killed by
+ *   signal on timeout. Only status 1 is forwarded to the user as "findings".
+ *   Status >=2 or signal is logged to stderr as a tool failure so the user
+ *   knows the gate didn't run rather than seeing tool error output mislabeled
+ *   as findings in their file.
  *
  * The companion skill at `skills/shell-conventions/SKILL.md` documents the
  * rules this hook checks (and a few that shellcheck doesn't cover). The hook
@@ -19,20 +25,13 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { runHook, allow } from "./lib/run-hook.js";
+import {
+  commandAvailable,
+  detectShellFlavor,
+  isShellScript,
+} from "./lib/file-probe.js";
 
-const SHELL_EXTENSIONS = [".sh", ".bash"];
 const SHELLCHECK_TIMEOUT = 10_000;
-
-function isShellScript(filePath: string): boolean {
-  if (SHELL_EXTENSIONS.some((ext) => filePath.endsWith(ext))) return true;
-  // Shebang fallback — covers extension-less scripts in scripts/
-  try {
-    const head = fs.readFileSync(filePath, { encoding: "utf-8" }).slice(0, 64);
-    return /^#!\s*\/(usr\/)?bin\/(env\s+)?(ba)?sh\b/.test(head);
-  } catch {
-    return false;
-  }
-}
 
 runHook("shellcheck-on-write", async (input) => {
   if (process.env.LOOM_SKIP_SHELLCHECK) return allow();
@@ -43,32 +42,14 @@ runHook("shellcheck-on-write", async (input) => {
 
   if (!isShellScript(filePath)) return allow();
   if (!fs.existsSync(filePath)) return allow();
+  if (!commandAvailable("shellcheck")) return allow();
 
-  // Probe shellcheck once — if absent, fail-open silently so users without it
-  // installed don't see noise on every shell edit.
-  try {
-    execFileSync("shellcheck", ["--version"], {
-      timeout: 2_000,
-      stdio: ["ignore", "ignore", "ignore"],
-    });
-  } catch {
-    return allow();
-  }
-
-  // Detect shell from shebang so shellcheck applies the right ruleset
-  // (#!/bin/sh vs #!/bin/bash have different valid grammars).
-  let shell = "bash";
-  try {
-    const head = fs.readFileSync(filePath, { encoding: "utf-8" }).slice(0, 64);
-    if (/^#!\s*\/(usr\/)?bin\/sh\b/.test(head)) shell = "sh";
-  } catch {
-    // ignore — default to bash
-  }
+  const shell = detectShellFlavor(filePath);
 
   try {
     execFileSync(
       "shellcheck",
-      ["-s", shell, "-f", "gcc", filePath],
+      ["-s", shell, "-f", "gcc", "--", filePath],
       {
         timeout: SHELLCHECK_TIMEOUT,
         encoding: "utf-8",
@@ -77,8 +58,29 @@ runHook("shellcheck-on-write", async (input) => {
     );
     return allow();
   } catch (err: any) {
-    const output = (err.stdout ?? "") + (err.stderr ?? "");
-    if (!output.trim()) return allow();
+    // shellcheck exit codes: 1 = real findings, 2-4 = fatal/support, signal =
+    // killed (likely timeout). Distinguish so tool failures don't masquerade
+    // as code findings in the user's file.
+    const status: number | null = err.status ?? null;
+    const signal: string | null = err.signal ?? null;
+    const output = ((err.stdout ?? "") + (err.stderr ?? "")).trim();
+
+    if (signal) {
+      process.stderr.write(
+        `[shellcheck-on-write] tool killed by signal ${signal} on ${filePath}\n`,
+      );
+      return allow();
+    }
+    if (status !== null && status >= 2) {
+      process.stderr.write(
+        `[shellcheck-on-write] shellcheck exited ${status} on ${filePath} (fatal/support error, not findings)\n`,
+      );
+      if (output) {
+        process.stderr.write(`  ${output.slice(0, 500)}\n`);
+      }
+      return allow();
+    }
+    if (!output) return allow();
     const truncated =
       output.length > 2_000 ? output.slice(0, 2_000) + "\n... (truncated)" : output;
     return allow(`shellcheck findings in ${filePath}:\n${truncated}`);

@@ -9,53 +9,55 @@
  * Skipped silently when:
  *   - file is not Python,
  *   - LOOM_SKIP_PYLINT env var is set,
- *   - neither ruff nor mypy is installed (fail-open).
+ *   - neither ruff nor mypy is installed (probed once, cached).
  *
- * Tools are run independently — a missing ruff doesn't block mypy and vice
- * versa. Mirrors typecheck-on-write.ts for TypeScript.
+ * Tool failure vs findings: ruff and mypy exit 1 on findings, >=2 on tool
+ * crash. Only status 1 is surfaced to the user as findings; >=2 / signal is
+ * logged to stderr so a tool crash doesn't masquerade as Python errors in
+ * the user's file.
  */
 
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { runHook, allow } from "./lib/run-hook.js";
+import { commandAvailable, isPython } from "./lib/file-probe.js";
 
-const PY_EXTENSIONS = [".py", ".pyi"];
 const TOOL_TIMEOUT = 15_000;
 
-function isPython(filePath: string): boolean {
-  if (PY_EXTENSIONS.some((ext) => filePath.endsWith(ext))) return true;
-  try {
-    const head = fs.readFileSync(filePath, { encoding: "utf-8" }).slice(0, 64);
-    return /^#!\s*\/(usr\/)?bin\/(env\s+)?python[23]?\b/.test(head);
-  } catch {
-    return false;
-  }
+interface ToolReport {
+  /** Real lint findings to forward to the user. */
+  findings?: string;
+  /** Tool-level failure (timeout, crash); logged to stderr, NOT shown to user. */
+  failure?: string;
 }
 
-function toolAvailable(bin: string): boolean {
-  try {
-    execFileSync(bin, ["--version"], {
-      timeout: 2_000,
-      stdio: ["ignore", "ignore", "ignore"],
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function runTool(bin: string, args: string[]): string | undefined {
+function runTool(toolName: string, bin: string, args: string[]): ToolReport {
   try {
     execFileSync(bin, args, {
       timeout: TOOL_TIMEOUT,
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "pipe"],
     });
-    return undefined;
+    return {};
   } catch (err: any) {
+    const status: number | null = err.status ?? null;
+    const signal: string | null = err.signal ?? null;
     const output = ((err.stdout ?? "") + (err.stderr ?? "")).trim();
-    if (!output) return undefined;
-    return output.length > 1_500 ? output.slice(0, 1_500) + "\n... (truncated)" : output;
+
+    if (signal) {
+      return { failure: `${toolName} killed by signal ${signal}` };
+    }
+    if (status !== null && status >= 2) {
+      return {
+        failure: `${toolName} exited ${status} (tool error, not findings)${
+          output ? ":\n  " + output.slice(0, 500) : ""
+        }`,
+      };
+    }
+    if (!output) return {};
+    return {
+      findings: output.length > 1_500 ? output.slice(0, 1_500) + "\n... (truncated)" : output,
+    };
   }
 }
 
@@ -68,19 +70,31 @@ runHook("pylint-on-write", async (input) => {
   if (!isPython(filePath)) return allow();
   if (!fs.existsSync(filePath)) return allow();
 
-  const reports: string[] = [];
+  const findings: string[] = [];
 
-  if (toolAvailable("ruff")) {
-    const ruff = runTool("ruff", ["check", "--no-fix", "--output-format=concise", filePath]);
-    if (ruff) reports.push(`ruff:\n${ruff}`);
+  if (commandAvailable("ruff")) {
+    const r = runTool("ruff", "ruff", [
+      "check", "--no-fix", "--output-format=concise", "--", filePath,
+    ]);
+    if (r.failure) {
+      process.stderr.write(`[pylint-on-write] ${r.failure} (file: ${filePath})\n`);
+    } else if (r.findings) {
+      findings.push(`ruff:\n${r.findings}`);
+    }
   }
 
-  if (toolAvailable("mypy")) {
-    const mypy = runTool("mypy", ["--strict", "--no-color-output", filePath]);
-    if (mypy) reports.push(`mypy:\n${mypy}`);
+  if (commandAvailable("mypy")) {
+    const r = runTool("mypy", "mypy", [
+      "--strict", "--no-color-output", "--", filePath,
+    ]);
+    if (r.failure) {
+      process.stderr.write(`[pylint-on-write] ${r.failure} (file: ${filePath})\n`);
+    } else if (r.findings) {
+      findings.push(`mypy:\n${r.findings}`);
+    }
   }
 
-  if (reports.length === 0) return allow();
+  if (findings.length === 0) return allow();
 
-  return allow(`Python lint findings in ${filePath}:\n${reports.join("\n\n")}`);
+  return allow(`Python lint findings in ${filePath}:\n${findings.join("\n\n")}`);
 });
