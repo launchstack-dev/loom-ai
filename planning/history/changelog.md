@@ -444,3 +444,29 @@
 - planVersion: 1
 - Phases: 5, Waves: 3, Deliverables: 6
 - Subcommands: commit, push, pr, merge, cleanup, review-pr
+
+## 2026-06-25 — Safe upgrade path PR (fix/safe-upgrade-path)
+
+**Problem:** Three unsafe upgrade paths in production:
+1. `/loom-update` shipped in source but NOT distributed by install.sh — curl users had no safe channel-aware updater.
+2. `/loom-library update` and `/loom-library sync` would re-pull system files (hooks, scripts/lib/*, prompts) while Claude Code was live — Claude Code itself rejected this as unsafe in a real user session.
+3. Re-running `install.sh` to upgrade silently wiped any user-added rows in `install-state.toon` (kits, BYO items, agents added later).
+
+**Fix (this PR):**
+
+1. **`install.sh` ships `/loom-update`** — added to COMMAND_FILES + INFRA_FILES:
+   - `commands/loom-update.md`
+   - `scripts/loom-update.ts`
+   - `scripts/lib/update/{check,apply,resume,rollback}.ts`
+2. **`install.sh` preserves user-added rows on re-run** — awk filter extracts non-system rows (type ∉ {infrastructure, prompt, hook-template}) from existing install-state.toon and appends them verbatim after regenerating the system rows. Print line confirms count of preserved rows.
+3. **`/loom-library update` + `sync` refuse system files** — rows with type ∈ {infrastructure, prompt, hook-template} are surfaced under a read-only "System files (skipped — use /loom-update)" section with explicit recovery copy. Library command never writes them.
+
+**Tests:** new `test/install-state-preservation.test.ts` (7 tests) exercises the awk preservation filter against fixtures covering: system-rows-stripped, agent rows preserved, BYO kit rows preserved, skill rows preserved, header lines ignored, empty user-set, protocol rows preserved. All pass.
+
+**Regression:** 41 existing install/plugin tests still pass.
+
+**Net effect on a curl-installed machine:**
+- After the next `curl ... | bash`, the user has `/loom-update` available.
+- After that, `/loom-update` is the canonical safe-upgrade path (atomic staging, restart signal, rollback).
+- `/loom-library update` is now safe — it only writes user-domain items.
+- Re-running install.sh is also safe — it preserves user-added rows.

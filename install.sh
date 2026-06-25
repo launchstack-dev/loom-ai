@@ -49,6 +49,16 @@ declare -a INFRA_FILES=(
   "scripts/loom-first-run.ts:${CLAUDE_DIR}/scripts/loom-first-run.ts"
   "scripts/lib/first-run.ts:${CLAUDE_DIR}/scripts/lib/first-run.ts"
   "scripts/lib/install-state.ts:${CLAUDE_DIR}/scripts/lib/install-state.ts"
+  # /loom-update CLI + its pure helpers. Shipping these is what gives curl
+  # users the channel-aware safe-upgrade path. Without them, the only update
+  # mechanism is re-running install.sh, which has no atomic staging, no
+  # restart signal, and no rollback. See planning/history/changelog.md
+  # 2026-06-25 entry for context on why this was missing.
+  "scripts/loom-update.ts:${CLAUDE_DIR}/scripts/loom-update.ts"
+  "scripts/lib/update/check.ts:${CLAUDE_DIR}/scripts/lib/update/check.ts"
+  "scripts/lib/update/apply.ts:${CLAUDE_DIR}/scripts/lib/update/apply.ts"
+  "scripts/lib/update/resume.ts:${CLAUDE_DIR}/scripts/lib/update/resume.ts"
+  "scripts/lib/update/rollback.ts:${CLAUDE_DIR}/scripts/lib/update/rollback.ts"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -74,6 +84,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-vote.md:${CLAUDE_DIR}/commands/loom-vote.md"
   "commands/loom-triage.md:${CLAUDE_DIR}/commands/loom-triage.md"
   "commands/loom-upgrade.md:${CLAUDE_DIR}/commands/loom-upgrade.md"
+  "commands/loom-update.md:${CLAUDE_DIR}/commands/loom-update.md"
   # Noun commands (registered as skills in library.yaml)
   "commands/loom-plan.md:${CLAUDE_DIR}/commands/loom-plan.md"
   "commands/loom-roadmap.md:${CLAUDE_DIR}/commands/loom-roadmap.md"
@@ -316,14 +327,41 @@ if [ "${FAIL_COUNT}" -gt 0 ]; then
 fi
 
 # ── Build install-state.toon ──
+# Re-run safety: preserve any user-added rows (kits, third-party items, BYO
+# entries) by extracting them from the existing file before we rewrite. The
+# preserved set is anything whose `type` is NOT one of the system types this
+# installer owns: infrastructure, prompt, hook-template. Those system rows are
+# fully owned by install.sh and are always regenerated from the arrays above.
 echo ""
 echo "Building install state..."
 STATE_FILE="${CLAUDE_DIR}/skills/library/install-state.toon"
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX")
+PRESERVED_TMP=$(mktemp "${STATE_FILE}.preserved.XXXXXX")
+trap 'rm -f "${STATE_TMP}" "${PRESERVED_TMP}"' EXIT
 
-# Count items
+# Extract user-added rows (anything NOT owned by install.sh) from the existing
+# state file. A "system" row is identified by its 2nd column (`type`) being one
+# of: infrastructure, prompt, hook-template. Anything else (agent, skill, kit,
+# protocol, byo-kit-item, etc.) is preserved verbatim.
+PRESERVED_COUNT=0
+if [ -f "${STATE_FILE}" ]; then
+  # awk extracts indented rows (start with two spaces) whose 2nd CSV field is
+  # not a system type. The rows are emitted in their original format, ready to
+  # append verbatim.
+  awk -F',' '
+    /^  [^ ]/ {
+      type=$2
+      if (type != "infrastructure" && type != "prompt" && type != "hook-template") {
+        print $0
+      }
+    }
+  ' "${STATE_FILE}" > "${PRESERVED_TMP}"
+  PRESERVED_COUNT=$(wc -l < "${PRESERVED_TMP}" | tr -d ' ')
+fi
+
+# Count system items
 ITEM_COUNT=0
 for entry in "${INFRA_FILES[@]}"; do
   dst="${entry#*:}"
@@ -338,11 +376,13 @@ for entry in "${HOOK_TEMPLATE_FILES[@]}"; do
   [ -f "${dst}" ] && ITEM_COUNT=$((ITEM_COUNT + 1))
 done
 
+TOTAL_COUNT=$((ITEM_COUNT + PRESERVED_COUNT))
+
 {
   echo "schemaVersion: 2"
   echo "lastSynced: ${NOW}"
   echo ""
-  echo "items[${ITEM_COUNT}]{name,type,source,targetPath,installedAt}:"
+  echo "items[${TOTAL_COUNT}]{name,type,source,targetPath,installedAt}:"
 } > "${STATE_TMP}"
 
 # Record infrastructure items
@@ -375,8 +415,19 @@ for entry in "${HOOK_TEMPLATE_FILES[@]}"; do
   fi
 done
 
+# Append preserved user-added rows verbatim
+if [ "${PRESERVED_COUNT}" -gt 0 ]; then
+  cat "${PRESERVED_TMP}" >> "${STATE_TMP}"
+fi
+
 mv "${STATE_TMP}" "${STATE_FILE}"
-echo "  OK   install-state.toon"
+rm -f "${PRESERVED_TMP}"
+trap - EXIT
+if [ "${PRESERVED_COUNT}" -gt 0 ]; then
+  echo "  OK   install-state.toon (preserved ${PRESERVED_COUNT} user-added row(s))"
+else
+  echo "  OK   install-state.toon"
+fi
 
 # ── Runtime detection ──
 # Loom hooks are .ts files dispatched through hooks/run-hook.sh, which prefers
