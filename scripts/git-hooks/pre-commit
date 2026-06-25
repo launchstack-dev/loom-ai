@@ -61,3 +61,63 @@ if ! git diff --quiet -- "${MANIFEST}"; then
   git add -- "${MANIFEST}"
   echo "[checksums] checksums.sha256 updated and re-staged"
 fi
+
+# ── Quality gates on staged files (fail-closed) ───────────────────────
+# The PostToolUse hooks (shellcheck-on-write, bash-portability-on-write,
+# pylint-on-write) catch issues at Claude write-time. This block is the
+# catch-net for everything else — manual edits, merge resolution, scripted
+# changes. Each gate skips silently when its tool isn't installed so the
+# hook doesn't impose tooling on contributors who haven't opted in.
+# Override with `git commit --no-verify` for emergencies only.
+
+STAGED_SH=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(sh|bash)$' || true)
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.py$' || true)
+GATE_FAIL=0
+
+if [ -n "${STAGED_SH}" ] && command -v shellcheck >/dev/null 2>&1; then
+  echo "[shellcheck] linting staged shell scripts..."
+  for f in ${STAGED_SH}; do
+    shell=bash
+    if head -1 "${f}" 2>/dev/null | grep -qE '^#!\s*/(usr/)?bin/sh\b'; then
+      shell=sh
+    fi
+    if ! shellcheck -s "${shell}" -f gcc "${f}"; then
+      GATE_FAIL=1
+    fi
+  done
+fi
+
+if [ -n "${STAGED_SH}" ]; then
+  echo "[portability] scanning staged shell scripts for BSD/GNU divergences..."
+  for f in ${STAGED_SH}; do
+    if grep -nE '\bmktemp\s+(-d\s+)?-t\s+[A-Za-z0-9_.-]*[^X]$' "${f}" >/dev/null 2>&1; then
+      grep -nE '\bmktemp\s+(-d\s+)?-t\s+[A-Za-z0-9_.-]*[^X]$' "${f}" | sed "s|^|  ${f}:|"
+      echo "    Fix: append .XXXXXX to the template (GNU mktemp requires >=3 trailing X)."
+      GATE_FAIL=1
+    fi
+    if grep -nE '\breadlink\s+-f\b' "${f}" >/dev/null 2>&1; then
+      grep -nE '\breadlink\s+-f\b' "${f}" | sed "s|^|  ${f}:|"
+      echo "    Fix: readlink -f is GNU-only; use a pure-shell equivalent."
+      GATE_FAIL=1
+    fi
+    if grep -nE '\bgrep\s+(-[A-Za-z]*P|--perl-regexp)\b' "${f}" >/dev/null 2>&1; then
+      grep -nE '\bgrep\s+(-[A-Za-z]*P|--perl-regexp)\b' "${f}" | sed "s|^|  ${f}:|"
+      echo "    Fix: grep -P is GNU-only; use grep -E with POSIX regex."
+      GATE_FAIL=1
+    fi
+  done
+fi
+
+if [ -n "${STAGED_PY}" ] && command -v ruff >/dev/null 2>&1; then
+  echo "[ruff] linting staged Python files..."
+  if ! ruff check --no-fix --output-format=concise ${STAGED_PY}; then
+    GATE_FAIL=1
+  fi
+fi
+
+if [ "${GATE_FAIL}" -ne 0 ]; then
+  echo ""
+  echo "[pre-commit] Quality gate failed. Address the findings above and re-stage." >&2
+  echo "[pre-commit] To bypass (rare): git commit --no-verify" >&2
+  exit 1
+fi

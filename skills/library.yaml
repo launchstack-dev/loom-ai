@@ -394,6 +394,10 @@ library:
       description: Generates new Claude Code agents, skills, and commands
       source: agents/meta-agent.md
 
+    - name: presubmit-sweep-agent
+      description: Cheap-tier sweep run before `gh pr create` — catches comment-vs-code self-contradictions, schema-drift, and editor cruft that static linters miss.
+      source: agents/presubmit-sweep-agent.md
+
     - name: tdd-coach
       description: Drives test-driven development with red-green-refactor
       source: agents/tdd-coach.md
