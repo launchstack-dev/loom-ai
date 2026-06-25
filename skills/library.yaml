@@ -203,6 +203,15 @@ library:
         - "**/pyproject.toml"
         - "**/requirements.txt"
 
+    - name: shell-conventions
+      description: Shell-script conventions — BSD/GNU portability, locale-stable text matching, defensive parsing, never-suppress-errors. Auto-loads on .sh/.bash edits to prevent the 7 failure modes from PR #18.
+      source: skills/shell-conventions/SKILL.md
+      triggers:
+        - "**/*.sh"
+        - "**/*.bash"
+        - "scripts/**"
+        - "hooks/*.sh"
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -614,4 +623,12 @@ kits:
     includes:
       - type: skill
         name: python-conventions
+
+  - name: shell-conventions
+    description: Shell-script conventions skill — auto-loads on .sh/.bash edits to enforce portability, locale-stable text matching, defensive parsing, and never-suppress-errors rules derived from PR #18 lessons.
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: shell-conventions
 
