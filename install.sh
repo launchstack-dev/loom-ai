@@ -337,11 +337,12 @@ echo "Building install state..."
 STATE_FILE="${CLAUDE_DIR}/skills/library/install-state.toon"
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX") || { echo "ERROR: mktemp failed for state tmpfile" >&2; exit 1; }
-PRESERVED_TMP=$(mktemp "${STATE_FILE}.preserved.XXXXXX") || { echo "ERROR: mktemp failed for preserved tmpfile" >&2; exit 1; }
-
 # Cleanup function: idempotent rm -f on both tmpfiles. Installed as an EXIT
-# trap once so cleanup runs even if a later command in this block aborts.
+# trap BEFORE the mktemp calls — if the second mktemp fails after the first
+# succeeded, the EXIT handler still fires and cleans up the leaked tmpfile.
+# The cleanup uses `${STATE_TMP:-}` parameter-default expansion so `rm -f ""`
+# is a safe no-op while the vars are still unset.
+#
 # We do NOT issue `trap - EXIT` on the success path — leaving the trap
 # installed is safe (rm -f is idempotent) and avoids clearing any other EXIT
 # handler that future code in install.sh may install before this block runs.
@@ -349,6 +350,9 @@ _loom_cleanup_install_state() {
   rm -f "${STATE_TMP:-}" "${PRESERVED_TMP:-}"
 }
 trap _loom_cleanup_install_state EXIT
+
+STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX") || { echo "ERROR: mktemp failed for state tmpfile" >&2; exit 1; }
+PRESERVED_TMP=$(mktemp "${STATE_FILE}.preserved.XXXXXX") || { echo "ERROR: mktemp failed for preserved tmpfile" >&2; exit 1; }
 
 # Extract user-added rows (anything NOT owned by install.sh) from the existing
 # state file. A "system" row is identified by its 2nd column (`type`) being one
