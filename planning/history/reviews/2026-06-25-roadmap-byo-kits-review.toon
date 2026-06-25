@@ -1,0 +1,59 @@
+type: roadmap-review
+roadmapFile: planning/ROADMAP-byo-kits.md
+reviewedAt: 2026-06-25T00:00:00Z
+agentCount: 3
+agentsRequested: 4
+agentsMissing[1]: scope-feasibility-agent
+structuralErrors: 0
+structuralWarnings: 0
+
+agents[3]{name,findingCount,blockingCount,warningCount,infoCount}:
+  feature-coverage-agent,11,4,4,3
+  strategy-agent,8,2,3,3
+  ux-agent,18,3,11,4
+
+findings[26]{id,agent,severity,dimension,title}:
+  F-FC-01,feature-coverage,critical,schema,kits[] table parallel to existing components[] in install-state.toon
+  F-FC-02,feature-coverage,critical,api-surface,no local-path source for add-kit blocks authoring loop
+  F-FC-03,feature-coverage,high,competitive,no upstream staleness check (npm outdated parity)
+  F-FC-04,feature-coverage,high,schema,type infrastructure in kit.toon ambiguity for hooks
+  F-FC-05,feature-coverage,medium,schema,missing license homepage maxLoomVersion fields in kit.toon
+  F-FC-06,feature-coverage,medium,api-surface,no --dry-run on add-kit
+  F-FC-07,feature-coverage,medium,api-surface,no list-kit or inspect-kit subcommand
+  F-FC-08,feature-coverage,medium,api-surface,no --check-only on update-kit
+  F-FC-09,feature-coverage,medium,api-surface,no bulk update-all-kits or check-all-kits
+  F-FC-10,feature-coverage,low,schema,no kitVersion semantic in kit.toon for breaking changes
+  F-FC-11,feature-coverage,low,competitive,positioning vs private claude plugin underspecified
+  F-ST-01,strategy,critical,sequencing,kits[] schema collision with M-07 plugin install-state writes (Q-03)
+  F-ST-02,strategy,critical,demand,demand validation gate missing - one user report not enough
+  F-ST-03,strategy,high,positioning,differentiation vs claude plugin add github private repo not closed
+  F-ST-04,strategy,high,sequencing,M-06 OSS launch still in-flight - install-state v3 dependency unstated
+  F-ST-05,strategy,high,positioning,kit distribution closer to slash-command bundle than workflow loop
+  F-ST-06,strategy,medium,sequencing,distracts engineering attention from flagship convergence story
+  F-ST-07,strategy,medium,schema,Q-02 project-local vs user-global target unresolved
+  F-ST-08,strategy,low,testability,cross-machine convergence metric not testable by described fixtures
+  F-UX-01,ux,critical,command-surface,verb collision add vs add-kit remove vs remove-kit update vs update-kit
+  F-UX-02,ux,critical,error-state,gh auth error has 3 distinct states all collapsed
+  F-UX-03,ux,critical,authoring,no loom-kit init no example kit.toon no scaffold
+  F-UX-04,ux,warning,state-coverage,update-kit confirmation prompt text undefined
+  F-UX-05,ux,warning,error-state,loom doctor --kits drift report has no recovery copy
+  F-UX-06,ux,warning,state-coverage,9 of 12 user states underspecified
+  F-UX-07,ux,info,state-coverage,success state output undefined for all three commands
+
+crossCuttingThemes[4]{theme,findingIds,confidence,severity}:
+  Q-03 plugin install-state clobber must resolve before M-01,F-FC-01;F-ST-01,high,critical
+  Q-02 project-local vs user-global target undeferrable,F-FC-01;F-ST-07;F-UX-06,high,high
+  Differentiation vs private plugin undertheorized,F-FC-11;F-ST-03,high,high
+  Authoring journey invisible - kit author needs scaffold,F-FC-02;F-UX-03,high,high
+
+requiredChangesBeforeApprove[10]{id,action}:
+  REQ-01,resolve Q-03 plugin install-state.toon clobber risk by reading M-07 install code
+  REQ-02,resolve Q-02 in-roadmap as C-07 target scope constraint
+  REQ-03,add C-08 differentiation vs private claude plugin add github
+  REQ-04,add C-09 demand validation gate - 2 of 3 polled teams confirm before M-01
+  REQ-05,drop hyphenated verbs - extend existing add remove update to detect github scheme
+  REQ-06,promote Q-01 to F-07 local path source as required for authoring
+  REQ-07,add F-08 loom-kit init scaffold command for authoring discoverability
+  REQ-08,resolve loom doctor --kits as flag or subcommand
+  REQ-09,specify error copy for gh auth (3 states) ref-not-found checksum mismatch name collision
+  REQ-10,define success-state output for add-kit update-kit remove-kit including drift-recovery line

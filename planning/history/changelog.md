@@ -445,6 +445,95 @@
 - Phases: 5, Waves: 3, Deliverables: 6
 - Subcommands: commit, push, pr, merge, cleanup, review-pr
 
+## 2026-06-25 — ROADMAP-byo-kits.md review-integrate
+
+Folded 26 review findings (3 agents) into planning/ROADMAP-byo-kits.md.
+
+**Constraints added:** C-07 (target-path scope per type), C-08 (differentiation vs private plugin), C-09 (demand validation gate), C-10 (no infrastructure items in kits v1), C-11 (extend components[] not parallel kits[] table).
+
+**Features added:** F-07 (local path source, promoted from Q-01), F-08 (init-kit scaffold for authoring discoverability). totalFeatures 6 → 8.
+
+**Verb surface:** kept existing add | remove | update | sync (no hyphenated add-kit/remove-kit/update-kit). Scheme-based dispatch via github: prefix.
+
+**Resolved:** Q-01 (→ F-07), Q-02 (→ C-07). **Still open:** Q-03 (plugin-clobber risk, BLOCKING M-01), Q-04, Q-05.
+
+**Acceptance criteria upgraded** for F-02/F-03/F-04/F-05 with: gh auth 3-state error reporting, --dry-run, --check-only, --check-upstream, KIT_REF_NOT_FOUND, KIT_CHECKSUM_FAIL, KIT_NAME_CONFLICT, KIT_DRIFT, KIT_STALE errors, progress feedback, success-state output, mutable-ref warning, remove-confirmation guard.
+
+Status: reviewed (was draft → reviewed via /loom-roadmap review on 2026-06-25). Not yet approved — Q-03 verification and C-09 demand gate are explicit prerequisites.
+
+Review record: planning/history/reviews/2026-06-25-roadmap-byo-kits-review.toon
+
+## 2026-06-25 — ROADMAP-byo-kits.md autoconverge (rounds 2-3)
+
+Round 2 surfaced 1 critical + 2 high + 3 medium + 1 low. Round 3 ran clean on feature-coverage, surfaced 1 high on UX (F-05 success output). All integrated.
+
+**Round 2 integration:**
+- F-09 added (new feature): `/loom-library checksum <directory>` companion to F-08, full acceptance criteria + error codes
+- C-07 scope enum: `{project, global}` with explicit override prompt text and --force suppression
+- C-11 authoritative-read rule: `components[]` wins; auxiliary file rewrites on mismatch; F-04 flags `KIT_STATE_INCONSISTENT`
+- F-01 acceptance: scope enum validation + Q-03 dependency note
+- F-02 `KIT_REF_REQUIRED` for `github:owner/repo` with no `@ref` (no silent default to mutable @main)
+- F-07 `KIT_MANIFEST_NOT_FOUND` for missing local kit.toon
+- F-08 `KIT_DIRECTORY_NOT_EMPTY` refusing non-empty target without --force
+- M-01 exit expanded with full error-code list + end-to-end authoring loop verification
+- Q-04 resolved: `list` surfaces all `components[]` rows including kits naturally
+
+**Round 3 integration:**
+- F-05 success output: `Kit '{name}' updated: <old-sha> → <new-sha>, N files replaced.` with changed-file list
+
+**Converge status:** converged after 3 rounds. 0 critical, 0 high findings remain across feature-coverage + strategy + ux.
+
+**Still open (by design):** Q-03 (plugin clobber - M-01 entry gate), Q-05 (kit.toon format version policy - defer to first breaking change).
+
+totalFeatures: 6 → 8 → 9
+Constraints: 6 → 11
+
+## 2026-06-25 — ROADMAP-byo-kits.md Q-03 resolved
+
+**Code-read findings:**
+- `~/.loom/install.toon` is the plugin/update envelope (written by `scripts/lib/update/apply.ts`, `scripts/loom-update.ts`)
+- `~/.claude/skills/library/install-state.toon` is the core component inventory, written ONLY by `install.sh:350` (full overwrite, no merge)
+- Plugin upgrade does NOT touch the library install-state file — plugin-installed users would have been safe
+- Curl re-install DOES overwrite it — curl users would have lost any user-added rows
+
+**Decision:** Isolate kit state into dedicated `~/.claude/skills/library/kits.toon` instead of extending `components[]` in install-state.toon. Both channels (plugin + curl) are now safe by construction — no merge logic needed in either installer.
+
+**Roadmap changes:**
+- C-11 rewritten: dedicated `kits.toon` schema, `kits[]` + `items[]` with kit foreign-key column
+- Conceptual Data Model updated
+- M-01 entry criteria: Q-03 removed as gate (resolved), M-06 demoted from hard prerequisite to recommended (kit state no longer depends on install-state v3 wiring)
+- F-01 dependency note removed (storage layout now stable)
+- Open Questions: Q-03 moved to Resolved with code-read summary
+
+**Status:** roadmap is now blocked only on C-09 demand validation gate (3-team conversation). All structural and schema prerequisites resolved.
+
+## 2026-06-25 — ROADMAP-byo-kits.md C-09 deferred to post-OSS-launch
+
+**Reason:** Original C-09 required polling 3 Loom-using teams. Loom's user base at current stage (main ROADMAP.md M-06 OSS launch still IN-FLIGHT) cannot supply 3 independent teams to poll. Gate as written was unsatisfiable.
+
+**Decision:** Defer C-09 execution until after M-06 5-stranger cold-install milestone. Original three-team poll criterion preserved verbatim for execution at that point.
+
+**Roadmap changes:**
+- C-09 rewritten with deferral framing + rationale explaining why "lower the bar" and "drop the gate" were rejected
+- M-01 entry criteria: M-06 5-stranger milestone added as the first gate; C-09 chained behind it
+- Risks section: theatre risk mitigated by post-OSS deferral; new risk added for OSS-launch-slips-and-BYO-stalls (mitigated — no engineering cost while dormant)
+
+**Status:** Roadmap is now fully converged and unblocked. All schema, structural, and design prerequisites resolved. Implementation cannot begin until M-06 ships and C-09 gate clears, but no further roadmap work is needed.
+
+## 2026-06-25 — ROADMAP-byo-kits.md APPROVED
+
+Status: reviewed → approved. Frontmatter `approvedAt: 2026-06-25` set.
+
+**Approval summary:**
+- 9 features, 11 constraints, 2 milestones
+- 3 converge rounds — 0 critical / 0 high findings remain
+- Q-03 resolved by code-read (kit state isolated to dedicated kits.toon file)
+- Q-04 resolved during converge (list walks kits.toon naturally)
+- C-09 demand validation deferred to post-OSS-launch (no fictitious-team theatre)
+- Implementation gate: main ROADMAP.md M-06 OSS launch → C-09 poll → M-01 start
+
+Plan generation unlocked: `/loom-plan create planning/ROADMAP-byo-kits.md` is valid once M-06 ships and demand gate clears. No engineering action required today.
+
 ## 2026-06-25 — Safe upgrade path PR (fix/safe-upgrade-path)
 
 **Problem:** Three unsafe upgrade paths in production:
