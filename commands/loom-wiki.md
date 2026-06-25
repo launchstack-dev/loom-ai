@@ -76,9 +76,9 @@ Parse arguments after `refresh`:
 #### Step 0: Read Protocols
 
 Read these files for context:
-- `~/.claude/agents/protocols/wiki-conventions.md` -- significance, atomic writes
-- `~/.claude/agents/protocols/wiki-page.schema.md` -- frontmatter schema, required H2 sections per category
-- `~/.claude/agents/protocols/wiki-index.schema.md` -- index columns (`summary`, `estimatedTokens`, `subtype`)
+- `~/.claude/protocols/wiki-conventions.md` -- significance, atomic writes
+- `~/.claude/protocols/wiki-page.schema.md` -- frontmatter schema, required H2 sections per category
+- `~/.claude/protocols/wiki-index.schema.md` -- index columns (`summary`, `estimatedTokens`, `subtype`)
 
 #### Step 1: Build candidate list
 
@@ -159,9 +159,9 @@ Parse arguments after `ingest`:
 #### Step 0: Read Protocols
 
 Read these files for context on wiki conventions:
-- `~/.claude/agents/protocols/wiki-conventions.md` -- directory structure, page format, significance threshold
-- `~/.claude/agents/protocols/wiki-page.schema.md` -- page frontmatter format
-- `~/.claude/agents/protocols/toon-format.md` -- TOON format reference
+- `~/.claude/protocols/wiki-conventions.md` -- directory structure, page format, significance threshold
+- `~/.claude/protocols/wiki-page.schema.md` -- page frontmatter format
+- `~/.claude/protocols/toon-format.md` -- TOON format reference
 
 #### Step 1: Pre-flight
 
@@ -296,9 +296,9 @@ Parse arguments after `lint`:
 #### Step 0: Read Protocols
 
 Read these files for context:
-- `~/.claude/agents/protocols/wiki-lint-rules.md` -- full check catalog with IDs, severity, auto-fix rules
-- `~/.claude/agents/protocols/wiki-conventions.md` -- staleness model, cross-ref rules
-- `~/.claude/agents/protocols/toon-format.md` -- TOON format reference
+- `~/.claude/protocols/wiki-lint-rules.md` -- full check catalog with IDs, severity, auto-fix rules
+- `~/.claude/protocols/wiki-conventions.md` -- staleness model, cross-ref rules
+- `~/.claude/protocols/toon-format.md` -- TOON format reference
 
 #### Step 1: Pre-flight
 

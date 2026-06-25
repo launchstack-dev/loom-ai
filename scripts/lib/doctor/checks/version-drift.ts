@@ -9,7 +9,7 @@ import type { Check, CheckCategory } from "../check.interface";
 import type { InstallState as InstallStateEnvelope } from "../../install-state";
 
 // Inline structural HealthCheck type — Phase 0B left HealthCheck as `unknown`.
-// Mirrors `agents/protocols/doctor-report.schema.md`.
+// Mirrors `protocols/doctor-report.schema.md`.
 export interface HealthCheck {
   id: string;
   category: CheckCategory;

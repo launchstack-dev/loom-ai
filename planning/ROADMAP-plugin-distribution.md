@@ -123,7 +123,7 @@ Loom remains the planning + convergence workflow layer on top of Claude Code. Pl
 
 ## Data Model
 
-All schemas live under `agents/protocols/` and use TOON per CLAUDE.md. Sketches below; canonical definitions ship as part of the features that produce them.
+All schemas live under `protocols/` and use TOON per CLAUDE.md. Sketches below; canonical definitions ship as part of the features that produce them.
 
 ### `install.toon` (per-machine install state, at `~/.loom/install.toon`)
 ```

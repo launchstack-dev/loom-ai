@@ -101,7 +101,7 @@ If available, read `.loom/wiki/index.toon` and scan for pages related to the bug
    This bug appears to affect flow `{flow-title}` — the {affected-exit-state} exit path may be regressing.
    ```
 
-   Use the flow's `summary` and `exitStates` (per `agents/protocols/wiki-page.schema.md`) to pick a plausible `{affected-exit-state}`; if uncertain, omit the exit-state clause and keep just the flow name.
+   Use the flow's `summary` and `exitStates` (per `protocols/wiki-page.schema.md`) to pick a plausible `{affected-exit-state}`; if uncertain, omit the exit-state clause and keep just the flow name.
 
 **2b. Fix archive check.**
 
@@ -159,7 +159,7 @@ Dry run: {true/false}
 TaskId: {fixId}
 
 {If Matched flows is non-empty: "Treat the listed flow pageIds as authoritative user-facing-impact context. Populate affectedFlows[] in your AgentResult with the flow pageIds whose exitStates or steps[].touches intersect the diff. If the bug regresses a specific exit-state on a flow, name it in your root-cause analysis."}
-{If --no-archive is NOT set: "Read the fix-archive schema at agents/protocols/fix-archive.schema.md before writing the archive entry."}
+{If --no-archive is NOT set: "Read the fix-archive schema at protocols/fix-archive.schema.md before writing the archive entry."}
 {If --no-archive: "Archive is disabled. Do NOT write any fix archive entry or touch .loom/fix-archive/. Skip all archive-related steps."}
 {If --no-verify: "Skip verification — do not run test/typecheck/lint commands."}
 {If --dry-run: "DIAGNOSTIC ONLY — do NOT apply any code changes. Complete phases 1-2 and 4 (context, diagnosis, impact assessment) then return. Write the archive entry with fix field set to 'DRY RUN — fix not applied' and status partial."}
@@ -256,7 +256,7 @@ When `--autoconverge` is set, the command BYPASSES the analyst-driven flow above
 
 ### Preconditions
 
-- `--symptom <path>` MUST be provided. The path MUST resolve to a real file under repo root (per OQ-02 in `agents/protocols/converge.config.applications.md`).
+- `--symptom <path>` MUST be provided. The path MUST resolve to a real file under repo root (per OQ-02 in `protocols/converge.config.applications.md`).
 - `--dry-run` MUST NOT be set (mutually exclusive — autoconverge always applies fixes).
 
 If either precondition fails, print an error and stop before Step 4.
@@ -272,7 +272,7 @@ The subject MUST exist under the repo root.
 
 ### Step A2: Generate the converge.config
 
-Write `converge.config.toon` per `agents/protocols/converge.config.schema.md` with the F-03 field values from `agents/protocols/converge.config.applications.md`:
+Write `converge.config.toon` per `protocols/converge.config.schema.md` with the F-03 field values from `protocols/converge.config.applications.md`:
 
 ```toon
 runId: conv-{YYYY-MM-DD-HH-mm-ss}-{NNN}
@@ -312,7 +312,7 @@ Final blocks:   {finalBlockingCount}
 Summary:        .plan-execution/convergence-summary.toon
 ```
 
-If `status != converged`, print a one-line recovery hint from `agents/protocols/convergence-summary.schema.md` § Halt Reason Cross-Reference.
+If `status != converged`, print a one-line recovery hint from `protocols/convergence-summary.schema.md` § Halt Reason Cross-Reference.
 
 ### What autoconverge skips
 

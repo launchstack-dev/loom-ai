@@ -46,7 +46,7 @@ The catalog file (`skills/library.yaml`) has four top-level sections:
 
 ### skills
 
-Protocol schemas and behavioral guidelines installed to `~/.claude/agents/protocols/`:
+Protocol schemas and behavioral guidelines installed to `~/.claude/protocols/`:
 - Execution protocols, TOON format spec, agent result schema
 - Plan/state/pipeline schemas
 - Wiki schemas and conventions
@@ -112,7 +112,7 @@ Falls back to `curl` if `gh` is unavailable.
 |------|-----------------|
 | `agents` | `~/.claude/agents/<name>.md` |
 | `prompts` | `~/.claude/commands/<name>.md` |
-| `skills` | `~/.claude/agents/protocols/<name>.md` |
+| `skills` | `~/.claude/protocols/<name>.md` |
 | `infrastructure` | Explicit `target:` path from catalog |
 
 ## Commands

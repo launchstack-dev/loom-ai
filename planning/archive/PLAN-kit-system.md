@@ -99,11 +99,11 @@ Supported targets (all agents): dbt, Dagster, Airflow, BigQuery, Bauplan, raw SQ
 **Description:** Define the kit metadata format, insertion point enum, gate primitive, naming conventions, and data engineering agent contracts. Include a spike: one stub agent + sample kit entry to validate round-trip.
 
 **Deliverables:**
-- `agents/protocols/kit.schema.md` — kit manifest format, insertion point definitions, naming conventions, data-eng agent contracts, sample kit entry
-- `agents/protocols/agent-result.schema.md` — extended with gate, gateReason, failAction, retryMax fields + blocker equivalence docs
-- `agents/protocols/orchestration-config.schema.md` — extended with `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]` sections + reconciliation table mapping insertionPoint vs phase
+- `protocols/kit.schema.md` — kit manifest format, insertion point definitions, naming conventions, data-eng agent contracts, sample kit entry
+- `protocols/agent-result.schema.md` — extended with gate, gateReason, failAction, retryMax fields + blocker equivalence docs
+- `protocols/orchestration-config.schema.md` — extended with `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]` sections + reconciliation table mapping insertionPoint vs phase
 
-**File Ownership:** `agents/protocols/kit.schema.md`, `agents/protocols/agent-result.schema.md`, `agents/protocols/orchestration-config.schema.md`
+**File Ownership:** `protocols/kit.schema.md`, `protocols/agent-result.schema.md`, `protocols/orchestration-config.schema.md`
 
 **Acceptance Criteria:**
 - [ ] kit.schema.md defines the kits section format for library.yaml with all fields from Schema above including version and minLoomVersion

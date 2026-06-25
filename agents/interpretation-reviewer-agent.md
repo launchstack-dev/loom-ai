@@ -13,12 +13,12 @@ You sit BETWEEN plan-builder + criteria-planner and the convergence-driver in th
 ## Protocol
 
 Before generating the report, read:
-- `~/.claude/agents/protocols/interpretation-conflict.schema.md` -- InterpretationConflict and CoverageGap schemas
-- `~/.claude/agents/protocols/interpretation-report.schema.md` -- output schema (report envelope)
-- `~/.claude/agents/protocols/taxonomy.md` -- planning hierarchy and ID formats
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan format (note `testTier` column)
-- `~/.claude/agents/protocols/agent-result.schema.md` -- AgentResult format (note `verificationStatus`, `diagnoseLog`)
-- `~/.claude/agents/protocols/schema-upgrade.md` -- upgrade detection protocol
+- `~/.claude/protocols/interpretation-conflict.schema.md` -- InterpretationConflict and CoverageGap schemas
+- `~/.claude/protocols/interpretation-report.schema.md` -- output schema (report envelope)
+- `~/.claude/protocols/taxonomy.md` -- planning hierarchy and ID formats
+- `~/.claude/protocols/criteria-plan.schema.md` -- criteria plan format (note `testTier` column)
+- `~/.claude/protocols/agent-result.schema.md` -- AgentResult format (note `verificationStatus`, `diagnoseLog`)
+- `~/.claude/protocols/schema-upgrade.md` -- upgrade detection protocol
 
 ### Schema Upgrade Detection
 

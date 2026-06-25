@@ -35,8 +35,8 @@ crossCuttingFindings[12]{rank,issue,flaggedBy,severity,recommendedAction}:
   12,loom-converge-cited-in-Phase-11-README-Differentiators-but-not-shipped-by-this-plan,strategy-and-ux,high,Either-add-as-Phase-8-harness-check-or-remove-from-README-contract
 
 schemaConflicts[2]{conflict,severity,location}:
-  InstallState-plan-defines-new-channel-tracking-envelope-on-disk-schema-is-v3-component-inventory,critical,planning/plans/PLAN-plugin-marketplace-merged.md-Schema-section-vs-agents/protocols/install-state.schema.md
-  DoctorReport-category-enum-plan-channel-hook-wiring-on-disk-files-runtime,critical,planning/plans/PLAN-plugin-marketplace-merged.md-line-72-vs-agents/protocols/doctor-report.schema.md
+  InstallState-plan-defines-new-channel-tracking-envelope-on-disk-schema-is-v3-component-inventory,critical,planning/plans/PLAN-plugin-marketplace-merged.md-Schema-section-vs-protocols/install-state.schema.md
+  DoctorReport-category-enum-plan-channel-hook-wiring-on-disk-files-runtime,critical,planning/plans/PLAN-plugin-marketplace-merged.md-line-72-vs-protocols/doctor-report.schema.md
 
 uxWalkabilityIssues[3]{issue,phase,severity}:
   MIGRATION_OWNERSHIP_DIVERGED-remediation-uses-broken-diff-and-undefined-evidence-editor,9,critical
@@ -81,8 +81,8 @@ apiSurfaceGaps[6]{cli,gap,severity}:
   register-loom-hooks,--list-flag-missing-for-pre-registration-inspection,nice-to-have
 
 missingSchemas[2]{path,purpose}:
-  agents/protocols/update-check.schema.md,Schema-for-loom-update-check-json-output-currentVersion-latestVersion-behind-pinnedVersion
-  agents/protocols/submission-evidence.schema.md,Schema-for-marketplace-submission-evidence-toon-durable-artifact
+  protocols/update-check.schema.md,Schema-for-loom-update-check-json-output-currentVersion-latestVersion-behind-pinnedVersion
+  protocols/submission-evidence.schema.md,Schema-for-marketplace-submission-evidence-toon-durable-artifact
 
 executionReadiness:
   phasesReady[9]: 0, 1, 2, 4, 5, 7, 8, 13, 14

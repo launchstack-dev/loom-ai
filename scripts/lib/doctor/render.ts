@@ -4,7 +4,7 @@
  * Pure functions — injects TTY detection so tests can drive both branches
  * without faking `process.stdout`. The line shape is asserted in
  * `test/loom-doctor.test.ts` and documented in
- * `agents/protocols/doctor-report.schema.md`.
+ * `protocols/doctor-report.schema.md`.
  *
  * Line shape (per check):
  *   `{✓ PASS|⚠ WARN|✗ FAIL} {id} ({category}) — {message}`
@@ -18,7 +18,7 @@
 //
 // We re-declare a minimal structural shape rather than depending on the
 // `HealthCheck`/`DoctorReport` placeholders in
-// `agents/protocols/doctor-report.schema.md`; once real types ship we swap.
+// `protocols/doctor-report.schema.md`; once real types ship we swap.
 // ---------------------------------------------------------------------------
 
 export type CheckStatus = "pass" | "warn" | "fail";

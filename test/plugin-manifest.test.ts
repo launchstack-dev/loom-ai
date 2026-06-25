@@ -7,7 +7,6 @@ const manifestPath = path.join(repoRoot, ".claude-plugin", "plugin.json");
 const hooksManifestPath = path.join(repoRoot, "hooks", "hooks.json");
 const schemaPath = path.join(
   repoRoot,
-  "agents",
   "protocols",
   "upstream",
   "plugin.schema.json",
@@ -88,7 +87,7 @@ function validateAgainstSnapshot(
 }
 
 describe("plugin.json", () => {
-  it("validates against agents/protocols/upstream/plugin.schema.json", () => {
+  it("validates against protocols/upstream/plugin.schema.json", () => {
     const manifest = readJson(manifestPath) as PluginManifest;
     const schema = readJson(schemaPath) as JsonSchema;
     const errors = validateAgainstSnapshot(

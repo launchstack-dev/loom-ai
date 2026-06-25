@@ -13,11 +13,11 @@ You sit AFTER the criteria-planner-agent (which identifies e2e-tier criteria) an
 ## Protocol
 
 Before generating stories and tests, read:
-- `~/.claude/agents/protocols/e2e-story.schema.md` -- E2EStory and PlaywrightTest schemas, including the **required `derivedFrom[]` field** every story MUST populate
-- `~/.claude/agents/protocols/scenario.schema.md` -- canonical Given/When/Then scenario block format and the default-`testTier` resolution chain. Stories derive from scenarios; this schema defines the source.
-- `~/.claude/agents/protocols/convergence-tier.schema.md` -- tier definitions (e2e = level 3, milestone) AND the canonical Scenario-to-Tier resolution chain used to filter source scenarios
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- CriteriaPlanEntry with `testTier` and `scenarioRef` columns
-- `~/.claude/agents/protocols/taxonomy.md` -- planning hierarchy (e2e operates at milestone level)
+- `~/.claude/protocols/e2e-story.schema.md` -- E2EStory and PlaywrightTest schemas, including the **required `derivedFrom[]` field** every story MUST populate
+- `~/.claude/protocols/scenario.schema.md` -- canonical Given/When/Then scenario block format and the default-`testTier` resolution chain. Stories derive from scenarios; this schema defines the source.
+- `~/.claude/protocols/convergence-tier.schema.md` -- tier definitions (e2e = level 3, milestone) AND the canonical Scenario-to-Tier resolution chain used to filter source scenarios
+- `~/.claude/protocols/criteria-plan.schema.md` -- CriteriaPlanEntry with `testTier` and `scenarioRef` columns
+- `~/.claude/protocols/taxonomy.md` -- planning hierarchy (e2e operates at milestone level)
 
 ## Input Context
 

@@ -2,9 +2,9 @@
 /**
  * Debug-mode convergence harness (F-03).
  *
- * Mode:     `convergenceMode: document` per `agents/protocols/converge.config.applications.md`.
- * Output:   `ConvergenceFindings` TOON per `agents/protocols/findings.schema.md`.
- * Row variants: `agents/protocols/findings.applications-rows.md` § F-03.
+ * Mode:     `convergenceMode: document` per `protocols/converge.config.applications.md`.
+ * Output:   `ConvergenceFindings` TOON per `protocols/findings.schema.md`.
+ * Row variants: `protocols/findings.applications-rows.md` § F-03.
  *
  * Pipeline (per iteration):
  *

@@ -1,7 +1,7 @@
 /**
  * Sole writer of `IterationSnapshot` files for document-mode convergence runs.
  *
- * Schema:     `agents/protocols/iteration-snapshot.schema.md`
+ * Schema:     `protocols/iteration-snapshot.schema.md`
  * Called from: `agents/convergence-driver.md § Document Mode Safeguards § Auto-Snapshot Writer`
  * Error mode: warn-and-continue. The helper performs a single retry with 1s
  *             backoff on transient failure; if the retry also fails it throws

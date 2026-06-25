@@ -211,7 +211,7 @@ Loom is an **extensible** platform, not a fixed methodology — every reviewer, 
 
 There are two audiences for this surface: **consumers** and **authors**. To install a published skill kit, run `/loom-library use <kit>`. To author your own agent today, run `/loom-agent create`. The wizards scaffold the resource, add it to `skills/library.yaml`, and register it where it belongs.
 
-Five resource types compose every Loom behavior: **agent** (`.claude/agents/`), **prompt** (`.claude/commands/`), **protocol** (`agents/protocols/`), **skill** (`~/.claude/skills/`), and **infrastructure** (`hooks/`, `scripts/`). Per-project registration lives in `.claude/orchestration.toml`.
+Five resource types compose every Loom behavior: **agent** (`.claude/agents/`), **prompt** (`.claude/commands/`), **protocol** (`protocols/`), **skill** (`~/.claude/skills/`), and **infrastructure** (`hooks/`, `scripts/`). Per-project registration lives in `.claude/orchestration.toml`.
 
 ### Authoring kits
 
@@ -310,7 +310,7 @@ The `git clone` path is also the entry point for the [local-dev install pattern]
 │   ├── loom-library.md             Pull-on-demand catalog manager
 │   ├── loom-plan/, loom-roadmap/   Progressive-disclosure subcommand dirs
 │   └── loom-{change,code,wiki,…}   Noun-grouped commands
-├── agents/protocols/               Protocol schemas (pulled on demand)
+├── protocols/               Protocol schemas (pulled on demand)
 ├── config/starship-loom.toml       Starship status-line theme (optional)
 ├── skills/library/                 Library catalog cache
 ├── statusline-renderer.cjs         Pipeline + test-metrics + convergence segments
@@ -401,7 +401,7 @@ Confirm by inspecting `env | grep AGENT_TEAMS` inside the session.
 - One-shot commands (`/loom-quick`, `/loom-bugfix`, `/loom-code review`) — they don't span enough stages to benefit
 - Sessions where you actively want to inspect / inject between stages
 
-Either mode produces the same on-disk artifacts (`stage-context/*.toon`, `wave-N-summary.toon`, etc.) — agent teams is a runtime acceleration, not a different pipeline. See `commands/loom-auto.md` Step 1 for the detection logic and `agents/protocols/team-coordination.md` for the dispatch protocol.
+Either mode produces the same on-disk artifacts (`stage-context/*.toon`, `wave-N-summary.toon`, etc.) — agent teams is a runtime acceleration, not a different pipeline. See `commands/loom-auto.md` Step 1 for the detection logic and `protocols/team-coordination.md` for the dispatch protocol.
 
 ### Your first run
 
@@ -444,7 +444,7 @@ git pull
 /loom-library sync                  Reconcile ~/.claude/ symlinks vs the local checkout
 ```
 
-A `sync` on a local-dev env (detected via `~/.claude/skills/library/library.yaml` being a symlink) walks the local checkout's `commands/`, `agents/`, `agents/protocols/`, `skills/library.yaml`, and `skills/*/SKILL.md` (native Claude Code skills). It adds symlinks for new files, replaces stale install.sh copies with symlinks, and prunes broken symlinks whose targets no longer exist. The local checkout itself updates via plain `git pull` — symlinks pick up the new file contents automatically the moment `git pull` finishes; `sync` only fires when the checkout's *file set* changes (new agents, removed files, etc.).
+A `sync` on a local-dev env (detected via `~/.claude/skills/library/library.yaml` being a symlink) walks the local checkout's `commands/`, `agents/`, `protocols/`, `skills/library.yaml`, and `skills/*/SKILL.md` (native Claude Code skills). It adds symlinks for new files, replaces stale install.sh copies with symlinks, and prunes broken symlinks whose targets no longer exist. The local checkout itself updates via plain `git pull` — symlinks pick up the new file contents automatically the moment `git pull` finishes; `sync` only fires when the checkout's *file set* changes (new agents, removed files, etc.).
 
 `/loom-library sync` is dry-run by default; pass `--apply` to mutate.
 
@@ -511,7 +511,7 @@ The 4-tier convergence model maps tiers to planning-hierarchy levels:
 | E2E | Feature | e2e-runner-agent (Playwright / Chrome MCP) | block-milestone (zero-critical) |
 | QA Review | Milestone | qa-review-agent (fan-out) | advisory (zero-blocking) |
 
-See `docs/scenarios-authoring-template.md` for authoring guidance and `agents/protocols/scenario.schema.md` for validator rules.
+See `docs/scenarios-authoring-template.md` for authoring guidance and `protocols/scenario.schema.md` for validator rules.
 
 ## Convergence: one loop, applied everywhere
 
@@ -596,7 +596,7 @@ The four tiers run in order; each tier gates the next per its `gatingBehavior`:
 | **E2E** | Milestone | zero-blocking | Blocks milestone close — advisory stories may still fail |
 | **QA Review** | Phase | zero-critical | Advisory — critical findings block, warnings/info do not |
 
-The convergence-planner emits targets from scenarios using the resolution chain in `agents/protocols/convergence-tier.schema.md` (rules summarized: `automatable: false` → qa-review; single-tag default; multi-tag highest-cost wins; `whenTriggerType` fallback; explicit `testTier` always overrides).
+The convergence-planner emits targets from scenarios using the resolution chain in `protocols/convergence-tier.schema.md` (rules summarized: `automatable: false` → qa-review; single-tag default; multi-tag highest-cost wins; `whenTriggerType` fallback; explicit `testTier` always overrides).
 
 ### Circuit breakers
 
@@ -955,7 +955,7 @@ statusline-renderer.cjs        Pipeline state + test metrics + convergence segme
 loom-update-checker.cjs        Background catalog version check (4h throttle)
 ```
 
-Selected protocols (47 total in `agents/protocols/`):
+Selected protocols (47 total in `protocols/`):
 
 | Protocol | Purpose |
 |----------|---------|
@@ -1168,7 +1168,7 @@ Manual: `/loom-wiki ingest`, `/loom-wiki lint`, `/loom-wiki query "question"`.
 
 ## Data Formats
 
-- **TOON** (Token-Oriented Object Notation) for all on-disk artifacts and agent communication — token-efficient, structured, machine-diffable. Spec at `agents/protocols/toon-format.md`. ~30–60% smaller than JSON for typical Loom payloads.
+- **TOON** (Token-Oriented Object Notation) for all on-disk artifacts and agent communication — token-efficient, structured, machine-diffable. Spec at `protocols/toon-format.md`. ~30–60% smaller than JSON for typical Loom payloads.
 - **JSON** for AJV schema validation tests only.
 - **Markdown** for plans, roadmaps, and wiki pages; TOON appears as fenced blocks inside.
 

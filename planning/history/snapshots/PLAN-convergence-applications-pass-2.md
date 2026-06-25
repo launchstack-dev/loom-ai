@@ -19,7 +19,7 @@ Wire four additional harness + integrator pairs (code-review, test-run, debug, P
 
 - **Runtime:** bun (preferred) / node fallback for harness scripts (TypeScript)
 - **Driver substrate:** `agents/convergence-driver.md` (frozen, do not modify per CA-01)
-- **Shared schemas:** `agents/protocols/findings.schema.md`, `iteration-snapshot.schema.md`, `convergence-summary.schema.md` (all frozen)
+- **Shared schemas:** `protocols/findings.schema.md`, `iteration-snapshot.schema.md`, `convergence-summary.schema.md` (all frozen)
 - **Shared helpers:** `scripts/lib/aggregate-findings.ts` (existing), `hooks/lib/iteration-snapshot.ts` (existing)
 - **External tooling:** `gh` CLI (F-04 PR comments + diff retrieval), test runners (bun test, vitest, pytest)
 - **Data format:** TOON for all Loom artifacts (findings, summaries, configs, pr-state)
@@ -445,18 +445,18 @@ Wrappers read environment variables at invocation time and merge into the genera
 **Agent:** contracts-agent
 **Objective:** Establish the shared types (IntegratorModeInput, TestFinding, BotReviewFinding, PrState, DebugSymptom, ConvergeConfigDocument) and the harness invocation contract that all four applications consume.
 **Dependencies:** None
-**File Ownership:** agents/protocols/integrator-mode.schema.md, agents/protocols/harness-contract.schema.md, scripts/lib/types/convergence-applications.ts
+**File Ownership:** protocols/integrator-mode.schema.md, protocols/harness-contract.schema.md, scripts/lib/types/convergence-applications.ts
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/integrator-mode.schema.md | Create | contracts-agent |
-| agents/protocols/harness-contract.schema.md | Create | contracts-agent |
+| protocols/integrator-mode.schema.md | Create | contracts-agent |
+| protocols/harness-contract.schema.md | Create | contracts-agent |
 | scripts/lib/types/convergence-applications.ts | Create | contracts-agent |
 
 #### Acceptance Criteria
-- [ ] `agents/protocols/integrator-mode.schema.md` defines IntegratorModeInput exactly as in Schema section above
-- [ ] `agents/protocols/harness-contract.schema.md` documents the four env vars (SUBJECT, OUTPUT_PATH, ITERATION, CONFIG_PATH) and the exit-code contract
+- [ ] `protocols/integrator-mode.schema.md` defines IntegratorModeInput exactly as in Schema section above
+- [ ] `protocols/harness-contract.schema.md` documents the four env vars (SUBJECT, OUTPUT_PATH, ITERATION, CONFIG_PATH) and the exit-code contract
 - [ ] `scripts/lib/types/convergence-applications.ts` exports TypeScript interfaces matching every entity in the Schema section
 - [ ] `bun run tsc --noEmit` exits with code 0 against the new types
 - [ ] No file in the deliverables list is referenced by any existing implementation yet (Wave 0 is read-only after this phase)
@@ -483,7 +483,7 @@ automatable: true
 ```toon
 id: S-02
 title: Integrator-mode schema is loadable
-given[1]: agents/protocols/integrator-mode.schema.md exists
+given[1]: protocols/integrator-mode.schema.md exists
 when: A markdown linter parses the file
 whenTriggerType: api-call
 then[2]: No syntax errors are reported, The frontmatter YAML parses to an object containing fields findingsPath, subjectPath, roadmapPath, iterationNumber
@@ -692,7 +692,7 @@ automatable: true
 
 #### Convergence Targets
 - Both agent .md files exist and validate against agent-frontmatter conventions
-- No new schema files under `agents/protocols/` are introduced (CA-01 boundary check)
+- No new schema files under `protocols/` are introduced (CA-01 boundary check)
 
 #### Scenarios
 
@@ -1064,7 +1064,7 @@ bun run scripts/validate-library.ts
 - [ ] All four new wrappers (`/loom-code review --autoconverge`, `/loom-test --autoconverge`, `/loom-bugfix --autoconverge`, `/loom-git review-pr --autoconverge`) exist and pass their fixtures
 - [ ] `fixer-agent` Integrator Mode is documented and exercised by F-01, F-02, F-04
 - [ ] `debug-investigator-agent`, `fix-applier-agent`, `pr-fixer-agent` exist and are registered
-- [ ] Zero modifications to `agents/convergence-driver.md`, `agents/protocols/findings.schema.md`, `iteration-snapshot.schema.md`, `convergence-summary.schema.md` (CA-01 enforced via diff)
+- [ ] Zero modifications to `agents/convergence-driver.md`, `protocols/findings.schema.md`, `iteration-snapshot.schema.md`, `convergence-summary.schema.md` (CA-01 enforced via diff)
 - [ ] End-to-end fixture sweep exits 0
 - [ ] Success Metric #4 verified: all five applications share circuit-breaker enum + summary shape
 - [ ] Spawn-count ceilings hold per application

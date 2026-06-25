@@ -15,11 +15,11 @@ The convergence-driver routes criteria with `testTier: qa-review` to you. You re
 ## Protocol
 
 Before reviewing, read:
-- `~/.claude/agents/protocols/convergence-tier.schema.md` -- tier definitions (qa-review = level 2, phase)
-- `~/.claude/agents/protocols/interpretation-conflict.schema.md` -- conflict format
-- `~/.claude/agents/protocols/interpretation-report.schema.md` -- report format
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan with testTier field
-- `~/.claude/agents/protocols/agent-result.schema.md` -- AgentResult envelope
+- `~/.claude/protocols/convergence-tier.schema.md` -- tier definitions (qa-review = level 2, phase)
+- `~/.claude/protocols/interpretation-conflict.schema.md` -- conflict format
+- `~/.claude/protocols/interpretation-report.schema.md` -- report format
+- `~/.claude/protocols/criteria-plan.schema.md` -- criteria plan with testTier field
+- `~/.claude/protocols/agent-result.schema.md` -- AgentResult envelope
 
 ## Input
 

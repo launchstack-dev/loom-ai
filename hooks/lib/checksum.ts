@@ -14,7 +14,7 @@
  * validator, which is exactly what the checksum is meant to prevent.
  *
  * Canonical-body algorithm — per
- * `agents/protocols/contract-page-extensions.schema.md` `## Drift Detection`:
+ * `protocols/contract-page-extensions.schema.md` `## Drift Detection`:
  *   1. Extract the body (everything after the closing TOON frontmatter fence).
  *   2. Normalize line endings to `\n`.
  *   3. Strip trailing whitespace per line.

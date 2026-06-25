@@ -1,7 +1,7 @@
 /**
  * Pure-function migrator for library.yaml v2 → v3.
  * No I/O. The caller parses YAML, hands us an object, gets a v3 object back.
- * See agents/protocols/library-catalog.schema.md and schema-upgrade.md Rule 13.
+ * See protocols/library-catalog.schema.md and schema-upgrade.md Rule 13.
  */
 
 import {
@@ -525,7 +525,7 @@ export const MIGRATIONS: MigrationRegistry = Object.freeze({
  *
  * Bumped from 3 → 4 in Phase 1 of PLAN-kit-native-skills.md, simultaneously
  * with the real `"3->4"` migrator landing above and `library-catalog.currentVersion`
- * in `agents/protocols/schema-versions.toon` bumping to 4. The parity test in
+ * in `protocols/schema-versions.toon` bumping to 4. The parity test in
  * `test/protocol/schema-upgrade-v3.test.ts` guards against drift between the
  * three sites.
  */

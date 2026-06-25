@@ -52,7 +52,7 @@ Halt conditions: `halted-pass-cap` (round == passLimit, default 3, max 5), `halt
 
 ## Dimensions and Rubrics
 
-Eight MVP default dimensions, each backed by a pedagogical rubric file at `agents/protocols/roadmap-rubrics/{name}.md` with exactly three required sections (`## Green`, `## Yellow`, `## Red`):
+Eight MVP default dimensions, each backed by a pedagogical rubric file at `protocols/roadmap-rubrics/{name}.md` with exactly three required sections (`## Green`, `## Yellow`, `## Red`):
 
 - `vision`, `milestones`, `tool-selection`, `data-model`, `success-metrics`, `constraints`, `risks`, `out-of-scope`
 

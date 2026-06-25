@@ -26,7 +26,7 @@ library:
   protocols:
     - name: execution-protocols
       description: Inter-agent protocol schemas for the Loom execution pipeline
-      source: agents/protocols/execution-conventions.md
+      source: protocols/execution-conventions.md
 
   skills:
     - name: python-conventions

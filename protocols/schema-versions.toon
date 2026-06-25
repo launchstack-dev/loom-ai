@@ -1,0 +1,77 @@
+# Schema Version Registry
+#
+# Single source of truth for "what's the current version of every Loom schema".
+# Read by /loom-upgrade detection logic, the install-state writer, and tests.
+#
+# This registry is HUMAN-AUTHORITATIVE. Code mirrors `currentVersion` in
+# module-level `CURRENT_VERSION` constants (one per "module" kind migrator).
+# The parity test in `test/protocol/schema-upgrade-v3.test.ts` guards against
+# drift: if you bump currentVersion here but forget to bump CURRENT_VERSION in
+# the migrator, the test fails. The reverse — bumping the constant without
+# bumping the registry — also fails because the test reads this file by name.
+#
+# Adding a new schema version: see "Adding a New Schema Version" in
+# schema-upgrade.md.
+
+schemaVersion: 1
+lastUpdated: 2026-06-13
+
+# `migratorKind` values:
+#   - "module"   → typed migrator module exporting MIGRATIONS + migrateToLatest()
+#   - "inline"   → migration logic lives directly in /loom-upgrade (Rule N steps)
+#   - "agent"    → structural migration via an upgrade agent (Tier C)
+#   - "scaffold" → empty structure created when missing (no version concept)
+#   - "static"   → no migration ever; file is read at current version or not at all
+#
+# `pathKind` values:
+#   - "home"     → home-relative (~/.claude/…)
+#   - "literal"  → literal path relative to project root
+#   - "glob"     → glob pattern (e.g. *.agent-result.toon)
+#   - "dir"      → directory containing many files of this schema kind
+#   - "multi"    → multi-source union (pipe-separated paths/globs/dirs)
+#                  used when one schema-kind spans several disjoint locations
+#                  that the migration rule treats as a single concern
+#
+# `migratorPath` values:
+#   - "module" kind  → relative path to the TS migrator module
+#   - "inline" kind  → rule anchor in schema-upgrade.md (e.g. schema-upgrade.md#rule-1)
+#   - "agent" kind   → path to the upgrade agent .md file
+#   - "scaffold"/"static" kinds → "—" (no executable migrator)
+
+registry[24]{schema,file,pathKind,currentVersion,migratorKind,migratorPath,rule}:
+  install-state,~/.claude/skills/library/install-state.toon,home,3,module,hooks/lib/install-state-migrator.ts,12
+  library-catalog,~/.claude/skills/library/library.yaml,home,4,module,hooks/lib/library-catalog-migrator.ts,13
+  criteria-plan,*/criteria-plan.toon,glob,1,inline,schema-upgrade.md#rule-1,1
+  agent-result,*.agent-result.toon,glob,1,inline,schema-upgrade.md#rule-2,2
+  plan,PLAN.md,literal,2,agent,agents/plan-upgrade-agent.md,3
+  state,.plan-execution/state.toon,literal,1,inline,schema-upgrade.md#rule-4,4
+  convergence-tier,convergence-tier.schema.md,literal,1,static,—,5
+  orchestration-config,.claude/orchestration.toml,literal,2,inline,schema-upgrade.md#rule-6,6
+  roadmap,ROADMAP.md,literal,1,agent,agents/roadmap-upgrade-agent.md,7
+  claude-md,CLAUDE.md,literal,2,inline,schema-upgrade.md#rule-8,8
+  hooks,.claude/settings.json,literal,1,inline,schema-upgrade.md#rule-9,9
+  wiki-index,.loom/wiki/index.toon,literal,1,scaffold,—,10
+  protocols,protocols/,dir,1,inline,schema-upgrade.md#rule-11,11
+  scope-contract,*/scope-contract.toon,glob,1,static,—,—
+  scenario,*/scenarios/,dir,1,static,—,—
+  change-proposal,.loom/changes/*/proposal.md,glob,1,static,—,—
+  change-state,.loom/changes/*/state.toon,glob,1,static,—,—
+  contract-page-extensions,.loom/wiki/pages/contract-*.md,glob,1,static,—,—
+  plan-artifact-layout,ROADMAP.md|PLAN*.md|.plan-history/,multi,1,inline,schema-upgrade.md#rule-14,14
+  convergence-findings,.plan-execution/convergence/findings.toon,literal,1,static,—,—
+  plan-critique,.plan-execution/critique.toon,literal,1,static,—,—
+  iteration-snapshot,planning/history/snapshots/*-pass-*.toon,glob,1,static,—,—
+  convergence-summary,.plan-execution/convergence-summary.toon,literal,1,static,—,—
+  roadmapConvergeState,.roadmap-converge/*/state.toon,glob,1,module,scripts/migrators/roadmap-converge-state/index.ts,—
+
+# When a schema's currentVersion bumps:
+#   1. Update currentVersion above.
+#   2. Update the migratorKind if changing (e.g., "static" → "module").
+#   3. For "module" kind: add migrateVNToVN+1 to the migrator's MIGRATIONS map.
+#      Bump the exported `CURRENT_VERSION` constant in the migrator to match.
+#   4. For "inline" kind: extend the rule body in schema-upgrade.md.
+#   5. Add a fixture pair under test-fixtures/<schema>-migration/.
+#   6. If your new step needs options the prior step didn't, extend
+#      MigrationOptions with OPTIONAL fields only. Required-option changes
+#      break backward compat for chain walks; reserve those for v(N+1) bumps
+#      where every step is being rewritten.

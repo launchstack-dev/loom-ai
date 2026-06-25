@@ -49,7 +49,7 @@ applies only to Agent tool calls; sign-off runs as a deterministic script.
    `sign_off_at = <ISO now>`, `sign_off_diff_hash = sha256(current ROADMAP.md)`
    atomically (`.tmp` + `fs.renameSync`).
 6. Writes `.plan-execution/stage-context/execute-signoff.toon` atomically
-   per `agents/protocols/execution-conventions.md`.
+   per `protocols/execution-conventions.md`.
 
 ### Exit codes
 

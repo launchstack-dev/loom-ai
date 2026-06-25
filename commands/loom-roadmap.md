@@ -13,12 +13,12 @@ You create, track, validate, refine, and visualize both documents.
 ## Protocols
 
 Before doing anything, read these protocol files:
-- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
-- `~/.claude/agents/protocols/plan.schema.md` — the canonical PLAN.md format spec (v1 and v2)
-- `~/.claude/agents/protocols/spec.schema.md` — v2 spec section formats (API specs, state machines, etc.)
-- `~/.claude/agents/protocols/validation-rules.md` — validation stages and enforcement rules
-- `~/.claude/agents/protocols/execution-conventions.md` — planning/history/ and .plan-execution/ structure
-- `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting and stale detection
+- `~/.claude/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
+- `~/.claude/protocols/plan.schema.md` — the canonical PLAN.md format spec (v1 and v2)
+- `~/.claude/protocols/spec.schema.md` — v2 spec section formats (API specs, state machines, etc.)
+- `~/.claude/protocols/validation-rules.md` — validation stages and enforcement rules
+- `~/.claude/protocols/execution-conventions.md` — planning/history/ and .plan-execution/ structure
+- `~/.claude/protocols/agent-monitoring.schema.md` — progress reporting and stale detection
 
 ## Model Resolution
 
@@ -90,7 +90,7 @@ These flags invoke a multi-agent pattern before or during the subcommand's main 
 - `--triage "task"`: Route a subtask through the triage classifier.
 
 When a pattern flag is present:
-1. Read `~/.claude/agents/protocols/orchestration-patterns.md` and `~/.claude/agents/protocols/pattern-executor.md`
+1. Read `~/.claude/protocols/orchestration-patterns.md` and `~/.claude/protocols/pattern-executor.md`
 2. Execute the pattern first
 3. Inject the pattern's result into the subcommand's context
 4. Continue with the subcommand's normal flow
@@ -99,8 +99,8 @@ When a pattern flag is present:
 
 Before any subcommand, gather available state:
 
-1. **Find the roadmap file**: follow `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer, not the source. Note status (draft/reviewed/approved).
-2. **Find the plan file**: follow `agents/protocols/planning-paths.md` — check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then user-specified path. Note planVersion (1 or 2).
+1. **Find the roadmap file**: follow `protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer, not the source. Note status (draft/reviewed/approved).
+2. **Find the plan file**: follow `protocols/planning-paths.md` — check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then user-specified path. Note planVersion (1 or 2).
 3. **Check execution state**: read `.plan-execution/state.toon` if it exists → extract wave statuses, task completions.
 4. **Check plan history**: read `planning/history/roadmap.toon`, `planning/history/changelog.md` if they exist.
 5. **Check project config**: read `.claude/orchestration.toml` if it exists for custom agents and model profile.

@@ -6,9 +6,9 @@ agents[2]{taskId,agent,model,status,filesCreated}:
   w0-contracts,contracts-agent,opus,success,3
   w0-converge-config-schema-backfill,contracts-agent,opus,success,1
 filesCreated[4]:
-  agents/protocols/converge.config.applications.md
-  agents/protocols/findings.applications-rows.md
-  agents/protocols/converge.config.schema.md
+  protocols/converge.config.applications.md
+  protocols/findings.applications-rows.md
+  protocols/converge.config.schema.md
   .plan-execution/contracts/wave-0-manifest.toon
 filesModified[0]:
 verification:

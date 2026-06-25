@@ -7,7 +7,7 @@ createdAt: 2026-04-25T22:00:00Z
 updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
-sourceRefs[1]: agents/protocols/agent-result.schema.md
+sourceRefs[1]: protocols/agent-result.schema.md
 crossRefs[3]{pageId,relationship}:
   structure-agent-taxonomy,relates-to
   concept-execution-pipeline,relates-to
@@ -21,7 +21,7 @@ confidence: high
 
 Every execution agent in Loom MUST return a valid TOON block matching the AgentResult schema as the **last content block** in its response. The orchestrator parses this programmatically to determine task outcomes, file ownership, and pipeline progression.
 
-Source: `agents/protocols/agent-result.schema.md`
+Source: `protocols/agent-result.schema.md`
 
 ---
 

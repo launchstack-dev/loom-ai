@@ -53,8 +53,8 @@ Per CLAUDE.md mandatory model-resolution, the driver agent's frontmatter (`model
 | `.roadmap-converge/{slug}/state.toon` | Durable per-roadmap state (atomic writes). Tracked by git. |
 | `.roadmap-converge/{slug}/.lock` | Concurrency lock. Ephemeral; gitignored. |
 | `.plan-execution/stage-context/execute.toon` | Per-pass stage summary (atomic writes). Tracked by git. |
-| `agents/protocols/roadmap-converge-state.schema.toon` | Schema for state.toon. |
-| `agents/protocols/roadmap-rubrics/{dim}.md` | Per-dimension rubrics (Green/Yellow/Red exemplars). |
+| `protocols/roadmap-converge-state.schema.toon` | Schema for state.toon. |
+| `protocols/roadmap-rubrics/{dim}.md` | Per-dimension rubrics (Green/Yellow/Red exemplars). |
 
 ### What this command does NOT do (deferred)
 

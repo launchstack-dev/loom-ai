@@ -143,20 +143,20 @@ describe("validate-library-catalog.js — v4 behaviour", () => {
   it("accepts protocol: and infrastructure: prefixes in requires: (exit 0)", () => {
     // Create the source files the catalog entries point to.
     const scriptsDir = path.join(scratchDir, "scripts");
-    const agentsDir = path.join(scratchDir, "agents", "protocols");
+    const protocolsDir = path.join(scratchDir, "protocols");
     const hooksDir = path.join(scratchDir, "hooks");
     fs.mkdirSync(scriptsDir, { recursive: true });
-    fs.mkdirSync(agentsDir, { recursive: true });
+    fs.mkdirSync(protocolsDir, { recursive: true });
     fs.mkdirSync(hooksDir, { recursive: true });
-    fs.writeFileSync(path.join(agentsDir, "execution-protocols.md"), "# proto\n");
+    fs.writeFileSync(path.join(protocolsDir, "execution-protocols.md"), "# proto\n");
     fs.writeFileSync(path.join(hooksDir, "some-hook.sh"), "#!/bin/sh\n");
-    fs.writeFileSync(path.join(agentsDir, "my-agent.md"), "# agent\n");
+    fs.writeFileSync(path.join(protocolsDir, "my-agent.md"), "# agent\n");
 
     const catalog = buildCatalog({
       protocols: [
         "    - name: execution-protocols",
         "      description: Execution protocol spec",
-        "      source: agents/protocols/execution-protocols.md",
+        "      source: protocols/execution-protocols.md",
       ].join("\n"),
       infrastructure: [
         "    - name: some-hook",
@@ -167,7 +167,7 @@ describe("validate-library-catalog.js — v4 behaviour", () => {
       agents: [
         "    - name: my-agent",
         "      description: An agent that uses protocols",
-        "      source: agents/protocols/my-agent.md",
+        "      source: protocols/my-agent.md",
         "      requires: [protocol:execution-protocols, infrastructure:some-hook]",
       ].join("\n"),
     });

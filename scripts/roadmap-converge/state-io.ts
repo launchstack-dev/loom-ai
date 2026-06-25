@@ -6,7 +6,7 @@
  * (`.tmp` + `fs.renameSync`).
  *
  * The on-disk shape conforms to the field catalogue in
- * agents/protocols/roadmap-converge-state.schema.toon. This module is the
+ * protocols/roadmap-converge-state.schema.toon. This module is the
  * single allowed reader/writer of that file at runtime; the migrator is the
  * single allowed shape-translator. Together they keep all schema knowledge
  * out of the driver's hot path.

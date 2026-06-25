@@ -35,7 +35,7 @@ If `orchestration.toml` declares `settings.maxParallelAgents`, respect that limi
 
 ### Kit Agents (Insertion Points)
 
-In addition to project-specific agents (which use the `phase` field), check `orchestration.toml` for kit agents registered under `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]`. Kit agents use the `insertionPoint` field instead of `phase`. See `agents/protocols/kit.schema.md` for the full specification.
+In addition to project-specific agents (which use the `phase` field), check `orchestration.toml` for kit agents registered under `[[kit.<name>.agents]]` and `[[kit.<name>.gates]]`. Kit agents use the `insertionPoint` field instead of `phase`. See `protocols/kit.schema.md` for the full specification.
 
 **6 insertion points** (kit agents fire at these pipeline boundaries):
 
@@ -104,7 +104,7 @@ kitHalts: 0
 4. Write the file and stop
 
 **If `--dry-run`:**
-1. Resolve and read the plan file per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified)
+1. Resolve and read the plan file per `protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified)
 2. Analyze it and propose a wave structure:
    - Wave 0: What contracts to create
    - Wave 1-N: What implementation tasks, with file ownership assignments
@@ -139,7 +139,7 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
 
 #### Step 1: Initialize
 
-1. Resolve and read the plan file per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified). Confirm it exists and has content.
+1. Resolve and read the plan file per `protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root → user-specified). Confirm it exists and has content.
 
 2. **Validation gate.** Before creating `.plan-execution/`, run plan validation stages 1-4 from `validation-rules.md` Section 6:
    - **Stage 1 (Structure):** Verify frontmatter, required sections, Phase 0 existence and contracts-agent assignment
@@ -301,7 +301,7 @@ For each implementation wave (1, 2, ...):
 1. Update state.toon: wave N = in_progress
 2. Create git tag `plan-exec-wave-N-pre`
 3. Read `rolling-context.md`
-4. **Pattern check:** If `.claude/orchestration.toml` exists and has `[patterns.*]` entries, check each task's description against pattern triggers. If a task matches a pattern trigger (per `~/.claude/agents/protocols/pattern-executor.md`), execute the pattern instead of spawning a single implementer. The pattern's output replaces the implementer's AgentResult.
+4. **Pattern check:** If `.claude/orchestration.toml` exists and has `[patterns.*]` entries, check each task's description against pattern triggers. If a task matches a pattern trigger (per `~/.claude/protocols/pattern-executor.md`), execute the pattern instead of spawning a single implementer. The pattern's output replaces the implementer's AgentResult.
 5. For each task in this wave, prepare the implementer prompt:
    - Instruction: "Read your instructions from `~/.claude/agents/implementer-agent.md` first."
    - Task objective and acceptance criteria
@@ -528,7 +528,7 @@ Do NOT count wiki maintenance against circuit breaker thresholds or agent budget
 
 **Finalize step (mandatory on full success):**
 
-1. Resolve the plan path per `agents/protocols/planning-paths.md` (same resolution used in Step 1).
+1. Resolve the plan path per `protocols/planning-paths.md` (same resolution used in Step 1).
 2. Read the plan's frontmatter (YAML block between `---` fences at the top).
 3. If `status:` is not already `completed`:
    - Set `status: completed`

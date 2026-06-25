@@ -190,7 +190,7 @@ Look up the named kit under `skills/library.yaml` `kits:`.
        - type: skill
          name: <name>
    ```
-   (4-space indent for the list-item dash; nested `name:` 2 spaces deeper — matches the v4 typed-include shape documented in `agents/protocols/kit.schema.md § Typed Includes (v4+)`.)
+   (4-space indent for the list-item dash; nested `name:` 2 spaces deeper — matches the v4 typed-include shape documented in `protocols/kit.schema.md § Typed Includes (v4+)`.)
 
 #### Step 9: write SKILL.md and library.yaml entry
 

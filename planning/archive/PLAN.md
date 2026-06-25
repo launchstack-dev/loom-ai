@@ -561,7 +561,7 @@ This project does not expose HTTP APIs. The interface is CLI commands and their 
 
 **Behavior:**
 1. Scans project for old-format artifacts: PLAN.md (v1), criteria-plan.toon (missing testTier), AgentResult files (missing verificationStatus), state.toon (old schema)
-2. For each detected old-format file, reads migration rules from `agents/protocols/schema-upgrade.md`
+2. For each detected old-format file, reads migration rules from `protocols/schema-upgrade.md`
 3. Shows migration summary: files to upgrade, fields to add, default values to apply
 4. Creates backup of all affected files to `--backup-dir`
 5. Applies migrations in-place: adds missing required fields with defaults, converts v1→v2 structure where applicable
@@ -816,36 +816,36 @@ error:
 **Agent:** contracts-agent
 **Objective:** Define the planning taxonomy protocol, all new TOON schemas (interpretation-conflict, convergence-tier, e2e-story), extend existing schemas (criteria-plan with testTier, agent-result with verificationStatus/diagnoseLog), and codify behavioral guidelines for TDD enforcement, diagnose-before-fix, and hard verification gate. Ref: F-01, F-07, C-01, C-03, C-06.
 **Dependencies:** None
-**File Ownership:** agents/protocols/taxonomy.md, agents/protocols/interpretation-conflict.schema.md, agents/protocols/convergence-tier.schema.md, agents/protocols/e2e-story.schema.md, agents/protocols/criteria-plan.schema.md, agents/protocols/agent-result.schema.md, agents/protocols/plan.schema.md, agents/protocols/roadmap.schema.md, agents/protocols/behavioral-guidelines.md, agents/protocols/schema-upgrade.md
+**File Ownership:** protocols/taxonomy.md, protocols/interpretation-conflict.schema.md, protocols/convergence-tier.schema.md, protocols/e2e-story.schema.md, protocols/criteria-plan.schema.md, protocols/agent-result.schema.md, protocols/plan.schema.md, protocols/roadmap.schema.md, protocols/behavioral-guidelines.md, protocols/schema-upgrade.md
 
 <!-- Review: Finding 8 — merged old Phase 4 (behavioral-guidelines) into Phase 0 to eliminate undersized phase -->
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/taxonomy.md | Create | contracts-agent |
-| agents/protocols/interpretation-conflict.schema.md | Create | contracts-agent |
-| agents/protocols/convergence-tier.schema.md | Create | contracts-agent |
-| agents/protocols/e2e-story.schema.md | Create | contracts-agent |
-| agents/protocols/criteria-plan.schema.md | Modify | contracts-agent |
-| agents/protocols/agent-result.schema.md | Modify | contracts-agent |
-| agents/protocols/plan.schema.md | Modify | contracts-agent |
-| agents/protocols/roadmap.schema.md | Modify | contracts-agent |
-| agents/protocols/behavioral-guidelines.md | Modify | contracts-agent |
-| agents/protocols/schema-upgrade.md | Create | contracts-agent |
+| protocols/taxonomy.md | Create | contracts-agent |
+| protocols/interpretation-conflict.schema.md | Create | contracts-agent |
+| protocols/convergence-tier.schema.md | Create | contracts-agent |
+| protocols/e2e-story.schema.md | Create | contracts-agent |
+| protocols/criteria-plan.schema.md | Modify | contracts-agent |
+| protocols/agent-result.schema.md | Modify | contracts-agent |
+| protocols/plan.schema.md | Modify | contracts-agent |
+| protocols/roadmap.schema.md | Modify | contracts-agent |
+| protocols/behavioral-guidelines.md | Modify | contracts-agent |
+| protocols/schema-upgrade.md | Create | contracts-agent |
 
 #### Acceptance Criteria
-- [ ] `agents/protocols/taxonomy.md` defines the 4-level hierarchy (Milestone > Feature > Phase > Wave) with convergence tier assignments at each level
-- [ ] `agents/protocols/criteria-plan.schema.md` includes `testTier` column in criteria array with valid values: unit, integration, e2e, qa-review <!-- Review: Finding 1 — testTier in live schema -->
-- [ ] `agents/protocols/agent-result.schema.md` includes required `verificationStatus` field and optional `diagnoseLog` field <!-- Review: Finding 1 — verificationStatus/diagnoseLog in live schema -->
-- [ ] `agents/protocols/interpretation-conflict.schema.md` defines InterpretationConflict and CoverageGap TOON schemas with severity field
-- [ ] `agents/protocols/convergence-tier.schema.md` defines 4 tiers with runner, passCondition, gatingBehavior fields; hierarchyLevel uses "wave" not duplicate "phase" <!-- Review: Finding 1 — fixed duplicate enum -->
-- [ ] `agents/protocols/e2e-story.schema.md` defines E2EStory and PlaywrightTest TOON schemas
+- [ ] `protocols/taxonomy.md` defines the 4-level hierarchy (Milestone > Feature > Phase > Wave) with convergence tier assignments at each level
+- [ ] `protocols/criteria-plan.schema.md` includes `testTier` column in criteria array with valid values: unit, integration, e2e, qa-review <!-- Review: Finding 1 — testTier in live schema -->
+- [ ] `protocols/agent-result.schema.md` includes required `verificationStatus` field and optional `diagnoseLog` field <!-- Review: Finding 1 — verificationStatus/diagnoseLog in live schema -->
+- [ ] `protocols/interpretation-conflict.schema.md` defines InterpretationConflict and CoverageGap TOON schemas with severity field
+- [ ] `protocols/convergence-tier.schema.md` defines 4 tiers with runner, passCondition, gatingBehavior fields; hierarchyLevel uses "wave" not duplicate "phase" <!-- Review: Finding 1 — fixed duplicate enum -->
+- [ ] `protocols/e2e-story.schema.md` defines E2EStory and PlaywrightTest TOON schemas
 - [ ] `behavioral-guidelines.md` documents TDD red-green gate: implementer runs test stubs, confirms failure, implements, confirms passage
 - [ ] `behavioral-guidelines.md` documents diagnose-before-fix: fixer reads finding, diagnoses root cause, documents diagnosis in diagnoseLog, then applies fix
 - [ ] `behavioral-guidelines.md` documents hard verification gate: AgentResult with verificationStatus "unverified" triggers warning in convergence-driver
 - [ ] All schema files parse as valid Markdown with embedded TOON code blocks
-- [ ] `agents/protocols/schema-upgrade.md` defines migration rules for each modified schema with version detection, default values for new required fields, and backup-before-migrate protocol
+- [ ] `protocols/schema-upgrade.md` defines migration rules for each modified schema with version detection, default values for new required fields, and backup-before-migrate protocol
 - [ ] schema-upgrade.md covers: criteria-plan (add testTier default "unit"), agent-result (add verificationStatus default "unverified", diagnoseLog default null), plan.schema (v1→v2 field mapping), convergence-tier (new file — no migration)
 - [ ] schema-upgrade.md specifies automatic detection: agents reading old-format files emit stderr warning "Old format detected in {file}. Run `/loom-upgrade` to migrate."
 - [ ] schema-upgrade.md specifies explicit migration: `/loom-upgrade` transforms files in-place after creating `.plan-execution/backups/{timestamp}/` backup
@@ -864,13 +864,13 @@ error:
 **Agent:** implementer-agent
 **Objective:** Create the interpretation-reviewer-agent that reads plan-builder output and criteria-planner output independently, identifies conflicts, coverage gaps, and produces interpretation-report.toon. Ref: F-06, C-02.
 **Dependencies:** Phase 0
-**File Ownership:** agents/interpretation-reviewer-agent.md, agents/protocols/interpretation-report.schema.md
+**File Ownership:** agents/interpretation-reviewer-agent.md, protocols/interpretation-report.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
 | agents/interpretation-reviewer-agent.md | Create | implementer-agent |
-| agents/protocols/interpretation-report.schema.md | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
+| protocols/interpretation-report.schema.md | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
 
 #### Acceptance Criteria
 - [ ] `agents/interpretation-reviewer-agent.md` has frontmatter with `model: opus` (per roadmap model assignment)
@@ -927,16 +927,16 @@ error:
 **Agent:** implementer-agent
 **Objective:** Implement context budget preflight for test agent spawns and rolling context compression with HOT/WARM/COLD tiers, ensuring all agents from Wave 2+ have budget compliance infrastructure available. Ref: F-08.
 **Dependencies:** Phase 0
-**File Ownership:** agents/protocols/stage-context.schema.md, hooks/context-budget-test.ts, agents/protocols/context-budget.md
+**File Ownership:** protocols/stage-context.schema.md, hooks/context-budget-test.ts, protocols/context-budget.md
 
 <!-- Review: Context budget moved from Wave 4 to Wave 1 — agents in Waves 2+ cannot comply with budget protocol that doesn't exist yet -->
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/stage-context.schema.md | Modify | implementer-agent |
+| protocols/stage-context.schema.md | Modify | implementer-agent |
 | hooks/context-budget-test.ts | Modify | implementer-agent | <!-- Review: Finding 1 — file already exists on disk, changed Create→Modify -->
-| agents/protocols/context-budget.md | Modify | implementer-agent |
+| protocols/context-budget.md | Modify | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] stage-context.schema.md adds stage values for test-related stages: "e2e", "qa-review" (in addition to existing "test")
@@ -1000,7 +1000,7 @@ error:
 **Agent:** implementer-agent
 **Objective:** Create the e2e-test-writer-agent that converts acceptance criteria e2e specs into YAML user stories and Playwright test files, and the e2e-runner-agent that executes them with headless/Chrome modes, screenshot audit trails, and console capture. Ref: F-04, F-05, C-04, C-07.
 **Dependencies:** Phase 0, Phase 4
-**File Ownership:** agents/e2e-test-writer-agent.md, agents/e2e-runner-agent.md, agents/protocols/e2e-story.schema.md
+**File Ownership:** agents/e2e-test-writer-agent.md, agents/e2e-runner-agent.md, protocols/e2e-story.schema.md
 
 <!-- Review: Merged old Phase 6 (e2e-runner-agent, 1 deliverable) into this phase to eliminate undersized phase and same-wave serial dependency -->
 
@@ -1009,7 +1009,7 @@ error:
 |------|--------|------------|
 | agents/e2e-test-writer-agent.md | Create | implementer-agent |
 | agents/e2e-runner-agent.md | Create | implementer-agent |
-| agents/protocols/e2e-story.schema.md | Modify | implementer-agent | <!-- Review: Finding 6 — Append-only modification rights; must maintain backward compatibility with Phase 0 schema -->
+| protocols/e2e-story.schema.md | Modify | implementer-agent | <!-- Review: Finding 6 — Append-only modification rights; must maintain backward compatibility with Phase 0 schema -->
 
 #### Acceptance Criteria
 - [ ] `agents/e2e-test-writer-agent.md` has frontmatter with `model: sonnet` (per roadmap model assignment)
@@ -1040,15 +1040,15 @@ error:
 **Agent:** implementer-agent
 **Objective:** Extend statusline with test counts and QA findings, extend execution-log with all test event types, and update the /loom-auto pipeline to integrate dual-track planning, 4-tier convergence gates, and behavioral hardening. Agent MUST use grep-based selective reading of dependency files, not linear reads. Ref: F-02, F-03, F-07, F-08. <!-- Review: Finding 2 — ~89k token budget pressure; grep-based reading required -->
 **Dependencies:** Phase 2, Phase 4, Phase 5
-**File Ownership:** agents/protocols/statusline-contract.md, agents/protocols/execution-log.schema.md, commands/loom.md, commands/loom-upgrade.md
+**File Ownership:** protocols/statusline-contract.md, protocols/execution-log.schema.md, commands/loom.md, commands/loom-upgrade.md
 
 <!-- Review: Merged old Phase 10 (loom.md, 1 deliverable) into this phase to eliminate undersized phase -->
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/statusline-contract.md | Modify | implementer-agent |
-| agents/protocols/execution-log.schema.md | Modify | implementer-agent |
+| protocols/statusline-contract.md | Modify | implementer-agent |
+| protocols/execution-log.schema.md | Modify | implementer-agent |
 | commands/loom.md | Modify | implementer-agent |
 | commands/loom-upgrade.md | Create | implementer-agent |
 
@@ -1082,15 +1082,15 @@ error:
 **Agent:** implementer-agent
 **Objective:** Add flaky test quarantine to the convergence engine and define rollback behavior for failed convergence iterations, addressing review gaps. Ref: F-03, F-08.
 **Dependencies:** Phase 4
-**File Ownership:** agents/protocols/flaky-test.schema.md, agents/protocols/convergence-rollback.md
+**File Ownership:** protocols/flaky-test.schema.md, protocols/convergence-rollback.md
 
 <!-- Review: No flaky test detection mentioned; no rollback story for failed convergence — added as dedicated phase -->
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/flaky-test.schema.md | Create | implementer-agent |
-| agents/protocols/convergence-rollback.md | Create | implementer-agent |
+| protocols/flaky-test.schema.md | Create | implementer-agent |
+| protocols/convergence-rollback.md | Create | implementer-agent |
 
 #### Acceptance Criteria
 - [ ] flaky-test.schema.md defines a FlakyTest record: testId, file, failureRate, lastSeen, quarantined (boolean), quarantineReason
@@ -1111,13 +1111,13 @@ error:
 **Agent:** wiring-agent
 **Objective:** Connect all new agents, schemas, commands, and hooks into a cohesive system. Verify cross-references, update orchestration patterns, and ensure all protocols are internally consistent. Wiring agent MUST use grep-based insertion point discovery to stay within 100k token budget — do not linearly read all dependency files. Ref: F-08. <!-- Review: Finding 9 — wiring agent budget risk -->
 **Dependencies:** Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7
-**File Ownership:** agents/protocols/orchestration-patterns.md, agents/protocols/execution-conventions.md
+**File Ownership:** protocols/orchestration-patterns.md, protocols/execution-conventions.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/orchestration-patterns.md | Modify | wiring-agent |
-| agents/protocols/execution-conventions.md | Modify | wiring-agent |
+| protocols/orchestration-patterns.md | Modify | wiring-agent |
+| protocols/execution-conventions.md | Modify | wiring-agent |
 
 #### Acceptance Criteria
 - [ ] orchestration-patterns.md includes convergence pattern with 4-tier model reference
@@ -1183,7 +1183,7 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 
 ```bash
 # Validate all protocol schemas parse as valid Markdown
-find agents/protocols/ -name "*.md" -exec sh -c 'head -1 "{}" | grep -q "^#" || echo "FAIL: {}"' \;
+find protocols/ -name "*.md" -exec sh -c 'head -1 "{}" | grep -q "^#" || echo "FAIL: {}"' \;
 
 # Check new agent files exist
 test -f agents/interpretation-reviewer-agent.md && echo "PASS" || echo "FAIL: interpretation-reviewer-agent.md missing"
@@ -1191,11 +1191,11 @@ test -f agents/e2e-test-writer-agent.md && echo "PASS" || echo "FAIL: e2e-test-w
 test -f agents/e2e-runner-agent.md && echo "PASS" || echo "FAIL: e2e-runner-agent.md missing"
 
 # Check new protocol files exist
-test -f agents/protocols/taxonomy.md && echo "PASS" || echo "FAIL: taxonomy.md missing"
-test -f agents/protocols/interpretation-conflict.schema.md && echo "PASS" || echo "FAIL: interpretation-conflict.schema.md missing"
-test -f agents/protocols/convergence-tier.schema.md && echo "PASS" || echo "FAIL: convergence-tier.schema.md missing"
-test -f agents/protocols/flaky-test.schema.md && echo "PASS" || echo "FAIL: flaky-test.schema.md missing"
-test -f agents/protocols/convergence-rollback.md && echo "PASS" || echo "FAIL: convergence-rollback.md missing"
+test -f protocols/taxonomy.md && echo "PASS" || echo "FAIL: taxonomy.md missing"
+test -f protocols/interpretation-conflict.schema.md && echo "PASS" || echo "FAIL: interpretation-conflict.schema.md missing"
+test -f protocols/convergence-tier.schema.md && echo "PASS" || echo "FAIL: convergence-tier.schema.md missing"
+test -f protocols/flaky-test.schema.md && echo "PASS" || echo "FAIL: flaky-test.schema.md missing"
+test -f protocols/convergence-rollback.md && echo "PASS" || echo "FAIL: convergence-rollback.md missing"
 
 # Check agent frontmatter model assignments
 grep -q "model: opus" agents/interpretation-reviewer-agent.md && echo "PASS" || echo "FAIL: interpretation-reviewer model"
@@ -1203,13 +1203,13 @@ grep -q "model: sonnet" agents/e2e-test-writer-agent.md && echo "PASS" || echo "
 grep -q "model: haiku" agents/e2e-runner-agent.md && echo "PASS" || echo "FAIL: e2e-runner model"
 
 # Check schema extensions
-grep -q "verificationStatus" agents/protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: verificationStatus missing"
-grep -q "testTier" agents/protocols/criteria-plan.schema.md && echo "PASS" || echo "FAIL: testTier missing"
-grep -q "diagnoseLog" agents/protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: diagnoseLog missing"
+grep -q "verificationStatus" protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: verificationStatus missing"
+grep -q "testTier" protocols/criteria-plan.schema.md && echo "PASS" || echo "FAIL: testTier missing"
+grep -q "diagnoseLog" protocols/agent-result.schema.md && echo "PASS" || echo "FAIL: diagnoseLog missing"
 
 # Check behavioral guidelines sections
-grep -q "TDD Red-Green Gate" agents/protocols/behavioral-guidelines.md && echo "PASS" || echo "FAIL: TDD section missing"
-grep -q "Diagnose Before Fix" agents/protocols/behavioral-guidelines.md && echo "PASS" || echo "FAIL: diagnose section missing"
+grep -q "TDD Red-Green Gate" protocols/behavioral-guidelines.md && echo "PASS" || echo "FAIL: TDD section missing"
+grep -q "Diagnose Before Fix" protocols/behavioral-guidelines.md && echo "PASS" || echo "FAIL: diagnose section missing"
 
 # Run existing tests to ensure no regressions
 bun test || npm test

@@ -167,7 +167,7 @@ Five pipeline stages each have a "teammate" protocol file in `agents/stage-teamm
 
 ## How Agents Are Organized
 
-All agents live in `agents/` as flat `.md` files. There is no subdirectory hierarchy for functional categories — the taxonomy above is conceptual. The `agents/protocols/` subdirectory contains schemas, conventions, and protocols that agents read as reference material (not agents themselves).
+All agents live in `agents/` as flat `.md` files. There is no subdirectory hierarchy for functional categories — the taxonomy above is conceptual. The `protocols/` subdirectory contains schemas, conventions, and protocols that agents read as reference material (not agents themselves).
 
 Model assignments follow a consistent pattern:
 - **opus** — high-stakes generation: plan building, contracts, implementation

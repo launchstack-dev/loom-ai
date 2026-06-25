@@ -130,7 +130,7 @@ Four features identified from competitive analysis against GSD, Compound Enginee
    utility = "haiku"
    ```
 
-2. **Schema update** (`agents/protocols/orchestration-config.schema.md`)
+2. **Schema update** (`protocols/orchestration-config.schema.md`)
    - Add `modelProfile` field and profile definitions to the schema
    - Document the agent tier classification (planning, execution, review, verification, utility)
 
@@ -211,7 +211,7 @@ Phases are independent — can execute in any order. Recommended sequence by val
 |-------|-----------|----------------|
 | 1 | `commands/loom-pause.md`, `commands/loom-resume.md` | `skills/library.yaml` |
 | 2 | `commands/loom-do.md`, `commands/loom-next.md` | `skills/library.yaml` |
-| 3 | `commands/loom-profile.md` | `agents/protocols/orchestration-config.schema.md`, `commands/loom-execute-plan.md`, `commands/loom-review-plan.md`, `commands/loom-review-code.md`, `commands/loom-auto.md`, `commands/loom-create-plan.md`, `commands/loom-roadmap.md`, `skills/library.yaml` |
+| 3 | `commands/loom-profile.md` | `protocols/orchestration-config.schema.md`, `commands/loom-execute-plan.md`, `commands/loom-review-plan.md`, `commands/loom-review-code.md`, `commands/loom-auto.md`, `commands/loom-create-plan.md`, `commands/loom-roadmap.md`, `skills/library.yaml` |
 | 4 | None | `commands/loom-note.md`, `commands/loom-roadmap.md` |
 
 ## Backlog (future phases, not in this plan)

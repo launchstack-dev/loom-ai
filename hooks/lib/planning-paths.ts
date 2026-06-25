@@ -2,7 +2,7 @@
  * Planning artifact path resolution.
  *
  * Single source of truth for the resolution order documented in
- * `agents/protocols/planning-paths.md`. Every exported function
+ * `protocols/planning-paths.md`. Every exported function
  * defaults to a `defaultFs` resolver that calls `node:fs` directly,
  * so the production caller gets real filesystem reads. Tests pass an
  * injected `FsResolver` to stub the filesystem without monkey-patching

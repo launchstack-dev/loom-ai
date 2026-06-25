@@ -30,7 +30,7 @@ These flags invoke a multi-agent pattern before or during the subcommand's main 
 - `--triage "task"`: Route a subtask through the triage classifier before execution.
 
 When a pattern flag is present:
-1. Read `~/.claude/agents/protocols/orchestration-patterns.md` and `~/.claude/agents/protocols/pattern-executor.md`
+1. Read `~/.claude/protocols/orchestration-patterns.md` and `~/.claude/protocols/pattern-executor.md`
 2. Execute the pattern first using the same logic as `/loom-debate`, `/loom-chain`, `/loom-vote`, or `/loom-triage`
 3. Inject the pattern's result into the subcommand's context (e.g., debate recommendation becomes a locked decision for plan creation, vote winner replaces the single-agent implementation for a task)
 4. Continue with the subcommand's normal flow
@@ -38,13 +38,13 @@ When a pattern flag is present:
 ## Protocols
 
 Before doing anything, read:
-- `~/.claude/agents/protocols/plan.schema.md` — the canonical PLAN.md format spec (v1 and v2)
-- `~/.claude/agents/protocols/spec.schema.md` — v2 spec section formats (API specs, state machines, error handling)
-- `~/.claude/agents/protocols/validation-rules.md` — plan validation stages, AgentResult validation, blocker gates, config validation
-- `~/.claude/agents/protocols/execution-conventions.md` — shared rules, directory structure, context compression
-- `~/.claude/agents/protocols/agent-result.schema.md` — the return format every agent must use
-- `~/.claude/agents/protocols/state.schema.md` — execution state structure
-- `~/.claude/agents/protocols/agent-monitoring.schema.md` — progress reporting, polling, stale detection, escalation
+- `~/.claude/protocols/plan.schema.md` — the canonical PLAN.md format spec (v1 and v2)
+- `~/.claude/protocols/spec.schema.md` — v2 spec section formats (API specs, state machines, error handling)
+- `~/.claude/protocols/validation-rules.md` — plan validation stages, AgentResult validation, blocker gates, config validation
+- `~/.claude/protocols/execution-conventions.md` — shared rules, directory structure, context compression
+- `~/.claude/protocols/agent-result.schema.md` — the return format every agent must use
+- `~/.claude/protocols/state.schema.md` — execution state structure
+- `~/.claude/protocols/agent-monitoring.schema.md` — progress reporting, polling, stale detection, escalation
 
 ## Model Resolution
 

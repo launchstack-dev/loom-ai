@@ -6,32 +6,32 @@ status: complete
 verificationStatus: pass
 
 filesCreated[5]:
-  agents/protocols/update-check.schema.md
-  agents/protocols/submission-evidence.schema.md
+  protocols/update-check.schema.md
+  protocols/submission-evidence.schema.md
   scripts/lib/doctor/migration-runner.interface.ts
   scripts/lib/doctor/check.interface.ts
   scripts/validate-toon-schemas.ts
 
 filesModified[7]:
-  agents/protocols/plugin-manifest.schema.md
-  agents/protocols/doctor-report.schema.md
-  agents/protocols/settings-tier.schema.md
-  agents/protocols/upstream/plugin.schema.json
-  agents/protocols/upstream/.meta.toon
-  agents/protocols/install-state.schema.md
-  agents/protocols/library-catalog.schema.md
+  protocols/plugin-manifest.schema.md
+  protocols/doctor-report.schema.md
+  protocols/settings-tier.schema.md
+  protocols/upstream/plugin.schema.json
+  protocols/upstream/.meta.toon
+  protocols/install-state.schema.md
+  protocols/library-catalog.schema.md
 
 filesVerifiedUnchanged[3]:
-  agents/protocols/hook-manifest.schema.md
-  agents/protocols/migration-evidence.schema.md
-  agents/protocols/migration-runner.schema.md
+  protocols/hook-manifest.schema.md
+  protocols/migration-evidence.schema.md
+  protocols/migration-runner.schema.md
 
 verifyCommands[2]{cmd,exit}:
   bunx tsx scripts/validate-toon-schemas.ts,0
   bash scripts/refresh-upstream-schemas.sh --check,0
 
 reconciliationWarnings[1]{file,reason,resolution}:
-  agents/protocols/library-catalog.schema.md,Out-of-ownership write by Phase 0B agent — added TOON exemplar to make new validator pass,Allowed: benign documentation fix needed by new validator. Logged.
+  protocols/library-catalog.schema.md,Out-of-ownership write by Phase 0B agent — added TOON exemplar to make new validator pass,Allowed: benign documentation fix needed by new validator. Logged.
 
 keyDecisions[3]:
   permissions-derived check assigned category=settings (vs hook-wiring) by Phase 0A in doctor-report registry. Phase 9A2b implementer must honor this categorization.

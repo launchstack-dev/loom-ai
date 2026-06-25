@@ -27,10 +27,10 @@ library:
   skills:
     - name: execution-protocols
       description: Inter-agent protocol schemas for the Loom execution pipeline
-      source: agents/protocols/execution-conventions.md
+      source: protocols/execution-conventions.md
     - name: toon-format-protocol
       description: TOON format specification for all on-disk artifacts
-      source: agents/protocols/toon-format.md
+      source: protocols/toon-format.md
 
   agents:
     - name: contracts-agent

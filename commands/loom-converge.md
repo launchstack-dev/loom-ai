@@ -67,9 +67,9 @@ Parse arguments after `converge`:
 **Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
 
 Read convergence-related protocols:
-- `~/.claude/agents/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
-- `~/.claude/agents/protocols/pattern-executor.md` (Converge execution)
-- If `--criteria`: also read `~/.claude/agents/protocols/criteria-plan.schema.md`
+- `~/.claude/protocols/orchestration-patterns.md` (Pattern 5: Converge + Pattern 6: Criteria Converge)
+- `~/.claude/protocols/pattern-executor.md` (Converge execution)
+- If `--criteria`: also read `~/.claude/protocols/criteria-plan.schema.md`
 
 #### Step 1: Handle Special Flags
 

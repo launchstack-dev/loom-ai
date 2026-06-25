@@ -124,7 +124,7 @@ stalled: {true|false}
 summary: {1-2 sentences}
 ```
 
-See `agents/protocols/stage-context.schema.md` for the ConvergenceIterationSummary schema.
+See `protocols/stage-context.schema.md` for the ConvergenceIterationSummary schema.
 
 ### 6. Budget Warning
 

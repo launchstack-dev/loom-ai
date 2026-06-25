@@ -20,8 +20,8 @@ Parse arguments after `chain`:
 ### Protocols
 
 Before doing anything, read:
-- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 2: Chain
-- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+- `~/.claude/protocols/orchestration-patterns.md` — Pattern 2: Chain
+- `~/.claude/protocols/pattern-executor.md` — execution mechanics
 
 ### Instructions
 

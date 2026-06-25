@@ -21,8 +21,8 @@ Parse arguments after `triage`:
 ### Protocols
 
 Before doing anything, read:
-- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 4: Triage
-- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+- `~/.claude/protocols/orchestration-patterns.md` — Pattern 4: Triage
+- `~/.claude/protocols/pattern-executor.md` — execution mechanics
 
 ### Instructions
 

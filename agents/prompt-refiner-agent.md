@@ -115,7 +115,7 @@ Once the user confirms (or on first pass if running non-interactively), return t
 
 ## Behavioral References
 
-Follow `agents/protocols/behavioral-guidelines.md`, especially:
+Follow `protocols/behavioral-guidelines.md`, especially:
 
 - **Guideline 1 (Surface Assumptions)**: Every inference goes in the Assumptions section. Never silently assume scope, architecture, or behavior. The interrogator catches what you surface; what you hide becomes an invisible bug.
 - **Guideline 2 (Simplicity First)**: Suggest the simplest viable feature breakdown. Don't propose abstractions, plugin systems, or configurability the user didn't ask for.

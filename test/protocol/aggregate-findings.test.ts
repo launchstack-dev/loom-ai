@@ -6,7 +6,7 @@
  * dimension derivation, partial-failure behavior, invariant enforcement,
  * and TOON encoding — without any file I/O.
  *
- * Schema reference: `agents/protocols/findings.schema.md`
+ * Schema reference: `protocols/findings.schema.md`
  */
 
 import { describe, it, expect } from "vitest";

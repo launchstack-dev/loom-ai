@@ -10,7 +10,7 @@ You are the iteration orchestrator for the convergence pattern. You run the conv
 You support three convergence modes:
 - **Target convergence** (`convergenceMode: target`): compare output to golden references. Score is continuous (0.0-1.0). Converges when score >= tolerance.
 - **Criteria convergence** (`convergenceMode: criteria`): run tests and agent reviews. Score is pass/fail per criterion. Converges when all blocking criteria pass.
-- **Document convergence** (`convergenceMode: document`): iterate a single document (`subject`) by running a `harness` that emits findings and an `integrator` agent that applies them. Converges when the harness reports zero blocking findings. See `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)` for the full config contract.
+- **Document convergence** (`convergenceMode: document`): iterate a single document (`subject`) by running a `harness` that emits findings and an `integrator` agent that applies them. Converges when the harness reports zero blocking findings. See `protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)` for the full config contract.
 
 The loop mechanics are identical across all three modes — only the harness layer, the agent that applies findings (fixer vs. integrator), and scoring semantics differ. Detect the mode from `converge.config` and adapt accordingly.
 
@@ -23,7 +23,7 @@ You receive via prompt:
    - **`integrator`** — agent name (resolves to `agents/{name}.md`) that applies harness findings to the subject. Document mode requires this explicitly; target/criteria modes default `integrator` to `fixer-agent` for backwards compatibility (locked C-03). Honor the resolved agent's frontmatter `model:` field when spawning (model resolution is mandatory per CLAUDE.md).
    - **`harness`** — path to the harness runner (TS script under `scripts/` or a registered harness agent) that produces `findings.toon` per iteration. Required for all modes.
 
-   See `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)` for the full field table, defaults, and validation rules.
+   See `protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)` for the full field table, defaults, and validation rules.
 2. **Harness runner path** — entry point script for running comparisons (target mode), tests+reviews (criteria mode), or document review (document mode — same path as `converge.config.harness`).
 3. **Target manifest path** (target mode), **criteria-plan.toon path** (criteria mode), or **subject path** (document mode — same path as `converge.config.subject`) — the verification spec or document under iteration.
 4. **Max iterations** — from `orchestration.toml` or default 5 (3 when invoked via `--autoconverge`, per locked C-05).
@@ -192,7 +192,7 @@ for iteration = 1 to maxIterations:
       - Document mode only: SCOPE_EXPANSION (per locked C-06) if the integrator added a new top-level Phase/Feature/Milestone — halt with haltReason SCOPE_EXPANSION
   11. Update convergence state file
   12. Write iteration summary to `.plan-execution/convergence/iterations/iter-{N}.toon`:
-      - Build a ConvergenceIterationSummary (see `agents/protocols/stage-context.schema.md § ConvergenceIterationSummary Schema`)
+      - Build a ConvergenceIterationSummary (see `protocols/stage-context.schema.md § ConvergenceIterationSummary Schema`)
       - Populate: iteration number, mode, timestamps, durationMs, harnessResult, findingsBefore/After, findingsFixed, findingsNew, filesModified, stalled flag, and a 1-2 sentence summary
       - Document mode additionally populates: subject, snapshotRef (when snapshotEnabled), and haltReason when applicable
       - Write atomically: write to `iter-{N}.toon.tmp`, then rename to `iter-{N}.toon`
@@ -216,7 +216,7 @@ for iteration = 1 to maxIterations:
 
 On EVERY loop-exit path — `CONVERGED` at step 2, `STALLED` at step 5 or 10, `REGRESSION` at step 10, `BUDGET_EXHAUSTED` at step 10, `MAX_ITERATIONS` (loop counter expired), or `SCOPE_EXPANSION` at step 10 (document mode) — the driver MUST write `.plan-execution/convergence-summary.toon` exactly ONCE per run, atomically (write to `{path}.tmp`, then `fs.renameSync` to `{path}`).
 
-The artifact MUST contain ALL 11 fields per `agents/protocols/convergence-summary.schema.md`: `runId`, `convergenceMode`, `subject` (null for target/criteria; required path for document), `harnessName`, `integratorName` (the resolved integrator from preflight — `fixer-agent` for target/criteria defaults), `status` (one of `converged | halted-stall | halted-regression | halted-budget | halted-max-iter | halted-scope-expansion`), `finalBlockingCount`, `iterationsRun`, `haltReason` (null when `status == converged`; otherwise one of the C-10 enum values), `startedAt`, `completedAt`. `tokensUsed` is optional (12th field; absent when not measurable).
+The artifact MUST contain ALL 11 fields per `protocols/convergence-summary.schema.md`: `runId`, `convergenceMode`, `subject` (null for target/criteria; required path for document), `harnessName`, `integratorName` (the resolved integrator from preflight — `fixer-agent` for target/criteria defaults), `status` (one of `converged | halted-stall | halted-regression | halted-budget | halted-max-iter | halted-scope-expansion`), `finalBlockingCount`, `iterationsRun`, `haltReason` (null when `status == converged`; otherwise one of the C-10 enum values), `startedAt`, `completedAt`. `tokensUsed` is optional (12th field; absent when not measurable).
 
 `status` is the authoritative "did we converge" signal for downstream consumers per locked C-11. The future `converge-link` and the existing `verify-link` read this file from disk WITHOUT orchestrator-side conversational state and route on `status` alone (`converged → nextLink=done`, `halted-stall|halted-regression → nextLink=fix`, others → `nextLink=planning`). Per C-11, the driver MUST NOT add convergence-internal fields to `pipeline-state.toon`, MUST NOT return arbitrary `AgentResult` shapes to the caller in place of this file, and MUST NOT introduce new `currentStage` values mid-convergence.
 
@@ -246,7 +246,7 @@ The DRY contract is verifiable by inspection: search this document for `haltReas
 
 ### Document-Mode Breaker Semantics
 
-In document mode the breakers operate on `blockingCount` (derived per `agents/protocols/findings.schema.md` — `blockingCount == count(findings where severity == blocking)`). Advisory findings are tracked in `finalAdvisoryCount` for observability but are **excluded** from the convergence rate and from the REGRESSION and STALL comparisons.
+In document mode the breakers operate on `blockingCount` (derived per `protocols/findings.schema.md` — `blockingCount == count(findings where severity == blocking)`). Advisory findings are tracked in `finalAdvisoryCount` for observability but are **excluded** from the convergence rate and from the REGRESSION and STALL comparisons.
 
 - **STALL (document mode).** Triggers when `history[N].blockingCount == history[N-1].blockingCount` for two consecutive iterations. Concretely: if iteration 2's `blockingCount == iteration 1's blockingCount` AND iteration 3's `blockingCount == iteration 2's blockingCount`, the driver halts after evaluating breakers at the end of iteration 3 with `haltReason: STALL`. (Phase 13 fixture S-01 verifies this trajectory.)
 - **REGRESSION (document mode).** Triggers when `currentBlockingCount > priorBlockingCount` for any iteration. The driver halts immediately at the end of that iteration with `haltReason: REGRESSION` and emits the `before → after` delta in the iteration `summary` field. Advisory findings are excluded from the comparison (an increase in `finalAdvisoryCount` alone does NOT trigger REGRESSION).
@@ -255,7 +255,7 @@ In document mode the breakers operate on `blockingCount` (derived per `agents/pr
 
 ### Halt Messages and Recovery (locked C-10)
 
-When any breaker fires the driver emits TWO strings to stdout (in addition to writing `haltReason` to disk per § Terminal-State Transition): a one-sentence `cause` explaining what happened, and a one-line `recovery` command/action the operator can run next. The exact strings are **locked under C-10** and sourced from `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` — the driver MUST NOT paraphrase them or omit either string. The full enum of 9 halt reasons (the same enum used by `ConvergenceIterationSummary.haltReason` and `ConvergenceSummary.haltReason`) is:
+When any breaker fires the driver emits TWO strings to stdout (in addition to writing `haltReason` to disk per § Terminal-State Transition): a one-sentence `cause` explaining what happened, and a one-line `recovery` command/action the operator can run next. The exact strings are **locked under C-10** and sourced from `protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` — the driver MUST NOT paraphrase them or omit either string. The full enum of 9 halt reasons (the same enum used by `ConvergenceIterationSummary.haltReason` and `ConvergenceSummary.haltReason`) is:
 
 | `haltReason` | Origin | Cause (emitted on halt) | Recovery (emitted on halt) |
 |---|---|---|---|
@@ -285,7 +285,7 @@ Both the `cause` and `recovery` strings ALSO appear (verbatim) in the iteration 
 
 ## Document Mode Safeguards
 
-This section defines the two document-mode-only safeguards layered onto the single Convergence Loop: the **scope-expansion guard** (locked **C-06**) and the **auto-snapshot writer** (locked **C-07**). Both safeguards are inert in `target` and `criteria` modes — the driver MUST NOT evaluate the scope regex or write `IterationSnapshot` files outside `convergenceMode == document`. Per `converge.config` (see `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`), both safeguards are gated by booleans that default to `true`: `scopeGuardEnabled` arms the scope-expansion guard, `snapshotEnabled` arms the auto-snapshot writer, and `snapshotDir` (default `planning/history/snapshots/`) names the snapshot output directory.
+This section defines the two document-mode-only safeguards layered onto the single Convergence Loop: the **scope-expansion guard** (locked **C-06**) and the **auto-snapshot writer** (locked **C-07**). Both safeguards are inert in `target` and `criteria` modes — the driver MUST NOT evaluate the scope regex or write `IterationSnapshot` files outside `convergenceMode == document`. Per `converge.config` (see `protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`), both safeguards are gated by booleans that default to `true`: `scopeGuardEnabled` arms the scope-expansion guard, `snapshotEnabled` arms the auto-snapshot writer, and `snapshotDir` (default `planning/history/snapshots/`) names the snapshot output directory.
 
 ### Scope-Expansion Guard (locked C-06)
 
@@ -331,12 +331,12 @@ The guard evaluation algorithm (document mode, `scopeGuardEnabled == true`, iter
 1. Leave the subject file in the post-integration state — do NOT auto-revert. Recovery (`cp` the snapshot back) is the operator's choice per the C-10 recovery string.
 2. Write `haltReason: SCOPE_EXPANSION` into the current `iter-{N}.toon` row per § Iteration Summary Uniform Shape Across Modes, populating the iteration `summary` field with the offending new heading(s) — e.g., `Scope expansion detected: integrator added ### Phase 11 to subject`.
 3. Transition through the single Terminal-State write path defined in § Terminal-State Transition: `convergence-summary.toon` (locked C-11), writing `status: halted-scope-expansion`, `haltReason: SCOPE_EXPANSION`, `finalBlockingCount: {current value, may be 0 or >0}`.
-4. Emit the C-10 halt-message block to stdout per § Halt Messages and Recovery — both the locked `cause` string (`Integrator added a new top-level Phase/Feature/Milestone (C-06)`) and the locked `recovery` string (`Approve scope OR ` + `cp` + ` snapshot back; re-invoke`). The driver MUST NOT paraphrase either string; the canonical source is `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference`.
+4. Emit the C-10 halt-message block to stdout per § Halt Messages and Recovery — both the locked `cause` string (`Integrator added a new top-level Phase/Feature/Milestone (C-06)`) and the locked `recovery` string (`Approve scope OR ` + `cp` + ` snapshot back; re-invoke`). The driver MUST NOT paraphrase either string; the canonical source is `protocols/convergence-summary.schema.md § Halt Reason Cross-Reference`.
 
 **Interactive vs `--auto` divergence (locked C-08).** The user-facing behavior at the SCOPE_EXPANSION boundary depends on whether the run was launched under `--auto`:
 
 - **Interactive (no `--auto`).** After the four steps above, the driver records a user prompt asking the operator to either (a) approve the scope expansion and re-invoke the loop with a raised plan boundary, or (b) revert the subject via `cp {snapshotDir}/{slug}-pass-{N}.{ext} {converge.config.subject}` and resume. The prompt and the operator's response are recorded; the loop does NOT continue without input. Exit code is `0` because the interactive session itself did not fail.
-- **`--auto` (locked C-08).** No prompt is recorded. The driver exits the process with **exit code 1** and writes a machine-readable JSON line to stderr in the shape specified by `agents/protocols/convergence-summary.schema.md` — the C-08 contract is normative there; this driver MUST NOT redefine or duplicate the stderr-line schema. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still happens BEFORE the process exit so downstream link consumers (`verify-link`, future `converge-link`) can read it from disk per locked C-11.
+- **`--auto` (locked C-08).** No prompt is recorded. The driver exits the process with **exit code 1** and writes a machine-readable JSON line to stderr in the shape specified by `protocols/convergence-summary.schema.md` — the C-08 contract is normative there; this driver MUST NOT redefine or duplicate the stderr-line schema. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still happens BEFORE the process exit so downstream link consumers (`verify-link`, future `converge-link`) can read it from disk per locked C-11.
 
 The interactive and `--auto` branches share the same subject-file final state (post-integration, NOT reverted) and the same `convergence-summary.toon` shape — only the prompt-vs-stderr handling and process exit code differ.
 
@@ -346,16 +346,16 @@ The interactive and `--auto` branches share the same subject-file final state (p
 
 The snapshot write slots into the Convergence Loop between step 5 (stall short-circuit) and step 6 (spawn integrator) — concretely, the driver MUST call the snapshot helper AFTER deciding the integrator will be spawned this iteration and BEFORE the Agent tool call that spawns it. This ordering guarantees that if the integrator hangs, crashes, or produces garbage, the snapshot of the pre-integration subject is already on disk and can be used to revert.
 
-**File layout (per `agents/protocols/iteration-snapshot.schema.md`).** Each pass writes TWO sibling files under `{converge.config.snapshotDir}` (default `planning/history/snapshots/`):
+**File layout (per `protocols/iteration-snapshot.schema.md`).** Each pass writes TWO sibling files under `{converge.config.snapshotDir}` (default `planning/history/snapshots/`):
 
 - `{slug}-pass-{N}.{ext}` — the verbatim copy of the subject file at write time.
 - `{slug}-pass-{N}.toon` — the `IterationSnapshot` metadata record (sourcePath, snapshotPath, snapshotChecksum, iteration, timestamp, slug).
 
 Where `{slug}` is derived from `converge.config.subject` per the locked W-02 slug rule (basename minus its FINAL extension only) and `{ext}` preserves the subject's trailing extension verbatim. The integer `N` in `pass-{N}` MUST equal the driver's `currentIteration` at write time and MUST equal the `iteration` field of the sibling `.toon` record. All snapshots are retained forever per C-07 — the driver does NOT GC, cap, or rotate snapshot files.
 
-**Helper call (Phase 11 deliverable).** The driver invokes `writeIterationSnapshot(...)` exported from `hooks/lib/iteration-snapshot.ts` (helper lands in Phase 11 of this plan; this driver doc cites the call site, the Phase 11 implementer wires the helper). The helper is the SOLE writer of `IterationSnapshot` files — the driver MUST NOT inline the slug derivation, sha256 computation, or atomic-write sequence; it MUST call through the helper so the on-disk format stays consistent with the schema. The helper handles atomic writes per `agents/protocols/iteration-snapshot.schema.md § File Locations` (write copy to `{path}.{ext}.tmp`, rename; write metadata to `{path}.toon.tmp`, rename; verify checksum).
+**Helper call (Phase 11 deliverable).** The driver invokes `writeIterationSnapshot(...)` exported from `hooks/lib/iteration-snapshot.ts` (helper lands in Phase 11 of this plan; this driver doc cites the call site, the Phase 11 implementer wires the helper). The helper is the SOLE writer of `IterationSnapshot` files — the driver MUST NOT inline the slug derivation, sha256 computation, or atomic-write sequence; it MUST call through the helper so the on-disk format stays consistent with the schema. The helper handles atomic writes per `protocols/iteration-snapshot.schema.md § File Locations` (write copy to `{path}.{ext}.tmp`, rename; write metadata to `{path}.toon.tmp`, rename; verify checksum).
 
-**Error handling: `SNAPSHOT_WRITE_FAILED` is warn-and-continue.** Per the Error Handling table above and `agents/protocols/iteration-snapshot.schema.md § Error Codes`, a snapshot-write failure (disk full, permissions, missing source, checksum mismatch) does NOT halt the convergence loop. The helper performs a single retry with 1-second backoff; if the retry also fails, the helper returns `SNAPSHOT_WRITE_FAILED` and the driver MUST:
+**Error handling: `SNAPSHOT_WRITE_FAILED` is warn-and-continue.** Per the Error Handling table above and `protocols/iteration-snapshot.schema.md § Error Codes`, a snapshot-write failure (disk full, permissions, missing source, checksum mismatch) does NOT halt the convergence loop. The helper performs a single retry with 1-second backoff; if the retry also fails, the helper returns `SNAPSHOT_WRITE_FAILED` and the driver MUST:
 
 1. Log a warning to stderr identifying the failed snapshot path and the underlying error.
 2. Set `snapshotRef: null` in the current iteration's `iter-{N}.toon` row (per § Iteration Summary Uniform Shape Across Modes invariant 2 — `snapshotRef` is `null` when the snapshot is unavailable).
@@ -368,12 +368,12 @@ This warn-and-continue posture is intentional: snapshot writing is a safety-net 
 ### Cross-References
 
 - **Locked decision C-06** — Scope-expansion guard semantics and the regex set; this section is the driver-side implementation contract.
-- **Locked decision C-07** — Auto-snapshot writes before every integrator spawn (iteration `>= 2`); see `agents/protocols/iteration-snapshot.schema.md` for the schema and retention policy.
-- **Locked decision C-08** — `--auto` + SCOPE_EXPANSION exits with code 1 and a machine-readable stderr line; the exact JSON shape is normative in `agents/protocols/convergence-summary.schema.md`. This section MUST NOT duplicate that schema.
+- **Locked decision C-07** — Auto-snapshot writes before every integrator spawn (iteration `>= 2`); see `protocols/iteration-snapshot.schema.md` for the schema and retention policy.
+- **Locked decision C-08** — `--auto` + SCOPE_EXPANSION exits with code 1 and a machine-readable stderr line; the exact JSON shape is normative in `protocols/convergence-summary.schema.md`. This section MUST NOT duplicate that schema.
 - **Locked decision C-09** — Stdout progress format; see § Output Format § Stdout Progress (locked C-09) for the per-iteration line emitted at step 13 of the Convergence Loop. The SCOPE_EXPANSION halt line at step 10 is the C-10 halt-message block (cause + recovery), NOT a C-09 progress line.
 - **Locked decision C-10** — Halt-message format (cause + recovery + machine-readable `haltReason`); see § Circuit Breakers § Halt Messages and Recovery (locked C-10) for the full enum and the locked strings. The SCOPE_EXPANSION row of the C-10 table is the canonical source for the cause and recovery strings emitted on a guard firing.
-- **`agents/protocols/iteration-snapshot.schema.md`** — Snapshot record schema, slug derivation (W-02), `SNAPSHOT_WRITE_FAILED` warn-and-continue behavior, retention policy.
-- **`agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`** — `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` configuration fields and their defaults.
+- **`protocols/iteration-snapshot.schema.md`** — Snapshot record schema, slug derivation (W-02), `SNAPSHOT_WRITE_FAILED` warn-and-continue behavior, retention policy.
+- **`protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`** — `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` configuration fields and their defaults.
 - **`hooks/lib/iteration-snapshot.ts`** — Phase 11 deliverable that exports `writeIterationSnapshot(...)`; sole writer of `IterationSnapshot` files; implementation reference for slug rule, sha256 algorithm, and atomic-write sequence.
 
 ## State Tracking
@@ -472,7 +472,7 @@ Document-mode-specific fields:
 
 ### Iteration Summary Uniform Shape Across Modes
 
-The per-iteration `iter-{N}.toon` files written at step 12 of the Convergence Loop follow a SINGLE uniform shape across all three modes — `target`, `criteria`, and `document`. Required fields are identical; the document-mode-specific fields (`subject`, `snapshotRef`, `haltReason` when applicable) are present in every iteration summary but set to `null` for target and criteria modes. This uniformity is locked (see `agents/protocols/stage-context.schema.md § Uniform Shape Across Modes`) and is load-bearing for `/loom-converge --resume` and the future `loom-auto converge-link`, both of which read `iter-{N}.toon` with a fresh context and MUST be able to detect mode + outcome without reading `converge.config`.
+The per-iteration `iter-{N}.toon` files written at step 12 of the Convergence Loop follow a SINGLE uniform shape across all three modes — `target`, `criteria`, and `document`. Required fields are identical; the document-mode-specific fields (`subject`, `snapshotRef`, `haltReason` when applicable) are present in every iteration summary but set to `null` for target and criteria modes. This uniformity is locked (see `protocols/stage-context.schema.md § Uniform Shape Across Modes`) and is load-bearing for `/loom-converge --resume` and the future `loom-auto converge-link`, both of which read `iter-{N}.toon` with a fresh context and MUST be able to detect mode + outcome without reading `converge.config`.
 
 Driver invariants when writing `iter-{N}.toon`:
 
@@ -600,7 +600,7 @@ The historical name "fixer" survives in target/criteria messages and commit pref
 
 ## Iteration Context Strategy
 
-Each iteration writes a ConvergenceIterationSummary to `.plan-execution/convergence/iterations/iter-{N}.toon` (see `agents/protocols/stage-context.schema.md § ConvergenceIterationSummary Schema`). These files accumulate on disk across the entire convergence loop.
+Each iteration writes a ConvergenceIterationSummary to `.plan-execution/convergence/iterations/iter-{N}.toon` (see `protocols/stage-context.schema.md § ConvergenceIterationSummary Schema`). These files accumulate on disk across the entire convergence loop.
 
 When starting a new iteration (iteration 2+), the driver reads ONLY the last 2 iteration summaries from disk (`iter-{N-1}.toon` and `iter-{N-2}.toon`, if they exist). These summaries are passed to the delta-analyzer alongside the current Delta Report so it can detect stuck fixes and trends.
 
@@ -755,7 +755,7 @@ This line is the human-readable counterpart to the `status: converged` value wri
 
 ### FINDINGS_SCHEMA_INVALID Raise Condition
 
-Per the Error Handling table below and `findings.schema.md` Error Codes, the driver MUST raise `FINDINGS_SCHEMA_INVALID` and HALT (no retry) whenever the harness's `findings.toon` fails any validation rule defined in `agents/protocols/findings.schema.md § Validation Rules`. Specifically:
+Per the Error Handling table below and `findings.schema.md` Error Codes, the driver MUST raise `FINDINGS_SCHEMA_INVALID` and HALT (no retry) whenever the harness's `findings.toon` fails any validation rule defined in `protocols/findings.schema.md § Validation Rules`. Specifically:
 
 - Missing required field (`subject`, `harnessName`, `iteration`, `blockingCount`, `advisoryCount`, `producedAt`, `findings[]`)
 - `subject` does not equal `converge.config.subject`

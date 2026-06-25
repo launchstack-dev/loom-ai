@@ -37,9 +37,9 @@ You receive via prompt:
 ## Input (from disk)
 
 Read these files before starting:
-- `~/.claude/agents/protocols/wiki-conventions.md` — page format, categories, significance threshold (includes Flow/Contract significance heuristics and Required H2 sections)
-- `~/.claude/agents/protocols/wiki-page.schema.md` — frontmatter schema (universal fields plus category-specific Flow and Contract field tables)
-- `~/.claude/agents/protocols/wiki-index.schema.md` — index columns (schemaVersion 2 adds `summary`, `estimatedTokens`, `subtype`)
+- `~/.claude/protocols/wiki-conventions.md` — page format, categories, significance threshold (includes Flow/Contract significance heuristics and Required H2 sections)
+- `~/.claude/protocols/wiki-page.schema.md` — frontmatter schema (universal fields plus category-specific Flow and Contract field tables)
+- `~/.claude/protocols/wiki-index.schema.md` — index columns (schemaVersion 2 adds `summary`, `estimatedTokens`, `subtype`)
 - `.loom/wiki/index.toon` — current page catalog (to avoid duplicates)
 
 ## Approach

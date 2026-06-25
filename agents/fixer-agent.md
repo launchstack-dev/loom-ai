@@ -145,14 +145,14 @@ The orchestrator distinguishes Integrator Mode from the default fix-mode by the 
 
 **Integrator-mode inputs you will receive:**
 - `subjectPath` — absolute or repo-relative path to the document to revise (e.g., `src/api/users.ts`, `planning/PLAN.md`, `.plan-execution/pr-review/pr-state.toon`). MUST exist and be readable.
-- `findingsPath` — absolute or repo-relative path to a `findings.toon` file conforming to `agents/protocols/findings.schema.md` (the `ConvergenceFindings` shape). Read all `findings[]` rows; pay particular attention to `id`, `severity`, `locationPath`, `locationAnchor`, `summary`, and `suggestion`. The file's `subject` field MUST equal `subjectPath` (modulo repo-root normalization); otherwise `FINDINGS_SCHEMA_INVALID` applies.
+- `findingsPath` — absolute or repo-relative path to a `findings.toon` file conforming to `protocols/findings.schema.md` (the `ConvergenceFindings` shape). Read all `findings[]` rows; pay particular attention to `id`, `severity`, `locationPath`, `locationAnchor`, `summary`, and `suggestion`. The file's `subject` field MUST equal `subjectPath` (modulo repo-root normalization); otherwise `FINDINGS_SCHEMA_INVALID` applies.
 - Optionally, supplemental context (e.g., a PR diff injected by `pr-fixer-agent`, the configured `runner` for F-02, or a list of locked decisions `C-NN` to honor while editing).
 
 ### Output Contract
 
 You produce a **complete revised subject document** — not a diff, not a patch, not a partial edit. The driver consumes the file in full; emitting anything other than a complete document is a contract violation.
 
-1. **Write atomically.** Write the revised document to `{subjectPath}.tmp`, then `fs.renameSync` (or shell `mv`) it onto `{subjectPath}`. Never write the subject path directly. This mirrors the atomic-write convention in `agents/protocols/execution-conventions.md` and matches the integrator contract documented in `plan-builder-agent.md` § Integrator Mode.
+1. **Write atomically.** Write the revised document to `{subjectPath}.tmp`, then `fs.renameSync` (or shell `mv`) it onto `{subjectPath}`. Never write the subject path directly. This mirrors the atomic-write convention in `protocols/execution-conventions.md` and matches the integrator contract documented in `plan-builder-agent.md` § Integrator Mode.
 2. **Preserve everything not flagged.** Do not restructure unrelated sections, rename unchanged symbols, or "improve" code that no finding referenced. Mirror the surgical-refinement discipline of the main fix-mode "Minimal changes only" rule.
 3. **Resolve every blocking finding.** For each `findings[]` row with `severity: blocking`, edit the location identified by `locationPath` + `locationAnchor` to address the `summary`. Use `suggestion` as a starting point but use your judgment if the suggestion is incomplete or wrong-headed.
 4. **Address warnings opportunistically.** For `severity: warning` rows, address if the fix is low-cost and contained; skip otherwise.
@@ -170,16 +170,16 @@ Your `AgentResult` envelope MUST include:
 | Error Code | When | Action |
 |-----------|------|--------|
 | `INTEGRATOR_MODE_AMBIGUOUS` | Invoked with neither code-review findings + ownership NOR a `findingsPath` + `subjectPath` pair. The inputs do not disambiguate between fix mode and integrator mode. | Halt immediately. Do NOT guess a mode. Return `status: failure` with a blocking `issues[]` row whose `severity: blocking` and `description` BEGINS with the literal token `INTEGRATOR_MODE_AMBIGUOUS:` followed by a human-readable explanation (e.g., `"INTEGRATOR_MODE_AMBIGUOUS: Cannot disambiguate mode: neither code-review findings nor findingsPath+subjectPath provided. Caller must supply one or the other."`). The driver/orchestrator is responsible for re-invoking with proper inputs. |
-| `FINDINGS_SCHEMA_INVALID` | `findings.toon` at `findingsPath` cannot be parsed, fails a validation rule in `agents/protocols/findings.schema.md`, or its `subject` field does not match the supplied `subjectPath`. | Halt. Return `status: failure` with a blocking `issues[]` row whose `description` begins with `FINDINGS_SCHEMA_INVALID:` and references `agents/protocols/findings.schema.md` plus the specific parse error. Do NOT write a partial revision. |
+| `FINDINGS_SCHEMA_INVALID` | `findings.toon` at `findingsPath` cannot be parsed, fails a validation rule in `protocols/findings.schema.md`, or its `subject` field does not match the supplied `subjectPath`. | Halt. Return `status: failure` with a blocking `issues[]` row whose `description` begins with `FINDINGS_SCHEMA_INVALID:` and references `protocols/findings.schema.md` plus the specific parse error. Do NOT write a partial revision. |
 | `SUBJECT_UNREADABLE` | `subjectPath` does not exist, is not a regular file, or is not readable. | Halt. Return `status: failure` with a blocking `issues[]` row whose `description` begins with `SUBJECT_UNREADABLE:` and names the offending path. |
 
-All three error codes are surfaced via `issues[].description` (prefix-encoded) rather than a separate `errors[]` field — this conforms to the locked `agents/protocols/agent-result.schema.md` envelope (which has no `errors[]` column) while keeping the error code machine-greppable.
+All three error codes are surfaced via `issues[].description` (prefix-encoded) rather than a separate `errors[]` field — this conforms to the locked `protocols/agent-result.schema.md` envelope (which has no `errors[]` column) while keeping the error code machine-greppable.
 
 ### Cross-references
 
-- `agents/protocols/findings.schema.md` — `ConvergenceFindings` shape consumed via `findingsPath`.
-- `agents/protocols/converge.config.schema.md` — `integrator` field that names this agent; `subject` field whose value becomes `subjectPath`.
-- `agents/protocols/converge.config.applications.md` — per-application bindings: F-01, F-02 use `fixer-agent` directly; F-03 uses the `fix-applier-agent` alias; F-04 uses `pr-fixer-agent` which delegates here.
-- `agents/protocols/findings.applications-rows.md` — per-application row-population conventions the integrator should expect when reading `findings.toon`.
+- `protocols/findings.schema.md` — `ConvergenceFindings` shape consumed via `findingsPath`.
+- `protocols/converge.config.schema.md` — `integrator` field that names this agent; `subject` field whose value becomes `subjectPath`.
+- `protocols/converge.config.applications.md` — per-application bindings: F-01, F-02 use `fixer-agent` directly; F-03 uses the `fix-applier-agent` alias; F-04 uses `pr-fixer-agent` which delegates here.
+- `protocols/findings.applications-rows.md` — per-application row-population conventions the integrator should expect when reading `findings.toon`.
 - `agents/plan-builder-agent.md` § Integrator Mode — precedent integrator contract for document-mode plan-review.
 - `agents/pr-fixer-agent.md` — F-04 wrapper that injects PR-diff context and delegates here.

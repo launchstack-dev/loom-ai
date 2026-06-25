@@ -515,7 +515,7 @@ Only `gemini` ships in this plan; `coderabbit` and `copilot` are reserved in the
 
 **Step 3: Generate the converge.config.**
 
-Invoke `scripts/lib/pr-review-harness/wrapper-config.ts::buildWrapperConfig({ prNumber, botAdapter })` and atomically write the encoded TOON to `.plan-execution/pr-review/converge.config.toon`. The resulting config is the F-04 binding from `agents/protocols/converge.config.applications.md`:
+Invoke `scripts/lib/pr-review-harness/wrapper-config.ts::buildWrapperConfig({ prNumber, botAdapter })` and atomically write the encoded TOON to `.plan-execution/pr-review/converge.config.toon`. The resulting config is the F-04 binding from `protocols/converge.config.applications.md`:
 
 ```toon
 mode: document

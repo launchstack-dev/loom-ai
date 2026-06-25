@@ -42,12 +42,12 @@ Exit non-zero.
 
 Before executing any subcommand, read the relevant schemas:
 
-- `~/.claude/agents/protocols/change-proposal.schema.md` — ChangeProposal + DeltaBlock field tables, directory layout, atomic archive semantics
-- `~/.claude/agents/protocols/change-state.schema.md` — runtime ChangeState format and status lifecycle
-- `~/.claude/agents/protocols/contract-page-extensions.schema.md` — what `contract-*` pages look like and what changes mutate
-- `~/.claude/agents/protocols/scenario.schema.md` — scenario block format used in DeltaBlock added/modified scenarios
-- `~/.claude/agents/protocols/execution-conventions.md` — atomic-write convention (`.tmp` + rename) for runtime state
-- `~/.claude/agents/protocols/validation-rules.md` — severity conventions for validator findings
+- `~/.claude/protocols/change-proposal.schema.md` — ChangeProposal + DeltaBlock field tables, directory layout, atomic archive semantics
+- `~/.claude/protocols/change-state.schema.md` — runtime ChangeState format and status lifecycle
+- `~/.claude/protocols/contract-page-extensions.schema.md` — what `contract-*` pages look like and what changes mutate
+- `~/.claude/protocols/scenario.schema.md` — scenario block format used in DeltaBlock added/modified scenarios
+- `~/.claude/protocols/execution-conventions.md` — atomic-write convention (`.tmp` + rename) for runtime state
+- `~/.claude/protocols/validation-rules.md` — severity conventions for validator findings
 
 Path constants for both proposal artifacts and runtime state are exported from `hooks/lib/change-paths.ts`. Runtime ChangeState read/write goes through `hooks/lib/change-state.ts`. Use these — do NOT hard-code paths.
 

@@ -2,9 +2,9 @@
 /**
  * F-02 test-run convergence harness.
  *
- * Mode:     `convergenceMode: document` per `agents/protocols/converge.config.applications.md`
- * Output:   `ConvergenceFindings` TOON per `agents/protocols/findings.schema.md`
- *           (F-02 row variant per `agents/protocols/findings.applications-rows.md`).
+ * Mode:     `convergenceMode: document` per `protocols/converge.config.applications.md`
+ * Output:   `ConvergenceFindings` TOON per `protocols/findings.schema.md`
+ *           (F-02 row variant per `protocols/findings.applications-rows.md`).
  *
  * Pattern:
  *

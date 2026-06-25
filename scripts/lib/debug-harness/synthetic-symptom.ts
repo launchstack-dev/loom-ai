@@ -2,8 +2,8 @@
  * Synthetic "symptom still reproduces" finding-row helper for F-03 (debug)
  * convergence harness.
  *
- * Contract:    `agents/protocols/findings.applications-rows.md` § F-03 OQ-01.
- * Schema:      `agents/protocols/findings.schema.md` (ConvergenceFindings v1).
+ * Contract:    `protocols/findings.applications-rows.md` § F-03 OQ-01.
+ * Schema:      `protocols/findings.schema.md` (ConvergenceFindings v1).
  *
  * The debug-harness re-runs the symptom after invoking the investigator. If
  * the symptom still reproduces (the re-run exits non-zero), the harness

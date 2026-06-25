@@ -2,14 +2,14 @@
 # scripts/refresh-upstream-schemas.sh
 #
 # Refresh pinned snapshots of upstream Anthropic schemas under
-# agents/protocols/upstream/. Wave 1 of PLAN-plugin-marketplace-migration
+# protocols/upstream/. Wave 1 of PLAN-plugin-marketplace-migration
 # validates Loom's `.claude-plugin/plugin.json` against this snapshot; if the
 # snapshot is the deferred-fetch placeholder shipped in Wave 0, the validation
 # is meaningless.
 #
 # This script fetches the current docs, extracts the JSON Schema for the plugin
-# manifest, writes it to agents/protocols/upstream/plugin.schema.json, and
-# updates agents/protocols/upstream/.meta.toon with a fresh snapshotDate.
+# manifest, writes it to protocols/upstream/plugin.schema.json, and
+# updates protocols/upstream/.meta.toon with a fresh snapshotDate.
 #
 # Invocation:
 #   scripts/refresh-upstream-schemas.sh           # fetch + write
@@ -30,7 +30,7 @@ set -euo pipefail
 # preserves fenced ```json blocks — that's what we scrape.
 SOURCE_URL="${LOOM_PLUGIN_DOCS_URL:-https://code.claude.com/docs/en/plugins-reference.md}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-UPSTREAM_DIR="$REPO_ROOT/agents/protocols/upstream"
+UPSTREAM_DIR="$REPO_ROOT/protocols/upstream"
 SCHEMA_FILE="$UPSTREAM_DIR/plugin.schema.json"
 META_FILE="$UPSTREAM_DIR/.meta.toon"
 TODAY="$(date -u +%Y-%m-%d)"

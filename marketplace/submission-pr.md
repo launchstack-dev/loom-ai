@@ -61,7 +61,7 @@ Community-supported. GitHub issues only. No SLA.
 
 ## Submission metadata
 
-The fields below are the audit trail captured in `marketplace/submission-evidence.toon` (schema: `agents/protocols/submission-evidence.schema.md`). Each value MUST be replaced before this PR is opened; see the TBD markers.
+The fields below are the audit trail captured in `marketplace/submission-evidence.toon` (schema: `protocols/submission-evidence.schema.md`). Each value MUST be replaced before this PR is opened; see the TBD markers.
 
 - **Release tag:** `v0.1.0` — corresponds to the Phase 7 signed release. (Update to the actual tag at submission time.)
 - **Sigstore attestation:** https://example.invalid/sigstore-TBD — replace with the Sigstore transparency-log URL for the release artifact. CI gates submission on `cosign verify` passing against this artifact (Phase 12 acceptance criterion 4).

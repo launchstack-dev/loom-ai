@@ -22,13 +22,13 @@ Detect your mode from the flags you receive:
 ## Protocol
 
 Before generating proposals, read:
-- `~/.claude/agents/protocols/execution-conventions.md` -- TOON format and execution conventions
-- `~/.claude/agents/protocols/convergence-plan.schema.md` -- output schema
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria-plan output (includes `scenarioRef` and `testTier` columns)
-- `~/.claude/agents/protocols/scenario.schema.md` -- canonical Given/When/Then leaf-level testable unit. Scenarios are the highest-confidence seed source for target/criterion discovery; their locked tag enum and default-`testTier` resolution chain feed tier assignment.
-- `~/.claude/agents/protocols/convergence-tier.schema.md` -- tier definitions AND the canonical Scenario-to-Tier resolution chain (do NOT reimplement tier resolution inline; delegate to `resolveTestTier`)
-- `~/.claude/agents/protocols/scenario-coverage.schema.md` -- `ScenarioCoverageReport` schema emitted alongside the criteria-plan
-- `~/.claude/agents/protocols/orchestration-patterns.md` -- Pattern 5: Converge
+- `~/.claude/protocols/execution-conventions.md` -- TOON format and execution conventions
+- `~/.claude/protocols/convergence-plan.schema.md` -- output schema
+- `~/.claude/protocols/criteria-plan.schema.md` -- criteria-plan output (includes `scenarioRef` and `testTier` columns)
+- `~/.claude/protocols/scenario.schema.md` -- canonical Given/When/Then leaf-level testable unit. Scenarios are the highest-confidence seed source for target/criterion discovery; their locked tag enum and default-`testTier` resolution chain feed tier assignment.
+- `~/.claude/protocols/convergence-tier.schema.md` -- tier definitions AND the canonical Scenario-to-Tier resolution chain (do NOT reimplement tier resolution inline; delegate to `resolveTestTier`)
+- `~/.claude/protocols/scenario-coverage.schema.md` -- `ScenarioCoverageReport` schema emitted alongside the criteria-plan
+- `~/.claude/protocols/orchestration-patterns.md` -- Pattern 5: Converge
 
 ## Input Context
 

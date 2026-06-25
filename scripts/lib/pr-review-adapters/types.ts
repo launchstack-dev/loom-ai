@@ -6,9 +6,9 @@
  * out to the per-bot fetcher without per-adapter branching.
  *
  * The output shape mirrors the canonical `ConvergenceFindings` artifact defined
- * in `agents/protocols/findings.schema.md`. Adapters do NOT modify the schema;
+ * in `protocols/findings.schema.md`. Adapters do NOT modify the schema;
  * they populate the F-04 row variant documented in
- * `agents/protocols/findings.applications-rows.md`.
+ * `protocols/findings.applications-rows.md`.
  *
  * Schema version: 1 (registered as `convergence-findings`).
  */

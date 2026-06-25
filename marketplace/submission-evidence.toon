@@ -1,6 +1,6 @@
 # SubmissionEvidence — marketplace/submission-evidence.toon
 #
-# Schema: agents/protocols/submission-evidence.schema.md (schemaVersion 1).
+# Schema: protocols/submission-evidence.schema.md (schemaVersion 1).
 # Written by the Phase 12 marketplace submission flow; consumed by maintainer
 # dashboards and `/loom-marketplace status` (future).
 #

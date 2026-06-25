@@ -20,7 +20,7 @@ Parse arguments after `status`:
 
 #### Step 1: Check for Roadmap
 
-Resolve roadmap per `agents/protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy). Treat a short root stub that references `planning/ROADMAP.md` as a pointer.
+Resolve roadmap per `protocols/planning-paths.md` — check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy). Treat a short root stub that references `planning/ROADMAP.md` as a pointer.
 
 If a roadmap exists:
 - Delegate to `/loom-roadmap status` logic. This shows the full unified status view (roadmap + plan + milestones + progress).
@@ -29,7 +29,7 @@ If a roadmap exists:
 
 #### Step 2: Basic Project Info (no roadmap)
 
-If no roadmap exists in either modern or legacy location, display a basic project overview. Plan resolution also follows `agents/protocols/planning-paths.md` — display `found at {path}` when matched, `not found` when missing.
+If no roadmap exists in either modern or legacy location, display a basic project overview. Plan resolution also follows `protocols/planning-paths.md` — display `found at {path}` when matched, `not found` when missing.
 
 ```
 ## Project Status

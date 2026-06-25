@@ -121,7 +121,7 @@ Two files touched:
 
 | File | Edit | Lines roughly |
 |------|------|---------------|
-| `agents/protocols/state.schema.md` | Add `gitLineage` block to the schema example + add rule under "Rules" for branch/lineage drift detection | +25 |
+| `protocols/state.schema.md` | Add `gitLineage` block to the schema example + add rule under "Rules" for branch/lineage drift detection | +25 |
 | `commands/loom-plan/execute.md` | Capture lineage in Step 1; populate in 3.5/8.5; check in --resume Step 3 | +60 |
 
 No new schemas, no new agents, no new hooks. Pure protocol hardening.

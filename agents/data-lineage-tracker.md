@@ -18,8 +18,8 @@ You receive via prompt:
 ## Input (from disk)
 
 Read these files before starting:
-- `~/.claude/agents/protocols/wiki-conventions.md` — page format rules, directory structure
-- `~/.claude/agents/protocols/wiki-page.schema.md` — page frontmatter format
+- `~/.claude/protocols/wiki-conventions.md` — page format rules, directory structure
+- `~/.claude/protocols/wiki-page.schema.md` — page frontmatter format
 - `.loom/wiki/index.toon` — current page catalog
 
 ## Approach

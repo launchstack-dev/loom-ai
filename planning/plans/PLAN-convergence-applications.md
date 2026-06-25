@@ -31,7 +31,7 @@ Wires four new applications (code-review, test-run, debug, PR-review) onto the f
 
 ### ConvergenceFindings (existing, locked — referenced verbatim per CA-01)
 
-Defined in `agents/protocols/findings.schema.md`. Each harness in this plan emits a `findings.toon` document conforming to that schema. The columns below are restated as the **row shape every new harness MUST produce** so the agents can wire correctly without re-reading the locked schema.
+Defined in `protocols/findings.schema.md`. Each harness in this plan emits a `findings.toon` document conforming to that schema. The columns below are restated as the **row shape every new harness MUST produce** so the agents can wire correctly without re-reading the locked schema.
 
 | Field | Type | Constraints | Validation |
 |-------|------|-------------|------------|
@@ -95,7 +95,7 @@ When the symptom no longer reproduces, the synthetic row is omitted; if the inve
 
 ### ConvergeConfig (existing, referenced — extended fields per application)
 
-Defined in `agents/protocols/converge.config.schema.md` (existing, locked structurally). Per OQ-02 decision, `subject` MUST resolve to a real file under repo root; F-04 uses a `pr-state.toon` projection.
+Defined in `protocols/converge.config.schema.md` (existing, locked structurally). Per OQ-02 decision, `subject` MUST resolve to a real file under repo root; F-04 uses a `pr-state.toon` projection.
 
 | Field | F-01 | F-02 | F-03 | F-04 |
 |-------|------|------|------|------|
@@ -110,7 +110,7 @@ Defined in `agents/protocols/converge.config.schema.md` (existing, locked struct
 
 ### IterationSnapshot (existing, locked — referenced)
 
-Defined in `agents/protocols/iteration-snapshot.schema.md`. All four applications snapshot via `hooks/lib/iteration-snapshot.ts` verbatim. F-04's `subject` resolves to `pr-state.toon`, which is a real file — the snapshot mechanism is unchanged (per OQ-02 decision).
+Defined in `protocols/iteration-snapshot.schema.md`. All four applications snapshot via `hooks/lib/iteration-snapshot.ts` verbatim. F-04's `subject` resolves to `pr-state.toon`, which is a real file — the snapshot mechanism is unchanged (per OQ-02 decision).
 
 ### ConvergenceSummary (existing, locked — NOT extended)
 
@@ -315,13 +315,13 @@ Harnesses themselves do NOT retry — retry is the driver's responsibility (exis
 **Agent:** contracts-agent
 **Objective:** Author the shared converge.config field-extension docs and the per-application finding-row schema rows so F-01..F-04 can be implemented in parallel without coordinating.
 **Dependencies:** None
-**File Ownership:** `agents/protocols/converge.config.applications.md`, `agents/protocols/findings.applications-rows.md`
+**File Ownership:** `protocols/converge.config.applications.md`, `protocols/findings.applications-rows.md`
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/converge.config.applications.md | Create | contracts-agent |
-| agents/protocols/findings.applications-rows.md | Create | contracts-agent |
+| protocols/converge.config.applications.md | Create | contracts-agent |
+| protocols/findings.applications-rows.md | Create | contracts-agent |
 
 These docs are TOON-compatible markdown (per CLAUDE.md: schemas defined in protocol files; tables/text are markdown). They reference the existing locked schemas verbatim and add only:
 - The per-application field columns from the matrix above (no schema changes)
@@ -329,8 +329,8 @@ These docs are TOON-compatible markdown (per CLAUDE.md: schemas defined in proto
 - The dedup rule shape for F-04 Gemini (OQ-04)
 
 #### Acceptance Criteria
-- [ ] `agents/protocols/converge.config.applications.md` exists and references `agents/protocols/converge.config.schema.md` without modifying it.
-- [ ] `agents/protocols/findings.applications-rows.md` documents F-01..F-04 row variants without modifying `agents/protocols/findings.schema.md`.
+- [ ] `protocols/converge.config.applications.md` exists and references `protocols/converge.config.schema.md` without modifying it.
+- [ ] `protocols/findings.applications-rows.md` documents F-01..F-04 row variants without modifying `protocols/findings.schema.md`.
 - [ ] `npx tsc --noEmit` exits with code 0 (no code in this phase, but the existing project type-checks).
 - [ ] `bun run lint` exits with code 0.
 
@@ -339,10 +339,10 @@ These docs are TOON-compatible markdown (per CLAUDE.md: schemas defined in proto
 ```toon
 id: S-01
 title: Contracts phase produces both protocol docs and does not modify locked schemas
-given[2]: The locked schemas in agents/protocols/ are unchanged on disk, contracts-agent is invoked for Phase 0
+given[2]: The locked schemas in protocols/ are unchanged on disk, contracts-agent is invoked for Phase 0
 when: The agent writes both new protocol docs
 whenTriggerType: actor-action
-then[3]: agents/protocols/converge.config.applications.md MUST exist, agents/protocols/findings.applications-rows.md MUST exist, git diff against agents/protocols/converge.config.schema.md and findings.schema.md and iteration-snapshot.schema.md and convergence-summary.schema.md MUST be empty
+then[3]: protocols/converge.config.applications.md MUST exist, protocols/findings.applications-rows.md MUST exist, git diff against protocols/converge.config.schema.md and findings.schema.md and iteration-snapshot.schema.md and convergence-summary.schema.md MUST be empty
 stateRef:
 tags[1]: happy-path
 automatable: true
@@ -570,7 +570,7 @@ title: convergence-summary.toon must not gain a customTerminationOutcome field
 given[1]: The fixture has converged via the synthetic-row path
 when: The driver writes convergence-summary.toon
 whenTriggerType: system-event
-then[1]: convergence-summary.toon keys MUST be exactly the keys defined in agents/protocols/convergence-summary.schema.md
+then[1]: convergence-summary.toon keys MUST be exactly the keys defined in protocols/convergence-summary.schema.md
 stateRef:
 tags[2]: regression, edge-case
 testTier: integration
@@ -597,7 +597,7 @@ automatable: true
 | test/fixer-agent-integrator-mode.test.ts | Create | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] `fixer-agent.md` contains an `## Integrator Mode` section that names the input disambiguation matrix (findings.toon + subject → integrator mode), specifies atomic `.tmp` + rename writes, names error codes `INTEGRATOR_MODE_AMBIGUOUS`, `FINDINGS_SCHEMA_INVALID`, `SUBJECT_UNREADABLE`, and references `agents/protocols/findings.schema.md`.
+- [ ] `fixer-agent.md` contains an `## Integrator Mode` section that names the input disambiguation matrix (findings.toon + subject → integrator mode), specifies atomic `.tmp` + rename writes, names error codes `INTEGRATOR_MODE_AMBIGUOUS`, `FINDINGS_SCHEMA_INVALID`, `SUBJECT_UNREADABLE`, and references `protocols/findings.schema.md`.
 - [ ] `pr-fixer-agent.md` declares its delegation to `fixer-agent` Integrator Mode plus PR-diff context injection via `gh pr diff`; does NOT duplicate fixer-agent's prose.
 - [ ] An integration test asserts that invoking `fixer-agent` with `findings.toon + subjectPath` writes a revised subject file atomically.
 - [ ] An integration test asserts that calling `fixer-agent` with neither a roadmap nor `findings.toon` returns `INTEGRATOR_MODE_AMBIGUOUS`.
@@ -833,7 +833,7 @@ This phase ships documentation only and produces no programmatically observable 
 ### Phase 8 — Wave 3: Spawn-Count Ceiling Tests + Cross-Application Schema Verification
 
 **Agent:** implementer-agent
-**Objective:** Author a single integration test that re-reads `agents/protocols/convergence-summary.schema.md`, `findings.schema.md`, `iteration-snapshot.schema.md`, and `converge.config.schema.md` from all five wiring fixtures (plan-creation existing + F-01..F-04 new) and asserts they all conform to the locked schemas. Also asserts spawn-count ceilings per application (per Success Metrics in the roadmap).
+**Objective:** Author a single integration test that re-reads `protocols/convergence-summary.schema.md`, `findings.schema.md`, `iteration-snapshot.schema.md`, and `converge.config.schema.md` from all five wiring fixtures (plan-creation existing + F-01..F-04 new) and asserts they all conform to the locked schemas. Also asserts spawn-count ceilings per application (per Success Metrics in the roadmap).
 **Dependencies:** Phase 1, Phase 2, Phase 3, Phase 6
 **File Ownership:** `test/convergence-applications/cross-application-schema.test.ts`, `test/convergence-applications/spawn-ceiling.test.ts`
 
@@ -931,7 +931,7 @@ bun test test/convergence-applications/                      # Phase 8
 ## Acceptance Criteria (Final)
 
 - [ ] All four applications converge their fixtures via `/loom-converge --mode document` against the unchanged driver.
-- [ ] `git diff` against `agents/convergence-driver.md`, `hooks/lib/iteration-snapshot.ts`, `agents/protocols/findings.schema.md`, `convergence-summary.schema.md`, `iteration-snapshot.schema.md` is empty (CA-01).
+- [ ] `git diff` against `agents/convergence-driver.md`, `hooks/lib/iteration-snapshot.ts`, `protocols/findings.schema.md`, `convergence-summary.schema.md`, `iteration-snapshot.schema.md` is empty (CA-01).
 - [ ] `--autoconverge` flag is the only autoconvergence flag exposed (CA-06) — no per-application synonyms exist in `~/.claude/commands/loom-code.md`, `~/.claude/commands/loom-test.md`, `~/.claude/commands/loom-bugfix.md`, `~/.claude/commands/loom-git.md`.
 - [ ] Phase 8 cross-application schema and spawn-ceiling tests pass.
 - [ ] `npx tsc --noEmit && bun run lint && bun test` exits with code 0 at the plan's completion.

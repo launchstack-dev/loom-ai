@@ -81,7 +81,7 @@ Examples:
 
 | Type | Source Pattern | Install Target |
 |------|---------------|----------------|
-| skills | `agents/protocols/*.md` | `~/.claude/skills/{name}.md` (global) |
+| skills | `protocols/*.md` | `~/.claude/skills/{name}.md` (global) |
 | agents | `agents/*.md` | `~/.claude/agents/{name}.md` (global) |
 | prompts | `commands/*.md` | `~/.claude/commands/{name}.md` (global) |
 | infrastructure | `hooks/*.cjs`, `hooks/*.sh` | explicit `target:` field |

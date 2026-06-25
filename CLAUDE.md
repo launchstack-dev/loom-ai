@@ -37,11 +37,11 @@ blockName:                                    # nested block
 
 ## Agent Conventions
 
-- All agents return a standard AgentResult envelope in TOON (see `agents/protocols/agent-result.schema.md`)
+- All agents return a standard AgentResult envelope in TOON (see `protocols/agent-result.schema.md`)
 - Execution agents write progress heartbeats to `.plan-execution/progress/{taskId}.toon`
 - File writes must be atomic: write to `.tmp`, then rename
 - **Model resolution is mandatory.** Before every Agent tool call, read the target agent's `.md` frontmatter `model:` field and pass `model: "{value}"` on the call. Resolution priority: (1) `orchestration.toml` profile tier, (2) frontmatter, (3) inherit parent. Never spawn an agent without resolving its model first.
-- See `agents/protocols/execution-conventions.md` for directory structure and file naming
+- See `protocols/execution-conventions.md` for directory structure and file naming
 
 ## Context Management
 
@@ -57,14 +57,14 @@ blockName:                                    # nested block
 - Token estimation uses the **characters / 4** heuristic (`Math.ceil(text.length / 4)`)
 - File-based estimation uses `fs.statSync(path).size / 4` (byte size, not character count)
 - A fixed **5000-token overhead** is added for system prompt, tool definitions, and formatting
-- See `hooks/lib/token-estimator.ts` for implementation and `agents/protocols/context-budget.md` for the full spec
+- See `hooks/lib/token-estimator.ts` for implementation and `protocols/context-budget.md` for the full spec
 
 ### Stage Summary Writes
 
 - Every pipeline stage must write a StageContext summary to `.plan-execution/stage-context/{stage}.toon`
 - Writes must be **atomic**: write to `{path}.tmp`, then `fs.renameSync` to `{path}`
 - Stage summaries are the structured source of truth; `rolling-context.md` is the compressed derivative
-- See `agents/protocols/stage-context.schema.md` for the full StageContext schema
+- See `protocols/stage-context.schema.md` for the full StageContext schema
 
 ### Budget Configuration
 
@@ -88,7 +88,7 @@ Loom is a platform you extend, not a fixed methodology. Every behavior is compos
 |---|---|---|
 | `agent` | `.claude/agents/{name}.md` | Subagent definitions (frontmatter `model:` + system prompt) |
 | `prompt` | `.claude/commands/{name}.md` | Slash commands users invoke (`/loom-...`) |
-| `protocol` | `agents/protocols/{name}.md` (or `.toon`/`.schema.md`) | Shared schemas, conventions, contracts read by multiple agents |
+| `protocol` | `protocols/{name}.md` (or `.toon`/`.schema.md`) | Shared schemas, conventions, contracts read by multiple agents |
 | `skill` | `~/.claude/skills/{name}/SKILL.md` | Procedural how-to guides Claude loads on demand |
 | `infrastructure` | `hooks/`, `scripts/` | Deterministic enforcement (hooks) and tooling scripts |
 
@@ -115,7 +115,7 @@ Loom is a platform you extend, not a fixed methodology. Every behavior is compos
 | **skill** | You want **domain conventions applied automatically** whenever matching files are open in a Claude Code session (e.g., language-specific patterns, framework preferences, coding-style rules). Activates via `triggers:` frontmatter or description-based matching; no orchestration overhead. Author with `/loom-skill create`. |
 | **agent** | You need a **participant in a Loom pipeline stage** (review, execution, testing, planning) that produces structured findings, files, or AgentResult envelopes. Activates only when the pipeline calls it. Author with `/loom-agent create`. |
 | **prompt** | You want a **user-invokable slash command** (`/loom-<thing>`) that runs in the foreground and prompts Claude to do a specific task on demand. Lives in `~/.claude/commands/`. Hand-author. |
-| **protocol** | You're defining a **shared schema, message envelope, or contract** that multiple agents read to coordinate (e.g., `AgentResult`, `state.toon`, wave-summary formats). Lives in `agents/protocols/`. Hand-author. |
+| **protocol** | You're defining a **shared schema, message envelope, or contract** that multiple agents read to coordinate (e.g., `AgentResult`, `state.toon`, wave-summary formats). Lives in `protocols/`. Hand-author. |
 | **infrastructure** | You need **deterministic enforcement** outside Claude's control loop — hooks (PreToolUse/PostToolUse/etc.) or scripts that run on real events. Lives in `hooks/` or `scripts/`. Hand-author; register with explicit `target:` path under `library.infrastructure:`. |
 
 **Heuristic for choosing between skill and agent:** if a Claude Code user would want this knowledge to "just be there" whenever they open a relevant file, author a **skill**. If a Loom pipeline run would call it as a discrete stage, author an **agent**. When unsure, `/loom-library add <source>` runs a classification heuristic that prioritizes `triggers:` frontmatter (→ skill) over filename and surfaces an ambiguous-type prompt when the signal is unclear.

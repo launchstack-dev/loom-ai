@@ -11,8 +11,8 @@ If no arguments are provided, look for a ROADMAP.md in the current working direc
 ### Review Protocols
 
 Before starting, read:
-- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
-- `~/.claude/agents/protocols/validation-rules.md` — Section 7: Roadmap Validation Rules
+- `~/.claude/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
+- `~/.claude/protocols/validation-rules.md` — Section 7: Roadmap Validation Rules
 
 ### Status Line Updates
 
@@ -20,11 +20,11 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` SS 
 
 ### Step R0: Read protocols
 
-Read `~/.claude/agents/protocols/validation-rules.md` for roadmap validation rules and blocker gate enforcement.
+Read `~/.claude/protocols/validation-rules.md` for roadmap validation rules and blocker gate enforcement.
 
 ### Step R1: Find the roadmap
 
-Resolve the roadmap document per `agents/protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then the user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer. Read the resolved file to confirm content.
+Resolve the roadmap document per `protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then the user-specified path. Treat a short root stub that references `planning/ROADMAP.md` as a pointer. Read the resolved file to confirm content.
 
 ### Step R1a: Structural pre-check
 

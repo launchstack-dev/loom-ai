@@ -1,7 +1,7 @@
 /**
  * Pure-function migrator for install-state.toon v2 → v3.
  * No I/O. Side effects (sha256 computation, timestamps) are injected via options.
- * See agents/protocols/install-state.schema.md and schema-upgrade.md Rule 12.
+ * See protocols/install-state.schema.md and schema-upgrade.md Rule 12.
  */
 
 import {

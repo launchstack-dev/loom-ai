@@ -21,8 +21,8 @@ If unsure, ask: "I see a project description. Should I run full scope interrogat
 ## Protocol
 
 Before generating decisions, read:
-- `~/.claude/agents/protocols/execution-conventions.md` -- TOON format and execution conventions
-- `~/.claude/agents/protocols/scope-contract.schema.md` -- scope contract schema (scope contract mode only)
+- `~/.claude/protocols/execution-conventions.md` -- TOON format and execution conventions
+- `~/.claude/protocols/scope-contract.schema.md` -- scope contract schema (scope contract mode only)
 
 ## Input Context
 
@@ -278,7 +278,7 @@ If the user picks [1], behave as if `--auto` was passed.
 
 ### Step 7: Output scope-contract.toon
 
-After all decisions are locked and acceptance criteria are confirmed, generate the scope contract in TOON format following `agents/protocols/scope-contract.schema.md`.
+After all decisions are locked and acceptance criteria are confirmed, generate the scope contract in TOON format following `protocols/scope-contract.schema.md`.
 
 The contract must include:
 - `schemaVersion`, `createdAt`, `sourcePrompt`, `briefHash`

@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://loom-ai.dev/schemas/upstream/plugin.schema.json",
+  "title": "Anthropic Claude Code Plugin Manifest (Loom-side snapshot)",
+  "description": "Synthesized from example manifest at https://code.claude.com/docs/en/plugins-reference.md. snapshotDate: 2026-06-25. snapshotMethod: extract-example-and-infer-schema. Treat as guidance, not authoritative — additionalProperties=true so upstream changes do not break local validation.",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "description"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "author": {
+      "type": "object"
+    },
+    "homepage": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array"
+    },
+    "skills": {
+      "type": "string"
+    },
+    "commands": {
+      "type": "array"
+    },
+    "agents": {
+      "type": "array"
+    },
+    "hooks": {
+      "type": "string"
+    },
+    "mcpServers": {
+      "type": "string"
+    },
+    "outputStyles": {
+      "type": "string"
+    },
+    "lspServers": {
+      "type": "string"
+    },
+    "experimental": {
+      "type": "object"
+    },
+    "dependencies": {
+      "type": "array"
+    }
+  }
+}

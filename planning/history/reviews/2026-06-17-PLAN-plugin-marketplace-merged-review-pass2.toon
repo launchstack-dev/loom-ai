@@ -56,7 +56,7 @@ mediumFindingsRemaining[5]{id,description,flaggedBy,fix}:
   M-2-1,--reset-evidence-confirmation-prompt-UX-unspecified-no-prompt-text-no-timeout-no-yes-bypass-no-non-TTY-behavior,ux,Specify-prompt-text-and-yes-bypass-and-non-TTY-auto-refuse
   M-2-2,--reconcile-confirmation-prompt-UX-unspecified-same-deficiency-as-reset-evidence-but-for-destructive-channel-file-removal,ux,Specify-prompt-text-timeout-yes-bypass-non-TTY-behavior
   M-2-3,Phase-4-deliverables-missing-test/fixtures/discussion-thread.json-AC-references-it-but-it-is-not-listed,agentic-workflow,Add-fixture-file-to-Phase-4-deliverables-table
-  M-2-4,Phase-13-rollback.ts-needs-explicit-pointer-to-agents/protocols/install-state.schema.md-for-v3-snapshot-format,agentic-workflow,Add-notes-line-to-Phase-13-pointing-rollback-implementer-at-the-schema
+  M-2-4,Phase-13-rollback.ts-needs-explicit-pointer-to-protocols/install-state.schema.md-for-v3-snapshot-format,agentic-workflow,Add-notes-line-to-Phase-13-pointing-rollback-implementer-at-the-schema
   M-2-5,install-source-digest-opt-in-friction-will-produce-sparse-skewed-data-source-enum-precision-not-matched-by-measurement-precision,strategy,Add-measurement-honesty-note-treating-signal-as-indicative-not-statistically-representative-until-organic-volume-threshold
 
 verdict:

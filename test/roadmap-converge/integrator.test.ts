@@ -74,11 +74,11 @@ beforeEach(() => {
   process.chdir(workdir);
 
   mkdirSync("planning", { recursive: true });
-  mkdirSync("agents/protocols/roadmap-rubrics", { recursive: true });
+  mkdirSync("protocols/roadmap-rubrics", { recursive: true });
   roadmapPath = "planning/ROADMAP.md";
   writeFileSync(roadmapPath, ROADMAP_INITIAL);
-  writeFileSync("agents/protocols/roadmap-rubrics/vision.md", RUBRIC_BODY);
-  writeFileSync("agents/protocols/roadmap-rubrics/milestones.md", RUBRIC_BODY);
+  writeFileSync("protocols/roadmap-rubrics/vision.md", RUBRIC_BODY);
+  writeFileSync("protocols/roadmap-rubrics/milestones.md", RUBRIC_BODY);
 });
 
 afterEach(() => {
@@ -183,7 +183,7 @@ describe("S-18: integrator surgical edit", () => {
     const result1 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope([{ description: "Vision too vague" }]) }),
       stderr: (s) => stderrLines.push(s),
       now: fixedNow,
@@ -207,7 +207,7 @@ describe("S-18: integrator surgical edit", () => {
     const result2 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: greenEnvelope() }),
       stderr: (s) => stderrLines.push(s),
       now: () => new Date("2026-06-18T02:00:00Z"),
@@ -345,7 +345,7 @@ describe("S-19: stall detection", () => {
     const result1 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope([{ description: "vision unclear" }]) }),
       stderr: (s) => stderrLines.push(s),
       now: fixedNow,
@@ -357,7 +357,7 @@ describe("S-19: stall detection", () => {
     const result2 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope() }),
       stderr: (s) => stderrLines.push(s),
       now: () => new Date("2026-06-18T01:00:00Z"),
@@ -415,7 +415,7 @@ describe("S-20: pass-cap halt", () => {
         roadmapPath,
         slug: "ROADMAP",
         dimensions: [
-          { name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" },
+          { name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" },
         ],
         invokeReviewer: buildReviewerInvoker({
           vision: redEnvelope([{ description: "still red" }]),
@@ -430,7 +430,7 @@ describe("S-20: pass-cap halt", () => {
     const result1 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope([{ description: "r1" }]) }),
       stderr: (s) => stderrLines.push(s),
       now: () => new Date("2026-06-18T01:00:00Z"),
@@ -454,7 +454,7 @@ describe("S-20: pass-cap halt", () => {
     const result2 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope([{ description: "r2" }]) }),
       stderr: (s) => stderrLines.push(s),
       now: () => new Date("2026-06-18T02:00:00Z"),
@@ -477,7 +477,7 @@ describe("S-20: pass-cap halt", () => {
     const result3 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: redEnvelope() }),
       stderr: (s) => stderrLines.push(s),
       now: () => new Date("2026-06-18T03:00:00Z"),
@@ -571,7 +571,7 @@ describe("FC-05: retire-dimension auto-resolution", () => {
     const result1 = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({
         vision: redEnvelope([{ description: "vision unclear" }]),
       }),
@@ -646,7 +646,7 @@ describe("INTEGRATOR_NO_ENVELOPE rejection", () => {
     await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({
         vision: redEnvelope([{ description: "unclear" }]),
       }),
@@ -672,7 +672,7 @@ describe("INTEGRATOR_NO_ENVELOPE rejection", () => {
     const result = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: greenEnvelope() }),
       invokeIntegrator: badInvoker,
       stderr: (s) => stderrLines.push(s),
@@ -692,7 +692,7 @@ describe("INTEGRATOR_NO_ENVELOPE rejection", () => {
     await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({
         vision: redEnvelope([{ description: "bad" }]),
       }),
@@ -718,7 +718,7 @@ describe("INTEGRATOR_NO_ENVELOPE rejection", () => {
     const result = await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: greenEnvelope() }),
       invokeIntegrator: badInvoker,
       stderr: (s) => stderrLines.push(s),
@@ -740,7 +740,7 @@ describe("execute-integrator.toon StageContext", () => {
     await runConvergePass({
       roadmapPath,
       slug: "ROADMAP",
-      dimensions: [{ name: "vision", rubricRef: "agents/protocols/roadmap-rubrics/vision.md" }],
+      dimensions: [{ name: "vision", rubricRef: "protocols/roadmap-rubrics/vision.md" }],
       invokeReviewer: buildReviewerInvoker({ vision: greenEnvelope() }),
       stderr: (s) => stderrLines.push(s),
       now: fixedNow,

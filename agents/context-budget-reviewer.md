@@ -61,7 +61,7 @@ If the config section is missing, use defaults:
 - `contextWindow`: 200000
 - `agentBudgetCap`: contextWindow / 2 = 100000
 
-See `agents/protocols/context-budget.md` for full configuration details.
+See `protocols/context-budget.md` for full configuration details.
 
 ## Recommendation Logic
 

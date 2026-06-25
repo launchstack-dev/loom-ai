@@ -1,0 +1,257 @@
+# Convergence Tier Schema
+
+Defines the 4 convergence tiers that map to the planning hierarchy levels defined in `taxonomy.md`. Each tier specifies how convergence is verified at its scope level, which agent or tool runs the verification, and how failures gate downstream execution.
+
+---
+
+## Schema
+
+```toon
+name: unit
+level: 1
+hierarchyLevel: wave
+runner: vitest-runner
+passCondition: all-pass
+defaultEnabled: true
+gatingBehavior: block-wave
+```
+
+### Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | enum | yes | Tier name: `unit`, `integration`, `e2e`, `qa-review`. |
+| level | integer | yes | Numeric level 1-4, ascending order of cost. 1 = cheapest (unit), 4 = most expensive (qa-review). |
+| hierarchyLevel | enum | yes | Planning hierarchy level this tier maps to: `wave`, `phase`, `feature`, `milestone`. |
+| runner | string | yes | Agent or CLI tool that executes verification at this tier. |
+| passCondition | enum | yes | What constitutes a pass: `all-pass`, `zero-critical`, `zero-blocking`. |
+| defaultEnabled | boolean | yes | Whether this tier runs by default in the convergence pipeline. |
+| gatingBehavior | enum | yes | How a failure at this tier affects execution: `block-wave`, `block-feature`, `block-milestone`, `advisory`. |
+
+---
+
+## Tier Definitions
+
+### Unit (Level 1 -- Wave)
+
+```toon
+name: unit
+level: 1
+hierarchyLevel: wave
+runner: vitest-runner
+passCondition: all-pass
+defaultEnabled: true
+gatingBehavior: block-wave
+```
+
+Unit tests verify individual wave outputs in isolation. Every wave must pass all unit tests before the next wave can begin. The default runner is `vitest-runner` but can be overridden per project (e.g., `jest-runner`, `pytest-runner`).
+
+### Integration (Level 2 -- Feature)
+
+```toon
+name: integration
+level: 2
+hierarchyLevel: feature
+runner: integration-test-agent
+passCondition: all-pass
+defaultEnabled: true
+gatingBehavior: block-feature
+```
+
+Integration tests verify cross-phase wiring within a feature. A feature cannot be marked complete until its integration tests pass. The `integration-test-agent` runs generated integration tests and reports results.
+
+### E2E (Level 3 -- Milestone)
+
+```toon
+name: e2e
+level: 3
+hierarchyLevel: milestone
+runner: e2e-runner-agent
+passCondition: zero-blocking
+defaultEnabled: true
+gatingBehavior: block-milestone
+```
+
+End-to-end stories verify complete user workflows across all features in a milestone. The `e2e-test-writer-agent` converts criteria-plan e2e specs into YAML stories and Playwright test files; the `e2e-runner-agent` executes them. Blocking stories must all pass; advisory stories may fail without preventing milestone completion.
+
+### QA Review (Level 4 -- Phase)
+
+```toon
+name: qa-review
+level: 4
+hierarchyLevel: phase
+runner: qa-review-agent
+passCondition: zero-critical
+defaultEnabled: true
+gatingBehavior: advisory
+```
+
+QA review verifies phase deliverables against acceptance criteria using agent-based review (code review, security review, etc.). The pass condition is `zero-critical` -- critical findings block, but warnings and info findings are advisory.
+
+---
+
+## Typed Array Form
+
+All 4 tiers as a typed array:
+
+```toon
+tiers[4]{name,level,hierarchyLevel,runner,passCondition,defaultEnabled,gatingBehavior}:
+  unit,1,wave,vitest-runner,all-pass,true,block-wave
+  integration,2,feature,integration-test-agent,all-pass,true,block-feature
+  e2e,3,milestone,e2e-runner-agent,zero-blocking,true,block-milestone
+  qa-review,4,phase,qa-review-agent,zero-critical,true,advisory
+```
+
+---
+
+## Scenario-to-Tier Mapping
+
+Scenarios (defined in `scenario.schema.md`) carry an optional `testTier` field. When omitted, the validator resolves the tier using the chain below. This chain is the **canonical** algorithm — schemas, validators, and convergence-planner implementations MUST follow it verbatim.
+
+### Resolution Chain
+
+When `testTier` is omitted from a scenario block, the validator computes it in this order. The first rule that matches wins:
+
+1. **`automatable: false` → `qa-review`.** Non-automatable scenarios cannot be verified by deterministic runners; they are always routed to QA review regardless of tags or trigger type.
+2. **Single-tag default.** When `tags[]` contains exactly one entry from the locked enum, use that tag's default tier:
+   - `happy-path` → `integration` (for `api-call` trigger) or `e2e` (for `actor-action` trigger).
+   - `edge-case` → `unit`.
+   - `error` → `integration`.
+   - `regression` → matches the originating bug's reproduction tier (resolved at criterion-creation time; if unknown, falls through to rule 3).
+3. **Multi-tag highest-cost wins.** When `tags[]` contains 2+ entries, pick the highest-cost tier among each tag's defaults. Cost order (high → low): `qa-review` > `e2e` > `integration` > `unit`.
+4. **`whenTriggerType` fallback.** When no tag yields a tier (e.g., all project-local tags from `scenarios.local.yaml`), fall back to:
+   - `api-call` → `integration`.
+   - `actor-action` → `e2e`.
+   - `system-event` → `unit`.
+5. **Explicit `testTier` always overrides.** If the scenario specifies a `testTier` value, that value wins over rules 1-4. The validator emits an info-level note when an explicit `testTier` conflicts with the resolved default (e.g., `automatable: false` with an explicit `testTier: unit` is a warning because it bypasses QA review).
+
+### Worked Examples
+
+| Scenario inputs | Resolved tier | Rule applied |
+|-----------------|---------------|--------------|
+| `automatable: false`, `tags: [happy-path]`, no `testTier` | `qa-review` | Rule 1 |
+| `automatable: true`, `tags: [happy-path]`, `whenTriggerType: api-call`, no `testTier` | `integration` | Rule 2 |
+| `automatable: true`, `tags: [happy-path]`, `whenTriggerType: actor-action`, no `testTier` | `e2e` | Rule 2 |
+| `automatable: true`, `tags: [edge-case]`, no `testTier` | `unit` | Rule 2 |
+| `automatable: true`, `tags: [error]`, no `testTier` | `integration` | Rule 2 |
+| `automatable: true`, `tags: [edge-case, error]`, `whenTriggerType: api-call`, no `testTier` | `integration` | Rule 3 (highest-cost of {unit, integration} = integration) |
+| `automatable: true`, `tags: [happy-path, edge-case]`, `whenTriggerType: api-call`, no `testTier` | `integration` | Rule 3 (highest-cost of {integration, unit} = integration) |
+| `automatable: true`, `tags: [custom-tag]` (project-local), `whenTriggerType: actor-action`, no `testTier` | `e2e` | Rule 4 |
+| `automatable: true`, `tags: [happy-path]`, `whenTriggerType: system-event`, no `testTier` | `unit` | Rule 4 (`system-event` overrides the api-call-only default for `happy-path`) |
+| Any inputs, `testTier: e2e` explicit | `e2e` | Rule 5 |
+
+### Where This Matters
+
+- **criteria-planner-agent** uses this chain when materializing criteria from scenarios — the resolved tier becomes the criterion's `testTier`.
+- **convergence-planner** uses this chain to decide which tier runner verifies a given scenario.
+- **e2e-test-writer-agent** filters source scenarios by `testTier == e2e` (resolved) when picking candidates for story generation.
+- **interpretation-reviewer-agent** uses this chain to detect tier mismatches between scenarios and their derived criteria.
+
+The resolution chain is a static, deterministic function of the scenario fields. Two validators executing this chain on the same scenario MUST produce the same tier.
+
+---
+
+## Validation Rules
+
+1. **Exactly 4 tiers.** The tier set must contain exactly 4 entries.
+2. **Name enum.** Must be one of: `unit`, `integration`, `e2e`, `qa-review`.
+3. **Level range.** Must be an integer from 1 to 4 inclusive.
+4. **Hierarchy level enum.** Must be one of: `wave`, `phase`, `feature`, `milestone`.
+5. **Unique names.** No two tiers may share the same `name`.
+6. **Unique levels.** No two tiers may share the same `level`.
+7. **Unique hierarchy levels.** No two tiers may share the same `hierarchyLevel`.
+8. **Pass condition enum.** Must be one of: `all-pass`, `zero-critical`, `zero-blocking`.
+9. **Gating behavior enum.** Must be one of: `block-wave`, `block-feature`, `block-milestone`, `advisory`.
+10. **Consistency with taxonomy.** The `hierarchyLevel` for each tier must match the mapping defined in `taxonomy.md` `convergenceLevels`.
+
+---
+
+## Relationship to Other Schemas
+
+- **taxonomy.md** -- Defines the hierarchy-to-tier mapping that this schema implements in detail.
+- **criteria-plan.schema.md** -- Criteria entries reference tier names via the `testTier` column.
+- **e2e-story.schema.md** -- E2E stories are executed at the `e2e` tier (level 1, milestone scope).
+- **plan.schema.md** -- Plan phases may reference convergence tiers for their verification strategy.
+- **scenario.schema.md** -- Scenarios reference tier names via `testTier`. The Scenario-to-Tier Mapping section above documents the canonical resolution chain that the validator and convergence-planner use when `testTier` is omitted.
+- **agent-result.schema.md** -- Tier runners return results in the AgentResult envelope.
+- **findings.schema.md** -- `converge.config.outputPath` (default `.plan-execution/convergence/findings.toon`) names the file every harness writes per `ConvergenceFindings` schema.
+- **convergence-summary.schema.md** -- `converge.config` parameters (mode, subject, harness, integrator, maxIterations) are mirrored in the run-end summary artifact.
+- **iteration-snapshot.schema.md** -- `converge.config.snapshotEnabled` and `snapshotDir` gate document-mode snapshot writes.
+
+---
+
+## ConvergeConfig Schema (Extended)
+
+The convergence-driver reads a per-run `converge.config` TOON file that declares mode, subject, harness, integrator, and budget. The file is the on-disk contract between `/loom-converge`, `/loom-plan create --autoconverge`, and `convergence-driver`. It is extended in plan `PLAN-convergence-generalization.md` to support `convergenceMode: document` alongside the original `target` and `criteria` modes.
+
+Backwards compatibility: existing `target` and `criteria` runs MUST continue to load unchanged configs. The new fields are optional or have backwards-compatible defaults.
+
+### Example: document-mode config
+
+```toon
+convergenceMode: document
+subject: planning/PLAN-convergence-generalization.md
+integrator: plan-builder-agent
+harness: scripts/plan-review-harness.ts
+outputPath: .plan-execution/convergence/findings.toon
+maxIterations: 3
+agentBudget: 30
+scopeGuardEnabled: true
+snapshotEnabled: true
+snapshotDir: planning/history/snapshots/
+```
+
+### Example: target-mode config (backwards compatible)
+
+```toon
+convergenceMode: target
+harness: scripts/target-runner.ts
+outputPath: .plan-execution/convergence/findings.toon
+maxIterations: 5
+agentBudget: 30
+```
+
+### Fields
+
+| Field | Type | Constraints | Default | Validation Rules |
+|-------|------|-------------|---------|------------------|
+| `convergenceMode` | enum | one of `target`, `criteria`, `document` | `target` (backwards compat) | New value `document` accepted; unknown values produce a blocking error. |
+| `subject` | string (path) | required when `convergenceMode == document`; relative to repo root | -- | MUST exist on first iteration; resolved against repo root. For `target`/`criteria` modes, omit (null). |
+| `integrator` | string (agent name) | required when `convergenceMode == document`; MUST be a known agent registered in `agents/` | `fixer-agent` for `target`/`criteria` modes (backwards compat) | MUST resolve to an `agents/{name}.md` file. Model resolution per CLAUDE.md applies (frontmatter `model:` field). Missing agent -> `INTEGRATOR_NOT_FOUND` blocking error at preflight. |
+| `harness` | string (path) | required for all modes; for document mode points to a TS script under `scripts/` or a registered harness agent | -- | MUST produce `findings.toon` at the configured `outputPath` per iteration. Missing harness -> `HARNESS_MISSING` blocking error at preflight. |
+| `outputPath` | string (path) | required | `.plan-execution/convergence/findings.toon` | Driver reads this path after each harness invocation. Atomic write required by the harness. |
+| `maxIterations` | integer | 1-10 | 5 (existing default); 3 for `--autoconverge` (per locked C-05) | Blocking error if `> 10`. |
+| `agentBudget` | integer | required; counts loop agent spawns | 30 (existing default) | Cumulative across iterations; preflight check before loop. Exceeded -> `BUDGET_EXHAUSTED` halt. |
+| `scopeGuardEnabled` | boolean | optional; document-mode only | `true` | When true, the scope-expansion guard is armed (per locked C-06). Detects top-level structural additions (new Phase, Feature, or Milestone headings) and halts with `SCOPE_EXPANSION`. Ignored in `target`/`criteria` modes. |
+| `snapshotEnabled` | boolean | optional; document-mode only | `true` | When true, an auto-snapshot per locked C-07 is written before each integrator invocation. Ignored in `target`/`criteria` modes. See `iteration-snapshot.schema.md`. |
+| `snapshotDir` | string (path) | optional | `planning/history/snapshots/` | Directory where `IterationSnapshot` files land. Slug + pass-number filename appended by the driver (`{slug}-pass-{N}.toon` + `{slug}-pass-{N}.{ext}`). Ignored when `snapshotEnabled` is false. |
+
+### Validation Rules
+
+1. **Mode enum.** `convergenceMode` MUST be one of `target`, `criteria`, `document`.
+2. **Document-mode required fields.** When `convergenceMode == document`, `subject`, `integrator`, and `harness` MUST all be present.
+3. **Document-mode missing-subject diagnostic.** A `converge.config` declaring `convergenceMode: document` without `subject` produces the user-facing message: `Document-mode config is missing required field 'subject' (path to subject file). Update converge.config or remove convergenceMode:document.` (distinct from a raw schema-validation error).
+4. **Integrator resolves.** `integrator` MUST resolve to an `agents/{name}.md` file; missing -> `INTEGRATOR_NOT_FOUND` blocking at preflight.
+5. **Harness exists.** `harness` path MUST exist; missing -> `HARNESS_MISSING` blocking at preflight.
+6. **maxIterations bounded.** `1 <= maxIterations <= 10`.
+7. **agentBudget positive.** `agentBudget > 0`.
+8. **Output path under .plan-execution.** `outputPath` SHOULD be under `.plan-execution/` to remain ephemeral; absolute paths are allowed but flagged with a warning.
+9. **Snapshot fields irrelevant outside document mode.** `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir` are accepted in non-document configs but ignored; the driver does not emit warnings for their presence.
+10. **Timestamp precision (cross-schema, locked W-01).** Any timestamp field anywhere in the convergence pipeline -- including `producedAt` in `findings.toon`, `startedAt`/`completedAt` in `convergence-summary.toon` and `iter-{N}.toon`, and `timestamp` in `IterationSnapshot` -- MUST be ISO 8601 with millisecond precision (`YYYY-MM-DDTHH:mm:ss.sssZ`). This ensures stall-detection regression checks compare uniformly across iterations.
+
+### Indexes (TOON-artifact relationships)
+
+| Index | Fields | Type | Purpose |
+|-------|--------|------|---------|
+| primary | `configPath` | PRIMARY | One config per convergence run; identifies the loop. |
+| relation | `configPath` -> `integrator` | FOREIGN-LIKE | Driver dispatch lookup. |
+| relation | `configPath` -> `harness` | FOREIGN-LIKE | Driver harness invocation lookup. |
+
+### Cascade Behavior
+
+| Parent | Child | On Delete | On Update |
+|--------|-------|-----------|-----------|
+| `converge.config` | `iter-{N}.toon` (per-iteration) | RETAIN | RETAIN -- iter summaries preserved for debrief |
+| `converge.config` | `findings.toon` (latest) | OVERWRITE | OVERWRITE -- only latest matters at runtime |
+| `converge.config` | `IterationSnapshot` rows (per-pass) | RETAIN | RETAIN per C-07 (keep all forever) |
+| `converge.config` | `convergence-summary.toon` | RETAIN | OVERWRITE on terminal-state re-transition (resume) |

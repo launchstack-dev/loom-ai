@@ -7,7 +7,7 @@ createdAt: 2026-04-25T22:00:00Z
 updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
-sourceRefs[1]: agents/protocols/toon-format.md
+sourceRefs[1]: protocols/toon-format.md
 crossRefs[2]{pageId,relationship}:
   convention-agent-result,depended-by
   concept-execution-pipeline,relates-to
@@ -20,7 +20,7 @@ confidence: high
 
 TOON (Token-Oriented Object Notation) is the default serialization format for all Loom on-disk artifacts and agent-to-agent communication. It is a compact, human-readable alternative to JSON optimized for token efficiency in LLM contexts.
 
-Source: `agents/protocols/toon-format.md`
+Source: `protocols/toon-format.md`
 
 ---
 

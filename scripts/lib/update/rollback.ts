@@ -14,7 +14,7 @@ import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
 // v3 inventory types (subset used by rollback — see
-// agents/protocols/install-state.schema.md for the full schema)
+// protocols/install-state.schema.md for the full schema)
 // ---------------------------------------------------------------------------
 
 export interface V3Item {

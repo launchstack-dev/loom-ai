@@ -1,4 +1,4 @@
-# Keep agents/protocols/upstream/plugin.schema.json in sync with Anthropic's
+# Keep protocols/upstream/plugin.schema.json in sync with Anthropic's
 # published Claude Code plugin manifest reference. Wave 1 of M-07 (plugin
 # marketplace migration) validates Loom's own .claude-plugin/plugin.json
 # against this snapshot; without a real upstream schema, the validation is a
@@ -20,8 +20,8 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'agents/protocols/upstream/plugin.schema.json'
-      - 'agents/protocols/upstream/.meta.toon'
+      - 'protocols/upstream/plugin.schema.json'
+      - 'protocols/upstream/.meta.toon'
       - 'scripts/refresh-upstream-schemas.sh'
       - '.github/workflows/refresh-upstream-schemas.yml'
 
@@ -57,7 +57,7 @@ jobs:
           commit-message: 'chore(upstream): refresh plugin.schema.json snapshot'
           title: 'chore(upstream): refresh plugin.schema.json snapshot'
           body: |
-            Automated refresh of `agents/protocols/upstream/plugin.schema.json`
+            Automated refresh of `protocols/upstream/plugin.schema.json`
             from Anthropic's plugin reference docs.
 
             Review the diff for upstream changes that affect Wave 1 manifest

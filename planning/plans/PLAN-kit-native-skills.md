@@ -87,7 +87,7 @@ totalWaves: 7
 | N-11 | warning | Phase 7: wave-4-gate.toon added to deliverables. Phase 7 AC extended with authoring-scaffolding grep checks. |
 | N-12 | warning | Phases 8–11 now depend on Phase 7 (sequential after Phase 7). Wave split into Waves 4–7 per N-17. |
 | N-13 | warning | Phase 0 deliverables table: prominent DO NOT bump CURRENT_VERSION callout box added. |
-| N-14 | warning | Phase 8 Dependencies: Phase 6 added. Read inputs note added naming agents/protocols/kit.schema.md as required. |
+| N-14 | warning | Phase 8 Dependencies: Phase 6 added. Read inputs note added naming protocols/kit.schema.md as required. |
 | N-15 | warning | Phase 8 AC: duplicate library.skills: entry detection — wizard prints warning and skips append (mirrors N-03 idempotency requirement). |
 | N-16 | warning | phase-8.toon, phase-9.toon, phase-11.toon added to respective Phase deliverables tables. |
 | N-17 | warning | Wave 4 internal structure redrawn as 4 sub-waves (Waves 4/5/6/7). See wave restructure note above. Wave headers updated on all affected phases. |
@@ -566,7 +566,7 @@ export function buildSkillRemovePlan(name: string): { skillMdPath: string; paren
 | Item type | Target directory | Filename |
 |-----------|-----------------|----------|
 | skill | `~/.claude/skills/<name>/` | `SKILL.md` (literal — required for Claude Code activation) |
-| protocol | `~/.claude/agents/protocols/` | `<name>.md` |
+| protocol | `~/.claude/protocols/` | `<name>.md` |
 | agent | `~/.claude/agents/` | `<name>.md` |
 | prompt/command | `~/.claude/commands/` | `<name>.md` |
 
@@ -795,7 +795,7 @@ The `type` field on `items[]` entries is an open string. For this upgrade, `skil
 
 ```
   (installer routes item) ──→ type: skill ──→ targetPath: ~/.claude/skills/<name>/SKILL.md
-                         ──→ type: protocol ──→ targetPath: ~/.claude/agents/protocols/<name>.md
+                         ──→ type: protocol ──→ targetPath: ~/.claude/protocols/<name>.md
                          ──→ type: agent ──→ targetPath: ~/.claude/agents/<name>.md
 ```
 
@@ -1077,7 +1077,7 @@ automatable: true
 **Agent:** implementer-agent
 **Objective:** Implement `migrateLibraryCatalogV3ToV4` pure function (including `requires: [skill:*]` rewrite), register it as `"3->4"` in `MIGRATIONS`, extend `detectLibraryCatalogVersion` to recognize v4, and bump `CURRENT_VERSION` to 4 and `schema-versions.toon` atomically.
 **Dependencies:** Phase 0
-**File Ownership:** hooks/lib/library-catalog-migrator.ts (function implementations), agents/protocols/schema-versions.toon
+**File Ownership:** hooks/lib/library-catalog-migrator.ts (function implementations), protocols/schema-versions.toon
 
 <!-- F-010: explicit note — Wave 1 and Wave 2 must merge as one release; no window where v4 catalog exists but installer can't honor skill: routing -->
 **Release note:** Wave 1 (migrator) and Wave 2 (installer routing) MUST ship as a single merged release. There must be no window where a v4 catalog is in the wild but the installer cannot honor `skill:` routing. Do not merge Wave 1 changes independently.
@@ -1089,7 +1089,7 @@ automatable: true
 | File | Action | Owner hint |
 |------|--------|------------|
 | `hooks/lib/library-catalog-migrator.ts` | Modify — replace `"3->4"` no-op stub with real `migrateLibraryCatalogV3ToV4(v3, opts)` implementation; register in `MIGRATIONS["3->4"]`; extend `detectLibraryCatalogVersion` for v4; **bump `CURRENT_VERSION` to 4** (moved from Phase 0 per F-011) | implementer-agent |
-| `agents/protocols/schema-versions.toon` | Modify — bump `library-catalog` row `currentVersion` from 3 to 4 (atomically with `CURRENT_VERSION` bump above) | implementer-agent |
+| `protocols/schema-versions.toon` | Modify — bump `library-catalog` row `currentVersion` from 3 to 4 (atomically with `CURRENT_VERSION` bump above) | implementer-agent |
 | `skills/library.yaml` | Modify — detect current version and migrate to v4 shape: rename `library.skills:` → `library.protocols:`, initialize `library.skills: []`, set `catalog_version: 4`. This ensures Phase 5 writes into the correct v4 structure. Paired with CURRENT_VERSION bump in this phase for cohesion. | implementer-agent |
 | `.plan-execution/stage-context/phase-1.toon` | Create — record files modified, CURRENT_VERSION bumped to 4, schema-versions.toon updated, library.yaml migrated to v4 shape, key ACs confirmed, current-version state, any warnings emitted | implementer-agent |
 
@@ -1519,7 +1519,7 @@ automatable: true
 **Agent:** implementer-agent
 **Objective:** Add `deliverableId?` field to `change-proposal.schema.md`, update `kit.schema.md` with typed `includes:` documentation, and update `commands/loom-upgrade.md` to recognize v4 catalog as current (so Phase 7's dry-run criterion is traceable).
 **Dependencies:** Phase 0, Phase 1, Phase 3, Phase 5
-**File Ownership:** agents/protocols/change-proposal.schema.md, agents/protocols/kit.schema.md, commands/loom-upgrade.md
+**File Ownership:** protocols/change-proposal.schema.md, protocols/kit.schema.md, commands/loom-upgrade.md
 
 **Note:** `CLAUDE.md` and `README.md` extensibility documentation was promoted to Phase 0b. This phase handles the remaining schema and tooling docs only.
 
@@ -1527,8 +1527,8 @@ automatable: true
 
 | File | Action | Owner hint |
 |------|--------|------------|
-| `agents/protocols/change-proposal.schema.md` | Modify — add `deliverableId?: string` field to DeltaBlock spec with description "Reserved for future per-deliverable approval lifecycle; safe to omit" | implementer-agent |
-| `agents/protocols/kit.schema.md` | Modify — document typed `includes:` entries with the `skill:` resource type; document bare-name backward-compatible fallback timeline (drops in v5) | implementer-agent |
+| `protocols/change-proposal.schema.md` | Modify — add `deliverableId?: string` field to DeltaBlock spec with description "Reserved for future per-deliverable approval lifecycle; safe to omit" | implementer-agent |
+| `protocols/kit.schema.md` | Modify — document typed `includes:` entries with the `skill:` resource type; document bare-name backward-compatible fallback timeline (drops in v5) | implementer-agent |
 | `commands/loom-upgrade.md` | Modify — extend v4 awareness: recognize `catalog_version: 4` + `library.protocols:` markers as current (not outdated); update scan list to classify v3 catalogs (missing `library.protocols:`) as outdated with `action: auto` and Rule 13; deprecate any v3-only detection patterns | implementer-agent |
 | `.plan-execution/stage-context/phase-6.toon` | Create — record files modified, confirm loom-upgrade.md v4 classification logic added | implementer-agent |
 
@@ -1537,16 +1537,16 @@ automatable: true
 
 #### Acceptance Criteria
 
-- [ ] `grep -n "deliverableId" agents/protocols/change-proposal.schema.md` returns at least one line
-- [ ] `grep -n "skill:" agents/protocols/kit.schema.md` returns at least one line (typed include example)
+- [ ] `grep -n "deliverableId" protocols/change-proposal.schema.md` returns at least one line
+- [ ] `grep -n "skill:" protocols/kit.schema.md` returns at least one line (typed include example)
 - [ ] `grep -n "catalog_version.*4" commands/loom-upgrade.md` returns at least one line (v4 recognized as current)
 - [ ] `grep -n "Rule 13" commands/loom-upgrade.md` returns at least one line (v3 classified as outdated with Rule 13)
 - [ ] `bun run tsc --noEmit` exits 0 (no TS changes, but sanity check)
 
 #### Convergence Targets
 
-- `grep -n "deliverableId" agents/protocols/change-proposal.schema.md` ≥ 1 line
-- `grep -n "skill:" agents/protocols/kit.schema.md` ≥ 1 line
+- `grep -n "deliverableId" protocols/change-proposal.schema.md` ≥ 1 line
+- `grep -n "skill:" protocols/kit.schema.md` ≥ 1 line
 - `grep -n "Rule 13" commands/loom-upgrade.md` ≥ 1 line
 
 #### Scenarios
@@ -1554,10 +1554,10 @@ automatable: true
 ```toon
 id: S-17
 title: deliverableId field appears in change-proposal schema
-given[1]: agents/protocols/change-proposal.schema.md has been updated
+given[1]: protocols/change-proposal.schema.md has been updated
 when: grep is run for deliverableId in the file
 whenTriggerType: system-event
-then[1]: grep -n deliverableId agents/protocols/change-proposal.schema.md MUST return at least one line
+then[1]: grep -n deliverableId protocols/change-proposal.schema.md MUST return at least one line
 stateRef:
 tags[1]: happy-path
 testTier: unit
@@ -1689,8 +1689,8 @@ The following four phases (8–11) implement the authoring scaffolding approved 
 **Dependencies:** Phase 0, Phase 3, Phase 5, Phase 6, Phase 7
 **File Ownership:** commands/loom-skill.md<!-- pass-4: single file; all logic is in Phase 0 wizard-interview.ts -->
 
-<!-- N-14: Read inputs note: agents/protocols/kit.schema.md (updated in Phase 6) is required read for wizard step 7 (typed-includes generation) -->
-**Read-only inputs:** `agents/protocols/kit.schema.md` (Phase 6 artifact — read for typed `includes:` format when generating `skill:<name>` entries in step 7)
+<!-- N-14: Read inputs note: protocols/kit.schema.md (updated in Phase 6) is required read for wizard step 7 (typed-includes generation) -->
+**Read-only inputs:** `protocols/kit.schema.md` (Phase 6 artifact — read for typed `includes:` format when generating `skill:<name>` entries in step 7)
 
 #### Deliverables
 
@@ -2012,7 +2012,7 @@ grep -n '## Extensibility Model' CLAUDE.md
 grep -n '### Authoring Resources' CLAUDE.md
 
 # deliverableId field in change-proposal schema
-grep -n 'deliverableId' agents/protocols/change-proposal.schema.md
+grep -n 'deliverableId' protocols/change-proposal.schema.md
 
 # loom-upgrade.md v4 awareness
 grep -n 'Rule 13' commands/loom-upgrade.md

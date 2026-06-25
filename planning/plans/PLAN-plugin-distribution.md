@@ -46,7 +46,7 @@ Phasing follows roadmap critical path C-13:
 
 ## Schema / Type Definitions
 
-All schemas use TOON. Canonical schema files live under `agents/protocols/` and are produced by Phase 0.
+All schemas use TOON. Canonical schema files live under `protocols/` and are produced by Phase 0.
 
 ### InstallState (per-machine, at `~/.loom/install.toon`)
 
@@ -515,18 +515,18 @@ Read from process env on every command invocation. No `.env` file support — Lo
 **Agent:** contracts-agent
 **Objective:** Materialize all TOON schemas, TypeScript types, build toolchain (tsconfig + package.json), schema validator script, and shared protocol files consumed by downstream phases.
 **Dependencies:** None
-**File Ownership:** agents/protocols/install-state.schema.md, agents/protocols/plugin-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/plugin-root.schema.md, agents/protocols/dismissed-init-prompt.schema.md, agents/protocols/hook-failure-log.schema.md, agents/protocols/migration-marker.schema.md, hooks/lib/types/install-state.ts, hooks/lib/types/plugin-manifest.ts, hooks/lib/types/doctor-report.ts, hooks/lib/types/error-envelope.ts, hooks/lib/types/hook-failure-log.ts, tsconfig.json, package.json, scripts/validate-toon-schemas.ts
+**File Ownership:** protocols/install-state.schema.md, protocols/plugin-manifest.schema.md, protocols/doctor-report.schema.md, protocols/plugin-root.schema.md, protocols/dismissed-init-prompt.schema.md, protocols/hook-failure-log.schema.md, protocols/migration-marker.schema.md, hooks/lib/types/install-state.ts, hooks/lib/types/plugin-manifest.ts, hooks/lib/types/doctor-report.ts, hooks/lib/types/error-envelope.ts, hooks/lib/types/hook-failure-log.ts, tsconfig.json, package.json, scripts/validate-toon-schemas.ts
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/install-state.schema.md | Create | contracts-agent |
-| agents/protocols/plugin-manifest.schema.md | Create | contracts-agent |
-| agents/protocols/doctor-report.schema.md | Create | contracts-agent |
-| agents/protocols/plugin-root.schema.md | Create | contracts-agent |
-| agents/protocols/dismissed-init-prompt.schema.md | Create | contracts-agent |
-| agents/protocols/hook-failure-log.schema.md | Create | contracts-agent |
-| agents/protocols/migration-marker.schema.md | Create | contracts-agent |
+| protocols/install-state.schema.md | Create | contracts-agent |
+| protocols/plugin-manifest.schema.md | Create | contracts-agent |
+| protocols/doctor-report.schema.md | Create | contracts-agent |
+| protocols/plugin-root.schema.md | Create | contracts-agent |
+| protocols/dismissed-init-prompt.schema.md | Create | contracts-agent |
+| protocols/hook-failure-log.schema.md | Create | contracts-agent |
+| protocols/migration-marker.schema.md | Create | contracts-agent |
 | hooks/lib/types/install-state.ts | Create | contracts-agent |
 | hooks/lib/types/plugin-manifest.ts | Create | contracts-agent |
 | hooks/lib/types/doctor-report.ts | Create | contracts-agent |
@@ -534,14 +534,14 @@ Read from process env on every command invocation. No `.env` file support — Lo
 | hooks/lib/types/hook-failure-log.ts | Create — TS type matching the HookFailureLog TOON schema | contracts-agent |
 | tsconfig.json | Create — TypeScript 5.x, strict, ESM | contracts-agent |
 | package.json | Create — minimal with TypeScript + tsx + vitest deps | contracts-agent |
-| scripts/validate-toon-schemas.ts | Create — validates files under `agents/protocols/*.schema.md` | contracts-agent |
+| scripts/validate-toon-schemas.ts | Create — validates files under `protocols/*.schema.md` | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `npx tsc --noEmit` exits with code 0
-- [ ] `bunx tsx scripts/validate-toon-schemas.ts` exits 0 and validates every `agents/protocols/*.schema.md`
+- [ ] `bunx tsx scripts/validate-toon-schemas.ts` exits 0 and validates every `protocols/*.schema.md`
 - [ ] Every schema file has TOON-format reference example
 - [ ] Every enum value referenced in roadmap (channel, source) is defined in TypeScript
-- [ ] `agents/protocols/install-state.schema.md` includes all 14 fields from Data Model (11 base + `installError`, `pinnedVersion`, `updateInProgress.failed` terminal state)
+- [ ] `protocols/install-state.schema.md` includes all 14 fields from Data Model (11 base + `installError`, `pinnedVersion`, `updateInProgress.failed` terminal state)
 - [ ] `hooks/lib/types/plugin-manifest.ts` declares `compatibilityMatrix: string[]` (NOT `unknown[]`); TS compiler asserts the array element type
 - [ ] **Shared C-12 `--help` enforcement (applied to Phases 3, 9, 10, 11, 12):** every user-facing command exits 0 on `--help` and prints usage to stdout. Phase 0 publishes a shared `help-output` scenario template consumed by downstream phases.
 
@@ -826,7 +826,7 @@ automatable: true
 - [ ] Acceptance asserts on `entryPoint` (non-empty relative path), `publisher` (`loom-ai`), and `categories` (non-empty `string[]`)
 - [ ] First-run handler writes `~/.loom/install.toon` with `channel=plugin` and `source` per C-06
 - [ ] `bunx vitest run plugin/` exits 0
-- [ ] Manifest validates against `agents/protocols/plugin-manifest.schema.md`
+- [ ] Manifest validates against `protocols/plugin-manifest.schema.md`
 
 #### Convergence Targets
 - Plugin install materializes `~/.claude/plugins/loom/agents/`, `commands/`, `skills/`
@@ -1178,7 +1178,7 @@ title: --json emits valid doctor-report.toon
 given[1]: A working /loom-doctor invocation
 when: /loom-doctor --json is invoked
 whenTriggerType: actor-action
-then[2]: stdout MUST be parseable as TOON, The output MUST conform to agents/protocols/doctor-report.schema.md
+then[2]: stdout MUST be parseable as TOON, The output MUST conform to protocols/doctor-report.schema.md
 stateRef:
 tags[1]: happy-path
 testTier: integration
@@ -1915,7 +1915,7 @@ bunx tsx scripts/verify-manifest-drift.ts
 cosign verify --certificate-identity loom-release-bot dist/loom-vX.Y.Z.tar.gz
 
 # Schema validation (Phase 0 contracts intact)
-bunx tsx scripts/validate-toon-schemas.ts agents/protocols/
+bunx tsx scripts/validate-toon-schemas.ts protocols/
 
 # CLI smoke
 bunx tsx src/cli.ts loom-doctor --json

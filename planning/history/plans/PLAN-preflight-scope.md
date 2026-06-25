@@ -403,7 +403,7 @@ For `/loom quick`, the contract is optional. If the task is simple enough:
 |------|--------|-------------|
 | `agents/prompt-refiner-agent.md` | Create | New agent: prompt → structured brief |
 | `agents/questioner-agent.md` | Modify | Enhance to consume refined briefs, produce scope-contract.toon |
-| `agents/protocols/scope-contract.schema.md` | Create | Schema for scope-contract.toon |
+| `protocols/scope-contract.schema.md` | Create | Schema for scope-contract.toon |
 | `commands/loom.md` | Modify | Update `auto` subcommand with pre-flight stages |
 | `commands/loom-roadmap.md` | Modify | Update `init` to read contract, skip redundant questions |
 | `commands/loom-plan.md` | Modify | Update `create` and `execute` to read contract |

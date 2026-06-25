@@ -21,15 +21,15 @@ A field-lock note closes out the doc: the schemas frozen in Phase 0 of the plan 
 
 ## Before You Start
 
-Authoring scenarios well is a skill — read [`docs/scenarios-authoring-template.md`](./scenarios-authoring-template.md) **before** writing them into a roadmap, plan, or change proposal. The schema (`agents/protocols/scenario.schema.md`) is the validator contract; the template teaches you how to write them in the spirit of BDD without falling into the most common compound-scenario traps.
+Authoring scenarios well is a skill — read [`docs/scenarios-authoring-template.md`](./scenarios-authoring-template.md) **before** writing them into a roadmap, plan, or change proposal. The schema (`protocols/scenario.schema.md`) is the validator contract; the template teaches you how to write them in the spirit of BDD without falling into the most common compound-scenario traps.
 
 Other schemas referenced throughout this guide:
 
-- `agents/protocols/contract-page-extensions.schema.md` — body shape and frontmatter for `contract-*` pages
-- `agents/protocols/change-proposal.schema.md` — proposal directory layout and DeltaBlock format
-- `agents/protocols/change-state.schema.md` — runtime ChangeState format
-- `agents/protocols/entity-domain-partition.schema.md` — the partition manifest format
-- `agents/protocols/scenario-coverage.schema.md` — coverage report emitted by the planner
+- `protocols/contract-page-extensions.schema.md` — body shape and frontmatter for `contract-*` pages
+- `protocols/change-proposal.schema.md` — proposal directory layout and DeltaBlock format
+- `protocols/change-state.schema.md` — runtime ChangeState format
+- `protocols/entity-domain-partition.schema.md` — the partition manifest format
+- `protocols/scenario-coverage.schema.md` — coverage report emitted by the planner
 
 ---
 
@@ -367,7 +367,7 @@ The Phase 7 contract-page validators are wired into `loom-wiki lint` (see `agent
 - **W-CP-020..W-CP-029** — contract-page body / frontmatter rules (`validateAllContractPages`)
 - **W-CP-030..W-CP-039** — content-checksum drift (`validateAllContractPagesDrift`)
 
-Severity follows `agents/protocols/validation-rules.md`: drift is **blocking**, structural issues are **blocking**, legacy pages without checksum are **info**.
+Severity follows `protocols/validation-rules.md`: drift is **blocking**, structural issues are **blocking**, legacy pages without checksum are **info**.
 
 ---
 
@@ -375,9 +375,9 @@ Severity follows `agents/protocols/validation-rules.md`: drift is **blocking**, 
 
 - [`docs/scenarios-authoring-template.md`](./scenarios-authoring-template.md) — how to write good scenarios
 - [`planning/archive/PLAN-spec-upgrades.md`](../planning/archive/PLAN-spec-upgrades.md) — the source-of-truth plan for these features
-- `agents/protocols/scenario.schema.md` — scenario validator rules
-- `agents/protocols/change-proposal.schema.md` — proposal directory layout
-- `agents/protocols/contract-page-extensions.schema.md` — contract-page body shape
+- `protocols/scenario.schema.md` — scenario validator rules
+- `protocols/change-proposal.schema.md` — proposal directory layout
+- `protocols/contract-page-extensions.schema.md` — contract-page body shape
 - `commands/loom-change.md` — full subcommand reference
 - `commands/loom-plan/materialize.md` — materializer command reference
 - `commands/loom-quick.md` — quick-archive integration details

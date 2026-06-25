@@ -1,6 +1,6 @@
 #!/usr/bin/env bunx tsx
 /**
- * validate-toon-schemas.ts — walks `agents/protocols/*.schema.md` and validates
+ * validate-toon-schemas.ts — walks `protocols/*.schema.md` and validates
  * each file contains:
  *   (a) a top-level `# ...Schema` heading (markdown H1)
  *   (b) at least one fenced ```toon block whose body parses as well-formed TOON

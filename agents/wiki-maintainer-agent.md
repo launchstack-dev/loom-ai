@@ -28,9 +28,9 @@ You receive via prompt:
 ## Input (from disk)
 
 Read these files before starting:
-- `~/.claude/agents/protocols/wiki-conventions.md` — maintenance rules, directory structure, staleness model, Flow/Contract significance heuristics, Required H2 sections
-- `~/.claude/agents/protocols/wiki-page.schema.md` — page frontmatter format (universal fields + Flow / Contract category-specific fields, 8 cross-ref relationships)
-- `~/.claude/agents/protocols/wiki-index.schema.md` — index columns for schemaVersion 2 (`summary`, `estimatedTokens`, `subtype`)
+- `~/.claude/protocols/wiki-conventions.md` — maintenance rules, directory structure, staleness model, Flow/Contract significance heuristics, Required H2 sections
+- `~/.claude/protocols/wiki-page.schema.md` — page frontmatter format (universal fields + Flow / Contract category-specific fields, 8 cross-ref relationships)
+- `~/.claude/protocols/wiki-index.schema.md` — index columns for schemaVersion 2 (`summary`, `estimatedTokens`, `subtype`)
 - `.loom/wiki/index.toon` — current page catalog
 - `.loom/wiki/log.toon` — operation log (to append to)
 

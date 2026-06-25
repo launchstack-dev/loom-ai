@@ -45,9 +45,9 @@ beforeEach(() => {
   process.chdir(workdir);
 
   mkdirSync("planning", { recursive: true });
-  mkdirSync("agents/protocols/roadmap-rubrics", { recursive: true });
+  mkdirSync("protocols/roadmap-rubrics", { recursive: true });
   roadmapPath = "planning/ROADMAP.md";
-  rubricPath = "agents/protocols/roadmap-rubrics/vision.md";
+  rubricPath = "protocols/roadmap-rubrics/vision.md";
   writeFileSync(roadmapPath, ROADMAP_BODY);
   writeFileSync(rubricPath, RUBRIC_BODY);
 });
@@ -137,7 +137,7 @@ describe("runConvergePass — 5-cap per dimension (AW-15)", () => {
       })),
     });
     writeFileSync(
-      "agents/protocols/roadmap-rubrics/milestones.md",
+      "protocols/roadmap-rubrics/milestones.md",
       RUBRIC_BODY
     );
     const result = await runConvergePass({
@@ -145,7 +145,7 @@ describe("runConvergePass — 5-cap per dimension (AW-15)", () => {
       slug: "ROADMAP",
       dimensions: [
         { name: "vision", rubricRef: rubricPath },
-        { name: "milestones", rubricRef: "agents/protocols/roadmap-rubrics/milestones.md" },
+        { name: "milestones", rubricRef: "protocols/roadmap-rubrics/milestones.md" },
       ],
       invokeReviewer: buildInvoker({
         vision: mkEnv("red"),
@@ -280,7 +280,7 @@ describe("content-hash invalidation", () => {
 describe("REVIEWER_NO_ENVELOPE handling (AW-16)", () => {
   it("non-envelope reviewer is skipped with warning; other dimensions proceed", async () => {
     writeFileSync(
-      "agents/protocols/roadmap-rubrics/milestones.md",
+      "protocols/roadmap-rubrics/milestones.md",
       RUBRIC_BODY
     );
     const stderr: string[] = [];
@@ -299,7 +299,7 @@ describe("REVIEWER_NO_ENVELOPE handling (AW-16)", () => {
       slug: "ROADMAP",
       dimensions: [
         { name: "vision", rubricRef: rubricPath },
-        { name: "milestones", rubricRef: "agents/protocols/roadmap-rubrics/milestones.md" },
+        { name: "milestones", rubricRef: "protocols/roadmap-rubrics/milestones.md" },
       ],
       invokeReviewer: invoker,
       stderr: (s) => stderr.push(s),

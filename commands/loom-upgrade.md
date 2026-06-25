@@ -28,7 +28,7 @@ Parse flags from the arguments string.
 
 ### Execution Steps
 
-Read migration rules from `agents/protocols/schema-upgrade.md`. The schema-upgrade protocol defines 13 artifact types with version detection logic and migration rules. Schema-to-current-version mappings live in `agents/protocols/schema-versions.toon` — that registry is the single source of truth for "what version is current."
+Read migration rules from `protocols/schema-upgrade.md`. The schema-upgrade protocol defines 13 artifact types with version detection logic and migration rules. Schema-to-current-version mappings live in `protocols/schema-versions.toon` — that registry is the single source of truth for "what version is current."
 
 For schemas with `migratorKind: module` in the registry (currently `install-state` and `library-catalog`), migration uses the chained walker pattern: `migrateToLatest(parsed, fromVersion, opts, targetVersion?)` walks every step in the schema's `MIGRATIONS` map from `fromVersion` to `targetVersion`. A user upgrading from v2 directly to v5 gets v2→v3→v4→v5 executed in sequence — no special handling needed. See "Adding a new schema version" in schema-upgrade.md for the pattern.
 
@@ -46,7 +46,7 @@ Scan the project for artifacts that may need migration.
 .plan-execution/**/*.agent-result.toon → AgentResult artifacts
 .plan-execution/criteria-plan.toon  → criteria plan artifact
 PLAN.md                             → plan artifact
-agents/protocols/*.md               → protocol artifacts
+protocols/*.md               → protocol artifacts
 ```
 
 **Additionally scan when `--project` is set** (project infrastructure — Rules 6-14):
@@ -57,7 +57,7 @@ ROADMAP.md                                          → roadmap format
 CLAUDE.md                                           → Loom conventions
 .claude/settings.json                               → hook wiring
 .loom/wiki/                                         → wiki bootstrapping
-agents/protocols/                                   → protocol file completeness
+protocols/                                   → protocol file completeness
 ~/.claude/skills/library/install-state.toon         → install-state v3
 ~/.claude/skills/library/library.yaml               → library catalog v3
 ROADMAP.md, PLAN*.md, .plan-history/ (at root)      → plan artifact layout (Rule 14)
@@ -78,7 +78,7 @@ For each target found, run the appropriate version detection logic defined in `s
 - **claude-md**: Check `CLAUDE.md` for missing TOON convention, model resolution, context budget, and stage summary sections.
 - **hooks**: Check `.claude/settings.json` for missing `contract-lock`, `file-ownership`, `context-budget`, `budget-tracker`, `quality-gate` hook entries.
 - **wiki**: Check if `.loom/wiki/` exists and has `index.toon`.
-- **protocols**: Check `agents/protocols/` for missing required protocol files (13 files minimum).
+- **protocols**: Check `protocols/` for missing required protocol files (13 files minimum).
 - **install-state**: Check `~/.claude/skills/library/install-state.toon`. Outdated if `schemaVersion < 3`, missing entirely (treat as pre-v2), or v3 declared but missing `protocolVersion` / `loomCoreVersion` / `loomHooksVersion` / `catalogVersion` / `components[]`. Detection via `detectInstallStateVersion()` in `hooks/lib/install-state-migrator.ts`.
 - **library-catalog**: Check `~/.claude/skills/library/library.yaml`. **Current = `catalog_version: 4` with both `library.protocols:` and `library.skills:` markers present** (returns `{version: 4, outdated: false}` — no migration needed). Outdated if `catalog_version < 4`, including: v3 catalogs (declared `catalog_version: 3`, or v3 markers detected via missing `library.protocols:` split — auto-migrated by **Rule 13** v3→v4 chain step), and v2 catalogs (declared `catalog_version: 2` or marker-only — handled by the v2→v3 step in the same Rule 13 chained walker). v3 declared but missing top-level `loomCoreVersion` / `loomHooksVersion` / `releases` is also flagged outdated. Detection via `detectLibraryCatalogVersion()` in `hooks/lib/library-catalog-migrator.ts`; migration via `migrateToLatest()` walks every registered MIGRATIONS step from the detected source version to `CURRENT_VERSION` (currently 4).
 - **plan-artifact-layout (Rule 14)**: Check whether legacy planning artifacts live at the repo root and `planning/` is absent. Outdated if any of: (a) non-stub `ROADMAP.md` at root (stub detection via `isRootStub()` in `hooks/lib/planning-paths.ts` — ≤512 bytes AND ≤10 lines AND references `planning/ROADMAP.md`), (b) `PLAN.md` or `PLAN-*.md` at root, (c) `.plan-history/` directory at root — AND `planning/` does not exist (or is empty). Relocation logic in `hooks/lib/planning-paths.ts` resolvers.
@@ -191,7 +191,7 @@ Exit 1.
 
 Apply migration rules from `schema-upgrade.md` in-place. Each file is written atomically (write to `{path}.tmp`, then rename to `{path}`).
 
-**Symlink safety (applies to ALL rules that write).** Before writing to any target — install-state, library-catalog, plan artifacts, or relocation destinations — call `isSymlink(target)` from `hooks/lib/symlink-safety.ts`. If the target is a symlink, skip the write, record action=`skip-link` in the report with the `symlinkSkipAdvisory()` string, and continue with the next file. Symlink skips are not failures — the migration as a whole still exits 0 if every other rule succeeds. See `agents/protocols/schema-upgrade.md` § Symlink Safety for the full rationale and the user opt-in (`cp --remove-destination`).
+**Symlink safety (applies to ALL rules that write).** Before writing to any target — install-state, library-catalog, plan artifacts, or relocation destinations — call `isSymlink(target)` from `hooks/lib/symlink-safety.ts`. If the target is a symlink, skip the write, record action=`skip-link` in the report with the `symlinkSkipAdvisory()` string, and continue with the next file. Symlink skips are not failures — the migration as a whole still exits 0 if every other rule succeeds. See `protocols/schema-upgrade.md` § Symlink Safety for the full rationale and the user opt-in (`cp --remove-destination`).
 
 **Execution artifact rules (always applied):**
 
@@ -361,11 +361,11 @@ This command uses grep-based selective file reading to stay within the 100k toke
 
 ## Cross-References
 
-- `agents/protocols/schema-upgrade.md` — Migration rules, version detection logic, backup protocol.
-- `agents/protocols/agent-result.schema.md` — verificationStatus and diagnoseLog fields (Rule 2).
-- `agents/protocols/convergence-tier.schema.md` — Tier definitions (Rule 5, no migration needed).
-- `agents/protocols/behavioral-guidelines.md` — TDD and diagnose-before-fix protocols that produce the fields being migrated.
-- `agents/protocols/orchestration-config.schema.md` — orchestration.toml full schema (Rule 6).
-- `agents/protocols/roadmap.schema.md` — ROADMAP.md full schema (Rule 7).
-- `agents/protocols/wiki-conventions.md` — Wiki structure rules (Rule 10).
-- `agents/protocols/wiki-index.schema.md` — Wiki index format (Rule 10).
+- `protocols/schema-upgrade.md` — Migration rules, version detection logic, backup protocol.
+- `protocols/agent-result.schema.md` — verificationStatus and diagnoseLog fields (Rule 2).
+- `protocols/convergence-tier.schema.md` — Tier definitions (Rule 5, no migration needed).
+- `protocols/behavioral-guidelines.md` — TDD and diagnose-before-fix protocols that produce the fields being migrated.
+- `protocols/orchestration-config.schema.md` — orchestration.toml full schema (Rule 6).
+- `protocols/roadmap.schema.md` — ROADMAP.md full schema (Rule 7).
+- `protocols/wiki-conventions.md` — Wiki structure rules (Rule 10).
+- `protocols/wiki-index.schema.md` — Wiki index format (Rule 10).

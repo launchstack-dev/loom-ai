@@ -29,7 +29,7 @@ Loom's kit/library system today bundles agents, prompts, and "skills" — but th
 ## Constraints & Decisions
 
 ### C-01: Rename `library.skills:` → `library.protocols:`
-**Decision:** Rename the existing `skills:` section in `library.yaml` to `protocols:` (these items always installed to `~/.claude/agents/protocols/`). Add a new `skills:` section for Claude Code native skills with target `~/.claude/skills/<name>/SKILL.md`.
+**Decision:** Rename the existing `skills:` section in `library.yaml` to `protocols:` (these items always installed to `~/.claude/protocols/`). Add a new `skills:` section for Claude Code native skills with target `~/.claude/skills/<name>/SKILL.md`.
 **Rationale:** The current name is wrong today — items installed under it are protocol files, not skills. Stretching the name to mean both would compound confusion every time a new kit author reads the catalog. Migration cost is bounded by the existing `library-catalog-migrator.ts` walker pattern.
 **Alternatives considered:** Keep `skills:` for protocols and introduce a new namespace (`knowledge`, `domain-skills`). Rejected — preserves a legacy misnomer indefinitely; every future doc has to explain the historical wart.
 **Impact:** high
@@ -150,7 +150,7 @@ Loom's kit/library system today bundles agents, prompts, and "skills" — but th
 **Convergence targets:**
 - `grep -c "extensible" README.md` ≥ 1
 - `grep -n "## Extensibility Model" CLAUDE.md` returns one line
-- `grep -n "deliverableId" agents/protocols/change-proposal.schema.md` returns at least one line
+- `grep -n "deliverableId" protocols/change-proposal.schema.md` returns at least one line
 - docs-auditor agent run reports no fragmented extensibility coverage
 
 ## Data Model (Conceptual)
@@ -163,9 +163,9 @@ Loom's kit/library system today bundles agents, prompts, and "skills" — but th
 | InstallState | schemaVersion, lastSynced, components[] | Tracks installed items by name, type, source, targetPath, installedAt. New valid `type` value: `skill`. |
 | Skill | name, description, triggers[], targetPath | Claude Code native skill bundle. Installs to `~/.claude/skills/<name>/SKILL.md`. `triggers:` are file-pattern globs that auto-activate the skill. |
 | Kit | name, description, version, minLoomVersion, includes[], requires[], command?, suggestedConfig? | Bundle of related resources. `includes:` accepts typed entries (`skill:name`) or legacy bare names. |
-| Protocol | name, description, source, targetPath | Inter-agent contract file (formerly called "skill"). Installs to `~/.claude/agents/protocols/<name>.md`. |
+| Protocol | name, description, source, targetPath | Inter-agent contract file (formerly called "skill"). Installs to `~/.claude/protocols/<name>.md`. |
 | DeltaBlock | domain, before, after, deliverableId? | Existing change-proposal field; gains optional `deliverableId?: string` for future per-deliverable approval. |
-| SchemaRegistry | schema, currentVersion, migratorKind, migratorPath, rule | `agents/protocols/schema-versions.toon` row. `library-catalog`'s `currentVersion` bumps 3 → 4 in F-01. |
+| SchemaRegistry | schema, currentVersion, migratorKind, migratorPath, rule | `protocols/schema-versions.toon` row. `library-catalog`'s `currentVersion` bumps 3 → 4 in F-01. |
 
 ### Relationships
 

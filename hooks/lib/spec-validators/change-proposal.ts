@@ -2,9 +2,9 @@
  * Change-proposal validator — Phase 7 of PLAN-spec-upgrades.md.
  *
  * Validates a single ChangeProposal directory at `.loom/changes/{changeId}/`
- * against the rules locked in `agents/protocols/change-proposal.schema.md`.
+ * against the rules locked in `protocols/change-proposal.schema.md`.
  *
- * Enforced rules (severity per `agents/protocols/validation-rules.md`):
+ * Enforced rules (severity per `protocols/validation-rules.md`):
  *
  *   blocking
  *     - scope.included[] non-empty
@@ -25,7 +25,7 @@
  *     - linkedPlan (when set) resolves to an existing file
  *
  * The validator is intentionally additive — the existing wiki lint pipeline
- * (`agents/protocols/wiki-lint-rules.md`) continues to run; this layer adds
+ * (`protocols/wiki-lint-rules.md`) continues to run; this layer adds
  * change-proposal-specific structural checks. Findings are returned in the
  * same envelope shape as the scenario validators so the lint harness can
  * surface them through `loom-wiki lint` (Phase 8 wiring).

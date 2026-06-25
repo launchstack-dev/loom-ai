@@ -3,7 +3,7 @@
  *
  * Covers AC: atomic state writes (.tmp + rename), read via the F-13 migrator
  * entrypoint, roundtrip fidelity of the v1 fields enumerated in
- * agents/protocols/roadmap-converge-state.schema.toon.
+ * protocols/roadmap-converge-state.schema.toon.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

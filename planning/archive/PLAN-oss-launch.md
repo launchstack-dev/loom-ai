@@ -92,8 +92,8 @@ Nothing in Phases 1+ starts until Phase 0 closes.
 
 - **5-stranger demand test** — STILL OUTSTANDING. Go/no-go on the entire plan. Recruit 5 Claude Code users from Discord; have them run the current `install.sh` cold; observe bounce rate and friction points. If 4+/5 bounce, distribution polish is solving the wrong problem and this plan halts pending re-scoping. Time cost: ~2 days.
 - **Cosign/Sigstore OIDC spike** — WORKFLOW AUTHORED (`.github/workflows/cosign-spike.yml`), UNVERIFIED. Needs an actual run in `launchstack-dev` org repo with default Actions permissions to confirm keyless signing works. Failure forces fallback to GPG-signed releases.
-- **Catalog schema v3** — LANDED at `agents/protocols/library-catalog.schema.md`. Adds `releases[]` block (signed tarball URLs), top-level `loomCoreVersion` / `loomHooksVersion`, kit-level `minCoreVersion` / `minHooksVersion`. v2→v3 migration is backward-compatible.
-- **`install-state.toon` schema v3** — LANDED at `agents/protocols/install-state.schema.md`. Adds pinned versions per component, per-file integrity hashes, snapshot pointer, `protocolVersion` for hook fail-closed checks, v2→v3 reader spec.
+- **Catalog schema v3** — LANDED at `protocols/library-catalog.schema.md`. Adds `releases[]` block (signed tarball URLs), top-level `loomCoreVersion` / `loomHooksVersion`, kit-level `minCoreVersion` / `minHooksVersion`. v2→v3 migration is backward-compatible.
+- **`install-state.toon` schema v3** — LANDED at `protocols/install-state.schema.md`. Adds pinned versions per component, per-file integrity hashes, snapshot pointer, `protocolVersion` for hook fail-closed checks, v2→v3 reader spec.
 - **Fresh-repo decision** — LANDED at `.plan-history/explorations/2026-05-07-fresh-repo-decision.md`. **Option B (`git filter-repo`)** confirmed by maintainer 2026-05-07. Audit + rewrite execution scheduled at end of Phase 0 / start of Phase 1. Falls back to Option A only if audit surfaces unscrubbable content.
 - **`v0.0.x` cadence policy** — LANDED at `docs/version-cadence.md`. Patch-only inside v0.0.x; exit to v0.1.0 after 30 days of stable v3 schemas in production.
 

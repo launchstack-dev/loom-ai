@@ -6,7 +6,7 @@ description: "Diagnose Loom install health — channel, hook-wiring, settings, t
 
 `/loom-doctor` runs a battery of health checks against the current Loom
 install and renders a `DoctorReport` (schema:
-`agents/protocols/doctor-report.schema.md`, `schemaVersion: 1`). It is the
+`protocols/doctor-report.schema.md`, `schemaVersion: 1`). It is the
 canonical convergence signal consumed by `/loom-converge` and the primary
 entry-point for the channel-migration workflow (Phase 9B).
 
@@ -85,7 +85,7 @@ injected at runtime — the CLI surface ships independently.
 
 ## Output Rendering
 
-Per `agents/protocols/doctor-report.schema.md`:
+Per `protocols/doctor-report.schema.md`:
 
 - Per-check line: `{✓ PASS|⚠ WARN|✗ FAIL} {id} ({category}) — {message}`
 - Glyphs (`✓`, `⚠`, `✗`) emitted only on a TTY (`process.stdout.isTTY`).

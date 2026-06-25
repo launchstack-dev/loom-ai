@@ -251,7 +251,7 @@ This step produces a deep analysis of the existing codebase so the roadmap accou
    - What's the tech stack? (or auto-detect from Step 1)
    - Any constraints? (existing code, timeline, team size)
 2. Spawn `roadmap-builder-agent` (general-purpose) with:
-   - Instruction: "Read your instructions from `~/.claude/agents/roadmap-builder-agent.md` first, then read the format spec from `~/.claude/agents/protocols/roadmap.schema.md`."
+   - Instruction: "Read your instructions from `~/.claude/agents/roadmap-builder-agent.md` first, then read the format spec from `~/.claude/protocols/roadmap.schema.md`."
    - The codebase context summary from Step 1
    - The user's answers/description
    - The discussion phase decisions (from Step 1.6) to embed as Constraints & Decisions
@@ -316,7 +316,7 @@ Continue looping until the user approves (option 1).
 
 ### Step 5: Write and Initialize
 
-1. Write the validated roadmap. Resolve target per `agents/protocols/planning-paths.md`:
+1. Write the validated roadmap. Resolve target per `protocols/planning-paths.md`:
    - Default: `planning/ROADMAP.md` (create `planning/` if absent, mkdir -p)
    - Legacy projects with existing root `ROADMAP.md` and no `planning/`: update at root (don't silently relocate — that's Rule 14's job in `/loom-upgrade`)
    - User-specified path via flag (if any): use verbatim

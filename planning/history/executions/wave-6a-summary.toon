@@ -44,7 +44,7 @@ wiringApplied[1]{file,change,source}:
 
 contractsLocked[6]{contract,value}:
   /loom-update --check text format,Loom vX installed -> vY available — run /loom-update to apply (ASCII arrow)
-  /loom-update --check JSON,Conforms to agents/protocols/update-check.schema.md (currentVersion latestVersion behind pinnedVersion + schemaVersion generatedAt channel)
+  /loom-update --check JSON,Conforms to protocols/update-check.schema.md (currentVersion latestVersion behind pinnedVersion + schemaVersion generatedAt channel)
   Plugin update success final line,Claude Code restart required to load new plugin version
   Unrecoverable resume stderr,Update unrecoverable. Run /loom-update --check OR /loom-doctor --bundle to file an issue.
   Rollback chain error,ROLLBACK_HASH_MISMATCH (exit non-zero)

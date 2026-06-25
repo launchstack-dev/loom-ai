@@ -181,14 +181,14 @@ Inter-teammate coordination message format for agent team mode.
 **Agent:** contracts-agent
 **Objective:** Define the stage summary schema, context budget protocol, and team coordination protocol as protocol specification files.
 **Dependencies:** None
-**File Ownership:** agents/protocols/stage-context.schema.md, agents/protocols/context-budget.md, agents/protocols/team-coordination.md
+**File Ownership:** protocols/stage-context.schema.md, protocols/context-budget.md, protocols/team-coordination.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/stage-context.schema.md | Create | contracts-agent |
-| agents/protocols/context-budget.md | Create | contracts-agent |
-| agents/protocols/team-coordination.md | Create | contracts-agent |
+| protocols/stage-context.schema.md | Create | contracts-agent |
+| protocols/context-budget.md | Create | contracts-agent |
+| protocols/team-coordination.md | Create | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `stage-context.schema.md` defines the StageContext TOON format with all fields from the Schema section, includes examples for each stage type (execute, review, test, converge, fix)
@@ -202,12 +202,12 @@ Inter-teammate coordination message format for agent team mode.
 **Agent:** implementer-agent
 **Objective:** Add stage summary writing to the execution pipeline so that every stage boundary produces a `.plan-execution/stage-context/{stage}.toon` file.
 **Dependencies:** Phase 0
-**File Ownership:** agents/protocols/execution-conventions.md, commands/loom-plan.md, commands/loom.md
+**File Ownership:** protocols/execution-conventions.md, commands/loom-plan.md, commands/loom.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/execution-conventions.md | Modify | implementer-1 |
+| protocols/execution-conventions.md | Modify | implementer-1 |
 | commands/loom-plan.md | Modify | implementer-1 |
 | commands/loom.md | Modify | implementer-1 |
 
@@ -223,13 +223,13 @@ Inter-teammate coordination message format for agent team mode.
 **Agent:** implementer-agent
 **Objective:** Update the convergence driver to write per-iteration summaries to disk and read only the last 1-2 iterations instead of accumulating full history in conversation context.
 **Dependencies:** Phase 0
-**File Ownership:** agents/convergence-driver.md, agents/protocols/convergence-plan.schema.md
+**File Ownership:** agents/convergence-driver.md, protocols/convergence-plan.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
 | agents/convergence-driver.md | Modify | implementer-2 |
-| agents/protocols/convergence-plan.schema.md | Modify | implementer-2 |
+| protocols/convergence-plan.schema.md | Modify | implementer-2 |
 
 #### Acceptance Criteria
 - [ ] `convergence-driver.md` writes `.plan-execution/convergence/iterations/iter-N.toon` after each iteration using the ConvergenceIterationSummary format

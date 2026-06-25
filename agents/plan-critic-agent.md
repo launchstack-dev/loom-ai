@@ -84,7 +84,7 @@ Every row in `predictedFindings[].dimension` MUST appear in `dimensionsCovered[]
 
 ## Output
 
-Write `.plan-execution/critique.toon` atomically: write to `.plan-execution/critique.toon.tmp`, then rename. The TOON MUST match the `PlanCritique` schema in `agents/protocols/plan-critique.schema.md` exactly.
+Write `.plan-execution/critique.toon` atomically: write to `.plan-execution/critique.toon.tmp`, then rename. The TOON MUST match the `PlanCritique` schema in `protocols/plan-critique.schema.md` exactly.
 
 ### Required Fields (PlanCritique schema)
 
@@ -121,7 +121,7 @@ predictedFindings[6]{id,dimension,predictedSeverity,locationHint,concern,suggest
 
 ## AgentResult Envelope
 
-Return an `AgentResult` envelope per `agents/protocols/agent-result.schema.md` as the last content block of your response, including:
+Return an `AgentResult` envelope per `protocols/agent-result.schema.md` as the last content block of your response, including:
 
 - `status`: `success` (critique produced and atomically written) or `partial` (truncated under `CRITIQUE_TOO_LARGE`).
 - `filesCreated`: `.plan-execution/critique.toon`.

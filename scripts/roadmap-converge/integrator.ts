@@ -7,7 +7,7 @@
  *   1. Writes ROADMAP.md atomically (.tmp + renameSync).
  *   2. Recomputes the content_hash via hashRoadmap.
  *   3. Returns a standard AgentResult TOON envelope per
- *      agents/protocols/agent-result.schema.md.
+ *      protocols/agent-result.schema.md.
  *
  * FC-05 retire-dimension semantics: when a dimension name is added to
  * archivedDimensions[], EVERY open_questions[] row whose `dimension` matches

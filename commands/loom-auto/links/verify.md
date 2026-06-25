@@ -27,15 +27,15 @@ You must read these files in order. Stop and write a `failed` envelope if a requ
 
 You MUST write all of the following before your final message. All writes are atomic (`.tmp` then rename).
 
-1. `.plan-execution/stage-context/test.toon` — per `agents/protocols/stage-context.schema.md`
-2. `.plan-execution/stage-context/review.toon` — per `agents/protocols/stage-context.schema.md`
+1. `.plan-execution/stage-context/test.toon` — per `protocols/stage-context.schema.md`
+2. `.plan-execution/stage-context/review.toon` — per `protocols/stage-context.schema.md`
 3. `.plan-execution/review-report.md` — full review findings (consumed by FIX link)
 4. `.plan-execution/link-result.toon` — link envelope (see schema below)
 5. `.plan-execution/pipeline-state.toon` — updated with new `currentStage`, appended `linkHistory[]`, incremented `agentsSpawned`
 
 ## Model resolution (mandatory)
 
-Before every Agent tool call, resolve the model per `~/.claude/agents/protocols/execution-conventions.md`:
+Before every Agent tool call, resolve the model per `~/.claude/protocols/execution-conventions.md`:
 
 1. Read `.claude/orchestration.toml`. If `[settings] modelProfile` is set, read the profile definition.
 2. For the test runner agent: tier = `verification`.

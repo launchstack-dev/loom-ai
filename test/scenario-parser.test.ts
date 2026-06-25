@@ -4,7 +4,7 @@
  *
  * Covers: happy path, state references, multi-tag, missing required fields,
  * malformed TOON, no Scenarios section, multiple scenarios per section, and
- * a few edge cases on field formats. See agents/protocols/scenario.schema.md.
+ * a few edge cases on field formats. See protocols/scenario.schema.md.
  */
 
 import { describe, it, expect } from "vitest";

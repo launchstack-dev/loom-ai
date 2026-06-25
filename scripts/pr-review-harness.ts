@@ -3,12 +3,12 @@
  * F-04 PR-review convergence dispatcher harness.
  *
  * Mode:     `convergenceMode: document` per
- *           `agents/protocols/converge.config.schema.md`
+ *           `protocols/converge.config.schema.md`
  * Subject:  `.plan-execution/pr-review/pr-state.toon` (synthetic projection
  *           per OQ-02, refreshed by this harness each iteration)
  * Output:   `ConvergenceFindings` TOON per
- *           `agents/protocols/findings.schema.md` with F-04 row variant per
- *           `agents/protocols/findings.applications-rows.md`.
+ *           `protocols/findings.schema.md` with F-04 row variant per
+ *           `protocols/findings.applications-rows.md`.
  *
  * Pattern: dispatcher — read `botAdapter` from converge.config, refresh
  * `pr-state.toon`, then delegate to the per-bot adapter under

@@ -43,7 +43,7 @@ When a user runs `/loom-roadmap converge` against `planning/ROADMAP.md`:
 
 2. **State init** — `.roadmap-converge/ROADMAP/state.toon` created fresh. `slug = "ROADMAP"`.
 
-3. **Dimension loading** — `agents/protocols/roadmap-readiness.schema.toon` provides 8 dimensions: vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope.
+3. **Dimension loading** — `protocols/roadmap-readiness.schema.toon` provides 8 dimensions: vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope.
 
 4. **Pass 1 reviewer fan-out** — `roadmap-converge-reviewer.md` (sonnet tier) evaluates each dimension against its rubric. `planning/ROADMAP.md` is a mature document; expected results:
    - `vision`: likely green (clear project mission statement present)
