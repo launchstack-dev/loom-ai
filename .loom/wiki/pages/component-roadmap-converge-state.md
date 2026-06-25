@@ -11,7 +11,7 @@ summary: Durable per-roadmap state (RoadmapConvergeState) plus lock-file, slug d
 estimatedTokens: 1000
 bodySections[6]: Summary, Entities, On-Disk Layout, Concurrency Lock, Multi-Roadmap Slugging, Migration Runtime
 subtype:
-sourceRefs[7]: planning/plans/PLAN-roadmap-converge-harness.md, agents/protocols/roadmap-converge-state.schema.toon, agents/protocols/roadmap-readiness.schema.toon, agents/protocols/roadmap-archetypes.toon, scripts/roadmap-converge/state-io.ts, scripts/roadmap-converge/lock.ts, scripts/migrators/roadmap-converge-state/index.ts
+sourceRefs[7]: planning/plans/PLAN-roadmap-converge-harness.md, protocols/roadmap-converge-state.schema.toon, protocols/roadmap-readiness.schema.toon, protocols/roadmap-archetypes.toon, scripts/roadmap-converge/state-io.ts, scripts/roadmap-converge/lock.ts, scripts/migrators/roadmap-converge-state/index.ts
 crossRefs[4]{pageId,relationship}:
   component-roadmap-converge-driver,relates-to
   concept-roadmap-convergence,implements
@@ -32,9 +32,9 @@ The durable side of F-15. Owns the per-roadmap state file, the readiness schema 
 
 | Entity | Stored | Purpose |
 |--------|--------|---------|
-| `RoadmapReadinessSchema` | `agents/protocols/roadmap-readiness.schema.toon` | Per-archetype dimensional taxonomy with rubricRef paths |
+| `RoadmapReadinessSchema` | `protocols/roadmap-readiness.schema.toon` | Per-archetype dimensional taxonomy with rubricRef paths |
 | `RoadmapDimension` | embedded in state | Runtime status of one dimension (`green`/`yellow`/`red` + evidence/blockers/anchors/delta) |
-| `RoadmapRubric` | `agents/protocols/roadmap-rubrics/{name}.md` | Pedagogical exemplars (`## Green` / `## Yellow` / `## Red`) |
+| `RoadmapRubric` | `protocols/roadmap-rubrics/{name}.md` | Pedagogical exemplars (`## Green` / `## Yellow` / `## Red`) |
 | `RoadmapConvergeState` | `.roadmap-converge/{slug}/state.toon` | Durable per-roadmap state; F-13 migration-registered |
 | `RoadmapConvergeDigest` | not stored | Rendered view built by `/loom-roadmap status` from state alone |
 
@@ -98,7 +98,7 @@ State is registered with the F-13 chained walker pattern.
 
 | Artifact | Purpose |
 |----------|---------|
-| `agents/protocols/schema-versions.toon` | Includes a `roadmapConvergeState` entry pointing at version 1 |
+| `protocols/schema-versions.toon` | Includes a `roadmapConvergeState` entry pointing at version 1 |
 | `scripts/migrators/roadmap-converge-state/detect.ts` | `detectRoadmapConvergeStateVersion(content)` → `{detected, current, outdated}`; throws `MigrationDowngradeError` on future versions |
 | `scripts/migrators/roadmap-converge-state/index.ts` | Exports a frozen `MIGRATIONS` map and a pure `migrateToLatest(input, fromVersion, opts, targetVersion?)` walker |
 

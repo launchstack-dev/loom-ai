@@ -6,7 +6,7 @@
  * `/loom-upgrade --rollback`). This envelope is consumed by the doctor and
  * update CLIs for channel detection, freshness checks, and source attribution.
  *
- * See `agents/protocols/install-state.schema.md` (Reconciliation note) and
+ * See `protocols/install-state.schema.md` (Reconciliation note) and
  * `planning/plans/PLAN-plugin-marketplace-merged.md` Phase 4 for the
  * per-machine schema.
  *

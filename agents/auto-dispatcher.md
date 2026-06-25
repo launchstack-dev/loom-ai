@@ -28,7 +28,7 @@ You (Lead Dispatcher) — thin context
     └── subagents for targeted fixes
 ```
 
-See `agents/protocols/team-coordination.md` for the full architecture diagram, TeamMessage format, and hard limits.
+See `protocols/team-coordination.md` for the full architecture diagram, TeamMessage format, and hard limits.
 
 ## Context Budget Rule
 
@@ -155,7 +155,7 @@ totalDurationMs: 1200000
 summary: Pipeline completed. 6 of 7 findings resolved. 1 advisory finding deferred.
 ```
 
-3. Return your AgentResult in TOON format per `agents/protocols/agent-result.schema.md`
+3. Return your AgentResult in TOON format per `protocols/agent-result.schema.md`
 
 ## Hard Limits
 
@@ -177,7 +177,7 @@ These constraints are non-negotiable:
 
 ## Message Format Reference
 
-All inter-agent messages follow the TeamMessage format from `agents/protocols/team-coordination.md`:
+All inter-agent messages follow the TeamMessage format from `protocols/team-coordination.md`:
 
 ```toon
 from: lead

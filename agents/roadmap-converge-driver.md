@@ -18,7 +18,7 @@ Your prompt always contains:
 2. **`slug`** — path-safe slug derived from `roadmapPath` sans extension. Wave 1 default = `ROADMAP`.
 3. **`passLimit`** — clamped to `[1, 5]`. Default 3. Sourced from `[roadmap.converge].maxPasses`.
 4. **`force`** — optional boolean. When true, force-acquires the concurrency lock even if a fresh one is held.
-5. **`dimensions[]`** — list of `{name, rubricRef}` resolved from the active `RoadmapReadinessSchema` (`agents/protocols/roadmap-readiness.schema.toon`). MVP default is 8 dimensions.
+5. **`dimensions[]`** — list of `{name, rubricRef}` resolved from the active `RoadmapReadinessSchema` (`protocols/roadmap-readiness.schema.toon`). MVP default is 8 dimensions.
 
 ## Procedure
 
@@ -35,7 +35,7 @@ Your prompt always contains:
 8. **5-cap per dimension (AW-15)** — Keep the first 5 findings per dimension as `OpenQuestion` rows. The remainder go to `suppressedFindings[]` and produce a single `[roadmap-converge] {N} suppressed for {dim}` stderr footer. The cap is per-dimension, NOT aggregate.
 9. **F-15 rendering rule (P-03)** — When emitting a finding:
    - `green` status → emit nothing (driver does not surface findings on green dimensions)
-   - `yellow` → append the green-band exemplar from `agents/protocols/roadmap-rubrics/{dim}.md` to the finding text
+   - `yellow` → append the green-band exemplar from `protocols/roadmap-rubrics/{dim}.md` to the finding text
    - `red` → append BOTH the green-band AND red-band exemplars
    The driver loads and parses the rubric file's `## Green`, `## Yellow`, `## Red` sections via `parseRubric` in `driver.ts`.
 10. **Atomic state write** — Write the new state to `.roadmap-converge/{slug}/state.toon` via `writeState` (`.tmp` + `fs.renameSync`).

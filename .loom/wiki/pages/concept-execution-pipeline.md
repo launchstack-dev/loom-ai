@@ -7,7 +7,7 @@ createdAt: 2026-04-25T22:00:00Z
 updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
-sourceRefs[2]: agents/protocols/execution-conventions.md, agents/protocols/pipeline-state.schema.md
+sourceRefs[2]: protocols/execution-conventions.md, protocols/pipeline-state.schema.md
 crossRefs[3]{pageId,relationship}:
   concept-convergence,relates-to
   convention-agent-result,relates-to
@@ -21,7 +21,7 @@ confidence: high
 
 The Loom execution pipeline is a staged, wave-based system for coordinating parallel agent work. It provides file ownership enforcement, resumable state, and structured handoffs between stages.
 
-Source: `agents/protocols/execution-conventions.md`, `agents/protocols/pipeline-state.schema.md`
+Source: `protocols/execution-conventions.md`, `protocols/pipeline-state.schema.md`
 
 ---
 

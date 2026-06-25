@@ -5,7 +5,7 @@
  * partial-install or in-progress-update state. Consumed by `/loom-doctor`
  * (F-04), `/loom-update` (F-12), and the F-05 migration flow.
  *
- * Schema reference: agents/protocols/plugin-install-state.schema.md
+ * Schema reference: protocols/plugin-install-state.schema.md
  */
 
 /** Distribution channel (C-06). */

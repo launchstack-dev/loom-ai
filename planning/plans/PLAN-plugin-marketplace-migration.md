@@ -65,13 +65,13 @@ Establish TOON/markdown schemas before any implementation so all downstream wave
 
 | Path | Owner | Purpose |
 |---|---|---|
-| `agents/protocols/plugin-manifest.schema.md` | wave-0-schemas-agent | Mirrors Anthropic `plugin.json` shape; documents Loom-specific field constraints |
-| `agents/protocols/hook-manifest.schema.md` | wave-0-schemas-agent | Mirrors Anthropic `hooks.json` shape; documents `${CLAUDE_PLUGIN_ROOT}` anchoring |
-| `agents/protocols/doctor-report.schema.md` | wave-0-schemas-agent | DoctorReport + embedded HealthCheck[] |
-| `agents/protocols/migration-evidence.schema.md` | wave-0-schemas-agent | Hash-based ownership evidence record |
-| `agents/protocols/settings-tier.schema.md` | wave-0-schemas-agent | SettingsTier enum + TierResolution algorithm |
-| `agents/protocols/upstream/plugin.schema.json` | wave-0-schemas-agent | Fetched snapshot of Anthropic's plugin manifest JSON Schema from `code.claude.com/docs/en/plugins-reference`; pinned with snapshotDate in a sibling `.meta.toon` file | <!-- applied: CB-02 -->
-| `agents/protocols/migration-runner.schema.md` | wave-0-schemas-agent | Type-level contract for the `runMigration()` signature exported by `scripts/lib/migration-runner.ts` (Wave 2). Wave 2 vitest type-check asserts the implementation conforms. | <!-- applied: NR-01 -->
+| `protocols/plugin-manifest.schema.md` | wave-0-schemas-agent | Mirrors Anthropic `plugin.json` shape; documents Loom-specific field constraints |
+| `protocols/hook-manifest.schema.md` | wave-0-schemas-agent | Mirrors Anthropic `hooks.json` shape; documents `${CLAUDE_PLUGIN_ROOT}` anchoring |
+| `protocols/doctor-report.schema.md` | wave-0-schemas-agent | DoctorReport + embedded HealthCheck[] |
+| `protocols/migration-evidence.schema.md` | wave-0-schemas-agent | Hash-based ownership evidence record |
+| `protocols/settings-tier.schema.md` | wave-0-schemas-agent | SettingsTier enum + TierResolution algorithm |
+| `protocols/upstream/plugin.schema.json` | wave-0-schemas-agent | Fetched snapshot of Anthropic's plugin manifest JSON Schema from `code.claude.com/docs/en/plugins-reference`; pinned with snapshotDate in a sibling `.meta.toon` file | <!-- applied: CB-02 -->
+| `protocols/migration-runner.schema.md` | wave-0-schemas-agent | Type-level contract for the `runMigration()` signature exported by `scripts/lib/migration-runner.ts` (Wave 2). Wave 2 vitest type-check asserts the implementation conforms. | <!-- applied: NR-01 -->
 
 **Acceptance Criteria**
 
@@ -336,7 +336,7 @@ Flag semantics: `--mode` (existing) = path anchor style (`${CLAUDE_PROJECT_DIR}`
 - `hooks/hooks.json` — per same reference
 - `~/.claude/settings.json`, `.claude/settings.json`, `.claude/settings.local.json` tier hierarchy — per `code.claude.com/docs/en/settings`
 
-Loom MUST treat these schemas as upstream. The plan's data model snapshots known fields; on Anthropic schema drift, only `agents/protocols/plugin-manifest.schema.md` and `agents/protocols/hook-manifest.schema.md` need updates.
+Loom MUST treat these schemas as upstream. The plan's data model snapshots known fields; on Anthropic schema drift, only `protocols/plugin-manifest.schema.md` and `protocols/hook-manifest.schema.md` need updates.
 
 ## 5.5 E2E Test Environment  <!-- applied: CB-04 -->
 
@@ -436,7 +436,7 @@ transitions[]{from,to,trigger}:
 
 | Wave | Agent | Owned Paths |
 |---|---|---|
-| 0 | wave-0-schemas-agent | `agents/protocols/plugin-manifest.schema.md`, `agents/protocols/hook-manifest.schema.md`, `agents/protocols/doctor-report.schema.md`, `agents/protocols/migration-evidence.schema.md`, `agents/protocols/settings-tier.schema.md`, `agents/protocols/upstream/plugin.schema.json`, `agents/protocols/migration-runner.schema.md` | <!-- applied: NI-02 NR-01 -->
+| 0 | wave-0-schemas-agent | `protocols/plugin-manifest.schema.md`, `protocols/hook-manifest.schema.md`, `protocols/doctor-report.schema.md`, `protocols/migration-evidence.schema.md`, `protocols/settings-tier.schema.md`, `protocols/upstream/plugin.schema.json`, `protocols/migration-runner.schema.md` | <!-- applied: NI-02 NR-01 -->
 | 1 | wave-1-manifest-agent | `.claude-plugin/plugin.json`, `hooks/hooks.json`, `install.sh`, `test/plugin-manifest.test.ts`, `test/install-mutual-exclusion.test.ts` | <!-- applied: CB-01 -->
 | 2 | wave-2-doctor-agent | `commands/loom-doctor.md`, `scripts/loom-doctor.ts`, `hooks/loom-migration.ts`, `scripts/lib/ownership-evidence.ts`, `scripts/lib/migration-runner.ts`, `test/loom-doctor.test.ts`, `test/loom-migration.test.ts` | <!-- applied: CB-01, HF-07 -->
 | 3 | wave-3-tier-agent | `scripts/register-loom-hooks.ts`, `scripts/lib/tier-resolution.ts`, `commands/loom-init.md`, `commands/loom-auto.md`, `commands/loom-roadmap/init.md`, `commands/loom-quick.md`, `commands/loom-change.md`, `commands/loom-plan.md`, `test/tier-resolution.test.ts`, `test/register-loom-hooks-tier.test.ts` | <!-- applied: CB-01 HF-05 -->
@@ -454,15 +454,15 @@ transitions[]{from,to,trigger}:
 
 ### Cross-Plan Dependencies  <!-- applied: HF-03 -->
 
-F-15's `DoctorReport.installSource` (`plugin | curl`) is derived dynamically per session. The existing `agents/protocols/install-state.schema.md` (v3, shipped under M-06 F-13) has no corresponding persisted field. Open a follow-up PR to add `installSource` to install-state v3.1 so `/loom-upgrade` can route plugin-path vs curl-path updates. This plan does not own that change but flags it for M-07 sign-off.
+F-15's `DoctorReport.installSource` (`plugin | curl`) is derived dynamically per session. The existing `protocols/install-state.schema.md` (v3, shipped under M-06 F-13) has no corresponding persisted field. Open a follow-up PR to add `installSource` to install-state v3.1 so `/loom-upgrade` can route plugin-path vs curl-path updates. This plan does not own that change but flags it for M-07 sign-off.
 
-**Tracking:** the install-state v3.1 `installSource` field is tracked as a follow-up roadmap entry. Add F-18 to `planning/ROADMAP.md` under M-07 (or a new M-08 follow-up milestone) covering: (a) extend `agents/protocols/install-state.schema.md` with `installSource: plugin | curl` (v3.1 minor version bump), (b) populate the field in `install.sh` (curl path) and the SessionStart hook (plugin path) at registration time, (c) `/loom-upgrade` reads the field and dispatches plugin-tier vs curl-tier update logic. Blocks M-07 sign-off. <!-- applied: NI-01 -->
+**Tracking:** the install-state v3.1 `installSource` field is tracked as a follow-up roadmap entry. Add F-18 to `planning/ROADMAP.md` under M-07 (or a new M-08 follow-up milestone) covering: (a) extend `protocols/install-state.schema.md` with `installSource: plugin | curl` (v3.1 minor version bump), (b) populate the field in `install.sh` (curl path) and the SessionStart hook (plugin path) at registration time, (c) `/loom-upgrade` reads the field and dispatches plugin-tier vs curl-tier update logic. Blocks M-07 sign-off. <!-- applied: NI-01 -->
 
 ## 10. Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Anthropic plugin manifest schema evolves mid-implementation | medium | high | Snapshot current schema in `agents/protocols/plugin-manifest.schema.md`; pin to documented version; doctor surfaces `MANIFEST_INVALID` on drift |
+| Anthropic plugin manifest schema evolves mid-implementation | medium | high | Snapshot current schema in `protocols/plugin-manifest.schema.md`; pin to documented version; doctor surfaces `MANIFEST_INVALID` on drift |
 | Curl users miss the migration path to plugin | high | low | `/loom-doctor` prints one-shot migration recipe when curl install detected and plugin available; README decision matrix |
 | Ownership-evidence false positives block legitimate migrations | medium | medium | Advisory (not blocking) surfacing of divergence; evidence log preserves before/after for forensic review; user manually edits log when intentional edit is the source of divergence. <!-- applied: MF-03 MF-04 --> |
 | Tier flip surprises existing users on re-init | medium | medium | TierResolution preserves prior tier choice; `MIGRATION_TIER_AMBIGUOUS` refuses to write without explicit flag when both tiers populated |

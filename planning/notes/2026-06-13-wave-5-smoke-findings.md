@@ -49,7 +49,7 @@ Reviewer envelopes emit `severity: warning` and `severity: blocking` per `agent-
 
 - `scripts/lib/aggregate-findings.ts`: extended `AgentIssueSeverity` type to include `"blocking"` and `"warning"`; extended `severityToConvergenceSeverity` switch to map both identity-style (`blocking → blocking`, `warning → warning`)
 - `scripts/plan-review-harness.ts`: extended `VALID_AGENT_ISSUE_SEVERITIES` allowlist to include the new values
-- `agents/protocols/findings.schema.md`: extended the severityToConvergenceSeverity table with the 2 new rows + added a § "Why two enums" subsection explaining the union-acceptance design
+- `protocols/findings.schema.md`: extended the severityToConvergenceSeverity table with the 2 new rows + added a § "Why two enums" subsection explaining the union-acceptance design
 - `test/protocol/aggregate-findings.test.ts`: +5 new tests covering blocking/warning inputs, blocking-count contribution, mixed-enum runs (defensive)
 - `test/protocol/plan-review-harness.test.ts`: +3 new tests covering parser-side acceptance of the new severities
 

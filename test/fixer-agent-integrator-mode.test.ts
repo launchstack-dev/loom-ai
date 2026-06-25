@@ -19,9 +19,9 @@
  *      breaks the contract, this test fails.
  *
  * Schema references:
- *   - agents/protocols/findings.schema.md
- *   - agents/protocols/converge.config.schema.md
- *   - agents/protocols/agent-result.schema.md
+ *   - protocols/findings.schema.md
+ *   - protocols/converge.config.schema.md
+ *   - protocols/agent-result.schema.md
  *   - agents/fixer-agent.md § Integrator Mode
  */
 
@@ -115,7 +115,7 @@ describe("agents/pr-fixer-agent.md (doc contract)", () => {
 
 /**
  * The shape of an AgentResult `issues[]` row. Per
- * `agents/protocols/agent-result.schema.md`, error codes are surfaced via
+ * `protocols/agent-result.schema.md`, error codes are surfaced via
  * `description` prefixed with `<CODE>:` (the locked envelope has no `errors[]`
  * column).
  */
@@ -211,7 +211,7 @@ function runFixerIntegrator(input: IntegratorInput): AgentResultEnvelope {
     envelope.status = "failure";
     envelope.issues.push({
       severity: "blocking",
-      description: `FINDINGS_SCHEMA_INVALID: findings.toon at ${findingsPath} does not exist (see agents/protocols/findings.schema.md).`,
+      description: `FINDINGS_SCHEMA_INVALID: findings.toon at ${findingsPath} does not exist (see protocols/findings.schema.md).`,
     });
     return envelope;
   }
@@ -222,7 +222,7 @@ function runFixerIntegrator(input: IntegratorInput): AgentResultEnvelope {
     envelope.status = "failure";
     envelope.issues.push({
       severity: "blocking",
-      description: `FINDINGS_SCHEMA_INVALID: findings.toon at ${findingsPath} is missing the required \`subject\` field (see agents/protocols/findings.schema.md).`,
+      description: `FINDINGS_SCHEMA_INVALID: findings.toon at ${findingsPath} is missing the required \`subject\` field (see protocols/findings.schema.md).`,
     });
     return envelope;
   }

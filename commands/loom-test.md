@@ -94,8 +94,8 @@ If `--autoconverge` is NOT set:
 #### Step 3: Autoconverge mode (with `--autoconverge`)
 
 If `--autoconverge` is set, generate a `converge.config.toon` per the locked
-schema (`agents/protocols/converge.config.schema.md`) and per the F-02
-field-value matrix in `agents/protocols/converge.config.applications.md`.
+schema (`protocols/converge.config.schema.md`) and per the F-02
+field-value matrix in `protocols/converge.config.applications.md`.
 
 **Spawn-count contract:** Per F-02 acceptance, the per-iteration spawn budget
 is exactly 2 agents (1 test-harness invocation + 1 fixer-agent). At
@@ -172,7 +172,7 @@ When `/loom-converge` returns:
 
 - `scripts/test-harness.ts` — the harness this wrapper drives
 - `scripts/lib/test-runners/{bun,vitest,pytest}.ts` — output parsers
-- `agents/protocols/converge.config.schema.md` — canonical config schema (locked)
-- `agents/protocols/converge.config.applications.md` — F-02 field-value matrix
-- `agents/protocols/findings.applications-rows.md` — F-02 row variant
+- `protocols/converge.config.schema.md` — canonical config schema (locked)
+- `protocols/converge.config.applications.md` — F-02 field-value matrix
+- `protocols/findings.applications-rows.md` — F-02 row variant
 - `commands/loom-converge.md` — the driver dispatched in autoconverge mode

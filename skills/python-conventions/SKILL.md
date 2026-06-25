@@ -119,7 +119,7 @@ Any Python script in this repository that emits a Loom protocol artifact
 (AgentResult, state file, stage context, progress heartbeat, scope coverage,
 etc.) MUST emit **TOON** (Token-Oriented Object Notation), not JSON. TOON is
 the canonical format for all Loom on-disk artifacts — see
-`agents/protocols/toon-format.md`.
+`protocols/toon-format.md`.
 
 No library is required. A small writer suffices:
 
@@ -144,6 +144,6 @@ write_atomic(Path(".plan-execution/ephemeral/progress/my-task.toon"),
 ```
 
 When in doubt, look at how existing TOON files in `.plan-execution/` and
-`agents/protocols/` are structured and mirror that shape. JSON is reserved
+`protocols/` are structured and mirror that shape. JSON is reserved
 for app-specific data being compared or generated (e.g., upstream API
 responses) and standard tooling configs.

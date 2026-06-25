@@ -114,14 +114,14 @@ Two new optional fields added to `decision-*.md` frontmatter:
 **Agent:** contracts-agent
 **Objective:** Update the wiki page schema, conventions, and lint rules to support assumption pages.
 **Dependencies:** None
-**File Ownership:** agents/protocols/wiki-page.schema.md, agents/protocols/wiki-conventions.md, agents/protocols/wiki-lint-rules.md
+**File Ownership:** protocols/wiki-page.schema.md, protocols/wiki-conventions.md, protocols/wiki-lint-rules.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/wiki-page.schema.md | Modify | contracts-agent |
-| agents/protocols/wiki-conventions.md | Modify | contracts-agent |
-| agents/protocols/wiki-lint-rules.md | Modify | contracts-agent |
+| protocols/wiki-page.schema.md | Modify | contracts-agent |
+| protocols/wiki-conventions.md | Modify | contracts-agent |
+| protocols/wiki-lint-rules.md | Modify | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `wiki-page.schema.md` adds `assumption` to the page categories table with prefix `assumption-` and description

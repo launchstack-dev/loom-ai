@@ -18,9 +18,9 @@ You receive via prompt:
 ## Input (from disk)
 
 Read these files before starting:
-- `~/.claude/agents/protocols/wiki-conventions.md` — page format, cross-ref rules, Flow/Contract significance heuristics, Required H2 sections
-- `~/.claude/agents/protocols/wiki-page.schema.md` — universal fields plus Flow / Contract category-specific fields, full cross-ref relationship table (8 new relationships)
-- `~/.claude/agents/protocols/wiki-index.schema.md` — schemaVersion 2 columns including `summary`, `estimatedTokens`, `subtype` (used to answer many queries without reading full pages)
+- `~/.claude/protocols/wiki-conventions.md` — page format, cross-ref rules, Flow/Contract significance heuristics, Required H2 sections
+- `~/.claude/protocols/wiki-page.schema.md` — universal fields plus Flow / Contract category-specific fields, full cross-ref relationship table (8 new relationships)
+- `~/.claude/protocols/wiki-index.schema.md` — schemaVersion 2 columns including `summary`, `estimatedTokens`, `subtype` (used to answer many queries without reading full pages)
 - `.loom/wiki/index.toon` — page catalog (your primary navigation tool)
 - `.loom/wiki/execution-log.toon` — narrative history (for "why" questions)
 

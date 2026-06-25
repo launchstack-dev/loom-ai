@@ -86,13 +86,13 @@ Per-project tuning at `.loom/repo-map.config.toon` (optional; defaults work for 
 **Agent:** contracts-agent
 **Objective:** Define schemas and the rendered-pack format.
 **Dependencies:** None
-**File Ownership:** agents/protocols/repo-map.schema.md, agents/protocols/ranking-config.schema.md
+**File Ownership:** protocols/repo-map.schema.md, protocols/ranking-config.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/repo-map.schema.md | Create | contracts-agent |
-| agents/protocols/ranking-config.schema.md | Create | contracts-agent |
+| protocols/repo-map.schema.md | Create | contracts-agent |
+| protocols/ranking-config.schema.md | Create | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] Both schemas exist with TOON frontmatter examples, Field tables, validation rules.
@@ -214,7 +214,7 @@ node scripts/validate-library-catalog.js
 ## Acceptance Criteria (Final)
 
 - [ ] `buildRepoMap()` on the loom-ai repo produces a token-budgeted (≤8k tokens) symbol pack in <5 seconds.
-- [ ] Personalization works: seeding with `agents/protocols/scenario.schema.md` produces a measurably different top-20 than seeding with `commands/loom-plan/execute.md`.
+- [ ] Personalization works: seeding with `protocols/scenario.schema.md` produces a measurably different top-20 than seeding with `commands/loom-plan/execute.md`.
 - [ ] Re-running with identical seed + identical disk state produces byte-identical output (determinism).
 - [ ] `/loom-repo-map build --seed PLAN-spec-upgrades.md` produces a pack where scenario/contract-page schemas rank above unrelated subsystems.
 - [ ] `wiki-context-suggester.ts` UserPromptSubmit hook fires and injects context without exceeding the conversation budget.

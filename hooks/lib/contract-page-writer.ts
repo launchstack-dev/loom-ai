@@ -7,9 +7,9 @@
  *      `hooks/lib/checksum.ts` and embed it in the frontmatter BEFORE writing —
  *      the stored checksum covers the body that will actually live on disk.
  *   3. Write atomically via `.tmp` + rename per
- *      `agents/protocols/execution-conventions.md`.
+ *      `protocols/execution-conventions.md`.
  *   4. Update the wiki index entry for the page per
- *      `agents/protocols/wiki-index.schema.md` (atomic, bump `wikiVersion`,
+ *      `protocols/wiki-index.schema.md` (atomic, bump `wikiVersion`,
  *      keep `pageCount` + `categories[]` in sync).
  *
  * This module is the only authorized writer of `contract-*` pages at greenfield

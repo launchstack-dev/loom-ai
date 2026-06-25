@@ -13,7 +13,7 @@
 
 The tier summary table in `orchestration-patterns.md` lists qa-review as level 1, hierarchy "milestone", runner "interpretation-reviewer-agent". The canonical `convergence-tier.schema.md` defines qa-review as level 2, hierarchy "phase", runner "qa-review-agent". Three fields are wrong in a single row.
 
-**File**: `agents/protocols/orchestration-patterns.md`
+**File**: `protocols/orchestration-patterns.md`
 **Fix**: Change qa-review row to: `| qa-review | 2 | phase | qa-review-agent | advisory |`
 *Found by: code-reviewer, architecture-reviewer*
 
@@ -21,7 +21,7 @@ The tier summary table in `orchestration-patterns.md` lists qa-review as level 1
 
 `execution-conventions.md` lists e2e as tier (2) and qa-review as tier (1). The canonical schema defines e2e=1, qa-review=2.
 
-**File**: `agents/protocols/execution-conventions.md`
+**File**: `protocols/execution-conventions.md`
 **Fix**: Swap the tier numbers: e2e should be (1), qa-review should be (2).
 *Found by: code-reviewer, architecture-reviewer*
 
@@ -56,7 +56,7 @@ Both agents only have `model:` in frontmatter. Compare with `e2e-runner-agent.md
 
 Schema specifies `plan-acceptance`, `inferred`, `roadmap` but `criteria-planner-agent.md` uses additional values: `roadmap-acceptance`, `plan-implied`, `user-added`, `wiki-history`.
 
-**File**: `agents/protocols/criteria-plan.schema.md`
+**File**: `protocols/criteria-plan.schema.md`
 **Fix**: Add the additional source values to the schema.
 *Found by: code-reviewer, plan-compliance-reviewer*
 
@@ -135,7 +135,7 @@ Playwright invoked via `bunx playwright test` with file paths from criteria-plan
 
 YAML validation rule 1 lists url as required; TOON field table says optional. Runner handles missing URL.
 
-**File**: `agents/protocols/e2e-story.schema.md`
+**File**: `protocols/e2e-story.schema.md`
 **Fix**: Remove url from YAML required fields list.
 *Found by: architecture-reviewer*
 

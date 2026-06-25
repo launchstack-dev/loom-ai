@@ -7,7 +7,7 @@ createdAt: 2026-04-25T22:00:00Z
 updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
-sourceRefs[2]: agents/protocols/orchestration-patterns.md, agents/protocols/pattern-executor.md
+sourceRefs[2]: protocols/orchestration-patterns.md, protocols/pattern-executor.md
 crossRefs[3]{pageId,relationship}:
   pattern-model-resolution,relates-to
   concept-convergence,relates-to
@@ -21,7 +21,7 @@ confidence: high
 
 Loom provides five reusable multi-agent coordination patterns. Each defines a specific interaction topology with deterministic orchestration logic. Patterns are declared in `orchestration.toml` and invoked by commands or other agents.
 
-Source: `agents/protocols/orchestration-patterns.md`, `agents/protocols/pattern-executor.md`
+Source: `protocols/orchestration-patterns.md`, `protocols/pattern-executor.md`
 
 ---
 

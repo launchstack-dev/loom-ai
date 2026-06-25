@@ -50,13 +50,13 @@ Ship Loom as a native Claude Code plugin (`/plugin marketplace add launchstack-d
 | Signing | sigstore/cosign | Release asset attestation |
 | Data format | TOON | All Loom artifacts per CLAUDE.md |
 | Shell | POSIX sh | `install.sh`, `hooks/run-hook.sh`, `scripts/refresh-upstream-schemas.sh` |
-| Upstream schema | Anthropic plugin reference (`code.claude.com/docs/en/plugins-reference.md`) | Pinned snapshot in `agents/protocols/upstream/plugin.schema.json`; refreshed by CI |
+| Upstream schema | Anthropic plugin reference (`code.claude.com/docs/en/plugins-reference.md`) | Pinned snapshot in `protocols/upstream/plugin.schema.json`; refreshed by CI |
 
 ## Schema / Type Definitions
 
-All schemas live under `agents/protocols/` and were authored in Wave 0 of M-07 (already on disk — `plugin-manifest.schema.md`, `hook-manifest.schema.md`, `doctor-report.schema.md`, `migration-evidence.schema.md`, `settings-tier.schema.md`, `migration-runner.schema.md`, `upstream/plugin.schema.json`). Two additional schemas land in Phase 0 of this plan: `update-check.schema.md` and `submission-evidence.schema.md`. This section is the canonical TypeScript-facing snapshot.
+All schemas live under `protocols/` and were authored in Wave 0 of M-07 (already on disk — `plugin-manifest.schema.md`, `hook-manifest.schema.md`, `doctor-report.schema.md`, `migration-evidence.schema.md`, `settings-tier.schema.md`, `migration-runner.schema.md`, `upstream/plugin.schema.json`). Two additional schemas land in Phase 0 of this plan: `update-check.schema.md` and `submission-evidence.schema.md`. This section is the canonical TypeScript-facing snapshot.
 
-> **Schema reconciliation (review finding):** The `InstallState` definition below is a **per-machine install envelope** at `~/.loom/install.toon`, NOT the on-disk `agents/protocols/install-state.schema.md` v3 component-inventory (which lives at `~/.claude/skills/library/install-state.toon` and tracks per-component SHA256 for rollback). The two schemas describe **different concerns at different paths** — they coexist. Phase 0 includes an explicit acceptance criterion that both schemas remain on disk, neither is renamed, and `~/.loom/install.toon` is the canonical channel/source state for the doctor and update CLIs. The v3 component-inventory is consumed only by the rollback path (see `loom-update --rollback`).
+> **Schema reconciliation (review finding):** The `InstallState` definition below is a **per-machine install envelope** at `~/.loom/install.toon`, NOT the on-disk `protocols/install-state.schema.md` v3 component-inventory (which lives at `~/.claude/skills/library/install-state.toon` and tracks per-component SHA256 for rollback). The two schemas describe **different concerns at different paths** — they coexist. Phase 0 includes an explicit acceptance criterion that both schemas remain on disk, neither is renamed, and `~/.loom/install.toon` is the canonical channel/source state for the doctor and update CLIs. The v3 component-inventory is consumed only by the rollback path (see `loom-update --rollback`).
 
 ### InstallState (per-machine, at `~/.loom/install.toon`)
 
@@ -97,7 +97,7 @@ All schemas live under `agents/protocols/` and were authored in Wave 0 of M-07 (
 | mcpServers | string | optional | path to mcp config |
 | outputStyles | string | optional | path to styles dir |
 
-**Cascade:** N/A — declarative manifest. **Validates against** the pinned upstream snapshot at `agents/protocols/upstream/plugin.schema.json` (refreshed weekly by `scripts/refresh-upstream-schemas.sh`).
+**Cascade:** N/A — declarative manifest. **Validates against** the pinned upstream snapshot at `protocols/upstream/plugin.schema.json` (refreshed weekly by `scripts/refresh-upstream-schemas.sh`).
 
 ### HookManifest (at `hooks/hooks.json`)
 
@@ -135,7 +135,7 @@ All `command` values MUST use the `${CLAUDE_PLUGIN_ROOT}` anchor. UserPromptSubm
 | fixCommand | string \| null | optional CLI command that resolves the problem |
 | evidence | object | `{paths[], expected, actual}` |
 
-> **Schema reconciliation (review finding):** The current on-disk `agents/protocols/doctor-report.schema.md` declares the `category` enum as `files | runtime | settings | tier`. This plan's check registry uses `channel | hook-wiring | settings | tier`. Phase 0 includes an explicit acceptance criterion that the on-disk schema is updated to match this plan's enum (i.e., `files` → `hook-wiring`, `runtime` → `channel`). The exemplar block in the on-disk schema must be regenerated to use the new enum values.
+> **Schema reconciliation (review finding):** The current on-disk `protocols/doctor-report.schema.md` declares the `category` enum as `files | runtime | settings | tier`. This plan's check registry uses `channel | hook-wiring | settings | tier`. Phase 0 includes an explicit acceptance criterion that the on-disk schema is updated to match this plan's enum (i.e., `files` → `hook-wiring`, `runtime` → `channel`). The exemplar block in the on-disk schema must be regenerated to use the new enum values.
 
 **Check registry (the unification):**
 
@@ -233,7 +233,7 @@ bun scripts/register-loom-hooks.ts [--tier <auto|local|project>] [--mode <projec
 loom-update [--check] [--json] [--channel <curl|plugin>] [--resume] [--rollback] [--pin <version>] [--help]
 ```
 
-Behavior: `--check` reports drift in a single-line format (`Loom v{a} installed -> v{b} available — run /loom-update to apply`; ASCII `->` arrow used for terminal portability). `--check --json` emits **JSON** (not TOON) `{currentVersion, latestVersion, behind, pinnedVersion}` conforming to `agents/protocols/update-check.schema.md`. `--resume` completes from an `install.toon.updateInProgress` marker. `--rollback` reads the v3 component-inventory at `~/.claude/skills/library/install-state.toon` (per existing on-disk `install-state.schema.md`), verifies the prior snapshot's SHA256 chain, and restores the previous version. Rollback is the documented recovery path for an `install.toon.updateInProgress=failed` terminal state. Final stdout on plugin update: `Claude Code restart required to load new plugin version`.
+Behavior: `--check` reports drift in a single-line format (`Loom v{a} installed -> v{b} available — run /loom-update to apply`; ASCII `->` arrow used for terminal portability). `--check --json` emits **JSON** (not TOON) `{currentVersion, latestVersion, behind, pinnedVersion}` conforming to `protocols/update-check.schema.md`. `--resume` completes from an `install.toon.updateInProgress` marker. `--rollback` reads the v3 component-inventory at `~/.claude/skills/library/install-state.toon` (per existing on-disk `install-state.schema.md`), verifies the prior snapshot's SHA256 chain, and restores the previous version. Rollback is the documented recovery path for an `install.toon.updateInProgress=failed` terminal state. Final stdout on plugin update: `Claude Code restart required to load new plugin version`.
 
 ### CLI: `loom-uninstall`
 
@@ -249,7 +249,7 @@ Behavior: base prompt 60s timeout exits `1` with no mutation. `--purge-project-s
 - `hooks/hooks.json` — same reference
 - Settings tier hierarchy (`~/.claude/settings.json`, `.claude/settings.json`, `.claude/settings.local.json`) — per `code.claude.com/docs/en/settings`
 
-Loom treats these as upstream. On schema drift only `agents/protocols/plugin-manifest.schema.md`, `agents/protocols/hook-manifest.schema.md`, and `agents/protocols/upstream/plugin.schema.json` need updates (the last is automated by `scripts/refresh-upstream-schemas.sh` + `.github/workflows/refresh-upstream-schemas.yml`).
+Loom treats these as upstream. On schema drift only `protocols/plugin-manifest.schema.md`, `protocols/hook-manifest.schema.md`, and `protocols/upstream/plugin.schema.json` need updates (the last is automated by `scripts/refresh-upstream-schemas.sh` + `.github/workflows/refresh-upstream-schemas.yml`).
 
 ## State Machines
 
@@ -326,25 +326,25 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 **Agent:** contracts-agent
 **Objective:** Verify the 3 schemas already on disk that need no changes; modify the 3 existing schemas that need plan-specific changes (plugin-manifest permissions field, doctor-report enum + registry, settings-tier managed-tier note).
 **Dependencies:** None
-**File Ownership:** agents/protocols/plugin-manifest.schema.md, agents/protocols/hook-manifest.schema.md, agents/protocols/doctor-report.schema.md, agents/protocols/migration-evidence.schema.md, agents/protocols/settings-tier.schema.md, agents/protocols/migration-runner.schema.md
+**File Ownership:** protocols/plugin-manifest.schema.md, protocols/hook-manifest.schema.md, protocols/doctor-report.schema.md, protocols/migration-evidence.schema.md, protocols/settings-tier.schema.md, protocols/migration-runner.schema.md
 
 #### Deliverables
 
 | File | Action | Owner hint |
 |---|---|---|
-| agents/protocols/plugin-manifest.schema.md | Modify — add required `permissions: string[]` field (derived from `hooks.json` matchers); update exemplar block | contracts-agent |
-| agents/protocols/hook-manifest.schema.md | Verify | contracts-agent |
-| agents/protocols/doctor-report.schema.md | Modify — replace `category` enum (`files \| runtime \| settings \| tier`) with this plan's (`channel \| hook-wiring \| settings \| tier`); add the 12-check registry table; regenerate exemplar block to match new enum | contracts-agent |
-| agents/protocols/migration-evidence.schema.md | Verify | contracts-agent |
-| agents/protocols/settings-tier.schema.md | Modify — document `managed` tier as immutable for Loom; reference `managed-tier-detected` check | contracts-agent |
-| agents/protocols/migration-runner.schema.md | Verify | contracts-agent |
+| protocols/plugin-manifest.schema.md | Modify — add required `permissions: string[]` field (derived from `hooks.json` matchers); update exemplar block | contracts-agent |
+| protocols/hook-manifest.schema.md | Verify | contracts-agent |
+| protocols/doctor-report.schema.md | Modify — replace `category` enum (`files \| runtime \| settings \| tier`) with this plan's (`channel \| hook-wiring \| settings \| tier`); add the 12-check registry table; regenerate exemplar block to match new enum | contracts-agent |
+| protocols/migration-evidence.schema.md | Verify | contracts-agent |
+| protocols/settings-tier.schema.md | Modify — document `managed` tier as immutable for Loom; reference `managed-tier-detected` check | contracts-agent |
+| protocols/migration-runner.schema.md | Verify | contracts-agent |
 
 #### Acceptance Criteria
 
-- [ ] `agents/protocols/doctor-report.schema.md` `category` enum matches this plan's check registry exactly (`channel \| hook-wiring \| settings \| tier`); the exemplar block uses the new enum values
-- [ ] `agents/protocols/doctor-report.schema.md` includes the 12-check registry from this plan (3 new entries: `channel-upgrade-available`, `permissions-derived`, `managed-tier-detected`)
-- [ ] `agents/protocols/plugin-manifest.schema.md` declares `permissions: string[]` as a required field
-- [ ] `agents/protocols/settings-tier.schema.md` documents the `managed` tier as immutable for Loom
+- [ ] `protocols/doctor-report.schema.md` `category` enum matches this plan's check registry exactly (`channel \| hook-wiring \| settings \| tier`); the exemplar block uses the new enum values
+- [ ] `protocols/doctor-report.schema.md` includes the 12-check registry from this plan (3 new entries: `channel-upgrade-available`, `permissions-derived`, `managed-tier-detected`)
+- [ ] `protocols/plugin-manifest.schema.md` declares `permissions: string[]` as a required field
+- [ ] `protocols/settings-tier.schema.md` documents the `managed` tier as immutable for Loom
 - [ ] The 3 verify-only schemas (`hook-manifest`, `migration-evidence`, `migration-runner`) are unchanged on disk (`git diff --stat` reports 0 lines)
 - [ ] `tsc --noEmit` exits 0
 
@@ -359,26 +359,26 @@ Every error code emitted by any CLI in this plan. JSON envelope: `{error: {code,
 **Agent:** contracts-agent
 **Objective:** Create the 2 new schemas (`update-check`, `submission-evidence`), the 2 new TypeScript interfaces (`Check`, `MigrationRunner`) that 9A2 and 9B compile against in parallel, the TOON schema validator script, and the upstream snapshot refresh (live docs → snapshot file + meta).
 **Dependencies:** None (parallel with Phase 0A)
-**File Ownership:** agents/protocols/update-check.schema.md, agents/protocols/submission-evidence.schema.md, scripts/lib/doctor/migration-runner.interface.ts, scripts/lib/doctor/check.interface.ts, agents/protocols/upstream/plugin.schema.json, agents/protocols/upstream/.meta.toon, scripts/validate-toon-schemas.ts
+**File Ownership:** protocols/update-check.schema.md, protocols/submission-evidence.schema.md, scripts/lib/doctor/migration-runner.interface.ts, scripts/lib/doctor/check.interface.ts, protocols/upstream/plugin.schema.json, protocols/upstream/.meta.toon, scripts/validate-toon-schemas.ts
 
 #### Deliverables
 
 | File | Action | Owner hint |
 |---|---|---|
-| agents/protocols/update-check.schema.md | **Create** — schema for `/loom-update --check --json` output: `{currentVersion, latestVersion, behind: int, pinnedVersion: string \| null}` | contracts-agent |
-| agents/protocols/submission-evidence.schema.md | **Create** — schema for `marketplace/submission-evidence.toon`: `{submittedAt, releaseTag, sigstoreAttestationUrl, marketplacePrUrl, maintainerApprovalIssueUrl, outcome: pending \| accepted \| rejected}` | contracts-agent |
+| protocols/update-check.schema.md | **Create** — schema for `/loom-update --check --json` output: `{currentVersion, latestVersion, behind: int, pinnedVersion: string \| null}` | contracts-agent |
+| protocols/submission-evidence.schema.md | **Create** — schema for `marketplace/submission-evidence.toon`: `{submittedAt, releaseTag, sigstoreAttestationUrl, marketplacePrUrl, maintainerApprovalIssueUrl, outcome: pending \| accepted \| rejected}` | contracts-agent |
 | scripts/lib/doctor/migration-runner.interface.ts | **Create (moved from Phase 9A, pass 2 fix B-2-1)** — TypeScript interface `MigrationRunner { run(): Promise<MigrationEvidence>; reconcile(channel): Promise<void>; resetEvidence(checkId): Promise<void> }` consumed by Phase 9A1's `--fix` dispatch and implemented by Phase 9B's `scripts/lib/migration-runner.ts`. Lives in Phase 0 so 9A1 and 9B compile against it in parallel without a sibling dependency. | contracts-agent |
 | scripts/lib/doctor/check.interface.ts | **Create (pass 3 fix B-2-3)** — TypeScript interface `Check { id: string; category: 'channel' \| 'hook-wiring' \| 'settings' \| 'tier'; run(state: InstallState): Promise<HealthCheck>; }` implemented by each Phase 9A2 check module and dispatched by Phase 9A1's `scripts/lib/doctor/index.ts`. Same parallel-safety pattern as MigrationRunner. | contracts-agent |
-| agents/protocols/upstream/plugin.schema.json | Refresh via `scripts/refresh-upstream-schemas.sh` | contracts-agent |
-| agents/protocols/upstream/.meta.toon | Updated by the refresh script | contracts-agent |
-| scripts/validate-toon-schemas.ts | Create — validates every `agents/protocols/*.schema.md` | contracts-agent |
+| protocols/upstream/plugin.schema.json | Refresh via `scripts/refresh-upstream-schemas.sh` | contracts-agent |
+| protocols/upstream/.meta.toon | Updated by the refresh script | contracts-agent |
+| scripts/validate-toon-schemas.ts | Create — validates every `protocols/*.schema.md` | contracts-agent |
 
 #### Acceptance Criteria
 
 - [ ] `bunx tsx scripts/validate-toon-schemas.ts` exits 0
 - [ ] Every schema file has a TOON-format exemplar block (verified by the new validator)
-- [ ] **InstallState reconciliation acknowledged:** the existing on-disk `agents/protocols/install-state.schema.md` (v3 component-inventory at `~/.claude/skills/library/install-state.toon`) is preserved unchanged; this plan's `InstallState` (channel envelope at `~/.loom/install.toon`) is a separate concern. A new note at the top of `install-state.schema.md` documents the relationship: v3 is consumed only by `loom-update --rollback`; channel envelope is consumed by doctor + update CLIs.
-- [ ] `agents/protocols/update-check.schema.md` and `agents/protocols/submission-evidence.schema.md` exist and validate
+- [ ] **InstallState reconciliation acknowledged:** the existing on-disk `protocols/install-state.schema.md` (v3 component-inventory at `~/.claude/skills/library/install-state.toon`) is preserved unchanged; this plan's `InstallState` (channel envelope at `~/.loom/install.toon`) is a separate concern. A new note at the top of `install-state.schema.md` documents the relationship: v3 is consumed only by `loom-update --rollback`; channel envelope is consumed by doctor + update CLIs.
+- [ ] `protocols/update-check.schema.md` and `protocols/submission-evidence.schema.md` exist and validate
 - [ ] `scripts/refresh-upstream-schemas.sh --check` exits 0 on CI (snapshot in sync with live docs)
 - [ ] Both new TypeScript interfaces (`Check`, `MigrationRunner`) compile under `tsc --noEmit`
 - [ ] `tsc --noEmit` exits 0
@@ -450,7 +450,7 @@ automatable: true
 id: S-03
 title: No inline CLAUDE_PLUGIN_ROOT references outside resolver
 given[1]: The repo agents/ skills/ commands/ trees exist
-when: grep -RE '\${CLAUDE_PLUGIN_ROOT}' is run against those trees excluding hooks/lib/plugin-root-resolver.ts and agents/protocols/upstream/
+when: grep -RE '\${CLAUDE_PLUGIN_ROOT}' is run against those trees excluding hooks/lib/plugin-root-resolver.ts and protocols/upstream/
 whenTriggerType: system-event
 then[1]: The grep MUST return zero matches
 stateRef:
@@ -479,12 +479,12 @@ automatable: true
 | scripts/probe-hook-runtime.sh | Create — invoked by install.sh post-install and by Docker harness | implementer-agent |
 | loom-init-audit-notes.md | Create — Phase 2 audit findings; consumed by Phase 3 when authoring `commands/loom-init.md` | implementer-agent |
 | test/fixtures/hook-input.json | Create — minimal Claude Code hook stdin fixture | implementer-agent |
-| test/plugin-manifest.test.ts | Create — manifest validates against `agents/protocols/upstream/plugin.schema.json`; every referenced file exists; anchors well-formed | implementer-agent |
+| test/plugin-manifest.test.ts | Create — manifest validates against `protocols/upstream/plugin.schema.json`; every referenced file exists; anchors well-formed | implementer-agent |
 | test/install-mutual-exclusion.test.ts | Create — install.sh exits 9 with `INSTALL_CONFLICT_PLUGIN_AND_CURL` when plugin already registered | implementer-agent |
 
 #### Acceptance Criteria
 
-- [ ] `plugin.json` validates against `agents/protocols/upstream/plugin.schema.json` (unit tier)
+- [ ] `plugin.json` validates against `protocols/upstream/plugin.schema.json` (unit tier)
 - [ ] `hooks.json` registers SessionStart, PreToolUse, PostToolUse, Stop with `${CLAUDE_PLUGIN_ROOT}` anchors (unit tier)
 - [ ] `env -i HOME=$HOME PATH=/usr/bin:/bin sh hooks/run-hook.sh hooks/deploy-guard.ts` exits 0 with no stderr (integration tier)
 - [ ] Same probe succeeds for all 6 PreToolUse hooks: deploy-guard, context-budget, budget-tracker, contract-lock, file-ownership, wiki-write-guard
@@ -532,8 +532,8 @@ automatable: true
 ```toon
 id: S-03
 title: plugin.json validates against the pinned upstream schema
-given[1]: agents/protocols/upstream/plugin.schema.json is the current refreshed snapshot
-when: ajv validate -s agents/protocols/upstream/plugin.schema.json -d .claude-plugin/plugin.json is invoked
+given[1]: protocols/upstream/plugin.schema.json is the current refreshed snapshot
+when: ajv validate -s protocols/upstream/plugin.schema.json -d .claude-plugin/plugin.json is invoked
 whenTriggerType: system-event
 then[1]: The validator MUST exit 0
 stateRef:
@@ -1009,7 +1009,7 @@ automatable: true
 #### Acceptance Criteria
 
 - [ ] `scripts/lib/doctor/index.ts` dynamically discovers and dispatches every check module under `scripts/lib/doctor/checks/*.ts` (no static imports of check files; verified by `tsc --noEmit` passing without 9A2 deliverables present in dev, only at wave-merge time)
-- [ ] `/loom-doctor --json` emits DoctorReport conforming to `agents/protocols/doctor-report.schema.md` with `schemaVersion=1`
+- [ ] `/loom-doctor --json` emits DoctorReport conforming to `protocols/doctor-report.schema.md` with `schemaVersion=1`
 - [ ] `--reconcile` requires a confirmation prompt unless `--yes` is also passed
 - [ ] `--reset-evidence <check-id>` removes the named record from `.claude/loom-migration.log.toon` after confirmation; subsequent `--fix` succeeds where previously refused
 - [ ] `--quiet` suppresses `pass` lines; exit codes unchanged
@@ -1561,7 +1561,7 @@ automatable: true
 
 - [ ] `/loom-update` on curl install re-runs installer pinned to latest tag, preserves repo-root state
 - [ ] `/loom-update` on plugin install delegates to `claude plugin update loom`, falls back to plugin add re-run
-- [ ] `/loom-update --check --json` returns **JSON** conforming to `agents/protocols/update-check.schema.md` with fields `currentVersion`, `latestVersion`, `behind`, `pinnedVersion` (pass 2 fix C-2-1: was incorrectly "TOON" in v1)
+- [ ] `/loom-update --check --json` returns **JSON** conforming to `protocols/update-check.schema.md` with fields `currentVersion`, `latestVersion`, `behind`, `pinnedVersion` (pass 2 fix C-2-1: was incorrectly "TOON" in v1)
 - [ ] `--resume` completes from a mid-update marker
 - [ ] Final stdout line on plugin update: `Claude Code restart required to load new plugin version`
 - [ ] `--resume` on unrecoverable marker (toVersion gone) sets `install.toon.updateInProgress` to terminal `failed` state with `fixCommand: "/loom-update --check OR /loom-doctor --bundle to file an issue"`; exits non-zero
@@ -1595,7 +1595,7 @@ title: --check --json returns structured JSON
 given[1]: A version drift exists
 when: /loom-update --check --json is invoked
 whenTriggerType: actor-action
-then[1]: stdout MUST be parseable JSON conforming to agents/protocols/update-check.schema.md with fields currentVersion latestVersion behind and pinnedVersion
+then[1]: stdout MUST be parseable JSON conforming to protocols/update-check.schema.md with fields currentVersion latestVersion behind and pinnedVersion
 stateRef:
 tags[1]: happy-path
 testTier: integration
@@ -1731,7 +1731,7 @@ bunx tsx scripts/install-source-digest.ts --fixture test/fixtures/discussion-thr
 bash test/docker/run-harness.sh --local-tarball dist/loom-local-test.tar.gz
 act push --eventpath fixtures/v0.1.0-test-event.json
 grep -RE '\${CLAUDE_PLUGIN_ROOT}|~/\.claude/plugins/loom' agents/ skills/ commands/ \
-  | grep -v -F agents/protocols/upstream/ \
+  | grep -v -F protocols/upstream/ \
   | grep -v -F hooks/lib/plugin-root-resolver.ts \
   && exit 1 || exit 0
 
@@ -1775,7 +1775,7 @@ bunx vitest run test/hooks-json-migration.test.ts
 | Marketplace registry rejects listing | `marketplace/listing-checklist.md` and named maintainer-approval gate catch issues before submission; Phase 12 captures `outcome` for retry workflow |
 | Migration ownership-evidence hash mismatch on user-edited settings files | Refuse-by-default `MIGRATION_OWNERSHIP_DIVERGED`; **walkable recovery via `/loom-doctor --reset-evidence <check-id>`** + VCS-restore fallback; no automated `--force` override |
 | Tier ambiguity (entries in both tiers) blocks all subsequent register operations | `MIGRATION_TIER_AMBIGUOUS` error directs user to explicit `--tier` resolution; `/loom-doctor --fix` does NOT auto-resolve (deliberate) |
-| Doctor check registry grows unboundedly as new failure modes surface | New checks land via the same `scripts/lib/doctor/checks/*.ts` module pattern; registry table in `agents/protocols/doctor-report.schema.md` is the single source of truth |
+| Doctor check registry grows unboundedly as new failure modes surface | New checks land via the same `scripts/lib/doctor/checks/*.ts` module pattern; registry table in `protocols/doctor-report.schema.md` is the single source of truth |
 | **/loom-converge availability drift** — README differentiator names a command that could regress between releases | Phase 8 harness asserts `commands/loom-converge.md` is present and `/loom-converge --help` exits 0 in both install paths; CI fails on regression |
 | **Anthropic ships first-party planning primitives, collapsing the differentiator** | Phase 5 listing-content-spec includes a "durable differentiation" paragraph naming moats that survive first-party competition: TOON-artifact portability, git-committed wiki, kit ecosystem, cross-worktree state management |
 | **Curl→plugin migration UX strands curl users on plugin-eligible machines** | `channel-upgrade-available` doctor check (Phase 9A) proactively detects and surfaces the upgrade path; populates `install.toon.migratedFrom` post-completion |

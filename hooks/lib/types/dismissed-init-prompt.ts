@@ -5,7 +5,7 @@
  * user dismisses it. After 24h the suppression expires and the prompt is
  * shown again.
  *
- * Schema reference: agents/protocols/dismissed-init-prompt.schema.md
+ * Schema reference: protocols/dismissed-init-prompt.schema.md
  */
 
 export interface DismissedInitPrompt {

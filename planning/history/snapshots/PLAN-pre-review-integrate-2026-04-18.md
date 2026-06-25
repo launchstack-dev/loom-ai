@@ -70,12 +70,12 @@ Add a `/loom-quick` command to loom-ai that provides zero-ceremony task executio
 **Agent:** contracts-agent
 **Objective:** Define the quick-task TOON log format, mode detection logic, plan-injection schema, and the verification reuse protocol that the command file references.
 **Dependencies:** None
-**File Ownership:** agents/protocols/quick-task-contract.md
+**File Ownership:** protocols/quick-task-contract.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/quick-task-contract.md | Create | contracts |
+| protocols/quick-task-contract.md | Create | contracts |
 
 #### Acceptance Criteria
 - [ ] Contract defines the QuickTaskLog TOON format with all fields from the schema section, using TOON syntax (not JSON)
@@ -130,7 +130,7 @@ Add a `/loom-quick` command to loom-ai that provides zero-ceremony task executio
 
 #### Acceptance Criteria
 - [ ] `library.yaml` registers `loom-quick` under `prompts` with name, description, source `commands/loom-quick.md`, and `requires: [skill:quick-task-contract]`
-- [ ] `library.yaml` registers `quick-task-contract` under `skills` with source `agents/protocols/quick-task-contract.md`
+- [ ] `library.yaml` registers `quick-task-contract` under `skills` with source `protocols/quick-task-contract.md`
 - [ ] `commands/loom.md` adds `/loom-quick` and its flag variants to the Commands table with descriptions
 - [ ] `commands/loom.md` adds `/loom-quick "description"` to the Typical Workflow section as a quick-task alternative to the full pipeline
 - [ ] `python3 -c "import yaml; yaml.safe_load(open('skills/library.yaml'))"` exits with code 0 (valid YAML)
@@ -181,7 +181,7 @@ Add a `/loom-quick` command to loom-ai that provides zero-ceremony task executio
 test -f commands/loom-quick.md && echo "OK: command file exists" || echo "FAIL: missing"
 
 # Contract file exists
-test -f agents/protocols/quick-task-contract.md && echo "OK: contract exists" || echo "FAIL: missing"
+test -f protocols/quick-task-contract.md && echo "OK: contract exists" || echo "FAIL: missing"
 
 # Routing skill exists
 test -f skills/loom-quick-routing.md && echo "OK: routing skill exists" || echo "FAIL: missing"

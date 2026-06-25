@@ -32,13 +32,13 @@ All writes atomic (`.tmp` then rename).
 
 1. `.plan-execution/state.toon` — written by the executor sub-agent (not by you directly); you verify it exists on return.
 2. `.plan-execution/wave-{N}-summary.toon` — written by the executor per wave; you read for stage-context aggregation.
-3. `.plan-execution/stage-context/execute.toon` — per `agents/protocols/stage-context.schema.md`, aggregated from wave summaries.
+3. `.plan-execution/stage-context/execute.toon` — per `protocols/stage-context.schema.md`, aggregated from wave summaries.
 4. `.plan-execution/link-result.toon` — link envelope (see `link-result.schema.md` + per-link shape below).
 5. `.plan-execution/pipeline-state.toon` — appended `linkHistory[]`, incremented `agentsSpawned`, updated `currentStage`.
 
 ## Model resolution (mandatory)
 
-Before every Agent tool call, resolve the model per `~/.claude/agents/protocols/execution-conventions.md`:
+Before every Agent tool call, resolve the model per `~/.claude/protocols/execution-conventions.md`:
 
 1. Read `.claude/orchestration.toml` `[settings] modelProfile` if set.
 2. Tier mapping: executor dispatch → `execution` (the executor sub-agents are themselves resolved per their own frontmatter); post-execution tier gate agents (integration-test-agent, e2e-runner-agent, qa-review-agent) → `verification` for the runners and `review` for qa-review.
@@ -169,7 +169,7 @@ Update `ephemeral/status.toon`: `phase: aggregate-stage-context`.
 
 ### Step 5: Aggregate stage-context/execute.toon
 
-Build the stage-context summary from wave summaries and tier gate aggregates. Per `agents/protocols/stage-context.schema.md`:
+Build the stage-context summary from wave summaries and tier gate aggregates. Per `protocols/stage-context.schema.md`:
 
 ```toon
 stage: execute

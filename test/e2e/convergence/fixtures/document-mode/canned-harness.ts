@@ -5,10 +5,10 @@
  *
  * This module is NOT the production plan-review harness. It is a deterministic
  * fixture that emulates the harness/integrator contract documented in:
- *   - `agents/protocols/findings.schema.md` (ConvergenceFindings TOON shape)
- *   - `agents/protocols/iteration-snapshot.schema.md` (IterationSnapshot TOON
+ *   - `protocols/findings.schema.md` (ConvergenceFindings TOON shape)
+ *   - `protocols/iteration-snapshot.schema.md` (IterationSnapshot TOON
  *     shape and slug derivation rule)
- *   - `agents/protocols/stage-context.schema.md` (ConvergenceIterationSummary
+ *   - `protocols/stage-context.schema.md` (ConvergenceIterationSummary
  *     shape — uniform across modes)
  *   - `agents/convergence-driver.md` § Document Mode Safeguards (scope guard
  *     regex set + auto-snapshot writer placement)
@@ -251,7 +251,7 @@ export interface RunCannedHarnessArgs {
 
 /**
  * Write a `findings.toon` per the script, atomically. The on-disk shape
- * matches `agents/protocols/findings.schema.md` — including the three
+ * matches `protocols/findings.schema.md` — including the three
  * count invariants (severity-mapping is enforced row-by-row below).
  */
 export function runCannedHarness(args: RunCannedHarnessArgs): {

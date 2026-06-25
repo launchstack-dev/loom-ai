@@ -105,7 +105,7 @@
 - Plan: planning/plans/PLAN-convergence-generalization.md (1370 → 1411 lines, +41 net)
 - Five additive edits + one new plan-local constraint, all non-structural:
   - **New schema entry: ConvergenceSummary** (`.plan-execution/convergence-summary.toon`) — 11 fields including `status` enum (`converged` | `halted-stall` | `halted-regression` | `halted-budget` | `halted-max-iter` | `halted-scope-expansion`), `subject` (document mode), `harnessName`, `integratorName`, `finalBlockingCount`, `iterationsRun`. Authoritative "did we converge" signal read by verify-link today and future converge-link.
-  - **Phase 0 expanded:** adds `agents/protocols/convergence-summary.schema.md` to file ownership + deliverable row; new AC asserting the 11-field schema; schema-versions.toon registers 4 schemas (was 3).
+  - **Phase 0 expanded:** adds `protocols/convergence-summary.schema.md` to file ownership + deliverable row; new AC asserting the 11-field schema; schema-versions.toon registers 4 schemas (was 3).
   - **Phase 2 AC added:** driver writes convergence-summary.toon atomically at terminal-state transition; new Convergence Target verifying status field matches actual outcome.
   - **Phase 10 AC added:** wrapper outputs must be sufficient for fresh-context agent to derive link-result.toon envelope without orchestrator state; new Convergence Target verifying all wrapper outputs land on disk before return.
   - **Phase 14 AC added:** fixture verifies link-extraction readiness — convergence-summary.toon has all 11 fields, status matches outcome, subject points to real file, iterationsRun matches iter-{N}.toon count. Test asserts input completeness without constructing the envelope.

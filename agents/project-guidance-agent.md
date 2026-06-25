@@ -162,7 +162,7 @@ The `## Coding Behavior` block is **mandatory** in every generated CLAUDE.md. It
 - Preserve the `<!-- loom:karpathy-v1 -->` marker on its own line at the end
 - Use the four-principle structure shown above
 
-The marker enables `/loom-upgrade` to detect and inject this block into pre-existing CLAUDE.md files (see `agents/protocols/schema-upgrade.md` Rule 6). Do not include the principles inline elsewhere — duplicating them across sections defeats line-count budgets and confuses upgrade detection.
+The marker enables `/loom-upgrade` to detect and inject this block into pre-existing CLAUDE.md files (see `protocols/schema-upgrade.md` Rule 6). Do not include the principles inline elsewhere — duplicating them across sections defeats line-count budgets and confuses upgrade detection.
 
 The `## Loom Wiki Discipline` block is **conditional**: emit it ONLY when `.loom/wiki/` exists at the project root at the time `--init` / `--update` runs. If no wiki, emit ONLY the Coding Behavior block — existing behavior is preserved verbatim for non-wiki projects. When emitted, the Wiki Discipline block:
 
@@ -170,7 +170,7 @@ The `## Loom Wiki Discipline` block is **conditional**: emit it ONLY when `.loom
 - Preserves the `<!-- loom:wiki-discipline-v1 -->` marker on its own line at the end of the block.
 - Operationalizes each of the four Karpathy principles against the wiki — each `**Before X**` paragraph references its corresponding Coding Behavior § by name.
 
-The marker enables `/loom-upgrade` Rule 8 to detect and inject this block into pre-existing CLAUDE.md files when a wiki appears later (see `agents/protocols/schema-upgrade.md` Rule 8). The conditional gate is `.loom/wiki/` existence at the project root, checked at run time. Do NOT emit the Wiki Discipline block for projects without a wiki — surfacing wiki-discipline guidance in a repo with no wiki is noise.
+The marker enables `/loom-upgrade` Rule 8 to detect and inject this block into pre-existing CLAUDE.md files when a wiki appears later (see `protocols/schema-upgrade.md` Rule 8). The conditional gate is `.loom/wiki/` existence at the project root, checked at run time. Do NOT emit the Wiki Discipline block for projects without a wiki — surfacing wiki-discipline guidance in a repo with no wiki is noise.
 
 ### Subdirectory Guidance
 

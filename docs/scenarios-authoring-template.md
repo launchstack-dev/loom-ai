@@ -2,7 +2,7 @@
 
 Practical authoring guide for Loom scenarios (BDD-shaped Given/When/Then blocks). Read this **before** writing scenarios into a plan phase, roadmap feature, change proposal, or `contract-*` wiki page.
 
-This document is the field guide. The authoritative schema is `agents/protocols/scenario.schema.md` — refer there for exact validator rules and the locked tag enum. This document teaches you how to write scenarios well; the schema tells you what the validator will accept.
+This document is the field guide. The authoritative schema is `protocols/scenario.schema.md` — refer there for exact validator rules and the locked tag enum. This document teaches you how to write scenarios well; the schema tells you what the validator will accept.
 
 Companion schemas you should also know exist:
 - `contract-page-extensions.schema.md` — where scenarios live on contract pages
@@ -366,10 +366,10 @@ Across all three flows, the scenario stays the same artifact — same fields, sa
 
 ## See Also
 
-- `agents/protocols/scenario.schema.md` — authoritative validator rules
-- `agents/protocols/contract-page-extensions.schema.md` — how scenarios sit on contract pages
-- `agents/protocols/change-proposal.schema.md` — how scenarios mutate via deltas
-- `agents/protocols/scenario-coverage.schema.md` — traceability output
-- `agents/protocols/convergence-tier.schema.md` — `testTier` semantics
-- `agents/protocols/validation-rules.md` — severity conventions
+- `protocols/scenario.schema.md` — authoritative validator rules
+- `protocols/contract-page-extensions.schema.md` — how scenarios sit on contract pages
+- `protocols/change-proposal.schema.md` — how scenarios mutate via deltas
+- `protocols/scenario-coverage.schema.md` — traceability output
+- `protocols/convergence-tier.schema.md` — `testTier` semantics
+- `protocols/validation-rules.md` — severity conventions
 - [`docs/scenarios-and-changes.md`](./scenarios-and-changes.md) — end-to-end greenfield + brownfield walkthrough

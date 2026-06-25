@@ -6,7 +6,7 @@ structuralValidation: pass (0 errors, 6 warnings)
 
 structuralWarnings[N]:
   Phase 6 (Wave 3) depends on Phase 5 (Wave 3) — same-wave dependency
-  agents/protocols/e2e-story.schema.md cross-wave ownership (Phase 0 creates, Phase 5 modifies)
+  protocols/e2e-story.schema.md cross-wave ownership (Phase 0 creates, Phase 5 modifies)
   Phase 4 has <2 deliverables (1 deliverable)
   Phase 6 has <2 deliverables (1 deliverable)
   Phase 7 has <2 deliverables (1 deliverable)

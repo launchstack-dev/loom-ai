@@ -187,7 +187,7 @@ describe("real repo manifest", () => {
 
 // ---------------------------------------------------------------------------
 // IterationSnapshot writer — covers checksum embedding + atomic write +
-// retry-on-transient-failure per agents/protocols/iteration-snapshot.schema.md.
+// retry-on-transient-failure per protocols/iteration-snapshot.schema.md.
 //
 // Validates locked decisions W-01 (ms-precision ISO 8601), W-02 (slug rule
 // for multi-dot + extension-less filenames), and C-07 (keep all snapshots

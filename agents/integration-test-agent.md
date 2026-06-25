@@ -15,9 +15,9 @@ The convergence-driver routes criteria with `testTier: integration` to you. You 
 ## Protocol
 
 Before testing, read:
-- `~/.claude/agents/protocols/convergence-tier.schema.md` -- tier definitions (integration = level 3, feature)
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan with testTier field
-- `~/.claude/agents/protocols/agent-result.schema.md` -- AgentResult envelope
+- `~/.claude/protocols/convergence-tier.schema.md` -- tier definitions (integration = level 3, feature)
+- `~/.claude/protocols/criteria-plan.schema.md` -- criteria plan with testTier field
+- `~/.claude/protocols/agent-result.schema.md` -- AgentResult envelope
 
 ## Input
 

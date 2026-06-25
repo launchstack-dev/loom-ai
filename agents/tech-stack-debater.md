@@ -89,7 +89,7 @@ loomGuidance: what Loom agents should know about this stack decision for future 
 
 ## Debate Protocol
 
-This agent is designed to work with the **debate pattern** defined in `agents/protocols/orchestration-patterns.md`. Here is how it integrates:
+This agent is designed to work with the **debate pattern** defined in `protocols/orchestration-patterns.md`. Here is how it integrates:
 
 1. **The orchestrator declares a debate pattern** in `orchestration.toml` with this agent filling multiple roles (advocate, skeptic, pragmatist) or with separate instances per role.
 2. **Each invocation receives a role** via the role assignment input field, plus optionally the prior arguments from earlier rounds.

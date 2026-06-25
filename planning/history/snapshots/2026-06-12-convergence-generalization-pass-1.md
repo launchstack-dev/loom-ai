@@ -162,7 +162,7 @@ Per-pass snapshot record per C-07. Stored at `planning/history/snapshots/{slug}-
 |--------|-------|-----------|-----------|
 | converge.config | IterationSnapshot rows | RETAIN | RETAIN — per C-07 (keep all forever) |
 
-### ConvergenceIterationSummary (extended; existing schema at `agents/protocols/stage-context.schema.md`)
+### ConvergenceIterationSummary (extended; existing schema at `protocols/stage-context.schema.md`)
 
 Extended with two optional fields for document mode parity. The on-disk shape MUST remain identical across all three modes per F-01 acceptance.
 
@@ -299,25 +299,25 @@ issues[N]{severity,code,description,file,line,suggestion}:
 **Agent:** contracts-agent
 **Objective:** Land all TOON schema additions and protocol-doc updates so downstream phases have a single, stable contract to read from.
 **Dependencies:** None
-**File Ownership:** agents/protocols/convergence-tier.schema.md, agents/protocols/stage-context.schema.md, agents/protocols/schema-versions.toon, agents/protocols/findings.schema.md, agents/protocols/plan-critique.schema.md, agents/protocols/iteration-snapshot.schema.md
+**File Ownership:** protocols/convergence-tier.schema.md, protocols/stage-context.schema.md, protocols/schema-versions.toon, protocols/findings.schema.md, protocols/plan-critique.schema.md, protocols/iteration-snapshot.schema.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/convergence-tier.schema.md | Modify | contracts-agent (add `convergenceMode: document` enum value, `subject` and `integrator` field rows to ConvergeConfig table; document `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir`) |
-| agents/protocols/stage-context.schema.md | Modify | contracts-agent (extend `ConvergenceIterationSummary` with optional `subject` and `snapshotRef` fields; assert shape uniformity across all 3 modes) |
-| agents/protocols/findings.schema.md | Create | contracts-agent (new `ConvergenceFindings` schema doc per the Schema section) |
-| agents/protocols/plan-critique.schema.md | Create | contracts-agent (new `PlanCritique` schema doc per the Schema section) |
-| agents/protocols/iteration-snapshot.schema.md | Create | contracts-agent (new `IterationSnapshot` schema doc per the Schema section) |
-| agents/protocols/schema-versions.toon | Modify | contracts-agent (register the three new schemas with version 1) |
+| protocols/convergence-tier.schema.md | Modify | contracts-agent (add `convergenceMode: document` enum value, `subject` and `integrator` field rows to ConvergeConfig table; document `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir`) |
+| protocols/stage-context.schema.md | Modify | contracts-agent (extend `ConvergenceIterationSummary` with optional `subject` and `snapshotRef` fields; assert shape uniformity across all 3 modes) |
+| protocols/findings.schema.md | Create | contracts-agent (new `ConvergenceFindings` schema doc per the Schema section) |
+| protocols/plan-critique.schema.md | Create | contracts-agent (new `PlanCritique` schema doc per the Schema section) |
+| protocols/iteration-snapshot.schema.md | Create | contracts-agent (new `IterationSnapshot` schema doc per the Schema section) |
+| protocols/schema-versions.toon | Modify | contracts-agent (register the three new schemas with version 1) |
 
 #### Acceptance Criteria
-- [ ] `agents/protocols/findings.schema.md` exists and documents all 7 ConvergenceFindings fields with validation rules
-- [ ] `agents/protocols/plan-critique.schema.md` exists and documents the 7 PlanCritique fields plus the `dimensionsCovered` locked enum of 6 dimensions
-- [ ] `agents/protocols/iteration-snapshot.schema.md` exists and documents the 6 IterationSnapshot fields including sha256 checksum requirement
-- [ ] `agents/protocols/convergence-tier.schema.md` documents the `document` value in the convergenceMode enum and the `subject`/`integrator`/`scopeGuardEnabled`/`snapshotEnabled`/`snapshotDir` fields
-- [ ] `agents/protocols/stage-context.schema.md` `ConvergenceIterationSummary` section explicitly states uniform shape across `target`, `criteria`, `document` and lists `subject`/`snapshotRef` as optional document-mode fields
-- [ ] `agents/protocols/schema-versions.toon` registers `convergence-findings`, `plan-critique`, `iteration-snapshot` each at version 1
+- [ ] `protocols/findings.schema.md` exists and documents all 7 ConvergenceFindings fields with validation rules
+- [ ] `protocols/plan-critique.schema.md` exists and documents the 7 PlanCritique fields plus the `dimensionsCovered` locked enum of 6 dimensions
+- [ ] `protocols/iteration-snapshot.schema.md` exists and documents the 6 IterationSnapshot fields including sha256 checksum requirement
+- [ ] `protocols/convergence-tier.schema.md` documents the `document` value in the convergenceMode enum and the `subject`/`integrator`/`scopeGuardEnabled`/`snapshotEnabled`/`snapshotDir` fields
+- [ ] `protocols/stage-context.schema.md` `ConvergenceIterationSummary` section explicitly states uniform shape across `target`, `criteria`, `document` and lists `subject`/`snapshotRef` as optional document-mode fields
+- [ ] `protocols/schema-versions.toon` registers `convergence-findings`, `plan-critique`, `iteration-snapshot` each at version 1
 - [ ] `bun test test/protocol/schema-validation.test.ts` exits with code 0
 
 #### Convergence Targets
@@ -329,7 +329,7 @@ issues[N]{severity,code,description,file,line,suggestion}:
 ```toon
 id: S-01
 title: ConvergeConfig schema accepts convergenceMode=document with required fields
-given[2]: agents/protocols/convergence-tier.schema.md documents the document mode, A converge.config TOON file declares convergenceMode=document with subject + integrator + harness fields
+given[2]: protocols/convergence-tier.schema.md documents the document mode, A converge.config TOON file declares convergenceMode=document with subject + integrator + harness fields
 when: The schema validator parses the config
 whenTriggerType: system-event
 then[2]: Validation passes with no errors, Missing subject or integrator when mode=document produces a blocking validation error
@@ -567,7 +567,7 @@ automatable: true
 **Agent:** implementer-agent
 **Objective:** Implement the document-mode-only safeguards: scope-expansion detection (per C-06) and auto-snapshot writing (per C-07). This phase closes Milestone M-01 — after it lands, F-02 and F-03 may start.
 **Dependencies:** Phase 2, Phase 3, Phase 4
-**File Ownership:** agents/convergence-driver.md (Document Mode Safeguards subsection — new), agents/protocols/iteration-snapshot.schema.md (already created in Phase 0; this phase wires usage)
+**File Ownership:** agents/convergence-driver.md (Document Mode Safeguards subsection — new), protocols/iteration-snapshot.schema.md (already created in Phase 0; this phase wires usage)
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -648,7 +648,7 @@ automatable: true
 - [ ] Agent prompt explicitly states critic is advisory-only — does not gate, block, or produce schema artifacts beyond `critique.toon`
 - [ ] Agent prompt declares `dimensionsCovered[]` must come from the locked enum of 6 dimensions
 - [ ] `agents/plan-critic-checklist.md` contains exactly 30 numbered concerns, each tagged with one of the 6 dimensions
-- [ ] Output format documented in the agent prompt matches the `PlanCritique` schema from `agents/protocols/plan-critique.schema.md`
+- [ ] Output format documented in the agent prompt matches the `PlanCritique` schema from `protocols/plan-critique.schema.md`
 
 #### Convergence Targets
 - The critic prompt body fits within the 100k context budget cap when run against a 20-phase plan + 6 reviewer agent files (verified by token-estimator on a fixture)
@@ -947,9 +947,9 @@ automatable: true
 ### Phase 12 — Wave 5: Wiring — Library + Reference + Wiki Conventions
 
 **Agent:** wiring-agent
-**Objective:** Update advertise-and-discover surfaces: `library.yaml`, `commands/loom-reference.md`, `commands/loom-plan.md`, and the convergence section of `agents/protocols/execution-conventions.md` to mention document mode + autoconverge. Single owner to keep these in sync.
+**Objective:** Update advertise-and-discover surfaces: `library.yaml`, `commands/loom-reference.md`, `commands/loom-plan.md`, and the convergence section of `protocols/execution-conventions.md` to mention document mode + autoconverge. Single owner to keep these in sync.
 **Dependencies:** Phase 5, Phase 7, Phase 10, Phase 11 (all touchpoints exist)
-**File Ownership:** library.yaml, commands/loom-reference.md, commands/loom-plan.md, agents/protocols/execution-conventions.md (Convergence and Quality Infrastructure subsection only)
+**File Ownership:** library.yaml, commands/loom-reference.md, commands/loom-plan.md, protocols/execution-conventions.md (Convergence and Quality Infrastructure subsection only)
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -957,13 +957,13 @@ automatable: true
 | library.yaml | Modify | wiring-agent (advertise `--autoconverge`, `--skip-critic`, `--max-iterations` on `/loom-plan create`; advertise `--mode document` on `/loom-converge`) |
 | commands/loom-reference.md | Modify | wiring-agent (add `/loom-plan create --autoconverge` row; add `/loom-converge --mode document` row; document the new convergence mode in the modes table) |
 | commands/loom-plan.md | Modify | wiring-agent (link out to the new flags from the subcommand index) |
-| agents/protocols/execution-conventions.md | Modify | wiring-agent (Convergence and Quality Infrastructure subsection — add a brief paragraph naming document mode + linking to the schemas created in Phase 0) |
+| protocols/execution-conventions.md | Modify | wiring-agent (Convergence and Quality Infrastructure subsection — add a brief paragraph naming document mode + linking to the schemas created in Phase 0) |
 
 #### Acceptance Criteria
 - [ ] `library.yaml` grep for `--autoconverge` returns ≥ 1 entry under `/loom-plan create`
 - [ ] `library.yaml` grep for `mode: document` (or `--mode document`) returns ≥ 1 entry under `/loom-converge`
 - [ ] `commands/loom-reference.md` grep for `--autoconverge` returns ≥ 1 row in the flags or commands table
-- [ ] `agents/protocols/execution-conventions.md` Convergence subsection mentions the three modes (target, criteria, document) and links to `findings.schema.md` + `iteration-snapshot.schema.md`
+- [ ] `protocols/execution-conventions.md` Convergence subsection mentions the three modes (target, criteria, document) and links to `findings.schema.md` + `iteration-snapshot.schema.md`
 - [ ] `bun test test/protocol/library-catalog.test.ts` exits with code 0
 
 #### Convergence Targets

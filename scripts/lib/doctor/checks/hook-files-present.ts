@@ -3,7 +3,7 @@
  * `hooks/hooks.json` resolve to an existing file on disk under the install
  * root. Severity `fail` if any file is missing.
  *
- * Category: `hook-wiring` (per `agents/protocols/doctor-report.schema.md`).
+ * Category: `hook-wiring` (per `protocols/doctor-report.schema.md`).
  */
 
 import * as fsSync from "node:fs";

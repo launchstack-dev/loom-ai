@@ -54,7 +54,7 @@ summary:
 
 ### contractCandidates schema
 
-Each entry in `contractCandidates[]` describes a *candidate* `contract-*` wiki page that the discovery pass has detected. api-explorer itself does NOT create wiki pages — it emits candidates. `wiki-ingest-agent` (in `full` ingest mode, as wired by Agent B) reads this array and creates `contract-*` pages via the page schema in `agents/protocols/wiki-page.schema.md`.
+Each entry in `contractCandidates[]` describes a *candidate* `contract-*` wiki page that the discovery pass has detected. api-explorer itself does NOT create wiki pages — it emits candidates. `wiki-ingest-agent` (in `full` ingest mode, as wired by Agent B) reads this array and creates `contract-*` pages via the page schema in `protocols/wiki-page.schema.md`.
 
 | Field | Required | Description |
 |-------|----------|-------------|

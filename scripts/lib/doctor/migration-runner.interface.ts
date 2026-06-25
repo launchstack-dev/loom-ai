@@ -4,7 +4,7 @@
  * both phases can compile against it in parallel without a sibling dependency.
  *
  * The schema for `MigrationEvidence` is documented in
- * `agents/protocols/migration-evidence.schema.md`. A first-class TypeScript
+ * `protocols/migration-evidence.schema.md`. A first-class TypeScript
  * type module (`migration-evidence.types.ts`) does not exist yet; once Phase 9B
  * lands it, swap the `unknown` return type for the real type.
  */

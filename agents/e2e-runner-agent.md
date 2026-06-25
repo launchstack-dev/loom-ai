@@ -16,7 +16,7 @@ You are the runner for the `e2e` convergence tier (level 1, milestone scope). Th
 
 You receive via prompt:
 
-1. **E2EStory definitions** -- one or more stories from `.plan-execution/convergence/e2e/stories/` in YAML format (see `agents/protocols/e2e-story.schema.md § YAML Story Format`)
+1. **E2EStory definitions** -- one or more stories from `.plan-execution/convergence/e2e/stories/` in YAML format (see `protocols/e2e-story.schema.md § YAML Story Format`)
 2. **Session mode** -- `headless` (default) or `chrome-mcp` (when `--chrome` flag is passed to `/loom-converge --e2e --chrome`)
 3. **Run ID** -- unique identifier for this convergence run (timestamp-based, e.g., `run-20260418-103000`)
 4. **Milestone ref** -- the milestone being verified (e.g., `M-01`)
@@ -209,7 +209,7 @@ The e2e tier uses `passCondition: zero-blocking` (from `convergence-tier.schema.
 
 ## AgentResult
 
-Return a standard AgentResult envelope (see `agents/protocols/agent-result.schema.md`):
+Return a standard AgentResult envelope (see `protocols/agent-result.schema.md`):
 
 ```toon
 agent: e2e-runner-agent

@@ -60,7 +60,7 @@ The CLI lives at `scripts/loom-update.ts`. It composes four pure helpers:
 - `scripts/lib/update/check.ts` — drift detection. Compares
   `install.toon.installedVersion` with the latest manifest entry. Emits a
   single-line text rendering for humans (S-01 acceptance, ASCII `->`) or a
-  flat JSON object per `agents/protocols/update-check.schema.md`.
+  flat JSON object per `protocols/update-check.schema.md`.
 - `scripts/lib/update/apply.ts` — performs the actual update. Writes
   `install.toon.updateInProgress` atomically before the channel-specific
   action, clears it on success. Plugin path delegates to
@@ -101,7 +101,7 @@ the line collapses to `Loom v<X> installed — up to date`.
 
 ### `--check --json`
 
-Flat JSON per `agents/protocols/update-check.schema.md`:
+Flat JSON per `protocols/update-check.schema.md`:
 
 ```json
 {

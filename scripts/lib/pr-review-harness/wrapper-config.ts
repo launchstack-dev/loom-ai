@@ -1,7 +1,7 @@
 /**
  * Generates the `converge.config` TOON the `/loom-git review-pr --autoconverge`
  * wrapper hands to `/loom-converge`. Field bindings per
- * `agents/protocols/converge.config.applications.md` § F-04.
+ * `protocols/converge.config.applications.md` § F-04.
  *
  * This module is pure (no I/O). The wrapper is responsible for writing the
  * result atomically; this helper just produces the encoded string + the

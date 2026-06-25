@@ -35,13 +35,13 @@ All writes are atomic (`.tmp` then rename).
 
 1. `.plan-execution/review-report.before-fix-{trampolineIteration}.md` — snapshot of the predecessor's review-report.md, taken in Step 0. Used for stuck detection.
 2. `.plan-execution/review-report.md` — updated findings after fixers + quick review.
-3. `.plan-execution/stage-context/fix.toon` — per `agents/protocols/stage-context.schema.md`
+3. `.plan-execution/stage-context/fix.toon` — per `protocols/stage-context.schema.md`
 4. `.plan-execution/link-result.toon` — link envelope (see `link-result.schema.md` and per-link shape below)
 5. `.plan-execution/pipeline-state.toon` — appended `linkHistory[]`, incremented `agentsSpawned`, incremented `fixCycleCount`, updated `currentStage`
 
 ## Model resolution (mandatory)
 
-Before every Agent tool call, resolve the model per `~/.claude/agents/protocols/execution-conventions.md`:
+Before every Agent tool call, resolve the model per `~/.claude/protocols/execution-conventions.md`:
 
 1. Read `.claude/orchestration.toml`. If `[settings] modelProfile` is set, use the profile's per-tier mapping.
 2. Tier mapping: fixer-agent → `utility`, quick-review agent → `review`.
@@ -70,7 +70,7 @@ Spawn one general-purpose Agent. Model: resolved utility tier.
 Prompt:
 ```
 "Read your instructions from ~/.claude/commands/loom-code.md first.
- Read ~/.claude/agents/protocols/behavioral-guidelines.md section 6 (Diagnose Before Fix).
+ Read ~/.claude/protocols/behavioral-guidelines.md section 6 (Diagnose Before Fix).
  Run with --auto --severity critical,warning.
  Apply fixes from .plan-execution/review-report.md.
 

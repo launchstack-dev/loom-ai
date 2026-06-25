@@ -320,7 +320,7 @@ The wiki already has 5 hot integration paths and 1 hook. Flows and contracts unl
 
 | Touchpoint | File | Today | Update for flows/contracts |
 |------------|------|-------|----------------------------|
-| Rolling context `## Project Knowledge [WIKI]` block | `agents/protocols/context-budget.md`, `agents/protocols/execution-conventions.md` | Orchestrator picks "pages relevant to current wave" into a ≤1k-token slice | When wave files appear in any flow's `steps[].touches` or any contract's `producers`/`consumers`, **prefer those pages first** in the [WIKI] block. Keep the budget but rank flow/contract pages above generic component pages for the wave's file set. |
+| Rolling context `## Project Knowledge [WIKI]` block | `protocols/context-budget.md`, `protocols/execution-conventions.md` | Orchestrator picks "pages relevant to current wave" into a ≤1k-token slice | When wave files appear in any flow's `steps[].touches` or any contract's `producers`/`consumers`, **prefer those pages first** in the [WIKI] block. Keep the budget but rank flow/contract pages above generic component pages for the wave's file set. |
 | `questioner-agent` (plan proposals) | `agents/questioner-agent.md` | Reads wiki index + selected pages; informs proposals across multiple dimensions | Add "user-facing impact" dimension: list flow-* pages whose `touches` intersect the proposed scope. Add "compatibility commitments" dimension: list contract-* pages whose `producers` or `consumers` overlap the scope. |
 | `criteria-planner-agent` (acceptance criteria) | `agents/criteria-planner-agent.md` | Emits criteria with `source: wiki-history` for known regressions | Extend `source` enum with `wiki-flow` and `wiki-contract`. Auto-emit one criterion per intersecting flow (preserve exit states) and one per contract (response shape must not change). |
 | `bugfix-analyst-agent` (impact assessment) | `agents/bugfix-analyst-agent.md` | Records `wikiContext[]` and `relatedWikiPages[]` | Add two new output arrays: `affectedFlows[]` (flow pageIds whose `touches` overlap the bug's diff) and `affectedContracts[]` (contracts whose `producers`/`consumers` overlap). These give the reviewer immediate user-facing impact visibility. |
@@ -341,7 +341,7 @@ The wiki already has 5 hot integration paths and 1 hook. Flows and contracts unl
 | Hook | File | Current behavior | Change needed |
 |------|------|------------------|---------------|
 | `wiki-write-guard` (PreToolUse) | `hooks/wiki-write-guard.ts` | Blocks non-wiki-agents from writing `.loom/wiki/` during active execution; fail-open | **No change.** The four-agent allowlist is sufficient. Per-category write authority (e.g., only ingest can create contracts) is not worth the complexity for this iteration. |
-| `context-budget` (PreToolUse) | `hooks/context-budget.ts` | Estimates token budget before agent spawn; blocks if over cap | **Light enhancement:** when the orchestrator packs flow `steps[]` or contract `shape` into rolling-context, treat each as an atomic block — never truncate mid-step or mid-shape. Add a note in `agents/protocols/context-budget.md` describing the atomicity rule for these structured fields. |
+| `context-budget` (PreToolUse) | `hooks/context-budget.ts` | Estimates token budget before agent spawn; blocks if over cap | **Light enhancement:** when the orchestrator packs flow `steps[]` or contract `shape` into rolling-context, treat each as an atomic block — never truncate mid-step or mid-shape. Add a note in `protocols/context-budget.md` describing the atomicity rule for these structured fields. |
 | `quality-gate` (PostToolUse) | `hooks/quality-gate.ts` | Runs verification gates after writes | Future plan: a contract-drift check — if a wave touched files in a contract's `producers`/`consumers`, verify the contract's `shape` still matches the code. **Out of scope for this plan**; called out as a follow-on. |
 
 ### Rolling-context ranking heuristic
@@ -519,7 +519,7 @@ Today the closest thing to a stale-refresh command is `/loom-wiki ingest --full`
 
 ### Hook ordering and budget impact
 
-Both new hooks read from `index.toon` only — they never read page bodies. Index reads are cheap (<2k tokens for a 100-page wiki). Worst case impact on context budget is the appended summaries (max ~5 pages × 200 chars = 1k chars ≈ 250 tokens per prompt). This is well within the 100k per-agent cap defined in `agents/protocols/context-budget.md`.
+Both new hooks read from `index.toon` only — they never read page bodies. Index reads are cheap (<2k tokens for a 100-page wiki). Worst case impact on context budget is the appended summaries (max ~5 pages × 200 chars = 1k chars ≈ 250 tokens per prompt). This is well within the 100k per-agent cap defined in `protocols/context-budget.md`.
 
 The SessionStart hook's stale-page suggestion now points at a concrete command:
 ```
@@ -531,7 +531,7 @@ The SessionStart hook's stale-page suggestion now points at a concrete command:
 
 ## /loom-upgrade Migration (Rule 7)
 
-Add Rule 7 to `agents/protocols/schema-upgrade.md`:
+Add Rule 7 to `protocols/schema-upgrade.md`:
 
 **Detection rule:**
 ```
@@ -558,7 +558,7 @@ Update `commands/loom-upgrade.md` scan list and migration rules list to include 
 
 ## /loom-upgrade Migration (Rule 8) — CLAUDE.md wiki-discipline block
 
-Add Rule 8 to `agents/protocols/schema-upgrade.md`:
+Add Rule 8 to `protocols/schema-upgrade.md`:
 
 **Detection rule:**
 ```
@@ -671,14 +671,14 @@ This wave establishes the canonical type contracts that every downstream paralle
 - Lock canonical enums: `flowType` (5 values), `contractType` (7 values), all 8 new cross-ref relationships with direction/inverse.
 - Lock new frontmatter fields and constraints: `summary` (≤200 chars), `estimatedTokens` (computed), `bodySections`, `nextOnFail`, `errorExits[]`, `shapeFiles[]`, `compatibilityPolicy`, `deprecatedAt`, `replacedBy`, `breakingChanges[]`.
 - Bump `wiki-index.toon` schemaVersion 1 → 2 with extended `pages[N]` typed-array columns.
-- **Files owned (exclusive to this wave):** `agents/protocols/wiki-page.schema.md`, `agents/protocols/wiki-conventions.md`, `agents/protocols/wiki-index.schema.md`.
+- **Files owned (exclusive to this wave):** `protocols/wiki-page.schema.md`, `protocols/wiki-conventions.md`, `protocols/wiki-index.schema.md`.
 
 **Phase 0 — Upgrade machinery (Wave 1, Agent A — parallel with Phase 1, Phase 2)**
-- Add Rules 7, 8, and 9 to `agents/protocols/schema-upgrade.md`, with explicit rule-order-per-file semantics and failure handling.
+- Add Rules 7, 8, and 9 to `protocols/schema-upgrade.md`, with explicit rule-order-per-file semantics and failure handling.
 - Update `commands/loom-upgrade.md`: scan list + migration rules list + artifact-type count → 9 + new `--register-hooks` flag. Insert a `<!-- Phase 3: fill Rule 8 prose here -->` stub-marker in the Rule 8 entry so a downstream agent can fill behavioral detail without conflict.
 - Rule 7 handles three legacy edge cases: missing `schemaVersion`, missing `categories[]`, backfilling `summary` placeholder + `estimatedTokens` on existing pages.
 - Rule 9 includes the file-existence guard (only registers a hook if its `.ts` file exists on disk).
-- **Files owned (exclusive):** `agents/protocols/schema-upgrade.md`, `commands/loom-upgrade.md`. Does NOT touch `wiki-lint-rules.md` (Phase 2 owns it).
+- **Files owned (exclusive):** `protocols/schema-upgrade.md`, `commands/loom-upgrade.md`. Does NOT touch `wiki-lint-rules.md` (Phase 2 owns it).
 
 **Phase 1 — Agent updates + Karpathy CLAUDE.md (Wave 1, Agent B — parallel with Phase 0, Phase 2)**
 - Add `--flow <entry-point>` mode to `wiki-ingest-agent.md` (extraction from entry point).
@@ -696,7 +696,7 @@ This wave establishes the canonical type contracts that every downstream paralle
 - Add W-025 through W-027 (body cap, summary/section enforcement, field-length caps) to `wiki-lint-rules.md`.
 - **Document the W-026 carve-out for `(legacy — pending refresh)` placeholder directly in the W-026 rule row** (Phase 0 does NOT touch this file).
 - Update `wiki-lint-agent.md` to implement all eight new checks. W-026 has auto-fix (insert missing H2 section stubs); others are warn-only.
-- **Files owned (exclusive):** `agents/protocols/wiki-lint-rules.md`, `agents/wiki-lint-agent.md`.
+- **Files owned (exclusive):** `protocols/wiki-lint-rules.md`, `agents/wiki-lint-agent.md`.
 
 **Wave 1 gate (blocking — see Testing Strategy below):** before proceeding to Wave 2, three gates must pass:
 1. **AC-05 (extraction quality)** — run `/loom-wiki ingest --flow <real-route>` against an actual route in this repo; hand-review the produced page. Verb-led step names, accurate `touches` (no missing or fabricated files), correct `exitStates`, ≤12 steps. **This is the highest-uncertainty deliverable; if extraction is bad, halt and re-spec before lint rules lock around bad output.**
@@ -709,7 +709,7 @@ Hidden dependency declared: this phase reads `summary` + `estimatedTokens` from 
 
 Sub-phases for intra-wave parallelization:
 
-- **Phase 2.5a:** Rolling-context ranking + packing logic. `agents/protocols/context-budget.md` (atomicity rule + summary-first packing strategy). Foundation for 2.5b/c.
+- **Phase 2.5a:** Rolling-context ranking + packing logic. `protocols/context-budget.md` (atomicity rule + summary-first packing strategy). Foundation for 2.5b/c.
 - **Phase 2.5b (parallel after 2.5a):** 6 agent prompt expansions — `agents/questioner-agent.md`, `agents/criteria-planner-agent.md`, `agents/bugfix-analyst-agent.md`, `agents/interpretation-reviewer-agent.md`, `agents/wiki-maintainer-triggers.md`, `agents/api-explorer.md`. Each independent of the others.
 - **Phase 2.5c (parallel with 2.5b):** Command keying — `commands/loom-bugfix.md`, `commands/loom-quick.md`.
 - **Phase 2.5d (parallel with 2.5b/c):** Fill the Rule 8 stub-marker in `commands/loom-upgrade.md` left by Phase 0. Verify Rule 6 → Rule 8 sequencing.
@@ -870,12 +870,12 @@ Real but not testable before merge. Track post-ship:
 ## Cross-References
 
 **Schemas & protocols:**
-- `agents/protocols/wiki-page.schema.md` — primary schema target (categories, relationships, new context-efficiency fields)
-- `agents/protocols/wiki-conventions.md` — significance thresholds, category list, required H2 sections
-- `agents/protocols/wiki-index.schema.md` — index schema bump (new `summary` + `estimatedTokens` columns)
-- `agents/protocols/wiki-lint-rules.md` — eight new lint rules (W-020 through W-027)
-- `agents/protocols/schema-upgrade.md` — Rules 7 (wiki-index v1→v2) and 8 (CLAUDE.md wiki-discipline) added here
-- `agents/protocols/context-budget.md` — atomicity + summary-first packing rules
+- `protocols/wiki-page.schema.md` — primary schema target (categories, relationships, new context-efficiency fields)
+- `protocols/wiki-conventions.md` — significance thresholds, category list, required H2 sections
+- `protocols/wiki-index.schema.md` — index schema bump (new `summary` + `estimatedTokens` columns)
+- `protocols/wiki-lint-rules.md` — eight new lint rules (W-020 through W-027)
+- `protocols/schema-upgrade.md` — Rules 7 (wiki-index v1→v2) and 8 (CLAUDE.md wiki-discipline) added here
+- `protocols/context-budget.md` — atomicity + summary-first packing rules
 
 **Agents:**
 - `agents/wiki-ingest-agent.md` — new `--flow` mode, contract auto-create, summary/estimatedTokens computation

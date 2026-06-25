@@ -183,7 +183,7 @@ Per-pass snapshot record per C-07. Stored at `planning/history/snapshots/{slug}-
 |--------|-------|-----------|-----------|
 | converge.config | IterationSnapshot rows | RETAIN | RETAIN — per C-07 (keep all forever) |
 
-### ConvergenceIterationSummary (extended; existing schema at `agents/protocols/stage-context.schema.md`)
+### ConvergenceIterationSummary (extended; existing schema at `protocols/stage-context.schema.md`)
 
 Extended with two optional fields for document mode parity. The on-disk shape MUST remain identical across all three modes per F-01 acceptance.
 
@@ -412,7 +412,7 @@ The cause and recovery strings are locked per haltReason:
 
 **Decision:** All `--autoconverge` outputs MUST be reconstructable from disk. `convergence-summary.toon` is the authoritative "did we converge" signal; its `status` field is the source of truth read by verify-link today and by the future converge-link. The plan's outputs (PLAN.md, criteria-plan.toon, findings.toon, convergence-summary.toon, iter-{N}.toon, snapshot.toon, critique.toon) must be sufficient for a fresh-context agent (a future loom-auto link) to derive its own `link-result.toon` envelope and a `nextLink ∈ {verify, fix, planning, done}` decision without orchestrator-side conversational state.
 
-**Rationale:** A parallel session is restructuring `/loom-auto` into a trampoline + dispatched-links architecture (commits 3872228, 1e1b31a). Three links already shipped (verify, fix, execute); two are queued (converge — Phase 4; planning — Phase 5). When the planning link extracts `/loom-plan create` (and `--autoconverge` with it), the link must be able to read this plan's on-disk outputs and emit a `link-result.toon` per `agents/protocols/link-result.schema.md` without any translation layer. Aligning now is one-line cheaper than retrofitting later.
+**Rationale:** A parallel session is restructuring `/loom-auto` into a trampoline + dispatched-links architecture (commits 3872228, 1e1b31a). Three links already shipped (verify, fix, execute); two are queued (converge — Phase 4; planning — Phase 5). When the planning link extracts `/loom-plan create` (and `--autoconverge` with it), the link must be able to read this plan's on-disk outputs and emit a `link-result.toon` per `protocols/link-result.schema.md` without any translation layer. Aligning now is one-line cheaper than retrofitting later.
 
 **Alternatives considered:** (a) Delay link-compat until the converge-link is built (rejected — every additional output we add without explicit shape is a future translation burden). (b) Pre-emptively write the `--autoconverge` wrapper as a loom-auto link directly (rejected — premature; the planning link is the proper home, and its design is owned by the parallel session).
 
@@ -433,32 +433,32 @@ The cause and recovery strings are locked per haltReason:
 **Agent:** contracts-agent
 **Objective:** Land all TOON schema additions and protocol-doc updates so downstream phases have a single, stable contract to read from.
 **Dependencies:** None
-**File Ownership:** agents/protocols/convergence-tier.schema.md, agents/protocols/stage-context.schema.md, agents/protocols/schema-versions.toon, agents/protocols/findings.schema.md, agents/protocols/plan-critique.schema.md, agents/protocols/iteration-snapshot.schema.md, agents/protocols/convergence-summary.schema.md <!-- Added: C-11 — convergence-summary.toon schema is load-bearing for future loom-auto converge-link / verify-link -->
+**File Ownership:** protocols/convergence-tier.schema.md, protocols/stage-context.schema.md, protocols/schema-versions.toon, protocols/findings.schema.md, protocols/plan-critique.schema.md, protocols/iteration-snapshot.schema.md, protocols/convergence-summary.schema.md <!-- Added: C-11 — convergence-summary.toon schema is load-bearing for future loom-auto converge-link / verify-link -->
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/convergence-tier.schema.md | Modify | contracts-agent (add `convergenceMode: document` enum value, `subject`, `integrator`, and `harness` field rows to ConvergeConfig table; document `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir`; note `outputPath` default of `.plan-execution/convergence/findings.toon`) <!-- Applied: PF-03 (B-01) — explicit harness field row in deliverable; the harness field already exists in the in-plan schema table at line 47 but the Phase 0 deliverable description omitted it. --> |
-| agents/protocols/stage-context.schema.md | Modify | contracts-agent (extend `ConvergenceIterationSummary` with optional `subject` and `snapshotRef` fields; assert shape uniformity across all 3 modes) |
-| agents/protocols/findings.schema.md | Create | contracts-agent (new `ConvergenceFindings` schema doc per the Schema section) |
-| agents/protocols/plan-critique.schema.md | Create | contracts-agent (new `PlanCritique` schema doc per the Schema section) |
-| agents/protocols/iteration-snapshot.schema.md | Create | contracts-agent (new `IterationSnapshot` schema doc per the Schema section) |
-| agents/protocols/convergence-summary.schema.md | Create | contracts-agent (new `ConvergenceSummary` schema doc per the Schema section; document all 11 fields including the `status` enum and the document-mode `subject` field) <!-- Added: C-11 — explicit schema for the run-end artifact a future loom-auto converge-link will read --> |
-| agents/protocols/schema-versions.toon | Modify | contracts-agent (register the four new schemas with version 1) |
+| protocols/convergence-tier.schema.md | Modify | contracts-agent (add `convergenceMode: document` enum value, `subject`, `integrator`, and `harness` field rows to ConvergeConfig table; document `scopeGuardEnabled`, `snapshotEnabled`, `snapshotDir`; note `outputPath` default of `.plan-execution/convergence/findings.toon`) <!-- Applied: PF-03 (B-01) — explicit harness field row in deliverable; the harness field already exists in the in-plan schema table at line 47 but the Phase 0 deliverable description omitted it. --> |
+| protocols/stage-context.schema.md | Modify | contracts-agent (extend `ConvergenceIterationSummary` with optional `subject` and `snapshotRef` fields; assert shape uniformity across all 3 modes) |
+| protocols/findings.schema.md | Create | contracts-agent (new `ConvergenceFindings` schema doc per the Schema section) |
+| protocols/plan-critique.schema.md | Create | contracts-agent (new `PlanCritique` schema doc per the Schema section) |
+| protocols/iteration-snapshot.schema.md | Create | contracts-agent (new `IterationSnapshot` schema doc per the Schema section) |
+| protocols/convergence-summary.schema.md | Create | contracts-agent (new `ConvergenceSummary` schema doc per the Schema section; document all 11 fields including the `status` enum and the document-mode `subject` field) <!-- Added: C-11 — explicit schema for the run-end artifact a future loom-auto converge-link will read --> |
+| protocols/schema-versions.toon | Modify | contracts-agent (register the four new schemas with version 1) |
 
 #### Acceptance Criteria
-- [ ] `agents/protocols/findings.schema.md` exists and documents all 7 ConvergenceFindings fields with validation rules
-- [ ] `agents/protocols/plan-critique.schema.md` exists and documents the 7 PlanCritique fields plus the `dimensionsCovered` locked enum of 6 dimensions
-- [ ] `agents/protocols/iteration-snapshot.schema.md` exists and documents the 6 IterationSnapshot fields including sha256 checksum requirement
-- [ ] `agents/protocols/convergence-tier.schema.md` documents the `document` value in the convergenceMode enum and the `subject`/`integrator`/`harness`/`outputPath`/`scopeGuardEnabled`/`snapshotEnabled`/`snapshotDir` fields <!-- Applied: PF-03 (B-01) — harness + outputPath explicitly named -->
+- [ ] `protocols/findings.schema.md` exists and documents all 7 ConvergenceFindings fields with validation rules
+- [ ] `protocols/plan-critique.schema.md` exists and documents the 7 PlanCritique fields plus the `dimensionsCovered` locked enum of 6 dimensions
+- [ ] `protocols/iteration-snapshot.schema.md` exists and documents the 6 IterationSnapshot fields including sha256 checksum requirement
+- [ ] `protocols/convergence-tier.schema.md` documents the `document` value in the convergenceMode enum and the `subject`/`integrator`/`harness`/`outputPath`/`scopeGuardEnabled`/`snapshotEnabled`/`snapshotDir` fields <!-- Applied: PF-03 (B-01) — harness + outputPath explicitly named -->
 - [ ] `ConvergeConfig` Validation Rules subsection documents timestamp precision as ISO 8601 with millisecond precision (`producedAt: 2026-06-12T15:30:00.000Z`) so stall-detection regression checks compare uniformly <!-- Applied: W-01 — lock timestamp precision -->
 - [ ] `IterationSnapshot` slug derivation rule documents handling of filenames with multiple dots (e.g., `PLAN-x.v2.md` → slug `PLAN-x.v2`; basename minus FINAL extension only) <!-- Applied: W-02 — slug ambiguity -->
 - [ ] `ConvergenceFindings` schema includes a `reviewerAgent` field on each `findings[]` row preserving attribution after aggregation (string, optional for non-harness contexts) <!-- Applied: W-03 — preserve reviewer attribution -->
 - [ ] `ConvergenceFindings` schema includes a `severityToConvergenceSeverity` mapping table in the doc body: AgentResult `critical|high` → `blocking`; `medium` → `warning`; `low|info` → `info` <!-- Applied: PF-09 / CC-03 / W-18 — harness aggregator severity mapping -->
 - [ ] `ConvergenceIterationSummary` extension table lists `haltReason` as an optional enum field across all three modes (values: `STALL`, `REGRESSION`, `BUDGET_EXHAUSTED`, `MAX_ITERATIONS`, `SCOPE_EXPANSION`) <!-- Applied: I-01 — haltReason field on iter summary -->
-- [ ] `agents/protocols/stage-context.schema.md` `ConvergenceIterationSummary` section explicitly states uniform shape across `target`, `criteria`, `document` and lists `subject`/`snapshotRef` as optional document-mode fields
-- [ ] `agents/protocols/schema-versions.toon` registers `convergence-findings`, `plan-critique`, `iteration-snapshot`, `convergence-summary` each at version 1
-- [ ] `agents/protocols/convergence-summary.schema.md` exists and documents all 11 ConvergenceSummary fields including the `status` enum (6 values), the document-mode `subject` field, and the `haltReason` cross-reference to ConvergenceIterationSummary <!-- Added: C-11 — link contract requires this artifact -->
+- [ ] `protocols/stage-context.schema.md` `ConvergenceIterationSummary` section explicitly states uniform shape across `target`, `criteria`, `document` and lists `subject`/`snapshotRef` as optional document-mode fields
+- [ ] `protocols/schema-versions.toon` registers `convergence-findings`, `plan-critique`, `iteration-snapshot`, `convergence-summary` each at version 1
+- [ ] `protocols/convergence-summary.schema.md` exists and documents all 11 ConvergenceSummary fields including the `status` enum (6 values), the document-mode `subject` field, and the `haltReason` cross-reference to ConvergenceIterationSummary <!-- Added: C-11 — link contract requires this artifact -->
 - [ ] `bun test test/protocol/schema-validation.test.ts` exits with code 0
 
 #### Convergence Targets
@@ -470,7 +470,7 @@ The cause and recovery strings are locked per haltReason:
 ```toon
 id: S-01
 title: ConvergeConfig schema accepts convergenceMode=document with required fields
-given[2]: agents/protocols/convergence-tier.schema.md documents the document mode, A converge.config TOON file declares convergenceMode=document with subject + integrator + harness fields
+given[2]: protocols/convergence-tier.schema.md documents the document mode, A converge.config TOON file declares convergenceMode=document with subject + integrator + harness fields
 when: The schema validator parses the config
 whenTriggerType: system-event
 then[2]: Validation passes with no errors, Missing subject or integrator when mode=document produces a blocking validation error
@@ -570,7 +570,7 @@ automatable: true
 - [ ] Driver's Output Format section documents the FINDINGS_SCHEMA_INVALID raise condition when harness output fails schema validation (per Error Handling table) <!-- Applied: I-01 / supporting --> 
 - [ ] Driver's Fixer Agent Management section is renamed conceptually to "Integrator Agent Management" or augmented with text clarifying that "integrator" is config-driven per C-03; explicit note that target/criteria modes default `integrator` to `fixer-agent` for backwards compat
 - [ ] All existing target-mode and criteria-mode references in the driver remain unchanged (verified by diff scope)
-- [ ] Driver's Convergence Loop section documents that at terminal-state transition (converged OR halted), the driver writes `convergence-summary.toon` atomically with all 11 fields per `agents/protocols/convergence-summary.schema.md` — `status` is the authoritative "did we converge" signal for downstream consumers (verify-link today, future converge-link). Per C-11, this artifact must be reconstructable from disk for future loom-auto link extraction. <!-- Added: C-11 — terminal-state write of convergence-summary.toon -->
+- [ ] Driver's Convergence Loop section documents that at terminal-state transition (converged OR halted), the driver writes `convergence-summary.toon` atomically with all 11 fields per `protocols/convergence-summary.schema.md` — `status` is the authoritative "did we converge" signal for downstream consumers (verify-link today, future converge-link). Per C-11, this artifact must be reconstructable from disk for future loom-auto link extraction. <!-- Added: C-11 — terminal-state write of convergence-summary.toon -->
 - [ ] `bun test test/protocol/schema-validation.test.ts` exits with code 0
 - [ ] `bun test test/protocol/pipeline-loop.test.ts` exits with code 0
 
@@ -822,7 +822,7 @@ automatable: true
 - [ ] Agent prompt explicitly states critic is advisory-only — does not gate, block, or produce schema artifacts beyond `critique.toon`
 - [ ] Agent prompt declares `dimensionsCovered[]` must come from the locked enum of 6 dimensions
 - [ ] `agents/plan-critic-checklist.md` contains exactly 30 numbered concerns, each tagged with one of the 6 dimensions
-- [ ] Output format documented in the agent prompt matches the `PlanCritique` schema from `agents/protocols/plan-critique.schema.md`
+- [ ] Output format documented in the agent prompt matches the `PlanCritique` schema from `protocols/plan-critique.schema.md`
 
 #### Convergence Targets
 - The critic prompt body fits within the 100k context budget cap when run against a 20-phase plan + 6 reviewer agent files (verified by token-estimator on a fixture)
@@ -966,7 +966,7 @@ automatable: true
 **Agent:** implementer-agent
 **Objective:** Create a TypeScript harness script under `scripts/` that invokes the 6 reviewer agents in parallel against a subject PLAN.md, aggregates their AgentResults, and writes a `ConvergenceFindings` TOON file matching the schema from Phase 0.
 **Dependencies:** Phase 0 (schemas) — Phase 9 produces what Phase 2 documents consuming, so Phase 2 is not a hard dep <!-- Applied: W-20 — reversed-causality fix -->
-**Implicit reads:** commands/loom-plan/review.md (reviewer-agent list of record), agents/feature-coverage-agent.md, agents/strategy-agent.md, agents/ux-agent.md, agents/phasing-agent.md, agents/parallelization-agent.md, agents/agentic-workflow-agent.md (frontmatter model resolution), agents/protocols/agent-result.schema.md (input shape for aggregator), agents/protocols/findings.schema.md (output shape) <!-- Applied: PF-09 (CC-03 / W-28) — explicit files-in list -->
+**Implicit reads:** commands/loom-plan/review.md (reviewer-agent list of record), agents/feature-coverage-agent.md, agents/strategy-agent.md, agents/ux-agent.md, agents/phasing-agent.md, agents/parallelization-agent.md, agents/agentic-workflow-agent.md (frontmatter model resolution), protocols/agent-result.schema.md (input shape for aggregator), protocols/findings.schema.md (output shape) <!-- Applied: PF-09 (CC-03 / W-28) — explicit files-in list -->
 **File Ownership:** scripts/plan-review-harness.ts, scripts/lib/aggregate-findings.ts
 
 #### Deliverables
@@ -1146,9 +1146,9 @@ automatable: true
 ### Phase 12 — Wave 5: Wiring — Library + Reference + Wiki Conventions
 
 **Agent:** wiring-agent
-**Objective:** Update advertise-and-discover surfaces: `library.yaml`, `commands/loom-reference.md`, `commands/loom-plan.md`, and the convergence section of `agents/protocols/execution-conventions.md` to mention document mode + autoconverge. Single owner to keep these in sync.
+**Objective:** Update advertise-and-discover surfaces: `library.yaml`, `commands/loom-reference.md`, `commands/loom-plan.md`, and the convergence section of `protocols/execution-conventions.md` to mention document mode + autoconverge. Single owner to keep these in sync.
 **Dependencies:** Phase 5, Phase 7, Phase 9 (execution-conventions.md adds TS harness pattern), Phase 10 (advertised flags), Phase 11 (snapshot helper convention) <!-- Applied: W-26 — add Phase 9 dep -->
-**File Ownership:** library.yaml (sole owner per PF-02 / CC-02), commands/loom-reference.md, commands/loom-plan.md, agents/protocols/execution-conventions.md (Convergence and Quality Infrastructure subsection only) <!-- Applied: PF-02 (B-09 / CC-02) — library.yaml owned solely here -->
+**File Ownership:** library.yaml (sole owner per PF-02 / CC-02), commands/loom-reference.md, commands/loom-plan.md, protocols/execution-conventions.md (Convergence and Quality Infrastructure subsection only) <!-- Applied: PF-02 (B-09 / CC-02) — library.yaml owned solely here -->
 
 #### Deliverables
 | File | Action | Owner hint |
@@ -1156,13 +1156,13 @@ automatable: true
 | library.yaml | Modify | wiring-agent (advertise `--autoconverge`, `--skip-critic`, `--max-iterations` on `/loom-plan create`; advertise `--mode document` on `/loom-converge`) |
 | commands/loom-reference.md | Modify | wiring-agent (add `/loom-plan create --autoconverge` row; add `/loom-converge --mode document` row; document the new convergence mode in the modes table) |
 | commands/loom-plan.md | Modify | wiring-agent (link out to the new flags from the subcommand index) |
-| agents/protocols/execution-conventions.md | Modify | wiring-agent (Convergence and Quality Infrastructure subsection — add a brief paragraph naming document mode + linking to the schemas created in Phase 0) |
+| protocols/execution-conventions.md | Modify | wiring-agent (Convergence and Quality Infrastructure subsection — add a brief paragraph naming document mode + linking to the schemas created in Phase 0) |
 
 #### Acceptance Criteria
 - [ ] `library.yaml` grep for `--autoconverge` returns ≥ 1 entry under `/loom-plan create`
 - [ ] `library.yaml` grep for `mode: document` (or `--mode document`) returns ≥ 1 entry under `/loom-converge`
 - [ ] `commands/loom-reference.md` grep for `--autoconverge` returns ≥ 1 row in the flags or commands table
-- [ ] `agents/protocols/execution-conventions.md` Convergence subsection mentions the three modes (target, criteria, document) and links to `findings.schema.md` + `iteration-snapshot.schema.md`
+- [ ] `protocols/execution-conventions.md` Convergence subsection mentions the three modes (target, criteria, document) and links to `findings.schema.md` + `iteration-snapshot.schema.md`
 - [ ] `bun test test/protocol/library-catalog.test.ts` exits with code 0
 
 #### Convergence Targets
@@ -1281,7 +1281,7 @@ automatable: true
 - [ ] **Token-cost observability (non-blocking):** the fixture emits a `tokensUsed` total to `convergence-state.toon` and to the test log so cost can be tracked over time; no assertion threshold (cost-ceiling stays informational pending real-world calibration). <!-- Applied: PF-08 (B-03) — observability without unverifiable assertion -->
 - [ ] Fixture covers `--autoconverge --review-integrate` combination per Q-02: autoconverge still loops, critic stays off, no errors <!-- Applied: I-04 -->
 - [ ] Fixture asserts changelog has a multi-pass trajectory entry of the locked format `trajectory: pass-1 blocking=N, pass-2 blocking=N, ...` after a converged run <!-- Applied: W-14 — changelog format -->
-- [ ] **Link-extraction readiness assertion (per C-11):** after the fixture run completes, the on-disk artifact set under `.plan-execution/` and `planning/` is shaped such that a fresh-context agent reading only those files (and the dispatch prompt) could derive a `link-result.toon` envelope per `agents/protocols/link-result.schema.md` and a `nextLink` decision. Specifically: `convergence-summary.toon` exists with all 11 fields populated, `status` ∈ {converged, halted-*} matches the actual outcome, `subject` points to a real file, and `iterationsRun` matches the count of `iter-{N}.toon` files. Test does NOT need to construct the envelope — only assert input completeness. <!-- Added: C-11 — link contract input completeness fixture -->
+- [ ] **Link-extraction readiness assertion (per C-11):** after the fixture run completes, the on-disk artifact set under `.plan-execution/` and `planning/` is shaped such that a fresh-context agent reading only those files (and the dispatch prompt) could derive a `link-result.toon` envelope per `protocols/link-result.schema.md` and a `nextLink` decision. Specifically: `convergence-summary.toon` exists with all 11 fields populated, `status` ∈ {converged, halted-*} matches the actual outcome, `subject` points to a real file, and `iterationsRun` matches the count of `iter-{N}.toon` files. Test does NOT need to construct the envelope — only assert input completeness. <!-- Added: C-11 — link contract input completeness fixture -->
 
 #### Convergence Targets
 - Final PLAN.md from `--autoconverge` has zero blocking findings when re-run through the plan-review harness

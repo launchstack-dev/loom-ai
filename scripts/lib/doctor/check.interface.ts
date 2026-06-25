@@ -4,8 +4,8 @@
  * so 9A1 and 9A2 can compile in parallel without a sibling dependency.
  *
  * The DoctorReport / HealthCheck schemas live in
- * `agents/protocols/doctor-report.schema.md`. The InstallState schema lives in
- * `agents/protocols/install-state.schema.md` (channel-envelope flavor). First-
+ * `protocols/doctor-report.schema.md`. The InstallState schema lives in
+ * `protocols/install-state.schema.md` (channel-envelope flavor). First-
  * class TypeScript type modules for either are not yet on disk; once they
  * land, swap the placeholder `unknown` types below.
  */
@@ -15,11 +15,11 @@
 export type InstallState = unknown;
 
 // TODO: tighten when doctor-report types land
-//       (replace `unknown` with `import type { HealthCheck } from '../../../agents/protocols/doctor-report.types'`).
+//       (replace `unknown` with `import type { HealthCheck } from '../../../protocols/doctor-report.types'`).
 export type HealthCheck = unknown;
 
 /**
- * Category enum mirrors `agents/protocols/doctor-report.schema.md`'s
+ * Category enum mirrors `protocols/doctor-report.schema.md`'s
  * `checks[].category` field. Kept in sync manually until the schema gains a
  * generator.
  */

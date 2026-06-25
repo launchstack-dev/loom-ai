@@ -88,7 +88,7 @@ Phases that survive cherry-pick:
 
 | # | Source | Feature | Wave | What |
 |---|---|---|---|---|
-| 0 | merged | F-15 contracts + migration-runner + settings-tier schemas | 0 | All TOON schemas on disk (already done — `agents/protocols/upstream/`, `plugin-manifest.schema.md`, `hook-manifest.schema.md`, `doctor-report.schema.md`, `migration-evidence.schema.md`, `settings-tier.schema.md`, `migration-runner.schema.md`) |
+| 0 | merged | F-15 contracts + migration-runner + settings-tier schemas | 0 | All TOON schemas on disk (already done — `protocols/upstream/`, `plugin-manifest.schema.md`, `hook-manifest.schema.md`, `doctor-report.schema.md`, `migration-evidence.schema.md`, `settings-tier.schema.md`, `migration-runner.schema.md`) |
 | 1 | dist-F-07a | Minimal plugin-root resolver | 1 | `${CLAUDE_PLUGIN_ROOT}` / `${CLAUDE_PROJECT_DIR}` resolution lib + lint check |
 | 2 | dist-F-15 / mig-F-15 | Plugin manifest + hook PATH safety + install.sh mutual-exclusion probe | 1 | `.claude-plugin/plugin.json`, `hooks/hooks.json`, install.sh exit code 9 on conflict, stripped-PATH hook probe |
 | 3 | dist-F-02 | Graceful no-op + 24h dismissal in `commands/loom-init.md` | 2 | First-run handler, idempotent `/loom-init` |

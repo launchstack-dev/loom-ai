@@ -28,8 +28,8 @@ function createValidInstallState(items?: LibraryInstallItem[]): LibraryInstallSt
       {
         name: 'execution-protocols',
         type: 'skill',
-        source: '/path/to/agents/protocols/execution-conventions.md',
-        targetPath: '~/.claude/agents/protocols/execution-conventions.md',
+        source: '/path/to/protocols/execution-conventions.md',
+        targetPath: '~/.claude/protocols/execution-conventions.md',
         installedAt: '2026-04-06T09:55:00Z',
         contentHash: 'sha256:789ghi012jkl',
       },

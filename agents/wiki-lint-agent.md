@@ -24,8 +24,8 @@ You receive via prompt:
 ## Input (from disk)
 
 Read these files before starting:
-- `~/.claude/agents/protocols/wiki-lint-rules.md` — full check catalog with IDs, severity, and auto-fix rules
-- `~/.claude/agents/protocols/wiki-conventions.md` — staleness model, cross-ref rules
+- `~/.claude/protocols/wiki-lint-rules.md` — full check catalog with IDs, severity, and auto-fix rules
+- `~/.claude/protocols/wiki-conventions.md` — staleness model, cross-ref rules
 - `.loom/wiki/index.toon` — page catalog
 
 ## Approach

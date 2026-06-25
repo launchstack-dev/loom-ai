@@ -84,7 +84,7 @@ If `validateInstallPath` returns `{ valid: false }`, abort the install BEFORE wr
 When installing, place files based on their type in library.yaml:
 - `agents` items -> `~/.claude/agents/<name>.md`
 - `prompts` items -> `~/.claude/commands/<name>.md`
-- `protocols` items -> `~/.claude/agents/protocols/<name>.md` (legacy `library.skills` items, post-v4 rename per `library-catalog-migrator.ts` v3→v4)
+- `protocols` items -> `~/.claude/protocols/<name>.md` (legacy `library.skills` items, post-v4 rename per `library-catalog-migrator.ts` v3→v4)
 - `skill` items (native Claude Code skill, v4 `library.skills:` section) -> `~/.claude/skills/<name>/SKILL.md` — compute via `buildSkillTargetPath(name)` from `hooks/lib/skill-router.ts`. **The filename MUST literally be `SKILL.md`** (uppercase, no `.md` substitution per item name) — Claude Code's skill activation is keyed off this exact filename, so it is a hard contract, not a suggestion. Do not append `<name>.md`; do not lowercase. The skill body content goes into `<name>/SKILL.md`; siblings (e.g. resource scripts) live in the same directory.
 - `infrastructure` items -> use the explicit `target` path from the catalog entry (e.g. `~/.claude/statusline-renderer.cjs`). Expand `~` to the user's home directory. Infrastructure items are NOT `.md` files — preserve the original file extension from the source.
 
@@ -247,7 +247,7 @@ Reconcile `~/.claude/` against the live local checkout. No fetch happens — the
 - `commands/loom*.md` → `~/.claude/commands/` — note the **single-glob form** (no hyphen between `loom` and `*`). This matches BOTH `commands/loom.md` (the root dispatcher) AND `commands/loom-*.md` (the noun commands like `loom-plan.md`). The earlier hyphen-bearing pattern `commands/loom-*.md` would have silently excluded `commands/loom.md` — caught by Gemini PR #19 re-review.
 - `commands/loom-*/**/*.md` — **recursive descent** under any `loom-*/` subdirectory. Covers depth-2 files (`commands/loom-plan/create.md`), depth-3 files (`commands/loom-auto/links/execute.md`), and any deeper nesting that arrives later. Verified against the live checkout: 12 files at depth 2, 3 files at depth 3 (under `loom-auto/links/`). → `~/.claude/commands/{relpath}/`
 - `agents/*.md` → `~/.claude/agents/`
-- `agents/protocols/*.md` → `~/.claude/agents/protocols/`
+- `protocols/*.md` → `~/.claude/protocols/`
 - `skills/library.yaml` → `~/.claude/skills/library/library.yaml` (already symlinked; verified, not re-created)
 - `skills/*/SKILL.md` → `~/.claude/skills/{name}/SKILL.md` — native Claude Code skills under `skills/{name}/` (e.g. `skills/python-conventions/SKILL.md`). Gemini PR #19 round 4 finding: without this row, native skills installed by `/loom-library use <kit>` stay as stale regular files even when the rest of the env is in local-dev mode. Excludes `skills/library.yaml` (the catalog, handled above).
 
@@ -320,8 +320,8 @@ Run with --apply to execute.
       - **Name derivation:** Derive a unique name from the relative path by stripping the leading top-level dir (`commands/`, `agents/`, or `skills/`) and `.md` suffix, then replacing remaining slashes with hyphens. Examples: `commands/loom-plan/create.md` → `loom-plan-create`; `commands/loom-roadmap/create.md` → `loom-roadmap-create` (no collision); `commands/loom.md` → `loom`; `commands/loom-auto/links/execute.md` → `loom-auto-links-execute`.
       - **Type inference:**
         - `commands/**/*.md` → `prompt`
-        - `agents/protocols/**/*.md` → `protocol`
-        - `agents/**/*.md` (excluding `agents/protocols/`) → `agent`
+        - `protocols/**/*.md` → `protocol`
+        - `agents/**/*.md` (excluding `protocols/`) → `agent`
         - `skills/**/SKILL.md` → `skill`
 
    3. If neither rule applies (the file is in the allow-list but its path doesn't match any inference rule), log a warning `unknown type for {relpath}; defaulting to prompt` and use `prompt`. This is a never-should-happen safety case — the allow-list and the inference rules are designed to be exhaustive for the same paths.
@@ -466,7 +466,7 @@ data-engineering    data-schema-reviewer     agent    ~/.claude/agents/data-sche
 data-engineering    data-quality-gate        agent    ~/.claude/agents/data-quality-gate.md                    —
 loom-core           contracts-agent          agent    ~/.claude/agents/contracts-agent.md                      —
 loom-core           loom-plan                prompt   ~/.claude/commands/loom-plan.md                          —
-loom-core           execution-protocols      protocol ~/.claude/agents/protocols/execution-protocols.md        —
+loom-core           execution-protocols      protocol ~/.claude/protocols/execution-protocols.md        —
 python-kit          python-conventions       skill    ~/.claude/skills/python-conventions/SKILL.md             "polars", "pyproject.toml", "uv"
 (standalone)        my-local-skill           skill    ~/.claude/skills/my-local-skill/SKILL.md                 (description-based)
 ```

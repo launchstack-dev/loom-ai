@@ -5,7 +5,7 @@
  *   - `1` — M-01 checks (Phase 9, F-04 v1)
  *   - `2` — M-02 checks (Phase 14, F-04 v2)
  *
- * Schema reference: agents/protocols/doctor-report.schema.md
+ * Schema reference: protocols/doctor-report.schema.md
  */
 
 import type { Channel, Source } from './plugin-install-state.js';

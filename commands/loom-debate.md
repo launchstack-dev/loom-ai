@@ -21,8 +21,8 @@ Parse arguments after `debate`:
 ### Protocols
 
 Before doing anything, read:
-- `~/.claude/agents/protocols/orchestration-patterns.md` — Pattern 1: Debate
-- `~/.claude/agents/protocols/pattern-executor.md` — execution mechanics
+- `~/.claude/protocols/orchestration-patterns.md` — Pattern 1: Debate
+- `~/.claude/protocols/pattern-executor.md` — execution mechanics
 
 ### Instructions
 

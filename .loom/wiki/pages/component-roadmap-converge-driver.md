@@ -131,5 +131,5 @@ driverModel = "opus"
 retire = ["tool-selection"]   # per-project dimension skip-list
 
 [roadmap.converge.rubricOverrides]
-# "vision" = "agents/protocols/roadmap-rubrics/vision-strict.md"
+# "vision" = "protocols/roadmap-rubrics/vision-strict.md"
 ```

@@ -25,7 +25,7 @@ You receive via prompt:
 
 Search systematically for planning documents. Cast a wide net — false positives are cheap, missed documents are expensive.
 
-**Read `~/.claude/agents/protocols/planning-doc-patterns.md`** for the canonical search patterns, supplementary checks, and directory exclusions.
+**Read `~/.claude/protocols/planning-doc-patterns.md`** for the canonical search patterns, supplementary checks, and directory exclusions.
 
 **If the orchestrator provided a pre-flight planning docs list**, use it as your starting point — these files are already discovered. Run supplementary checks from the patterns file to find anything the pre-flight glob missed (non-standard names, nested directories, non-markdown formats). Do NOT re-scan patterns the pre-flight already covered.
 

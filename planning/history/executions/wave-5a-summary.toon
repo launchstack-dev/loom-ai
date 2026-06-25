@@ -46,7 +46,7 @@ wiringApplied[2]{file,change,source}:
   scripts/lib/doctor/index.ts,Dispatcher accepts both pre-built instances AND zero-arg-default constructors (Phase 9A2a/b modules export classes; new exported() now happens at discovery time),wave-merge
 
 contractAmendments[1]{file,issue,resolution}:
-  scripts/lib/doctor/check.interface.ts,HealthCheck typed as unknown in Phase 0B; all 12 check modules duplicate an inline structural type to satisfy doctor-report.schema.md,Tracked. Tighten once agents/protocols/doctor-report.types.ts lands (out of scope for Wave 5a).
+  scripts/lib/doctor/check.interface.ts,HealthCheck typed as unknown in Phase 0B; all 12 check modules duplicate an inline structural type to satisfy doctor-report.schema.md,Tracked. Tighten once protocols/doctor-report.types.ts lands (out of scope for Wave 5a).
 
 deferredWork[3]:
   package.json `bin` registration for loom-doctor (Phase 9A1 integrationNote)

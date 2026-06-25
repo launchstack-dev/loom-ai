@@ -32,7 +32,7 @@ wiringApplied[1]{file,change,source}:
 reconciliationWarnings[0]:
 
 infoFindings[3]:
-  Phase 1: 14 inline ${CLAUDE_PLUGIN_ROOT} matches in agents/protocols/*.schema.md + commands/loom-{auto,init}.md — schema refs are documentation fixtures (S-03 acceptable); 2 hits in command files worth migrating in a later phase
+  Phase 1: 14 inline ${CLAUDE_PLUGIN_ROOT} matches in protocols/*.schema.md + commands/loom-{auto,init}.md — schema refs are documentation fixtures (S-03 acceptable); 2 hits in command files worth migrating in a later phase
   Phase 2: PR #9 wrapper APPENDS Homebrew paths (not prepends as plan said) — correct behavior so user pins win; left as-is and documented in loom-init-audit-notes.md
   Phase 2: install.sh post-install probe fallback to source checkout path works today; wiring applied above to land the probe under ~/.claude/scripts/ for curl users
 

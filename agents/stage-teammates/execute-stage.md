@@ -102,7 +102,7 @@ nextStageHints[N]:
   {context the review/test stages should know}
 ```
 
-See `agents/protocols/stage-context.schema.md` for the full schema and validation rules.
+See `protocols/stage-context.schema.md` for the full schema and validation rules.
 
 ### 6. Return Result
 

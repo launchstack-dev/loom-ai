@@ -12,7 +12,7 @@ You are one of 4 agents spawned by `/loom-review-roadmap`. The others are `featu
 ## Protocol
 
 Before reviewing, read:
-- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
+- `~/.claude/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec
 
 ## Input
 

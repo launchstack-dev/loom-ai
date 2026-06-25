@@ -30,7 +30,7 @@ We dogfooded the unbuilt PR-review application by hand on PR #19 (5 rounds: trig
 
 ### CA-01: Engine is frozen; this roadmap adds wirings only
 
-No changes to `agents/convergence-driver.md`, `hooks/lib/iteration-snapshot.ts`, `agents/protocols/findings.schema.md`, `convergence-summary.schema.md`, or `iteration-snapshot.schema.md`. If a wiring needs a feature the engine doesn't provide, the wiring is wrong — escalate to a follow-up "convergence-engine v2" roadmap rather than fork the engine.
+No changes to `agents/convergence-driver.md`, `hooks/lib/iteration-snapshot.ts`, `protocols/findings.schema.md`, `convergence-summary.schema.md`, or `iteration-snapshot.schema.md`. If a wiring needs a feature the engine doesn't provide, the wiring is wrong — escalate to a follow-up "convergence-engine v2" roadmap rather than fork the engine.
 
 ### CA-02: Each application is independent and parallelizable
 

@@ -2,7 +2,7 @@
  * Pure-function migrator for RoadmapConvergeState (.roadmap-converge/*\/state.toon).
  *
  * Registered with the F-13 schema-version runtime via
- * agents/protocols/schema-versions.toon under `roadmapConvergeState`
+ * protocols/schema-versions.toon under `roadmapConvergeState`
  * (currentVersion: 1, migratorKind: module).
  *
  * Pattern mirrors hooks/lib/install-state-migrator.ts and Loom F-13:
@@ -17,7 +17,7 @@
  * MIGRATIONS is empty by design. The walker degenerates to a no-op when
  * fromVersion === targetVersion === 1. Future v2 will add a "1->2" entry.
  *
- * See agents/protocols/roadmap-converge-state.schema.toon for the field
+ * See protocols/roadmap-converge-state.schema.toon for the field
  * catalogue and PLAN-roadmap-converge-harness.md § Schema/Type Definitions
  * for the canonical English-language spec.
  */

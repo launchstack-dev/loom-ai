@@ -4,7 +4,7 @@
  *
  * Scenarios are stored as fenced TOON blocks (`​`​`​`toon ... `​`​`​`) under a
  * parent heading (e.g., `#### Scenarios` in plans, `Scenarios:` in roadmap
- * features). See agents/protocols/scenario.schema.md for the canonical field
+ * features). See protocols/scenario.schema.md for the canonical field
  * reference and block format.
  *
  * This module is intentionally narrow: it parses the flat-key and simple-array

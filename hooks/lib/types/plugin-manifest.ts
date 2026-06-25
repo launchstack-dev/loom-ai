@@ -2,7 +2,7 @@
  * PluginManifest — the real Claude Code plugin manifest at
  * `.claude-plugin/plugin.json`. Consumed by the Claude Code plugin loader.
  *
- * Schema reference: agents/protocols/plugin-manifest.schema.md
+ * Schema reference: protocols/plugin-manifest.schema.md
  * Canonical spec:   https://code.claude.com/docs/en/plugins-reference
  *
  * Format note: per CLAUDE.md, this artifact is exempt from the

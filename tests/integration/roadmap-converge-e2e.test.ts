@@ -93,7 +93,7 @@ beforeEach(() => {
 
   // Set up directory structure mirroring the real project.
   mkdirSync("planning", { recursive: true });
-  mkdirSync("agents/protocols/roadmap-rubrics", { recursive: true });
+  mkdirSync("protocols/roadmap-rubrics", { recursive: true });
   mkdirSync(".plan-execution/stage-context", { recursive: true });
 
   // Copy fixture roadmap into temp planning dir.
@@ -102,7 +102,7 @@ beforeEach(() => {
 
   // Write stub rubrics for all dimensions.
   for (const dim of DIMENSIONS) {
-    writeFileSync(`agents/protocols/roadmap-rubrics/${dim}.md`, RUBRIC_BODY);
+    writeFileSync(`protocols/roadmap-rubrics/${dim}.md`, RUBRIC_BODY);
   }
 });
 
@@ -195,7 +195,7 @@ function buildDriverOptions(
     passLimit,
     dimensions: DIMENSIONS.map((name) => ({
       name,
-      rubricRef: `agents/protocols/roadmap-rubrics/${name}.md`,
+      rubricRef: `protocols/roadmap-rubrics/${name}.md`,
     })),
     invokeReviewer: invoker,
     invokeIntegrator: integratorInvoker,

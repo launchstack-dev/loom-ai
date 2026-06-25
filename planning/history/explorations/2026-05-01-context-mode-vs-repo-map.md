@@ -89,7 +89,7 @@ Reduce context consumption during convergence loops by sandboxing test runner ou
 **Goal:** `/loom status` shows per-stage token consumption; debrief.toon includes cost metrics.
 **Files:**
 - `commands/loom-status.md` (modify — add context-mode stats section)
-- `agents/protocols/execution-conventions.md` (modify — add ctx_stats to debrief report)
+- `protocols/execution-conventions.md` (modify — add ctx_stats to debrief report)
 
 **Tasks:**
 

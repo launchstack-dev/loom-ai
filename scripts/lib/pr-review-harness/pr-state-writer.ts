@@ -3,7 +3,7 @@
  *
  * Produces the synthetic `subject` file the F-04 convergence loop snapshots
  * each iteration. The shape is documented verbatim in
- * `agents/protocols/converge.config.applications.md` § F-04 `pr-state.toon`
+ * `protocols/converge.config.applications.md` § F-04 `pr-state.toon`
  * projection shape.
  *
  * Atomic write: `{path}.tmp` then rename, per `execution-conventions.md`.

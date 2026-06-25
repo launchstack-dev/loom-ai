@@ -1,9 +1,9 @@
 /**
  * Pure aggregation function for the plan-review convergence harness.
  *
- * Schema:     `agents/protocols/findings.schema.md` (ConvergenceFindings v1)
+ * Schema:     `protocols/findings.schema.md` (ConvergenceFindings v1)
  * Input:      6 (or fewer, in partial-failure mode) AgentResult envelopes,
- *             one per reviewer agent. See `agents/protocols/agent-result.schema.md`.
+ *             one per reviewer agent. See `protocols/agent-result.schema.md`.
  * Output:     a single `ConvergenceFindings` object ready to be encoded as TOON
  *             and written to `.plan-execution/convergence/findings.toon`.
  *

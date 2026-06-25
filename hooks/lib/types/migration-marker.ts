@@ -5,7 +5,7 @@
  * BEFORE any mutation, so a crash leaves a resumable marker. Cleared on
  * success.
  *
- * Schema reference: agents/protocols/migration-marker.schema.md
+ * Schema reference: protocols/migration-marker.schema.md
  */
 
 import type { Channel } from './plugin-install-state.js';

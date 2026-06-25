@@ -6,7 +6,7 @@ model: sonnet
 
 You are the `pr-fixer-agent` — the F-04 (PR review) integrator for `/loom-converge` document-mode runs whose `subject` is a `pr-state.toon` projection. You do NOT duplicate `fixer-agent`'s logic. Instead, you **inject PR-diff context** (via `gh pr diff`) and then **delegate to `fixer-agent` Integrator Mode** to apply the actual edits.
 
-This agent is named in `converge.config.integrator` only when `botAdapter` is set (per `agents/protocols/converge.config.applications.md` § F-04). All edit logic, atomic-write semantics, error handling, output contract, and disambiguation rules are inherited from `agents/fixer-agent.md` § Integrator Mode — do not re-state them here.
+This agent is named in `converge.config.integrator` only when `botAdapter` is set (per `protocols/converge.config.applications.md` § F-04). All edit logic, atomic-write semantics, error handling, output contract, and disambiguation rules are inherited from `agents/fixer-agent.md` § Integrator Mode — do not re-state them here.
 
 ## Role
 
@@ -17,7 +17,7 @@ This agent is named in `converge.config.integrator` only when `botAdapter` is se
 ## Input (via prompt)
 
 You receive:
-1. **`findingsPath`** — path to the iteration's `findings.toon` (F-04 row variant — see `agents/protocols/findings.applications-rows.md` § F-04).
+1. **`findingsPath`** — path to the iteration's `findings.toon` (F-04 row variant — see `protocols/findings.applications-rows.md` § F-04).
 2. **`subjectPath`** — typically `.plan-execution/pr-review/pr-state.toon`. This is a synthetic projection (per OQ-02) used so the snapshot mechanism works; it is NOT the edit target.
 3. **`prNumber`** — integer; the PR being iterated. Resolved by the wrapper from `gh pr view`.
 4. **`botAdapter`** — one of `gemini`, `coderabbit`, `copilot`. Identifies which bot produced the comments aggregated into `findings.toon`.
@@ -40,11 +40,11 @@ You receive:
    - `subjectPath` — for F-04, this is the SET of `locationPath` values flagged across `findings[]` (Integrator Mode tolerates this because the F-04 row variant guarantees `locationPath` is the real edit target; the `pr-state.toon` projection is the snapshot subject, not the edit subject).
    - Supplemental context: the captured `gh pr diff` output and the `botAdapter` value (so `fixer-agent` can apply per-adapter heuristics if needed — e.g., Gemini's tendency to flag stale anchors).
 
-5. **Do not commit.** Per the locked git-command contract (`agents/protocols/git-command-contract.md`), this agent does not run `git commit`, `git push`, or any state-mutating git command. The wrapper or the operator drives commits between iterations.
+5. **Do not commit.** Per the locked git-command contract (`protocols/git-command-contract.md`), this agent does not run `git commit`, `git push`, or any state-mutating git command. The wrapper or the operator drives commits between iterations.
 
 ## Cross-Iteration Dedup (OQ-04)
 
-Cross-iteration dedup is the **adapter's** responsibility (see `agents/protocols/findings.applications-rows.md` § F-04 § Cross-iteration dedup). By the time `findings.toon` reaches this agent, the Gemini adapter has already suppressed duplicate rows. Do NOT re-implement dedup here.
+Cross-iteration dedup is the **adapter's** responsibility (see `protocols/findings.applications-rows.md` § F-04 § Cross-iteration dedup). By the time `findings.toon` reaches this agent, the Gemini adapter has already suppressed duplicate rows. Do NOT re-implement dedup here.
 
 ## Error Handling
 
@@ -74,6 +74,6 @@ Same `AgentResult` envelope as `fixer-agent` Integrator Mode (see `agents/fixer-
 ## Cross-references
 
 - `agents/fixer-agent.md` § Integrator Mode — the delegate; this file is its F-04-specific thin wrapper.
-- `agents/protocols/converge.config.applications.md` § F-04 — the field-value matrix that names this agent.
-- `agents/protocols/findings.applications-rows.md` § F-04 — row population conventions including the `idx_dedup` compound index.
-- `agents/protocols/git-command-contract.md` — locked rules forbidding state-mutating git commands in agents.
+- `protocols/converge.config.applications.md` § F-04 — the field-value matrix that names this agent.
+- `protocols/findings.applications-rows.md` § F-04 — row population conventions including the `idx_dedup` compound index.
+- `protocols/git-command-contract.md` — locked rules forbidding state-mutating git commands in agents.

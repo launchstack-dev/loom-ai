@@ -292,8 +292,8 @@ The `--autoconverge` flag turns `/loom-code review` from a one-shot fan-out into
 
 This is the F-01 application of the convergence loop. See:
 
-- `agents/protocols/converge.config.applications.md` — F-01 field-value matrix
-- `agents/protocols/findings.applications-rows.md` — F-01 row variant
+- `protocols/converge.config.applications.md` — F-01 field-value matrix
+- `protocols/findings.applications-rows.md` — F-01 row variant
 - `planning/plans/PLAN-convergence-applications.md` Phase 1
 
 ### Trigger
@@ -302,7 +302,7 @@ This is the F-01 application of the convergence loop. See:
 
 ### Step A — Generate converge.config
 
-Write `.plan-execution/convergence/converge.config.toon` atomically (`.tmp` + rename) with these field values, conformant to the canonical schema (`agents/protocols/converge.config.schema.md` v1):
+Write `.plan-execution/convergence/converge.config.toon` atomically (`.tmp` + rename) with these field values, conformant to the canonical schema (`protocols/converge.config.schema.md` v1):
 
 ```toon
 runId: conv-{YYYY-MM-DD-HH-mm-ss}-{NNN}

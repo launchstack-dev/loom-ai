@@ -4,7 +4,7 @@
  * Written by `/loom-init`. Consumed by the F-07a plugin-root resolver
  * (Wave 1) to translate plugin-relative paths into absolute paths.
  *
- * Schema reference: agents/protocols/plugin-root.schema.md
+ * Schema reference: protocols/plugin-root.schema.md
  */
 
 export interface PluginRootPointer {

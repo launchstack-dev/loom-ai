@@ -28,7 +28,7 @@ You receive:
 
 4. **Recompute content_hash.** After writing ROADMAP.md, compute the new sha256 and include it in your result so the driver can update `state.content_hash`.
 
-5. **Return AgentResult TOON envelope.** Your final response MUST be a valid TOON block per `agents/protocols/agent-result.schema.md`:
+5. **Return AgentResult TOON envelope.** Your final response MUST be a valid TOON block per `protocols/agent-result.schema.md`:
    - `filesModified[]` MUST include `ROADMAP.md` (and any other files you edit).
    - `status: success` when all questions were applied without errors.
    - `status: partial` when some questions could not be located/applied (include `issues[]` for each failure).

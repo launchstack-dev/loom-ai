@@ -6,7 +6,7 @@
  * Detection algorithm:
  *   1. Read CLAUDE.md, package.json (or pyproject.toml), README.md, and top-
  *      level directory names from the current working directory.
- *   2. For each archetype defined in agents/protocols/roadmap-archetypes.toon,
+ *   2. For each archetype defined in protocols/roadmap-archetypes.toon,
  *      count how many of its `detectionHints` are present (case-insensitive
  *      substring match) in the combined corpus.
  *   3. The archetype with the highest hit count wins, provided its hit count ≥
@@ -108,7 +108,7 @@ export const VALID_ARCHETYPES = [
 export type ArchetypeName = typeof VALID_ARCHETYPES[number];
 
 // ---------------------------------------------------------------------------
-// Detection hints table (mirrors agents/protocols/roadmap-archetypes.toon)
+// Detection hints table (mirrors protocols/roadmap-archetypes.toon)
 // ---------------------------------------------------------------------------
 
 interface ArchetypeSpec {

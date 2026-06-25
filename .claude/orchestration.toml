@@ -34,7 +34,7 @@ retire = []                   # dimensions to skip evaluation entirely
 
 # Optional per-archetype rubric overrides
 [roadmap.converge.rubricOverrides]
-# "vision" = "agents/protocols/roadmap-rubrics/vision-strict.md"
+# "vision" = "protocols/roadmap-rubrics/vision-strict.md"
 
 [execution.agents]
 roadmap-converge-driver = "agents/roadmap-converge-driver.md"

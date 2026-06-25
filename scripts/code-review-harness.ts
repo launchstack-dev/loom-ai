@@ -3,10 +3,10 @@
  * F-01 code-review convergence harness.
  *
  * Mode:     `convergenceMode: document` per
- *           `agents/protocols/converge.config.schema.md`
+ *           `protocols/converge.config.schema.md`
  * Output:   `ConvergenceFindings` TOON per
- *           `agents/protocols/findings.schema.md` with F-01 row variant per
- *           `agents/protocols/findings.applications-rows.md`.
+ *           `protocols/findings.schema.md` with F-01 row variant per
+ *           `protocols/findings.applications-rows.md`.
  * Schema version: 1 (registered as `convergence-findings`)
  *
  * Pattern: ONE-PHASE-VIA-INJECTION — same as `scripts/plan-review-harness.ts`.

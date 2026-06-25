@@ -9,7 +9,7 @@ You create a PLAN.md (v2, spec-driven) from an approved ROADMAP.md. The roadmap 
 ### Arguments
 
 Parse remaining arguments:
-- No args: create plan from the resolved ROADMAP (see `agents/protocols/planning-paths.md`); write to `planning/plans/PLAN.md` (legacy projects without `planning/` write to root `PLAN.md`)
+- No args: create plan from the resolved ROADMAP (see `protocols/planning-paths.md`); write to `planning/plans/PLAN.md` (legacy projects without `planning/` write to root `PLAN.md`)
 - `<path>`: use a specific roadmap file as source
 - `--auto`: accept defaults without interactive prompting
 - `--v1`: generate a v1 plan (simpler, no API specs or state machines)
@@ -20,7 +20,7 @@ Parse remaining arguments:
 - `--skip-test-gen`: skip criteria-planner-agent spawn; only run plan-builder-agent. Logs a warning to stderr: "Skipping criteria generation. criteria-plan.toon will not be created. Re-run without --skip-test-gen to generate criteria." When set, Step 1 spawns only plan-builder-agent, Steps 1.5 (interpretation review) and 4 item 1b (criteria-plan.toon write) are skipped.
 - `--skip-critic`: skip the `plan-critic-agent` spawn in Step 1 AND the Step 1.7 Critic Revise Pass. Falls back to legacy dual-track behavior (plan-builder + criteria-planner only). Logs a warning to stderr: `"--skip-critic active: plan-critic-agent will not run; Step 1.7 Critic Revise Pass will be skipped."` See Step 1.7 for the flag combination matrix (interactions with `--autoconverge`, `--review-integrate`, `--estimate`, `--skip-test-gen`).
 - `--autoconverge`: after writing the plan in Step 4, generate a `converge.config` (document-mode) and invoke `/loom-converge --resume-config <path>` to drive the plan toward zero blocking findings. After the driver returns `status: converged`, a **post-converge validation gate** (Step 5.5) runs structural validation (`validation-rules.md` stages 1–4); on blocking validation, the loop is re-entered once with synthesized findings. Defaults are LOCKED: `maxIterations: 3` (C-05), `scopeGuardEnabled: true` (C-06), `snapshotEnabled: true` (C-07), `integrator: plan-builder-agent`, `harness: scripts/plan-review-harness.ts`. See Step 5 and Step 5.5 for details, halt handling, and the flag-interaction matrix.
-- `--max-iterations <N>`: override the default `maxIterations: 3` cap on `--autoconverge` runs. Range `1 <= N <= 10` per `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema § Validation Rules`. Values outside the range are rejected with an error. No-op when `--autoconverge` is not also set.
+- `--max-iterations <N>`: override the default `maxIterations: 3` cap on `--autoconverge` runs. Range `1 <= N <= 10` per `protocols/convergence-tier.schema.md § ConvergeConfig Schema § Validation Rules`. Values outside the range are rejected with an error. No-op when `--autoconverge` is not also set.
 - `--skip-validation`: skip the post-converge validation gate (Step 5.5). Reviewer convergence alone determines `nextLink`. Logs a warning to stderr: `"--skip-validation active: post-converge structural validation will be skipped; downstream /loom-plan execute may still abort on structural blockers."` No-op when `--autoconverge` is not also set.
 - `--dry-run`: when combined with `--autoconverge`, emit the generated `converge.config` TOON to stdout and exit 0 WITHOUT invoking the convergence-driver. Useful for previewing the generated config. No-op when `--autoconverge` is not also set.
 
@@ -28,7 +28,7 @@ Parse remaining arguments:
 
 #### Step 0: Gather Context
 
-1. **Find the roadmap.** Resolve per `agents/protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path.
+1. **Find the roadmap.** Resolve per `protocols/planning-paths.md`: check `planning/ROADMAP.md` first, then `ROADMAP.md` at root (legacy), then user-specified path.
    - If none exists: "No roadmap found. Run `/loom-roadmap init` to create one first." Stop.
    - If frontmatter `status` is not `approved`: "Roadmap status is '{status}'. Approve it first with `/loom-roadmap approve`, or pass `--force` to proceed anyway."
 
@@ -57,7 +57,7 @@ Parse remaining arguments:
 
 If `--estimate` is set:
 
-1. Compute the token estimate for the dual-track plan creation pipeline using the `characters / 4` heuristic (see `agents/protocols/context-budget.md`):
+1. Compute the token estimate for the dual-track plan creation pipeline using the `characters / 4` heuristic (see `protocols/context-budget.md`):
    - **plan-builder-agent prompt:** roadmap text + codebase context + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **criteria-planner-agent prompt:** roadmap text + wiki quality history (estimate 2000 tokens if `.loom/wiki/` exists, 0 otherwise) + agent instructions overhead → `Math.ceil(totalChars / 4)`
    - **interpretation-reviewer-agent prompt:** estimated plan output (use 8000 tokens as a conservative default) + estimated criteria-plan output (use 4000 tokens as a conservative default) + agent instructions overhead → `Math.ceil(totalChars / 4)`
@@ -93,15 +93,15 @@ Rationale: a previous run invoked with `--skip-critic` (or a partial failure) ma
 |---|---|---|
 | `plan-builder-agent` | ROADMAP.md, codebase context, optional notes/scope-contract, optional existing PLAN.md (merge mode) | draft `PLAN.md` (returned in AgentResult; written to disk by Step 4) |
 | `criteria-planner-agent` | ROADMAP.md, codebase context, optional scope-contract, optional wiki quality history | `criteria-plan.toon` (returned in AgentResult; written by Step 4 item 1b) |
-| `plan-critic-agent` | draft `PLAN.md` from plan-builder, six reviewer files referenced by `agents/plan-critic-checklist.md` | `.plan-execution/critique.toon` (atomic write per `agents/protocols/plan-critique.schema.md`) |
+| `plan-critic-agent` | draft `PLAN.md` from plan-builder, six reviewer files referenced by `agents/plan-critic-checklist.md` | `.plan-execution/critique.toon` (atomic write per `protocols/plan-critique.schema.md`) |
 
 `critique.toon` is an **advisory** artifact distinct from the formal-review `findings.toon` (see the "critique.toon vs findings.toon" note in Step 1.7).
 
 **Agent A: plan-builder-agent** (general-purpose):
 ```
 "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first,
- then read `~/.claude/agents/protocols/plan.schema.md` and
- `~/.claude/agents/protocols/spec.schema.md`.
+ then read `~/.claude/protocols/plan.schema.md` and
+ `~/.claude/protocols/spec.schema.md`.
 
  Generate a planVersion: {2 unless --v1} spec-driven plan from this approved roadmap.
  Map features to phases, milestones to wave boundaries, conceptual data model to
@@ -128,8 +128,8 @@ Rationale: a previous run invoked with `--skip-critic` (or a partial failure) ma
 **Agent B: criteria-planner-agent** (general-purpose, `--auto` mode):
 ```
 "Read your instructions from `~/.claude/agents/criteria-planner-agent.md` first,
- then read `~/.claude/agents/protocols/criteria-plan.schema.md` and
- `~/.claude/agents/protocols/taxonomy.md`.
+ then read `~/.claude/protocols/criteria-plan.schema.md` and
+ `~/.claude/protocols/taxonomy.md`.
 
  Generate a criteria-plan.toon from this approved roadmap. You are running in
  dual-track mode alongside plan-builder-agent. You receive the ROADMAP directly --
@@ -159,7 +159,7 @@ Plan-builder and criteria-planner run independently. Collect both AgentResults b
 
 **Agent C: plan-critic-agent** (sequential; spawned only after plan-builder returns):
 
-Skip this spawn entirely if `--skip-critic` is set. Otherwise, resolve the critic's model per `CLAUDE.md` § "Agent Conventions": read `~/.claude/agents/plan-critic-agent.md` frontmatter `model:` (which is `haiku`) and pass `model: "haiku"` on the spawn call. The critic spawn is subject to the standard token-budget preflight (`agents/protocols/context-budget.md`) like every other agent — if the estimated prompt size exceeds the haiku-tier cap, the preflight hook blocks the spawn with a suggestion to split the input or re-run with `--skip-critic`. The critic MUST NOT bypass the preflight.
+Skip this spawn entirely if `--skip-critic` is set. Otherwise, resolve the critic's model per `CLAUDE.md` § "Agent Conventions": read `~/.claude/agents/plan-critic-agent.md` frontmatter `model:` (which is `haiku`) and pass `model: "haiku"` on the spawn call. The critic spawn is subject to the standard token-budget preflight (`protocols/context-budget.md`) like every other agent — if the estimated prompt size exceeds the haiku-tier cap, the preflight hook blocks the spawn with a suggestion to split the input or re-run with `--skip-critic`. The critic MUST NOT bypass the preflight.
 
 ```
 subagent_type: "general-purpose"
@@ -169,7 +169,7 @@ Prompt:
 ```
 "Read your instructions from `~/.claude/agents/plan-critic-agent.md` first,
  then read `~/.claude/agents/plan-critic-checklist.md` and
- `~/.claude/agents/protocols/plan-critique.schema.md`.
+ `~/.claude/protocols/plan-critique.schema.md`.
 
  You are a haiku-tier advisory critic. Predict findings that the 6 plan
  reviewer agents are likely to raise against this draft PLAN.md. Write
@@ -190,12 +190,12 @@ Collect the critic's AgentResult and verify `.plan-execution/critique.toon` was 
 
 #### Step 1.5: Interpretation Review (conflict detection)
 
-After both agents from Step 1 complete, spawn the **interpretation-reviewer-agent** to compare the plan and criteria outputs for conflicts and coverage gaps. This agent reads `~/.claude/agents/protocols/interpretation-conflict.schema.md` for its output format.
+After both agents from Step 1 complete, spawn the **interpretation-reviewer-agent** to compare the plan and criteria outputs for conflicts and coverage gaps. This agent reads `~/.claude/protocols/interpretation-conflict.schema.md` for its output format.
 
 Spawn `interpretation-reviewer-agent` (general-purpose):
 ```
 "Read your instructions from `~/.claude/agents/interpretation-reviewer-agent.md` first,
- then read `~/.claude/agents/protocols/interpretation-conflict.schema.md`.
+ then read `~/.claude/protocols/interpretation-conflict.schema.md`.
 
  Compare the plan and criteria plan for interpretation conflicts and coverage gaps.
  The plan and criteria were generated independently from the same roadmap by different
@@ -265,7 +265,7 @@ This step consumes the advisory critique produced by `plan-critic-agent` in Step
 
 **Procedure (default path):**
 
-1. **Read the critique.** Load `.plan-execution/critique.toon` and parse it per `agents/protocols/plan-critique.schema.md`.
+1. **Read the critique.** Load `.plan-execution/critique.toon` and parse it per `protocols/plan-critique.schema.md`.
 2. **Zero-blocking short-circuit.** If `predictedBlockingCount == 0`, echo to stdout: `"Critic predicted 0 blocking findings — skipping revise pass."` and proceed directly to Step 2. The plan-builder is NOT re-spawned; the draft PLAN.md from Step 1 is the input to Step 2.
 3. **Re-spawn plan-builder-agent in Integrator Mode.** If `predictedBlockingCount > 0`, re-spawn `plan-builder-agent` per the Integrator Mode contract documented in `~/.claude/agents/plan-builder-agent.md` § Integrator Mode. The critic's `critique.toon` is passed as the findings input (the integrator contract is shape-compatible with both `findings.toon` and `critique.toon` — see `plan-critique.schema.md` line 5: "`PlanCritique` mirrors the shape of `ConvergenceFindings` so plan-builder-agent can consume critic output through the same integrator contract"). The draft `PLAN.md` from Step 1 is the subject. Integrator dispatch is config-driven (locked decision **C-03**) — this command names `plan-builder-agent` as the integrator because that is what the config calls for in this context.
 4. **Atomic write.** The plan-builder Integrator Mode writes the revised PLAN.md atomically (`.tmp` + rename) per its existing contract. No additional write step is needed here.
@@ -280,7 +280,7 @@ This step consumes the advisory critique produced by `plan-critic-agent` in Step
 | Field | `.plan-execution/critique.toon` | `.plan-execution/convergence/findings.toon` |
 |---|---|---|
 | Producer | `plan-critic-agent` (haiku, advisory) | The plan-review harness (formal review aggregate; Phase 9 W4 deliverable) |
-| Schema | `PlanCritique` (`agents/protocols/plan-critique.schema.md`) | `ConvergenceFindings` (`agents/protocols/findings.schema.md`) |
+| Schema | `PlanCritique` (`protocols/plan-critique.schema.md`) | `ConvergenceFindings` (`protocols/findings.schema.md`) |
 | Path | `.plan-execution/critique.toon` | `.plan-execution/convergence/findings.toon` |
 | Lifecycle | Written ONCE per `/loom-plan create` invocation (in Step 1; consumed in Step 1.7 only) | Rewritten EVERY iteration of an `--autoconverge` loop |
 | Severity | `predictedSeverity` (predictions; advisory) | `severity` (actual formal-review findings; authoritative) |
@@ -363,7 +363,7 @@ Continue looping until the user approves.
 
 #### Step 4: Write and Initialize
 
-1. Write the validated plan to its target path. Resolve target per `agents/protocols/planning-paths.md`:
+1. Write the validated plan to its target path. Resolve target per `protocols/planning-paths.md`:
    - If `--output <path>` was passed: use it verbatim
    - Else if `--name <slug>` was passed: write to `planning/plans/PLAN-{slug}.md` (mkdir -p as needed)
    - Else if `planning/` exists OR `planning/plans/` exists: write to `planning/plans/PLAN.md`
@@ -422,13 +422,13 @@ If `--autoconverge --dry-run`: build the `converge.config` TOON per § "Generate
 
 ##### Generate `converge.config`
 
-Write the generated config atomically (`.tmp` + rename per `agents/protocols/execution-conventions.md`) to:
+Write the generated config atomically (`.tmp` + rename per `protocols/execution-conventions.md`) to:
 
 ```
 .plan-execution/convergence/converge.config.toon
 ```
 
-The defaults are **LOCKED** per the locked-decisions table in `PLAN-convergence-generalization.md` and `agents/protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`. Step 5 MUST emit these exact values for an `--autoconverge` invocation:
+The defaults are **LOCKED** per the locked-decisions table in `PLAN-convergence-generalization.md` and `protocols/convergence-tier.schema.md § ConvergeConfig Schema (Extended)`. Step 5 MUST emit these exact values for an `--autoconverge` invocation:
 
 | Field | Default value | Source / locked decision |
 |---|---|---|
@@ -446,7 +446,7 @@ The defaults are **LOCKED** per the locked-decisions table in `PLAN-convergence-
 **`--max-iterations N` override.** When `--max-iterations N` is passed alongside `--autoconverge`, ONLY the `maxIterations` field is overridden; all other defaults stay locked. Bound: `1 <= N <= 10` per the schema. Out-of-range values are rejected at this step with a stderr error:
 
 ```
---max-iterations must satisfy 1 <= N <= 10 (received: {N}). See agents/protocols/convergence-tier.schema.md § ConvergeConfig § Validation Rules.
+--max-iterations must satisfy 1 <= N <= 10 (received: {N}). See protocols/convergence-tier.schema.md § ConvergeConfig § Validation Rules.
 ```
 
 No other flag overrides any other field. To customise other fields (e.g., `agentBudget`, `integrator`), hand-author a `converge.config` and run `/loom-converge --resume-config <path>` directly.
@@ -469,7 +469,7 @@ This is the documented entry point — Step 5 MUST NOT inline the driver call or
 /loom-converge --resume-config .plan-execution/convergence/converge.config.toon --auto
 ```
 
-Under `--auto`, a `SCOPE_EXPANSION` halt MUST exit the process with **exit code 1** and write a machine-readable JSON line to stderr per locked **C-08** (the exact stderr-line schema is normative in `agents/protocols/convergence-summary.schema.md` — see also `agents/convergence-driver.md § Document Mode Safeguards § Interactive vs --auto divergence (locked C-08)`). The driver MUST NOT record a user prompt under `--auto`; the wrapper MUST NOT swallow the non-zero exit. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still lands on disk BEFORE the process exit so downstream link consumers can read it from disk per locked **C-11**.
+Under `--auto`, a `SCOPE_EXPANSION` halt MUST exit the process with **exit code 1** and write a machine-readable JSON line to stderr per locked **C-08** (the exact stderr-line schema is normative in `protocols/convergence-summary.schema.md` — see also `agents/convergence-driver.md § Document Mode Safeguards § Interactive vs --auto divergence (locked C-08)`). The driver MUST NOT record a user prompt under `--auto`; the wrapper MUST NOT swallow the non-zero exit. The `convergence-summary.toon` write (with `status: halted-scope-expansion`) still lands on disk BEFORE the process exit so downstream link consumers can read it from disk per locked **C-11**.
 
 ##### `--no-auto-commit` pass-through
 
@@ -480,7 +480,7 @@ Under `--auto`, a `SCOPE_EXPANSION` halt MUST exit the process with **exit code 
 On driver halt for ANY `haltReason`, Step 5 MUST:
 
 1. Leave the plan file (`{planPath}` — the subject) in its **last-good state** (the state after the last integrator pass; do NOT auto-revert). Recovery via `cp {snapshotDir}/{slug}-pass-{N}.{ext} {planPath}` is the operator's choice per the locked C-10 recovery string.
-2. Surface the `haltReason` and the locked **C-10** cause + recovery message to the user (or to stderr under `--auto`, per the C-08 path). The strings are **locked under C-10** — Step 5 MUST NOT paraphrase them. The canonical source is `agents/protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` and the table in `agents/convergence-driver.md § Circuit Breakers § Halt Messages and Recovery (locked C-10)`.
+2. Surface the `haltReason` and the locked **C-10** cause + recovery message to the user (or to stderr under `--auto`, per the C-08 path). The strings are **locked under C-10** — Step 5 MUST NOT paraphrase them. The canonical source is `protocols/convergence-summary.schema.md § Halt Reason Cross-Reference` and the table in `agents/convergence-driver.md § Circuit Breakers § Halt Messages and Recovery (locked C-10)`.
 3. Propagate the driver's exit code unchanged (exit 1 under `--auto` for `SCOPE_EXPANSION`; exit 0 otherwise for interactive halts that landed cleanly).
 
 The wrapper does NOT write its own halt-summary artifact. The authoritative "did we converge" signal is `.plan-execution/convergence-summary.toon` — see § "Link-extraction readiness (C-11)" below.
@@ -514,7 +514,7 @@ Step 5 explicitly documents that the wrapper's on-disk outputs MUST be sufficien
 
 **Explicit constraints (locked C-11):**
 
-- NO `pipeline-state.toon` mutation by this wrapper. The convergence-driver MUST NOT add convergence-internal fields to `pipeline-state.toon` per the forbidden-writes clause of `agents/protocols/convergence-summary.schema.md § Forbidden writes (C-11)`.
+- NO `pipeline-state.toon` mutation by this wrapper. The convergence-driver MUST NOT add convergence-internal fields to `pipeline-state.toon` per the forbidden-writes clause of `protocols/convergence-summary.schema.md § Forbidden writes (C-11)`.
 - NO mid-flight orchestrator-side state changes. Step 5 does not maintain its own state — the driver's `convergence-state.toon` and the terminal `convergence-summary.toon` are the only state files.
 - The `convergence-summary.toon` `status` field is THE authoritative signal. A fresh-context link reads ONLY this file from disk and routes deterministically:
   - `status: converged` -> Step 5.5 (post-converge validation gate) runs; final `nextLink` is set by Step 5.5 per its own routing table (CLEAN -> `done`; re-entry exhaustion -> `halted-validation` -> `planning`).
@@ -547,7 +547,7 @@ Runs after Step 5 IF AND ONLY IF the convergence-driver returned `status: conver
 
 ##### Re-entry on blocking validation
 
-4. **Synthesize findings.** Format each blocking validation result as a row in `findings.toon` per `agents/protocols/findings.schema.md` § findings[] Row Schema. Column values:
+4. **Synthesize findings.** Format each blocking validation result as a row in `findings.toon` per `protocols/findings.schema.md` § findings[] Row Schema. Column values:
    - `id`: `V-{N}` (validation-prefixed, distinct from `F-` reviewer findings).
    - `dimension: structural-validation` (synthetic dimension registered in `findings.schema.md` row schema — distinguishes wrapper-set rows from the 6 reviewer dimensions so the integrator can route appropriately).
    - `severity: blocking`.

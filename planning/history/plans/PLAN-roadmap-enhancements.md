@@ -126,7 +126,7 @@ Instructions:
 #### Protocols
 
 Read before starting:
-- `~/.claude/agents/protocols/orchestration-patterns.md` — for multi-agent patterns
+- `~/.claude/protocols/orchestration-patterns.md` — for multi-agent patterns
 - `CLAUDE.md` and `CONTEXT.md` if they exist — for project context
 - `ROADMAP.md` if it exists — for existing features and constraints
 

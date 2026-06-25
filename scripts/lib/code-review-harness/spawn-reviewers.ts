@@ -13,9 +13,9 @@
  * point at `scripts/code-review-harness.ts` is the I/O boundary.
  *
  * Schema references:
- *   - `agents/protocols/converge.config.applications.md` (F-01 row)
- *   - `agents/protocols/findings.applications-rows.md` (F-01 row variant)
- *   - `agents/protocols/findings.schema.md` (canonical findings shape)
+ *   - `protocols/converge.config.applications.md` (F-01 row)
+ *   - `protocols/findings.applications-rows.md` (F-01 row variant)
+ *   - `protocols/findings.schema.md` (canonical findings shape)
  */
 
 import {

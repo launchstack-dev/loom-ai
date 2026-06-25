@@ -8,7 +8,7 @@ Pure data synthesis — no agents spawned. Read all sources and render a unified
 
 ### Step 1: Read All Sources
 
-Resolve roadmap and plan paths per `agents/protocols/planning-paths.md` before reading (planning/ first, root legacy fallback).
+Resolve roadmap and plan paths per `protocols/planning-paths.md` before reading (planning/ first, root legacy fallback).
 
 ```
 1. ROADMAP.md (resolved) → parse features, milestones, status (draft/reviewed/approved)
@@ -237,7 +237,7 @@ Phase 1 (in_progress — requires confirmation), Phase 2 (pending — freely edi
 ### Step 4: Generate Refined Plan
 
 Spawn `plan-builder-agent` (general-purpose) with:
-- Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first, then read `~/.claude/agents/protocols/plan.schema.md`."
+- Instruction: "Read your instructions from `~/.claude/agents/plan-builder-agent.md` first, then read `~/.claude/protocols/plan.schema.md`."
 - The refinement brief from Step 3
 - Instruction: "Fix all validation errors. Apply agent findings where appropriate. Do NOT modify locked phases. Annotate every change with reasoning."
 

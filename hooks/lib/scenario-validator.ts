@@ -1,8 +1,8 @@
 /**
  * Scenario well-formedness validator.
  *
- * Enforces the validation rules from agents/protocols/scenario.schema.md with
- * severity classification per agents/protocols/validation-rules.md (blocking |
+ * Enforces the validation rules from protocols/scenario.schema.md with
+ * severity classification per protocols/validation-rules.md (blocking |
  * warning | info). Returns findings rather than throwing; callers (plan and
  * roadmap scenario orchestrators) decide whether to halt the pipeline.
  *

@@ -58,7 +58,7 @@ Select the pattern that best fits the constraints:
 - Run both systems simultaneously, compare outputs for correctness.
 - Best when: correctness is critical (financial, medical, compliance), you need confidence before cutover.
 - Risk: double compute cost, complexity of comparison infrastructure.
-- Ties into the converge pattern from `agents/protocols/orchestration-patterns.md` for automated validation.
+- Ties into the converge pattern from `protocols/orchestration-patterns.md` for automated validation.
 
 **Big Bang:**
 - Coordinate a single cutover from old system to new system.
@@ -136,7 +136,7 @@ riskMatrix:
 1. **Every step must be independently deployable** — no step should require the next step to work. If you deploy step 3 and stop, the system must function correctly with steps 1-3 complete and steps 4+ not started.
 2. **Every step must have a concrete rollback procedure** — not "undo the change" but specific commands, scripts, or processes to reverse the step. If rollback requires data restoration, specify the backup/restore mechanism.
 3. **Identify the point of no return explicitly** — the step where rollback becomes impossible or prohibitively expensive. This is usually a destructive schema migration, a data format change, or decommissioning the old system. Flag it clearly so stakeholders can make an informed decision.
-4. **Flag parallel-run opportunities** where the converge pattern from `agents/protocols/orchestration-patterns.md` can validate migration correctness. Any step that changes behavior (not just structure) is a candidate for parallel-run validation.
+4. **Flag parallel-run opportunities** where the converge pattern from `protocols/orchestration-patterns.md` can validate migration correctness. Any step that changes behavior (not just structure) is a candidate for parallel-run validation.
 5. **Don't underestimate data migration** — it is always harder than code migration. Account for: data volume transfer time, schema transformation complexity, backfill requirements, referential integrity ordering, and the need for dual-write during transition periods.
 6. **Consider feature flags for gradual rollout** of migrated components. Feature flags allow you to route a percentage of traffic to the new system, monitor for errors, and roll back instantly without a deployment.
 7. **Greenfield doesn't mean over-engineer** — only add abstraction boundaries where future change is probable (based on requirements volatility, vendor lock-in risk, or explicit constraints). Three similar lines of code is better than a premature adapter pattern.

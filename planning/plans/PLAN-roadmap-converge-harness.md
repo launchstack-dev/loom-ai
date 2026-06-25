@@ -23,7 +23,7 @@ Implements F-15 (M-07) — a subjective convergence loop that drives a ROADMAP.m
 | Skills / commands | Markdown frontmatter (Claude Code SKILL.md form) | — | `/loom-roadmap converge`, `/loom-roadmap sign-off`, `/loom-roadmap status` |
 | Agents | Markdown agent definitions | — | `roadmap-converge-reviewer`, `roadmap-converge-driver`, `roadmap-archetype-detector` |
 | State format | TOON | 1 | `roadmap-readiness.schema.toon`, `roadmap-converge-state.schema.toon`, state.toon |
-| Rubric format | Markdown | — | `agents/protocols/roadmap-rubrics/{dimension}.md` |
+| Rubric format | Markdown | — | `protocols/roadmap-rubrics/{dimension}.md` |
 | Runtime | TypeScript (bun preferred, npx tsx fallback) | — | Driver scripts, state writer/reader, lock-file manager |
 | Migration runtime | F-13 chained walker (`MIGRATIONS["v1->v2"]`, …) | — | Schema-versioned state evolution |
 | Test runner | vitest | latest | Unit + integration coverage |
@@ -48,7 +48,7 @@ Top-level dimensional taxonomy applied to a roadmap. One per archetype (or one u
 | Field | Type | Constraints |
 |-------|------|-------------|
 | name | string | required, kebab-case, unique within schema |
-| rubricRef | string | required, repo-relative path to `agents/protocols/roadmap-rubrics/{name}.md` |
+| rubricRef | string | required, repo-relative path to `protocols/roadmap-rubrics/{name}.md` |
 | required | boolean | required; `true` if listed in `roadmap.schema.md` as a required section |
 | depends_on[] | array<string> | optional; names of other dimensions that must be green before this is evaluated |
 
@@ -380,7 +380,7 @@ context:
 | SIGNOFF_NOT_ELIGIBLE:OPEN_QUESTIONS | 1 | `/loom-roadmap sign-off` invoked while one or more `open_questions[]` are unresolved | No — stderr: `"N open questions must be resolved — run /loom-roadmap converge and answer them."` <!-- Applied: UX-03 --> |
 | SIGNOFF_NOT_ELIGIBLE:RED_DIMENSIONS | 1 | `/loom-roadmap sign-off` invoked while one or more dimensions are not `green` | No — stderr: `"Dimensions still red/yellow: [list]. Run /loom-roadmap converge to address them."` <!-- Applied: UX-03 --> |
 | USER_REJECTED | 1 | User answered "no" at the sign-off diff confirmation prompt; roadmap stays in `sign-off-eligible` | Yes — stderr: `"Sign-off cancelled. Roadmap remains in sign-off-eligible state. Run /loom-roadmap status to review, or /loom-roadmap sign-off to try again."` `next_action_hint` set to `/loom-roadmap sign-off`. `last-error.toon` IS written with the cancellation context. <!-- Applied: FC-13 / UX-05 / UX-21 --> |
-| INTEGRATOR_NO_ENVELOPE | 1 | Integrator agent returned a payload that is not a valid `AgentResult` TOON envelope (per `agents/protocols/agent-result.schema.md`) | No — inspect integrator output and retry manually; halt the converge pass without applying any mutations <!-- Applied: AW-09 / FC-A2 / F-34 --> |
+| INTEGRATOR_NO_ENVELOPE | 1 | Integrator agent returned a payload that is not a valid `AgentResult` TOON envelope (per `protocols/agent-result.schema.md`) | No — inspect integrator output and retry manually; halt the converge pass without applying any mutations <!-- Applied: AW-09 / FC-A2 / F-34 --> |
 | REVIEWER_NO_ENVELOPE | non-fatal (driver continues with other dimensions) | Reviewer agent returned a non-AgentResult payload | Yes — driver skips dimension D for the pass, logs warning, records `delta_since_last=same` <!-- Applied: AW-16 --> |
 
 ### Retry Behavior
@@ -409,7 +409,7 @@ retire = ["tool-selection"]   # dimensions to skip evaluation entirely
 
 # Optional per-archetype rubric overrides
 [roadmap.converge.rubricOverrides]
-# "vision" = "agents/protocols/roadmap-rubrics/vision-strict.md"
+# "vision" = "protocols/roadmap-rubrics/vision-strict.md"
 ```
 
 ### Validation
@@ -429,33 +429,33 @@ retire = ["tool-selection"]   # dimensions to skip evaluation entirely
 **Agent:** contracts-agent
 **Objective:** Author the readiness + state schemas, archetype enumeration, schema-version registration, and the F-13 migrator for `RoadmapConvergeState`.
 **Dependencies:** None
-**File Ownership:** `agents/protocols/roadmap-readiness.schema.toon`, `agents/protocols/roadmap-converge-state.schema.toon`, `agents/protocols/roadmap-archetypes.toon`, `agents/protocols/schema-versions.toon`, `scripts/migrators/roadmap-converge-state/**`
+**File Ownership:** `protocols/roadmap-readiness.schema.toon`, `protocols/roadmap-converge-state.schema.toon`, `protocols/roadmap-archetypes.toon`, `protocols/schema-versions.toon`, `scripts/migrators/roadmap-converge-state/**`
 
 #### Deliverables
 
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/roadmap-readiness.schema.toon | Create | contracts-agent |
-| agents/protocols/roadmap-converge-state.schema.toon | Create | contracts-agent |
-| agents/protocols/roadmap-archetypes.toon | Create | contracts-agent |
-| agents/protocols/schema-versions.toon | Modify | contracts-agent |
+| protocols/roadmap-readiness.schema.toon | Create | contracts-agent |
+| protocols/roadmap-converge-state.schema.toon | Create | contracts-agent |
+| protocols/roadmap-archetypes.toon | Create | contracts-agent |
+| protocols/schema-versions.toon | Modify | contracts-agent |
 | scripts/migrators/roadmap-converge-state/detect.ts | Create | contracts-agent |
 | scripts/migrators/roadmap-converge-state/index.ts | Create | contracts-agent |
 
 #### Acceptance Criteria
 
-- [ ] `agents/protocols/roadmap-readiness.schema.toon` exists, parses as valid TOON, and defines the 8 MVP default dimensions with rubricRef paths that target files in Phase 0b.
-- [ ] `agents/protocols/roadmap-converge-state.schema.toon` exists with all RoadmapConvergeState fields, schemaVersion = 1, and matches the Schema/Type Definitions section.
-- [ ] `agents/protocols/roadmap-archetypes.toon` enumerates the 5 archetypes plus `default` with detection-hint keywords.
-- [ ] `agents/protocols/schema-versions.toon` includes a `roadmapConvergeState` entry pointing at version 1.
+- [ ] `protocols/roadmap-readiness.schema.toon` exists, parses as valid TOON, and defines the 8 MVP default dimensions with rubricRef paths that target files in Phase 0b.
+- [ ] `protocols/roadmap-converge-state.schema.toon` exists with all RoadmapConvergeState fields, schemaVersion = 1, and matches the Schema/Type Definitions section.
+- [ ] `protocols/roadmap-archetypes.toon` enumerates the 5 archetypes plus `default` with detection-hint keywords.
+- [ ] `protocols/schema-versions.toon` includes a `roadmapConvergeState` entry pointing at version 1.
 - [ ] `scripts/migrators/roadmap-converge-state/index.ts` exports a frozen `MIGRATIONS` map and a pure `migrateToLatest(input, fromVersion, opts, targetVersion?)` walker per F-13's pattern.
 - [ ] `bunx tsc --noEmit` (or `npx tsc --noEmit`) exits with code 0 on the migrator scripts.
 - [ ] vitest covers the v1 detection and migration walker round-trip for synthetic fixtures.
-- [ ] On completion, contracts-agent writes a StageContext summary to `.plan-execution/stage-context/contracts.toon` atomically (write to `.tmp` then `fs.renameSync`) per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
+- [ ] On completion, contracts-agent writes a StageContext summary to `.plan-execution/stage-context/contracts.toon` atomically (write to `.tmp` then `fs.renameSync`) per `protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
 
 #### Convergence Targets
 
-- `agents/protocols/roadmap-readiness.schema.toon` deserializes via the project's TOON parser into an object whose `dimensions` array length == 8.
+- `protocols/roadmap-readiness.schema.toon` deserializes via the project's TOON parser into an object whose `dimensions` array length == 8.
 - `detectRoadmapConvergeStateVersion(content)` returns `{detected: 1, current: 1, outdated: false}` on a valid v1 fixture and throws `MigrationDowngradeError` on a future v2 fixture.
 
 #### Scenarios
@@ -482,26 +482,26 @@ automatable: true
 **Agent:** contracts-agent
 **Objective:** Author the 8 pedagogical rubric files (green/yellow/red exemplars) for the MVP default dimensions.
 **Dependencies:** None (file ownership disjoint from Phase 0a)
-**File Ownership:** `agents/protocols/roadmap-rubrics/**`
+**File Ownership:** `protocols/roadmap-rubrics/**`
 
 #### Deliverables
 
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/roadmap-rubrics/vision.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/milestones.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/tool-selection.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/data-model.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/success-metrics.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/constraints.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/risks.md | Create | contracts-agent |
-| agents/protocols/roadmap-rubrics/out-of-scope.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/vision.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/milestones.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/tool-selection.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/data-model.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/success-metrics.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/constraints.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/risks.md | Create | contracts-agent |
+| protocols/roadmap-rubrics/out-of-scope.md | Create | contracts-agent |
 
 #### Acceptance Criteria
 
 - [ ] Each of the 8 rubric files exists and contains exactly three required sections: `## Green`, `## Yellow`, `## Red` with non-empty bodies.
-- [ ] After Phase 0a completes, every `rubricRef` in `agents/protocols/roadmap-readiness.schema.toon` resolves to a readable file created here.
-- [ ] On completion, Phase 0b contracts-agent writes a StageContext summary to `.plan-execution/stage-context/contracts-rubrics.toon` atomically (`.tmp` + `fs.renameSync`) per `agents/protocols/execution-conventions.md`. Distinct path from Phase 0a's `contracts.toon` so Wave 0 completion can be gated on BOTH summaries existing. <!-- Applied: AW-06 / F-31 -->
+- [ ] After Phase 0a completes, every `rubricRef` in `protocols/roadmap-readiness.schema.toon` resolves to a readable file created here.
+- [ ] On completion, Phase 0b contracts-agent writes a StageContext summary to `.plan-execution/stage-context/contracts-rubrics.toon` atomically (`.tmp` + `fs.renameSync`) per `protocols/execution-conventions.md`. Distinct path from Phase 0a's `contracts.toon` so Wave 0 completion can be gated on BOTH summaries existing. <!-- Applied: AW-06 / F-31 -->
 
 #### Convergence Targets
 
@@ -513,7 +513,7 @@ automatable: true
 ```toon
 id: S-01
 title: Readiness schema parses with 8 MVP default dimensions
-given[2]: The 8 rubric files exist under agents/protocols/roadmap-rubrics/, The schema file agents/protocols/roadmap-readiness.schema.toon exists
+given[2]: The 8 rubric files exist under protocols/roadmap-rubrics/, The schema file protocols/roadmap-readiness.schema.toon exists
 when: A test loads the readiness schema via the TOON parser
 whenTriggerType: api-call
 then[3]: Parser returns a RoadmapReadinessSchema object, dimensions array length MUST be 8, every dimensions[].rubricRef MUST resolve to a readable file
@@ -569,9 +569,9 @@ automatable: true
 - [ ] `driver.ts` exposes a typed `archetypeDetectionHook` seam (default no-op) that Phase 4 fills with the real detector; the seam's signature accepts `(roadmapPath, existingState | null) => Promise<{archetype: string, confidence: number} | null>`. Documenting the seam here prevents the Phase 4 cold-start AC from being a forward reference. <!-- Applied: P-02 -->
 - [ ] vitest covers: lock acquire/release, lock-conflict abort, lock auto-clear after 10 min, content-hash invalidation flag, atomic write, reviewer 5-cap, reviewer-rendering dispatch for each of green/yellow/red, no-op archetype hook returns null without modifying state.
 - [ ] `agents/roadmap-converge-driver.md` includes YAML frontmatter `model: opus` (matches `[roadmap.converge].driverModel` and C-05). `agents/roadmap-converge-reviewer.md` includes YAML frontmatter `model: sonnet` (matches `[roadmap.converge].reviewerModel`). Both fields are present BEFORE the agents are ever spawned, per CLAUDE.md mandatory model-resolution rule. <!-- Applied: AW-04 -->
-- [ ] `agents/roadmap-converge-reviewer.md` system prompt requires the reviewer to return a standard `AgentResult` envelope in TOON (per `agents/protocols/agent-result.schema.md`); the driver consumes `AgentResult.issues[]` (NOT a custom `findings[]` format) when applying the 5-finding cap. <!-- Applied: AW-05 -->
+- [ ] `agents/roadmap-converge-reviewer.md` system prompt requires the reviewer to return a standard `AgentResult` envelope in TOON (per `protocols/agent-result.schema.md`); the driver consumes `AgentResult.issues[]` (NOT a custom `findings[]` format) when applying the 5-finding cap. <!-- Applied: AW-05 -->
 - [ ] Driver MUST handle non-envelope reviewer output by skipping that dimension with a `REVIEWER_NO_ENVELOPE` warning (logged to stderr; dimension records `delta_since_last=same`), NOT aborting the entire pass. Other dimensions continue normally. <!-- Applied: AW-16 -->
-- [ ] `scripts/roadmap-converge/driver.ts` writes a StageContext summary to `.plan-execution/stage-context/execute.toon` atomically on every pass completion (success or halt), per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
+- [ ] `scripts/roadmap-converge/driver.ts` writes a StageContext summary to `.plan-execution/stage-context/execute.toon` atomically on every pass completion (success or halt), per `protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
 - [ ] `driver.ts` emits a one-line stderr banner at the start of every pass — `"[roadmap-converge] pass {round}/{passLimit} starting for {slug} — {dimensions.length} dimensions, {open_questions.length} open"` — so users have visible round-start signalling in TTY runs. <!-- Applied: UX-11 -->
 
 #### Convergence Targets
@@ -673,7 +673,7 @@ automatable: true
 - [ ] User confirmation prompt; `--yes` skips the prompt but still requires explicit CLI invocation.
 - [ ] On confirmation, writes `sign_off_state = signed-off`, `sign_off_at` (now), `sign_off_diff_hash` (current sha256), atomically.
 - [ ] No code path outside `scripts/roadmap-converge/sign-off.ts` may write `sign_off_state = signed-off` (verified by a vitest grep test over the `scripts/` tree).
-- [ ] On completion, Phase 2 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-signoff.toon` atomically (`.tmp` + `fs.renameSync`) per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-06 -->
+- [ ] On completion, Phase 2 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-signoff.toon` atomically (`.tmp` + `fs.renameSync`) per `protocols/execution-conventions.md`. <!-- Applied: AW-06 -->
 
 #### Convergence Targets
 
@@ -751,7 +751,7 @@ automatable: true
 - [ ] No code path in status.md or digest.ts writes to disk (vitest grep guard).
 - [ ] `digest.ts` produces a string that includes: pass number, last-touched timestamp, dimensional status line with glyphs, open-question count, first unresolved question verbatim, line-count diff, next-action command.
 - [ ] `resume-delegate.ts` exports a function that takes existence checks of both pipeline-state.toon and roadmap-converge state.toon and returns an ordered list of digest renderings (most-recently-modified first).
-- [ ] On completion, Phase 3 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-status.toon` atomically (`.tmp` + `fs.renameSync`) per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-06 -->
+- [ ] On completion, Phase 3 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-status.toon` atomically (`.tmp` + `fs.renameSync`) per `protocols/execution-conventions.md`. <!-- Applied: AW-06 -->
 
 #### Convergence Targets
 
@@ -834,9 +834,9 @@ automatable: true
 - [ ] User can pick any of: `cli`, `web-app`, `library`, `data-pipeline`, `research`, or accept the default.
 - [ ] Initial state.toon is written with the resolved archetype and `round=0`; then pass 1 runs.
 - [ ] `agents/roadmap-archetype-detector.md` includes YAML frontmatter `model: haiku` (lightweight classification task — cheap detection model is the appropriate choice). Frontmatter MUST be present BEFORE the agent is ever spawned, per CLAUDE.md mandatory model-resolution rule. <!-- Applied: AW-07 / FC-A1 / F-32 -->
-- [ ] `agents/roadmap-archetype-detector.md` system prompt requires the detector to return a standard `AgentResult` envelope in TOON (per `agents/protocols/agent-result.schema.md`) whose `data` block carries `{archetype, confidence}`; the driver's `archetypeDetectionHook` consumes `AgentResult.data` (NOT a custom payload). <!-- Applied: AW-08 / FC-A1 / F-33 -->
-- [ ] Phase 4 implementer-agent reads (input context): `scripts/roadmap-converge/driver.ts` (from Phase 1, for the archetype-hook seam signature), `agents/protocols/roadmap-archetypes.toon` (from Phase 0a, for the archetype enum + detection-hint keywords), `CLAUDE.md` and project manifest files (`package.json`, `Cargo.toml`, etc. — input to the detector itself). <!-- Applied: AW-13 -->
-- [ ] On completion, Phase 4 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-archetype.toon` atomically (`.tmp` + `fs.renameSync`) per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-06, PH-01, AW-14 (path disambiguated from Phase 1's execute.toon) -->
+- [ ] `agents/roadmap-archetype-detector.md` system prompt requires the detector to return a standard `AgentResult` envelope in TOON (per `protocols/agent-result.schema.md`) whose `data` block carries `{archetype, confidence}`; the driver's `archetypeDetectionHook` consumes `AgentResult.data` (NOT a custom payload). <!-- Applied: AW-08 / FC-A1 / F-33 -->
+- [ ] Phase 4 implementer-agent reads (input context): `scripts/roadmap-converge/driver.ts` (from Phase 1, for the archetype-hook seam signature), `protocols/roadmap-archetypes.toon` (from Phase 0a, for the archetype enum + detection-hint keywords), `CLAUDE.md` and project manifest files (`package.json`, `Cargo.toml`, etc. — input to the detector itself). <!-- Applied: AW-13 -->
+- [ ] On completion, Phase 4 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-archetype.toon` atomically (`.tmp` + `fs.renameSync`) per `protocols/execution-conventions.md`. <!-- Applied: AW-06, PH-01, AW-14 (path disambiguated from Phase 1's execute.toon) -->
 
 #### Convergence Targets
 
@@ -914,10 +914,10 @@ automatable: true
 - [ ] Integrator never modifies sections it cannot tie back to a resolved question (preserves un-flagged content surgically).
 - [ ] vitest covers: integrator surgical edit, stall trip after 2 identical passes, pass-cap halt at round == 3 (default), retire-dimension auto-resolves orphan `open_questions[]` with `resolution = "dimension archived"`.
 - [ ] `agents/roadmap-converge-integrator.md` includes YAML frontmatter `model: sonnet` (per `[roadmap.converge]` defaults and CLAUDE.md mandatory model resolution). <!-- Applied: AW-04 -->
-- [ ] Integrator agent returns a standard `AgentResult` TOON envelope per `agents/protocols/agent-result.schema.md` with `filesModified[]` listing `ROADMAP.md` (and any other files it edits). Driver MUST reject and halt with `INTEGRATOR_NO_ENVELOPE` if the agent returns a non-envelope payload. <!-- Applied: AW-05 / F-58 -->
+- [ ] Integrator agent returns a standard `AgentResult` TOON envelope per `protocols/agent-result.schema.md` with `filesModified[]` listing `ROADMAP.md` (and any other files it edits). Driver MUST reject and halt with `INTEGRATOR_NO_ENVELOPE` if the agent returns a non-envelope payload. <!-- Applied: AW-05 / F-58 -->
 - [ ] Retire-dimension semantics (FC-05): when a dimension name is added to `archivedDimensions[]`, EVERY `open_questions[]` row whose `dimension` matches that name is auto-resolved by setting `resolution = "dimension archived"` and `resolved_at = <now>` in the same atomic state write. The Phase 5 integrator is the sole writer that performs this transition. <!-- Applied: FC-05 -->
 - [ ] Stall detector reads `state.dimensionSnapshot[]` (NOT the audit-trail files) and compares against current `state.dimensions[]` statuses. The detector writes the current snapshot at the END of each pass before status recomputation begins. <!-- Applied: FC-03 -->
-- [ ] On completion, Phase 5 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-integrator.toon` atomically (`.tmp` + `fs.renameSync`) per `agents/protocols/execution-conventions.md`. Because Phase 5 is the mutator (writes ROADMAP.md), this summary MUST also include the list of `filesModified[]` from the integrator's AgentResult for auditability. <!-- Applied: AW-06 / F-31 -->
+- [ ] On completion, Phase 5 implementer-agent writes a StageContext summary to `.plan-execution/stage-context/execute-integrator.toon` atomically (`.tmp` + `fs.renameSync`) per `protocols/execution-conventions.md`. Because Phase 5 is the mutator (writes ROADMAP.md), this summary MUST also include the list of `filesModified[]` from the integrator's AgentResult for auditability. <!-- Applied: AW-06 / F-31 -->
 
 #### Convergence Targets
 
@@ -994,8 +994,8 @@ automatable: true
 - [ ] Dogfood pass: run `/loom-roadmap converge` against `planning/ROADMAP.md`, document any rubric drift in `planning/history/post-mortems/2026-MM-DD-roadmap-converge-dogfood.md`.
 - [ ] `bun test` (or `npx vitest run`) exits with code 0 across all phases' tests.
 - [ ] `tests/fixtures/roadmaps/example-cli.md` is authored as a minimal cli-archetype roadmap with mostly-green seed content (vision, milestones, tool-selection sections present and well-formed) so the e2e test in S-22 has a deterministic input. <!-- Applied: PH-01 -->
-- [ ] wiring-agent writes a StageContext summary to `.plan-execution/stage-context/wiring.toon` atomically (`.tmp` + rename) on completion, per `agents/protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
-- [ ] wiring-agent returns a standard `AgentResult` envelope in TOON (per `agents/protocols/agent-result.schema.md`) listing `filesModified[]` for all five Phase 6 owned files. <!-- Applied: AW-12 -->
+- [ ] wiring-agent writes a StageContext summary to `.plan-execution/stage-context/wiring.toon` atomically (`.tmp` + rename) on completion, per `protocols/execution-conventions.md`. <!-- Applied: AW-03 -->
+- [ ] wiring-agent returns a standard `AgentResult` envelope in TOON (per `protocols/agent-result.schema.md`) listing `filesModified[]` for all five Phase 6 owned files. <!-- Applied: AW-12 -->
 
 #### Convergence Targets
 
@@ -1057,7 +1057,7 @@ bun test || npx vitest run
 node scripts/lint-library-yaml.js
 
 # Schema lint (TOON parser smoke)
-node scripts/lint-protocol-schemas.js agents/protocols/roadmap-*.toon
+node scripts/lint-protocol-schemas.js protocols/roadmap-*.toon
 
 # Sign-off purity grep: ensure only sign-off.ts writes signed-off.
 # Uses POSIX-portable form (grep -E + [[:space:]]) — BSD grep on macOS

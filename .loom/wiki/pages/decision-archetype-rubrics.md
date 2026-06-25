@@ -11,7 +11,7 @@ summary: Per-dimension green/yellow/red rubric files selected by detected projec
 estimatedTokens: 550
 bodySections[3]: Summary, Rationale, Alternatives Considered
 subtype:
-sourceRefs[4]: planning/plans/PLAN-roadmap-converge-harness.md, agents/protocols/roadmap-readiness.schema.toon, agents/protocols/roadmap-archetypes.toon, agents/protocols/roadmap-rubrics/
+sourceRefs[4]: planning/plans/PLAN-roadmap-converge-harness.md, protocols/roadmap-readiness.schema.toon, protocols/roadmap-archetypes.toon, protocols/roadmap-rubrics/
 crossRefs[3]{pageId,relationship}:
   concept-roadmap-convergence,decides
   component-roadmap-converge-state,relates-to
@@ -25,7 +25,7 @@ confidence: high
 
 ## Summary
 
-Each roadmap dimension (vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope) is graded by a reviewer agent against a **pedagogical rubric file** that defines what `## Green`, `## Yellow`, and `## Red` look like for that dimension. Rubric files live at `agents/protocols/roadmap-rubrics/{name}.md` and ship green/yellow/red exemplars verbatim — not heuristics or scores.
+Each roadmap dimension (vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope) is graded by a reviewer agent against a **pedagogical rubric file** that defines what `## Green`, `## Yellow`, and `## Red` look like for that dimension. Rubric files live at `protocols/roadmap-rubrics/{name}.md` and ship green/yellow/red exemplars verbatim — not heuristics or scores.
 
 Which rubric set applies is selected by **archetype**: `cli`, `web-app`, `library`, `data-pipeline`, `research`, or `default`. The `roadmap-archetype-detector` agent runs on cold-start (reading CLAUDE.md, manifest files), presents a confirm-or-correct prompt with the best-guess default-highlighted, and writes the resolved archetype into `state.archetype`. The MVP ships eight default-archetype rubrics; per-archetype overrides land via `[roadmap.converge.rubricOverrides]` in `.claude/orchestration.toml`.
 

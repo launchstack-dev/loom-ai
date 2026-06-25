@@ -27,67 +27,67 @@ library:
   protocols:
     - name: execution-protocols
       description: Inter-agent protocol schemas for the Loom execution pipeline (AgentResult, state.toon, execution conventions)
-      source: agents/protocols/execution-conventions.md
+      source: protocols/execution-conventions.md
 
     - name: toon-format-protocol
       description: TOON (Token-Oriented Object Notation) format specification for all on-disk artifacts and agent communication
-      source: agents/protocols/toon-format.md
+      source: protocols/toon-format.md
 
     - name: pattern-executor-protocol
       description: Reusable pattern runtime protocol for debate, chain, vote, triage orchestration patterns
-      source: agents/protocols/pattern-executor.md
+      source: protocols/pattern-executor.md
 
     - name: roadmap-schema
       description: Schema for ROADMAP.md structure - vision, features, milestones, constraints, conceptual data model
-      source: agents/protocols/roadmap.schema.md
+      source: protocols/roadmap.schema.md
 
     - name: spec-schema
       description: Schema for v2 spec-level plan sections - API specs, state machines, error handling, validation rules
-      source: agents/protocols/spec.schema.md
+      source: protocols/spec.schema.md
 
     - name: plan-schema
       description: Schema for PLAN.md structure - phases, waves, deliverables, acceptance criteria, file ownership
-      source: agents/protocols/plan.schema.md
+      source: protocols/plan.schema.md
 
     - name: agent-result-schema
       description: Standard AgentResult return envelope schema - status, files, exports, issues, integration notes
-      source: agents/protocols/agent-result.schema.md
+      source: protocols/agent-result.schema.md
 
     - name: state-schema
       description: Execution state schema for state.toon - waves, tasks, agents, file hashes, rolling context
-      source: agents/protocols/state.schema.md
+      source: protocols/state.schema.md
 
     - name: pipeline-state-schema
       description: Pipeline state schema for /loom-auto - outer iterations, stage history, failure log, circuit breakers
-      source: agents/protocols/pipeline-state.schema.md
+      source: protocols/pipeline-state.schema.md
 
     - name: agent-monitoring-schema
       description: Agent progress monitoring schema - heartbeat files, stale detection, escalation thresholds
-      source: agents/protocols/agent-monitoring.schema.md
+      source: protocols/agent-monitoring.schema.md
 
     - name: validation-rules
       description: Validation rules for AgentResult, orchestration.toml, blocker gates, state integrity, plan structure
-      source: agents/protocols/validation-rules.md
+      source: protocols/validation-rules.md
 
     - name: orchestration-patterns
       description: Orchestration pattern catalog - debate, chain, vote, triage, converge with config schemas and examples
-      source: agents/protocols/orchestration-patterns.md
+      source: protocols/orchestration-patterns.md
 
     - name: orchestration-config-schema
       description: Schema for .claude/orchestration.toml - project-specific agent registration, pattern config, settings
-      source: agents/protocols/orchestration-config.schema.md
+      source: protocols/orchestration-config.schema.md
 
     - name: statusline-contract
       description: Output format contract for the Claude Code status line — defines ambient state shape, renderer protocol, and Starship integration
-      source: agents/protocols/statusline-contract.md
+      source: protocols/statusline-contract.md
 
     - name: git-command-contract
       description: Subcommand dispatch contract for loom-git — defines commit, push, PR, merge, cleanup, review-pr protocols
-      source: agents/protocols/git-command-contract.md
+      source: protocols/git-command-contract.md
 
     - name: quick-task-contract
       description: Contract for loom-quick — mode detection, plan-aware append, mid-execution injection, verification protocol
-      source: agents/protocols/quick-task-contract.md
+      source: protocols/quick-task-contract.md
 
     - name: loom-quick-routing
       description: "Natural-language routing skill for /loom-quick — triggers on \"quickly fix\", \"just do\", \"quick task\" patterns"
@@ -95,7 +95,7 @@ library:
 
     - name: fix-archive-schema
       description: Schema for fix archive entries — TOON format for bug fix summaries with impact assessment
-      source: agents/protocols/fix-archive.schema.md
+      source: protocols/fix-archive.schema.md
 
     - name: loom-bugfix-routing
       description: "Natural-language routing skill for /loom bugfix — triggers on bug reports, error descriptions, broken behavior"
@@ -104,94 +104,94 @@ library:
     # Wiki protocols
     - name: wiki-page-schema
       description: Schema for individual wiki pages — TOON frontmatter format, categories, cross-references, staleness model
-      source: agents/protocols/wiki-page.schema.md
+      source: protocols/wiki-page.schema.md
 
     - name: wiki-index-schema
       description: Schema for wiki index.toon — categorical catalog of all wiki pages
-      source: agents/protocols/wiki-index.schema.md
+      source: protocols/wiki-index.schema.md
 
     - name: wiki-log-schema
       description: Schema for wiki log.toon — append-only chronological record of wiki operations
-      source: agents/protocols/wiki-log.schema.md
+      source: protocols/wiki-log.schema.md
 
     - name: execution-log-schema
       description: Schema for execution-log.toon — narrative decision, pivot, and milestone history
-      source: agents/protocols/execution-log.schema.md
+      source: protocols/execution-log.schema.md
 
     - name: wiki-conventions
       description: Conventions for wiki agents — directory structure, page format, cross-ref rules, staleness model, atomic writes
-      source: agents/protocols/wiki-conventions.md
+      source: protocols/wiki-conventions.md
 
     - name: wiki-lint-rules
       description: Structural health check rules for wiki and execution artifacts — contradictions, orphans, drift, staleness
-      source: agents/protocols/wiki-lint-rules.md
+      source: protocols/wiki-lint-rules.md
 
     - name: behavioral-guidelines
       description: Karpathy-inspired behavioral guardrails for agents — assumption surfacing, simplicity, surgical changes, goal-driven verification
-      source: agents/protocols/behavioral-guidelines.md
+      source: protocols/behavioral-guidelines.md
 
     - name: scope-contract-schema
       description: Schema for scope-contract.toon — pre-flight decisions, assumptions, acceptance criteria, non-goals, contract evolution rules
-      source: agents/protocols/scope-contract.schema.md
+      source: protocols/scope-contract.schema.md
 
     - name: convergence-plan-schema
       description: Schema for convergence-plan.toon — targets, methods, tolerances, capture config, budget, planning decisions
-      source: agents/protocols/convergence-plan.schema.md
+      source: protocols/convergence-plan.schema.md
 
     # Spec-upgrades protocols (PLAN-spec-upgrades.md)
     - name: scenario-schema
       description: Schema for Given/When/Then scenario blocks usable in roadmap features, plan phases, change proposals, and contract-* wiki pages
-      source: agents/protocols/scenario.schema.md
+      source: protocols/scenario.schema.md
 
     - name: contract-page-extensions-schema
       description: Schema for category=contract wiki pages — extended frontmatter (contractVersion, domain, contentChecksum) and required body sections
-      source: agents/protocols/contract-page-extensions.schema.md
+      source: protocols/contract-page-extensions.schema.md
 
     - name: change-proposal-schema
       description: Schema for change proposals at .loom/changes/{changeId}/ — ChangeProposal, DeltaBlock, atomic archive semantics
-      source: agents/protocols/change-proposal.schema.md
+      source: protocols/change-proposal.schema.md
 
     - name: change-state-schema
       description: Schema for runtime ChangeState at .plan-execution/ephemeral/changes/{changeId}.toon — status, transitions, conflicts, supersession
-      source: agents/protocols/change-state.schema.md
+      source: protocols/change-state.schema.md
 
     - name: scenario-coverage-schema
       description: Schema for scenario-coverage.toon — traceability mapping every R-NN requirement to its covering scenarios with status (covered/uncovered/partial)
-      source: agents/protocols/scenario-coverage.schema.md
+      source: protocols/scenario-coverage.schema.md
 
     - name: entity-domain-partition-schema
       description: Schema for contract-partition.toon — explicit partitioning manifest mapping entities to contract-{domain} pages (used by /loom-plan materialize)
-      source: agents/protocols/entity-domain-partition.schema.md
+      source: protocols/entity-domain-partition.schema.md
 
     # Convergence-generalization schemas (Phase 0 of convergence-generalization plan; consumed by document-mode loops)
     - name: findings-schema
       description: Schema for findings.toon — uniform ConvergenceFindings contract emitted by harnesses (target/criteria/document modes); locked severity-to-convergence-severity mapping (critical|high → blocking, medium → warning, low|info|advisory → info); preserves W-03 reviewerAgent attribution per row
-      source: agents/protocols/findings.schema.md
+      source: protocols/findings.schema.md
 
     - name: plan-critique-schema
       description: Schema for critique.toon — PlanCritique envelope written by plan-critic-agent (Step 1.7); mirrors findings.schema.md shape so plan-builder-agent's Integrator Mode can consume critic output through the same integrator contract
-      source: agents/protocols/plan-critique.schema.md
+      source: protocols/plan-critique.schema.md
 
     - name: iteration-snapshot-schema
       description: Schema for IterationSnapshot metadata files at planning/history/snapshots/{slug}-pass-{N}.toon — pairs with the per-iteration subject-file copy; sha256-verified atomic-write contract used by document-mode auto-snapshots (C-07)
-      source: agents/protocols/iteration-snapshot.schema.md
+      source: protocols/iteration-snapshot.schema.md
 
     - name: convergence-summary-schema
       description: Schema for convergence-summary.toon — 11-field terminal-state envelope for any /loom-converge run (target/criteria/document); link-extraction readiness contract per C-11; halt-reason enum cross-referenced from convergence-driver.md circuit breakers
-      source: agents/protocols/convergence-summary.schema.md
+      source: protocols/convergence-summary.schema.md
 
     # Roadmap-converge protocols (Phase 0a/0b of PLAN-roadmap-converge-harness)
     - name: roadmap-readiness
       description: Schema for RoadmapReadinessSchema — MVP default 8 dimensions with rubricRef paths, archetype variants, DimensionDef columns, and dependsOn ordering for the roadmap-converge driver
-      source: agents/protocols/roadmap-readiness.schema.toon
+      source: protocols/roadmap-readiness.schema.toon
 
     - name: roadmap-converge-state
       description: Schema for RoadmapConvergeState v1 — on-disk state.toon for roadmap convergence sessions; sign_off_state, round, passLimit, dimensions, open_questions, stall detector snapshot, and F-13 migrator contract
-      source: agents/protocols/roadmap-converge-state.schema.toon
+      source: protocols/roadmap-converge-state.schema.toon
 
     - name: roadmap-rubrics
       description: Per-dimension rubric files for the roadmap-converge harness — green/yellow/red exemplars for vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope; archetype overrides in roadmap-converge.rubricOverrides
-      source: agents/protocols/roadmap-rubrics/vision.md
+      source: protocols/roadmap-rubrics/vision.md
 
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
@@ -601,7 +601,7 @@ library:
 kits:
   # Kit entries are installed via /loom-library use <kit-name>
   # Each kit bundles related agents, commands, and protocols
-  # See agents/protocols/kit.schema.md for the full kit entry format
+  # See protocols/kit.schema.md for the full kit entry format
 
   - name: data-engineering
     description: Data pipeline quality gates, schema review, lineage tracking, and test generation

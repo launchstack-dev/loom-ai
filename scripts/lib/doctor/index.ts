@@ -7,7 +7,7 @@
  * (the dispatcher must compile cleanly with an empty `checks/` directory).
  *
  * Public contract: `runChecks(opts)` returns a `DoctorReport` conforming to
- * `agents/protocols/doctor-report.schema.md` (`schemaVersion: 1`).
+ * `protocols/doctor-report.schema.md` (`schemaVersion: 1`).
  */
 
 import * as fs from "node:fs";

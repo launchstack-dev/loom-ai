@@ -4,9 +4,9 @@
  * Validates a single `category: contract` wiki page at
  * `.loom/wiki/pages/contract-{domain}.md` against the body-section, R-NN,
  * History, and replacedBy rules locked in
- * `agents/protocols/contract-page-extensions.schema.md`.
+ * `protocols/contract-page-extensions.schema.md`.
  *
- * Enforced rules (severity per `agents/protocols/validation-rules.md`):
+ * Enforced rules (severity per `protocols/validation-rules.md`):
  *
  *   blocking
  *     - all six required body sections present:

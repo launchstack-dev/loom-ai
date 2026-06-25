@@ -92,7 +92,7 @@ For small one-off work, `/loom-quick` auto-emits a retroactive `quick-archive` p
 
 The four pillars are the systems-level discipline. There's a parallel agent-level discipline — drawn from Andrej Karpathy's observations on how LLMs fail at coding — that shapes every Loom agent's behavior.
 
-(`agents/protocols/behavioral-guidelines.md`)
+(`protocols/behavioral-guidelines.md`)
 
 Four guardrails every agent follows:
 

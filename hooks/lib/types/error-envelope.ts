@@ -3,7 +3,7 @@
  *
  * Defined by the API Specification in PLAN-plugin-distribution.md (Error
  * Handling Specification). This is the ONE type without a paired
- * `agents/protocols/*.schema.md` file — it describes a wire format, not a
+ * `protocols/*.schema.md` file — it describes a wire format, not a
  * persisted artifact.
  *
  * Format (TOON, written to stderr):

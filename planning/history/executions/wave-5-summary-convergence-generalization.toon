@@ -47,7 +47,7 @@ filesModified[5]:
   skills/library.yaml
   commands/loom-reference.md
   commands/loom-plan.md
-  agents/protocols/execution-conventions.md
+  protocols/execution-conventions.md
   checksums.sha256
 
 filesDeleted[0]:

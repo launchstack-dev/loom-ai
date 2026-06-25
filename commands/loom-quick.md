@@ -127,7 +127,7 @@ Read `CLAUDE.md` if it exists. Scan the project structure and relevant source fi
 
 Implement the described task. Write or modify code as needed. Stay focused on exactly what the user described -- no scope creep. Respect any conventions or architectural decisions found in wiki context.
 
-If `matchedFlows[]` from step 3a is non-empty, treat the listed flows' `exitStates` as user-facing behaviors that must be preserved across the change. When making edits that touch a component the flow exercises, verify the flow's success exits still hold (per `agents/protocols/wiki-page.schema.md`, `flow-*` pages declare `exitStates` as the success criteria).
+If `matchedFlows[]` from step 3a is non-empty, treat the listed flows' `exitStates` as user-facing behaviors that must be preserved across the change. When making edits that touch a component the flow exercises, verify the flow's success exits still hold (per `protocols/wiki-page.schema.md`, `flow-*` pages declare `exitStates` as the success criteria).
 
 **3c. Continue to Step 4 (Post-Execution).**
 

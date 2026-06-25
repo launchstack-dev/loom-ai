@@ -51,8 +51,8 @@ not a destructive re-init. Use `/loom-update` for upgrades and
 #### Step 0: Read Protocols
 
 Read these files for context on Loom conventions:
-- `~/.claude/agents/protocols/execution-conventions.md` -- directory structure, file naming
-- `~/.claude/agents/protocols/toon-format.md` -- TOON format reference
+- `~/.claude/protocols/execution-conventions.md` -- directory structure, file naming
+- `~/.claude/protocols/toon-format.md` -- TOON format reference
 
 #### Step 0b: First-Invocation Guard Context
 
@@ -68,14 +68,14 @@ in `hooks/lib/init-guard.ts`.
 1a. Check what already exists:
    - `CLAUDE.md` -- project guidance
    - `CONTEXT.md` -- locked decisions and context
-   - `planning/ROADMAP.md` then `ROADMAP.md` at root -- existing roadmap (per `agents/protocols/planning-paths.md`)
+   - `planning/ROADMAP.md` then `ROADMAP.md` at root -- existing roadmap (per `protocols/planning-paths.md`)
    - `planning/plans/PLAN.md` then `PLAN.md` at root -- existing plan
    - `planning/` directory -- modern planning layout (if present, brownfield additions go here)
    - `.claude/orchestration.toml` -- project-specific agent config
    - `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `Gemfile` -- manifest files
    - `README.md` -- existing docs
 
-1b. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use the search patterns and directory exclusions defined in `~/.claude/agents/protocols/planning-doc-patterns.md`.
+1b. **Discover planning documents.** Search broadly for existing planning, design, requirements, and strategy documents. These contain decisions and constraints that should inform the roadmap rather than being reinvented. Use the search patterns and directory exclusions defined in `~/.claude/protocols/planning-doc-patterns.md`.
 
 1c. Display what was found:
    ```
@@ -343,7 +343,7 @@ Synthesize a CONTEXT.md from all 4 agents' output:
 
 ##### 4d. Planning Skeleton
 
-Create the modern planning layout so subsequent `/loom-roadmap init` and `/loom-plan create` runs write to the canonical locations (per `agents/protocols/planning-paths.md`):
+Create the modern planning layout so subsequent `/loom-roadmap init` and `/loom-plan create` runs write to the canonical locations (per `protocols/planning-paths.md`):
 
 ```
 mkdir -p planning/plans planning/archive planning/history

@@ -7,7 +7,7 @@ createdAt: 2026-04-25T22:00:00Z
 updatedAt: 2026-04-25T22:00:00Z
 createdBy: human
 updatedBy: human
-sourceRefs[2]: agents/convergence-planner-agent.md, agents/protocols/convergence-plan.schema.md
+sourceRefs[2]: agents/convergence-planner-agent.md, protocols/convergence-plan.schema.md
 crossRefs[4]{pageId,relationship}:
   concept-execution-pipeline,relates-to
   component-orchestration-patterns,relates-to

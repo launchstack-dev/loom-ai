@@ -1,7 +1,7 @@
 /**
  * Tests for hooks/lib/scenario-validator.ts.
  *
- * Uses the 3 valid + 6 invalid examples from agents/protocols/scenario.schema.md
+ * Uses the 3 valid + 6 invalid examples from protocols/scenario.schema.md
  * as a starting set, plus original cases per validation rule (compound
  * trigger, missing fields, unknown tag, unresolved stateRef, duplicate ID
  * cross-check, subjective then, default-tier resolution chain).

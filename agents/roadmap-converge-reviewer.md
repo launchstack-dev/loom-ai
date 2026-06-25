@@ -17,7 +17,7 @@ This agent ships with frontmatter `model: sonnet` so the driver can resolve it w
 Your prompt always contains:
 
 1. **`dimensionName`** — e.g. `vision`, `milestones`, `out-of-scope`. Matches a `DimensionDef.name` in the active `RoadmapReadinessSchema`.
-2. **`rubricPath`** — repo-relative path to `agents/protocols/roadmap-rubrics/{dimensionName}.md`. Read this file. It contains `## Green`, `## Yellow`, `## Red` exemplar sections plus a one-paragraph framing.
+2. **`rubricPath`** — repo-relative path to `protocols/roadmap-rubrics/{dimensionName}.md`. Read this file. It contains `## Green`, `## Yellow`, `## Red` exemplar sections plus a one-paragraph framing.
 3. **`roadmapPath`** — repo-relative path to the roadmap under review (e.g. `planning/ROADMAP.md`).
 4. **`priorStatus`** — one of `green | yellow | red | null`. Use this to calibrate language ("status held at red because…" vs "previously green; regressed to yellow because…"). Do NOT let prior status bias your verdict — re-evaluate from the document.
 
@@ -38,7 +38,7 @@ Your prompt always contains:
 
 ## Output — standard AgentResult envelope
 
-You MUST return a single fenced TOON code block conforming to `agents/protocols/agent-result.schema.md`. The driver parses `AgentResult.issues[]` and treats each row as a finding. Custom field shapes (e.g. a `findings[]` array) will be rejected per AW-05.
+You MUST return a single fenced TOON code block conforming to `protocols/agent-result.schema.md`. The driver parses `AgentResult.issues[]` and treats each row as a finding. Custom field shapes (e.g. a `findings[]` array) will be rejected per AW-05.
 
 Required field shape:
 

@@ -4,7 +4,7 @@
  * Each adapter exports a `TestRunner` object that the harness selects based
  * on the `--runner` CLI flag (`bun`, `vitest`, `pytest`).
  *
- * Contract per `agents/protocols/findings.applications-rows.md` F-02:
+ * Contract per `protocols/findings.applications-rows.md` F-02:
  *
  *   - `severity` is always `blocking` (set by the harness, not the runner).
  *   - `locationPath` is the test-file path returned in `TestFailure.file`.

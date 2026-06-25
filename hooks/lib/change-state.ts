@@ -1,11 +1,11 @@
 /**
  * Typed read/write of ChangeState TOON runtime files.
  *
- * Schema:        agents/protocols/change-state.schema.md
+ * Schema:        protocols/change-state.schema.md
  * Path:          .plan-execution/ephemeral/changes/{changeId}.toon
  *                (via `hooks/lib/change-paths.ts`)
  * Atomic write:  write `{path}.tmp`, then `fs.renameSync({path}.tmp, {path})`
- *                per agents/protocols/execution-conventions.md.
+ *                per protocols/execution-conventions.md.
  *
  * The proposal.md is the durable, authoritative record of intent (see
  * change-proposal.schema.md). This file is the **runtime mirror**: it is

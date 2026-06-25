@@ -81,12 +81,12 @@ const V3_INPUT_OBJ = {
       {
         name: "execution-protocols",
         description: "Inter-agent protocol schemas for the Loom execution pipeline",
-        source: "agents/protocols/execution-conventions.md",
+        source: "protocols/execution-conventions.md",
       },
       {
         name: "toon-format-protocol",
         description: "TOON format specification for all on-disk artifacts",
-        source: "agents/protocols/toon-format.md",
+        source: "protocols/toon-format.md",
       },
     ],
     agents: [
@@ -141,12 +141,12 @@ const V4_EXPECTED_OBJ = {
       {
         name: "execution-protocols",
         description: "Inter-agent protocol schemas for the Loom execution pipeline",
-        source: "agents/protocols/execution-conventions.md",
+        source: "protocols/execution-conventions.md",
       },
       {
         name: "toon-format-protocol",
         description: "TOON format specification for all on-disk artifacts",
-        source: "agents/protocols/toon-format.md",
+        source: "protocols/toon-format.md",
       },
     ],
     skills: [],
@@ -189,7 +189,7 @@ const V4_IDEMPOTENCY_OBJ = {
       {
         name: "execution-protocols",
         description: "Inter-agent protocol schemas for the Loom execution pipeline",
-        source: "agents/protocols/execution-conventions.md",
+        source: "protocols/execution-conventions.md",
       },
     ],
     skills: [

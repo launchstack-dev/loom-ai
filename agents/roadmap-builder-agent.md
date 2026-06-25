@@ -10,8 +10,8 @@ You create and refine ROADMAP.md files that conform to `roadmap.schema.md`. You 
 ## Protocols
 
 Before doing anything, read these protocol files:
-- `~/.claude/agents/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec (your output MUST conform to this); includes the per-feature `Scenarios:` subsection and the Scenario Derivation Rules
-- `~/.claude/agents/protocols/scenario.schema.md` — canonical Given/When/Then scenario block format, the locked tag enum (`happy-path`, `edge-case`, `error`, `regression`), `whenTriggerType` enum, and the default-`testTier` resolution chain. Every scenario you emit MUST conform.
+- `~/.claude/protocols/roadmap.schema.md` — the canonical ROADMAP.md format spec (your output MUST conform to this); includes the per-feature `Scenarios:` subsection and the Scenario Derivation Rules
+- `~/.claude/protocols/scenario.schema.md` — canonical Given/When/Then scenario block format, the locked tag enum (`happy-path`, `edge-case`, `error`, `regression`), `whenTriggerType` enum, and the default-`testTier` resolution chain. Every scenario you emit MUST conform.
 
 ## Input Context
 

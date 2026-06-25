@@ -13,7 +13,7 @@ This subcommand reviews a PLAN.md (or equivalent planning document) by spawning 
 ### Arguments
 
 Parse remaining arguments:
-- No args: resolve plan per `agents/protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root)
+- No args: resolve plan per `protocols/planning-paths.md` (planning/plans/PLAN.md → planning/archive/PLAN.md → PLAN.md at root)
 - `<path>`: use that file instead
 - `--full`: run all agents with extended analysis (default behavior)
 
@@ -25,11 +25,11 @@ Write `.plan-execution/ephemeral/status.toon` per `execution-conventions.md` sec
 
 #### Step 0: Read Protocols
 
-Read `~/.claude/agents/protocols/validation-rules.md` for AgentResult validation and blocker gate enforcement rules.
+Read `~/.claude/protocols/validation-rules.md` for AgentResult validation and blocker gate enforcement rules.
 
 #### Step 1: Find the Plan
 
-Resolve the planning document per `agents/protocols/planning-paths.md`: check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then the user-specified path. Read it to confirm it exists and has content.
+Resolve the planning document per `protocols/planning-paths.md`: check `planning/plans/PLAN.md`, then `planning/archive/PLAN.md`, then `PLAN.md` at root (legacy), then the user-specified path. Read it to confirm it exists and has content.
 
 #### Step 1a: Structural Pre-check
 

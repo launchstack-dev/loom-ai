@@ -6,7 +6,7 @@ description: "Explore roadmap shape and surface alternatives via multi-agent ide
 ### Protocols
 
 Before starting, read these protocol files:
-- `~/.claude/agents/protocols/orchestration-patterns.md` — for multi-agent spawn patterns and parallel execution
+- `~/.claude/protocols/orchestration-patterns.md` — for multi-agent spawn patterns and parallel execution
 - `CLAUDE.md` if it exists — tech stack, conventions, constraints
 - `CONTEXT.md` if it exists — locked decisions from prior discussion phases
 - `ROADMAP.md` if it exists — existing features, milestones, dependencies, constraints

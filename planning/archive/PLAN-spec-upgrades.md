@@ -160,17 +160,17 @@ Traceability artifact at `.plan-execution/ephemeral/scenario-coverage.toon`. Emi
 **Agent:** contracts-agent
 **Objective:** Create the four net-new schemas and the authoring template. Pure write-only — no existing-file modifications.
 **Dependencies:** None
-**File Ownership:** agents/protocols/scenario.schema.md, agents/protocols/contract-page-extensions.schema.md, agents/protocols/change-proposal.schema.md, agents/protocols/change-state.schema.md, agents/protocols/scenario-coverage.schema.md, agents/protocols/entity-domain-partition.schema.md, docs/scenarios-authoring-template.md
+**File Ownership:** protocols/scenario.schema.md, protocols/contract-page-extensions.schema.md, protocols/change-proposal.schema.md, protocols/change-state.schema.md, protocols/scenario-coverage.schema.md, protocols/entity-domain-partition.schema.md, docs/scenarios-authoring-template.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/scenario.schema.md | Create | contracts-agent |
-| agents/protocols/contract-page-extensions.schema.md | Create | contracts-agent |
-| agents/protocols/change-proposal.schema.md | Create | contracts-agent |
-| agents/protocols/change-state.schema.md | Create | contracts-agent |
-| agents/protocols/scenario-coverage.schema.md | Create | contracts-agent |
-| agents/protocols/entity-domain-partition.schema.md | Create | contracts-agent |
+| protocols/scenario.schema.md | Create | contracts-agent |
+| protocols/contract-page-extensions.schema.md | Create | contracts-agent |
+| protocols/change-proposal.schema.md | Create | contracts-agent |
+| protocols/change-state.schema.md | Create | contracts-agent |
+| protocols/scenario-coverage.schema.md | Create | contracts-agent |
+| protocols/entity-domain-partition.schema.md | Create | contracts-agent |
 | docs/scenarios-authoring-template.md | Create | contracts-agent |
 
 #### Acceptance Criteria
@@ -178,7 +178,7 @@ Traceability artifact at `.plan-execution/ephemeral/scenario-coverage.toon`. Emi
 - [ ] `scenario.schema.md` includes ≥3 valid and ≥3 invalid examples with the validator error each invalid case produces.
 - [ ] `docs/scenarios-authoring-template.md` provides a complete Given/When/Then worked example, a decomposition guide for compound conditions, and an RFC 2119 phrasing cheatsheet — usable by authors in subsequent phases.
 - [ ] Field names locked: phase exits with explicit "no field renames after this gate" sign-off written into `.plan-history/decisions/`.
-- [ ] `grep -r 'planVersion: 1' agents/protocols/` finds no schema requiring scenarios from v1 plans.
+- [ ] `grep -r 'planVersion: 1' protocols/` finds no schema requiring scenarios from v1 plans.
 
 ---
 
@@ -187,20 +187,20 @@ Traceability artifact at `.plan-execution/ephemeral/scenario-coverage.toon`. Emi
 **Agent:** contracts-agent
 **Objective:** Modify the three existing core schemas to add opt-in Scenarios sections AND update all downstream schemas that reference acceptance criteria.
 **Dependencies:** Phase 0
-**File Ownership:** agents/protocols/plan.schema.md, agents/protocols/roadmap.schema.md, agents/protocols/spec.schema.md, agents/protocols/criteria-plan.schema.md, agents/protocols/e2e-story.schema.md, agents/protocols/convergence-tier.schema.md, agents/protocols/interpretation-conflict.schema.md, agents/protocols/interpretation-report.schema.md, agents/protocols/taxonomy.md
+**File Ownership:** protocols/plan.schema.md, protocols/roadmap.schema.md, protocols/spec.schema.md, protocols/criteria-plan.schema.md, protocols/e2e-story.schema.md, protocols/convergence-tier.schema.md, protocols/interpretation-conflict.schema.md, protocols/interpretation-report.schema.md, protocols/taxonomy.md
 
 #### Deliverables
 | File | Action | Owner hint |
 |------|--------|------------|
-| agents/protocols/plan.schema.md | Modify | contracts-agent |
-| agents/protocols/roadmap.schema.md | Modify | contracts-agent |
-| agents/protocols/spec.schema.md | Modify | contracts-agent |
-| agents/protocols/criteria-plan.schema.md | Modify | contracts-agent |
-| agents/protocols/e2e-story.schema.md | Modify | contracts-agent |
-| agents/protocols/convergence-tier.schema.md | Modify | contracts-agent |
-| agents/protocols/interpretation-conflict.schema.md | Modify | contracts-agent |
-| agents/protocols/interpretation-report.schema.md | Modify | contracts-agent |
-| agents/protocols/taxonomy.md | Modify | contracts-agent |
+| protocols/plan.schema.md | Modify | contracts-agent |
+| protocols/roadmap.schema.md | Modify | contracts-agent |
+| protocols/spec.schema.md | Modify | contracts-agent |
+| protocols/criteria-plan.schema.md | Modify | contracts-agent |
+| protocols/e2e-story.schema.md | Modify | contracts-agent |
+| protocols/convergence-tier.schema.md | Modify | contracts-agent |
+| protocols/interpretation-conflict.schema.md | Modify | contracts-agent |
+| protocols/interpretation-report.schema.md | Modify | contracts-agent |
+| protocols/taxonomy.md | Modify | contracts-agent |
 
 #### Acceptance Criteria
 - [ ] `plan.schema.md` adds optional `### Scenarios` subsection under each phase, restricted to `planVersion: 2`.
@@ -299,7 +299,7 @@ After Phase 3 completes, before any M-02 phase begins:
 - [ ] Re-running against unchanged inputs produces byte-identical output.
 - [ ] `/loom-plan materialize` subcommand exists, is registered in `commands/loom-plan.md`'s dispatch table, and is the primary trigger surface (per D-02). Supports `--dry-run` to print the materialization plan without writing, and `--propose-partition` to scaffold `contract-partition.toon` if absent.
 - [ ] Running `/loom-plan materialize` against the taskboard fixture produces the expected `contract-*` pages and a matching wiki-index entry. Running without an `EntityDomainPartition` manifest exits non-zero with a clear "run --propose-partition first" message.
-- [ ] Generated pages pass the existing wiki lint rules (`agents/protocols/wiki-lint-rules.md`) PLUS the new contract-page-specific body-section validator from Phase 7.
+- [ ] Generated pages pass the existing wiki lint rules (`protocols/wiki-lint-rules.md`) PLUS the new contract-page-specific body-section validator from Phase 7.
 - [ ] `bunx vitest run test/materialize-contracts.test.ts` exits 0 with ≥6 cases including empty-scenarios fallback, idempotency, and wiki-index integration.
 
 ---

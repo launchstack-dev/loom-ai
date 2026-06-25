@@ -5,7 +5,7 @@
  * cannot locate a usable interpreter (F-15). Rotated when file exceeds 1MB.
  * Consumed by `/loom-doctor` F-04 `hooks` category red check.
  *
- * Schema reference: agents/protocols/hook-failure-log.schema.md
+ * Schema reference: protocols/hook-failure-log.schema.md
  */
 
 /** Runtime the wrapper attempted before giving up. */

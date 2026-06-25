@@ -875,7 +875,7 @@ describe("fixture parity — install-state", () => {
 
 describe("schema-versions.toon registry parity", () => {
   it("install-state CURRENT_VERSION matches the registry entry", () => {
-    const registry = loadFixture("../../agents/protocols/schema-versions.toon");
+    const registry = loadFixture("../../protocols/schema-versions.toon");
     const entries = parseToonArray(registry, "registry") as unknown as Array<{
       schema: string;
       currentVersion: number;
@@ -886,7 +886,7 @@ describe("schema-versions.toon registry parity", () => {
   });
 
   it("library-catalog CURRENT_VERSION matches the registry entry", () => {
-    const registry = loadFixture("../../agents/protocols/schema-versions.toon");
+    const registry = loadFixture("../../protocols/schema-versions.toon");
     const entries = parseToonArray(registry, "registry") as unknown as Array<{
       schema: string;
       currentVersion: number;

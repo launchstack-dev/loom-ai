@@ -68,7 +68,7 @@ function extractToonBlockNear(doc: string, anchorSubstring: string): string | nu
 // ---------------------------------------------------------------------------
 
 function loadConvergeConfigAllowedKeys(): Set<string> {
-  const schemaMd = readRepoFile("agents/protocols/converge.config.schema.md");
+  const schemaMd = readRepoFile("protocols/converge.config.schema.md");
   // Extract field rows from the "Field Table" markdown table.
   // Rows look like: `| \`fieldName\` | type | ...`
   const allowed = new Set<string>();
@@ -87,7 +87,7 @@ function loadConvergeConfigAllowedKeys(): Set<string> {
 }
 
 function loadConvergenceSummaryAllowedKeys(): Set<string> {
-  const schemaMd = readRepoFile("agents/protocols/convergence-summary.schema.md");
+  const schemaMd = readRepoFile("protocols/convergence-summary.schema.md");
   const allowed = new Set<string>();
   const re = /^\|\s*`([A-Za-z_][A-Za-z0-9_]*)`\s*\|/gm;
   let m: RegExpExecArray | null;
@@ -194,7 +194,7 @@ describe("S-01 / cross-application schema conformance", () => {
     // for plan-creation is that the locked schema itself remains valid and that
     // the canonical document-mode example in the schema parses to a subset of
     // its own field table.
-    const schemaMd = readRepoFile("agents/protocols/converge.config.schema.md");
+    const schemaMd = readRepoFile("protocols/converge.config.schema.md");
     const block = extractToonBlockNear(schemaMd, "TOON Example (document mode)");
     expect(block).not.toBeNull();
     const keys = topLevelKeysFromToonBlock(block as string);
@@ -240,11 +240,11 @@ describe("S-01 / cross-application schema conformance", () => {
 
 describe("OQ-01 regression: customTerminationOutcome MUST NOT exist", () => {
   const filesToScan = [
-    "agents/protocols/convergence-summary.schema.md",
-    "agents/protocols/converge.config.schema.md",
-    "agents/protocols/converge.config.applications.md",
-    "agents/protocols/findings.schema.md",
-    "agents/protocols/iteration-snapshot.schema.md",
+    "protocols/convergence-summary.schema.md",
+    "protocols/converge.config.schema.md",
+    "protocols/converge.config.applications.md",
+    "protocols/findings.schema.md",
+    "protocols/iteration-snapshot.schema.md",
     "commands/loom-code.md",
     "commands/loom-test.md",
     "commands/loom-bugfix.md",

@@ -35,12 +35,12 @@ Parse arguments after `auto`:
 ### Protocols
 
 Before doing anything, read these protocol files:
-- `~/.claude/agents/protocols/agent-result.schema.md` -- return format every agent uses
-- `~/.claude/agents/protocols/state.schema.md` -- execution state structure
-- `~/.claude/agents/protocols/execution-conventions.md` -- shared rules, directory structure, context compression
-- `~/.claude/agents/protocols/validation-rules.md` -- plan validation, blocker gates
-- `~/.claude/agents/protocols/pipeline-state.schema.md` -- pipeline-state.toon schema for this orchestrator
-- `~/.claude/agents/protocols/agent-monitoring.schema.md` -- progress reporting and stale detection
+- `~/.claude/protocols/agent-result.schema.md` -- return format every agent uses
+- `~/.claude/protocols/state.schema.md` -- execution state structure
+- `~/.claude/protocols/execution-conventions.md` -- shared rules, directory structure, context compression
+- `~/.claude/protocols/validation-rules.md` -- plan validation, blocker gates
+- `~/.claude/protocols/pipeline-state.schema.md` -- pipeline-state.toon schema for this orchestrator
+- `~/.claude/protocols/agent-monitoring.schema.md` -- progress reporting and stale detection
 
 ### Model Resolution
 
@@ -64,12 +64,12 @@ If criteria convergence is enabled (`--converge-criteria`), also read:
 - `~/.claude/agents/convergence-driver.md` -- iteration loop (supports both modes)
 - `~/.claude/agents/criteria-planner-agent.md` -- criteria discovery and test generation
 - `~/.claude/agents/criteria-harness-builder.md` -- test + review harness
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- criteria plan format
+- `~/.claude/protocols/criteria-plan.schema.md` -- criteria plan format
 
 Always read (dual-track planning, 4-tier convergence, and behavioral hardening):
-- `~/.claude/agents/protocols/convergence-tier.schema.md` -- 4-tier definitions (unit/integration/e2e/qa-review) with gating behavior
-- `~/.claude/agents/protocols/behavioral-guidelines.md` -- TDD red-green gate, diagnose-before-fix, verification gate
-- `~/.claude/agents/protocols/interpretation-conflict.schema.md` -- interpretation conflict format for dual-track review
+- `~/.claude/protocols/convergence-tier.schema.md` -- 4-tier definitions (unit/integration/e2e/qa-review) with gating behavior
+- `~/.claude/protocols/behavioral-guidelines.md` -- TDD red-green gate, diagnose-before-fix, verification gate
+- `~/.claude/protocols/interpretation-conflict.schema.md` -- interpretation conflict format for dual-track review
 
 ### Instructions
 
@@ -362,8 +362,8 @@ Update `pipeline-state.toon`: `currentStage: plan-create`.
 **Agent A: plan-builder-agent** (general-purpose):
 ```
 "Read your instructions from ~/.claude/agents/plan-builder-agent.md first,
- then read ~/.claude/agents/protocols/plan.schema.md and
- ~/.claude/agents/protocols/spec.schema.md.
+ then read ~/.claude/protocols/plan.schema.md and
+ ~/.claude/protocols/spec.schema.md.
 
  Generate a spec-driven plan from the approved roadmap.
  Map features to phases, milestones to wave boundaries, conceptual data model to
@@ -386,8 +386,8 @@ Update `pipeline-state.toon`: `currentStage: plan-create`.
 **Agent B: criteria-planner-agent** (general-purpose):
 ```
 "Read your instructions from ~/.claude/agents/criteria-planner-agent.md first,
- then read ~/.claude/agents/protocols/criteria-plan.schema.md and
- ~/.claude/agents/protocols/taxonomy.md.
+ then read ~/.claude/protocols/criteria-plan.schema.md and
+ ~/.claude/protocols/taxonomy.md.
 
  Generate a criteria-plan.toon from the approved roadmap. You are running in
  dual-track mode alongside plan-builder-agent. You receive the ROADMAP directly --
@@ -418,7 +418,7 @@ Record agents spawned (2). Collect both AgentResults before proceeding.
 
 ```
 "Read your instructions from ~/.claude/agents/interpretation-reviewer-agent.md first,
- then read ~/.claude/agents/protocols/interpretation-conflict.schema.md.
+ then read ~/.claude/protocols/interpretation-conflict.schema.md.
 
  Compare the plan and criteria plan for interpretation conflicts and coverage gaps.
  The plan and criteria were generated independently from the same roadmap by different

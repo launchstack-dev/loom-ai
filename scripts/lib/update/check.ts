@@ -3,7 +3,7 @@
  *
  * Pure module — all I/O dependencies (now, fetch, install-state reader) are
  * injected by callers. Produces UpdateCheck records per
- * `agents/protocols/update-check.schema.md`.
+ * `protocols/update-check.schema.md`.
  */
 import type { Channel, InstallState } from "../install-state.js";
 

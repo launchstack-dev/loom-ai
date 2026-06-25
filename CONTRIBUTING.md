@@ -47,7 +47,7 @@ Thanks for taking the time to contribute. Loom is in alpha (`v0.0.x`) — schema
 |---|---|
 | A user-facing command | `commands/loom-*.md` (and the `commands/loom-*/` subcommand folders) |
 | Agent behaviour or prompts | `agents/<agent-name>.md` |
-| A protocol schema | `agents/protocols/*.schema.md` — these are the source of truth, ports/wrappers consume them |
+| A protocol schema | `protocols/*.schema.md` — these are the source of truth, ports/wrappers consume them |
 | A hook | `hooks/*.ts` (TypeScript) — see `hooks/README.md` for the registration convention |
 | Wiki/catalog plumbing | `skills/library.yaml` and `scripts/materialize-contracts.ts` |
 | Docs | `docs/*.md` and `README.md` |
@@ -64,7 +64,7 @@ The `feat`/`fix` lineage in `git log` is the easiest way to learn the convention
 
 - **TypeScript:** strict mode. No `any` without a comment explaining why.
 - **Markdown:** wrap at ~100 columns where reasonable; tables and code blocks may exceed.
-- **TOON** (used in schemas and fixtures): see `agents/protocols/toon-format.md` for canonical examples.
+- **TOON** (used in schemas and fixtures): see `protocols/toon-format.md` for canonical examples.
 - **Identifiers in examples:** use `alice`, `bob`, `team-a` rather than real names or hostnames.
 - **No absolute paths** in tracked content — use repo-relative paths or environment variables. There is a hook that flags violations.
 

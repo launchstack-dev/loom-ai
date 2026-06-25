@@ -21,9 +21,9 @@ You sit BEFORE criteria-harness-builder in the criteria convergence pipeline. Yo
 ## Protocol
 
 Before generating proposals, read:
-- `~/.claude/agents/protocols/execution-conventions.md` -- TOON format and execution conventions
-- `~/.claude/agents/protocols/criteria-plan.schema.md` -- output schema
-- `~/.claude/agents/protocols/orchestration-patterns.md` -- Pattern 6: Criteria Converge
+- `~/.claude/protocols/execution-conventions.md` -- TOON format and execution conventions
+- `~/.claude/protocols/criteria-plan.schema.md` -- output schema
+- `~/.claude/protocols/orchestration-patterns.md` -- Pattern 6: Criteria Converge
 
 ## Input Context
 

@@ -2,8 +2,8 @@
 /**
  * plan-review convergence harness.
  *
- * Mode:     `convergenceMode: document` per `agents/protocols/convergence-tier.schema.md`
- * Output:   `ConvergenceFindings` TOON per `agents/protocols/findings.schema.md`
+ * Mode:     `convergenceMode: document` per `protocols/convergence-tier.schema.md`
+ * Output:   `ConvergenceFindings` TOON per `protocols/findings.schema.md`
  * Outputs to: `converge.config.outputPath` (default `.plan-execution/convergence/findings.toon`)
  * Schema version: 1 (registered as `convergence-findings`)
  *
