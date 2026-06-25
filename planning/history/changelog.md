@@ -559,3 +559,14 @@ Plan generation unlocked: `/loom-plan create planning/ROADMAP-byo-kits.md` is va
 - After that, `/loom-update` is the canonical safe-upgrade path (atomic staging, restart signal, rollback).
 - `/loom-library update` is now safe — it only writes user-domain items.
 - Re-running install.sh is also safe — it preserves user-added rows.
+
+## 2026-06-25 — Code fixes applied (PR #24 review)
+
+- Source: .plan-execution/review-report.md (PR #24 fix/safe-upgrade-path)
+- Applied: 8 findings (4 critical + 4 warning)
+- Unfixable: 0
+- Verification: PASS (9/9 preservation tests, 41/41 install+plugin regression)
+- Fix report: .plan-execution/fix-report.toon
+- Archived review: planning/history/reviews/2026-06-25-pr24-safe-upgrade-review.md
+
+Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat error checks), STYLE-01/02 (scoped EXIT trap + awk row count), GEM-02/SILENT-03 (test parity + stderr assert), GEM-03 (two new v3-to-v2 conversion test cases).

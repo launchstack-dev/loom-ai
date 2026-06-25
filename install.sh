@@ -337,28 +337,53 @@ echo "Building install state..."
 STATE_FILE="${CLAUDE_DIR}/skills/library/install-state.toon"
 NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX")
-PRESERVED_TMP=$(mktemp "${STATE_FILE}.preserved.XXXXXX")
-trap 'rm -f "${STATE_TMP}" "${PRESERVED_TMP}"' EXIT
+STATE_TMP=$(mktemp "${STATE_FILE}.XXXXXX") || { echo "ERROR: mktemp failed for state tmpfile" >&2; exit 1; }
+PRESERVED_TMP=$(mktemp "${STATE_FILE}.preserved.XXXXXX") || { echo "ERROR: mktemp failed for preserved tmpfile" >&2; exit 1; }
+
+# Cleanup function: idempotent rm -f on both tmpfiles. Installed as an EXIT
+# trap once so cleanup runs even if a later command in this block aborts.
+# We do NOT issue `trap - EXIT` on the success path — leaving the trap
+# installed is safe (rm -f is idempotent) and avoids clearing any other EXIT
+# handler that future code in install.sh may install before this block runs.
+_loom_cleanup_install_state() {
+  rm -f "${STATE_TMP:-}" "${PRESERVED_TMP:-}"
+}
+trap _loom_cleanup_install_state EXIT
 
 # Extract user-added rows (anything NOT owned by install.sh) from the existing
 # state file. A "system" row is identified by its 2nd column (`type`) being one
 # of: infrastructure, prompt, hook-template. Anything else (agent, skill, kit,
-# protocol, byo-kit-item, etc.) is preserved verbatim.
+# protocol, byo-kit-item, etc.) is preserved.
+#
+# Schema-version handling: install.sh writes a v2 5-column header. If the
+# existing file is v3 (7 columns: name,type,source,targetPath,sha256,component,
+# installedAt — produced by /loom-library sync) we must collapse 7-col rows
+# to 5-col before emitting them, or the result is a corrupted file with a
+# v2 header but v3 row arity (the sha256 column would be misparsed as
+# installedAt). The next /loom-library sync re-migrates to v3, so the
+# transient downgrade is acceptable; silent corruption is not.
 PRESERVED_COUNT=0
 if [ -f "${STATE_FILE}" ]; then
-  # awk extracts indented rows (start with two spaces) whose 2nd CSV field is
-  # not a system type. The rows are emitted in their original format, ready to
-  # append verbatim.
-  awk -F',' '
+  if ! awk -F',' '
     /^  [^ ]/ {
       type=$2
       if (type != "infrastructure" && type != "prompt" && type != "hook-template") {
-        print $0
+        if (NF == 7) {
+          # v3 row → v2 row: drop sha256 ($5) and component ($6), keep installedAt ($7).
+          print $1 "," $2 "," $3 "," $4 "," $7
+        } else {
+          print $0
+        }
       }
     }
-  ' "${STATE_FILE}" > "${PRESERVED_TMP}"
-  PRESERVED_COUNT=$(wc -l < "${PRESERVED_TMP}" | tr -d ' ')
+  ' "${STATE_FILE}" > "${PRESERVED_TMP}"; then
+    echo "ERROR: awk preservation pass failed — aborting to protect user-added rows in ${STATE_FILE}" >&2
+    exit 1
+  fi
+  # Count rows directly from the filtered output instead of `wc -l` to avoid
+  # off-by-one if awk's last record lacks a trailing newline (it shouldn't,
+  # but the TOON items[N] header MUST match the body count or parsers fail).
+  PRESERVED_COUNT=$(awk 'END{print NR}' "${PRESERVED_TMP}")
 fi
 
 # Count system items
@@ -417,12 +442,16 @@ done
 
 # Append preserved user-added rows verbatim
 if [ "${PRESERVED_COUNT}" -gt 0 ]; then
-  cat "${PRESERVED_TMP}" >> "${STATE_TMP}"
+  if ! cat "${PRESERVED_TMP}" >> "${STATE_TMP}"; then
+    echo "ERROR: failed to append preserved rows to ${STATE_TMP} — aborting to avoid writing a state file whose items[N] header lies about its body" >&2
+    exit 1
+  fi
 fi
 
 mv "${STATE_TMP}" "${STATE_FILE}"
+# Tmpfiles already gone after mv (STATE_TMP) and we delete PRESERVED_TMP
+# explicitly. EXIT trap remains installed; its cleanup is idempotent.
 rm -f "${PRESERVED_TMP}"
-trap - EXIT
 if [ "${PRESERVED_COUNT}" -gt 0 ]; then
   echo "  OK   install-state.toon (preserved ${PRESERVED_COUNT} user-added row(s))"
 else
