@@ -563,8 +563,16 @@ echo "The status line will notify you when updates are available."
 if command -v bun >/dev/null 2>&1; then
   ( cd "${CLAUDE_DIR}" && bun scripts/loom-first-run.ts 2>/dev/null ) || true
 elif command -v node >/dev/null 2>&1; then
-  if node --experimental-strip-types -e "" >/dev/null 2>&1; then
-    ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
+  # Two-step fallback. `--experimental-strip-types` (Node 22.6+) does NOT
+  # perform ESM extension resolution, so loom-first-run.ts's `.js` imports
+  # fail with MODULE_NOT_FOUND even when the flag itself works. Chain the
+  # flag probe AND the real run in the if condition — only declare success
+  # if BOTH pass. Otherwise fall through to `npx tsx` which DOES resolve
+  # `.js` ⇆ `.ts`. The bare `:` no-op consumes the success branch.
+  # (Gemini #28 round-5 HIGH.)
+  if node --experimental-strip-types -e "" >/dev/null 2>&1 && \
+     ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts >/dev/null 2>&1 ); then
+    :
   elif command -v npx >/dev/null 2>&1; then
     ( cd "${CLAUDE_DIR}" && npx --yes tsx scripts/loom-first-run.ts 2>/dev/null ) || true
   fi
