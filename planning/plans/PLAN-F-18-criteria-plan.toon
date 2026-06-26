@@ -1,0 +1,84 @@
+schemaVersion: 2
+createdAt: 2026-06-25T00:00:00Z
+updatedAt: 2026-06-25T00:00:00Z
+sourceContext: F-18 ROADMAP convergence targets and 23 sub-items (Matt Pocock Skills Adoption, milestone M-08)
+mode: auto
+convergenceMode: criteria
+
+intent: Verify F-18 ships the tight-red feedback loop (Phase B headline), vocabulary alignment, CONTEXT.md/DECISIONS.md split, ADR migration, convergence-state v1→v2 migration, and DX hardening per all 23 sub-items and 10 enumerated convergence targets in the approved roadmap. Every sub-item maps to at least one blocking criterion or carries an explicit no-test rationale.
+
+criteria[40]{id,description,tier,blocking,passCondition,subItemRef,criterionSource,rationale}:
+  C-01,protocols/codebase-design.md exists with Section 0 vocabulary mapping table (Module/Interface/Seam/Adapter/Leverage/Locality/Depth) and the Loom-native vs mattpocock precedence rules,unit,true,all-pass,sub-1,F-18 ROADMAP convergence target,Foundation glossary referenced by every architecture-touching agent
+  C-02,Vocabulary collision test — agent output for an architecture review uses Module/Seam/Adapter consistently and never mixes them with phase/wave/deliverable for the same concept,qa-review,true,zero-findings,sub-1,F-18 ROADMAP convergence target,Explicit convergence target — vocabulary collision test
+  C-03,CONTEXT.md split — CONTEXT.md becomes always-loaded ≤50-term domain glossary; locked decisions migrate to DECISIONS.md; loom-init and loom-wiki ingest maintain both,integration,true,all-pass,sub-2,F-18 ROADMAP convergence target,Phase A foundation; migration script must be idempotent
+  C-04,First-run empty-state advisory fires when CONTEXT.md not found (CONTEXT.md not found — run /loom-init to generate),integration,true,all-pass,sub-2,F-18 ROADMAP convergence target,Explicit empty-state UX requirement in sub-2
+  C-05,A fresh agent reading CONTEXT.md at session start uses domain terms (not generic words) in its first response — measured via vocabulary diff,qa-review,true,zero-findings,sub-2,F-18 ROADMAP convergence target,Explicit convergence target — CONTEXT.md adoption measurable via vocabulary diff
+  C-06,ADR convention — docs/adr/NNNN-*.md created and one-shot migration converts wiki decision-*.md to ADRs leaving stub pointers,integration,true,all-pass,sub-3,F-18 ROADMAP convergence target,Phase A migration must preserve all content and be one-shot
+  C-07,ADR creation is triggered only by loom-converge resolving a blocking conflict or loom-roadmap converge recording a load-bearing rejection — not lazy-on-first-write,integration,true,all-pass,sub-3,F-18 ROADMAP convergence target,Explicit trigger contract for ADR creation
+  C-08,convergence-state.toon v1→v2 migration ships in Phase A — detectConvergenceStateVersion returns {detected,current,outdated}; migrateConvergenceStateV1toV2 validates against pre-F-18 fixtures,integration,true,all-pass,sub-4b,F-18 ROADMAP convergence target,Explicit convergence target — schema migration follows F-13 walker pattern
+  C-09,/loom-which command exists as a decision-tree router skill (complements /loom-do model-facing and /loom-reference flat-table),e2e,true,all-pass,sub-4c,F-18 ROADMAP convergence target,Moved from Phase E to Phase A as discoverability index
+  C-10,FeedbackLoop schema (protocols/feedback-loop.schema.md) validates loop.toon envelope with full field set,unit,true,all-pass,sub-5,F-18 ROADMAP convergence target,Headline Phase B schema must validate every field; backward-compat
+  C-11,Retirement ceremony — retiredAt is set by loom-converge/loom-bugfix when symptom goes green and stays green across a verification run; retired loops are immutable but queryable,integration,true,all-pass,sub-5,F-18 ROADMAP convergence target,Explicit retirement semantics in sub-5
+  C-12,feedback-loop skill encodes 10-rung ladder plus TRDA gates and leading words tight/red,qa-review,true,zero-findings,sub-6,F-18 ROADMAP convergence target,Leading words tight and red imported verbatim — content audit
+  C-13,loom-bugfix Phase 1 gate halts on a hard bug until loop.toon exists with verifiedRed:true and TRDA gates passed — gate applies to autoconverge AND default analyst paths (no ungated branch),e2e,true,all-pass,sub-7,F-18 ROADMAP convergence target,Explicit convergence target — no theory before red on all entry paths
+  C-14,Escape hatch --override-loop-gate "<reason>" writes the reason to loop.toon.escapeReason and proceeds without TRDA pass; logged prominently in convergence digest,e2e,true,all-pass,sub-7,F-18 ROADMAP convergence target,Explicit escape-hatch contract in sub-7
+  C-15,Exhausted 10-rung ladder produces a named stuck-at-loop-construction HITL state with escalation guidance — verified by a regression test that hits the dead-end intentionally,e2e,true,all-pass,sub-7,F-18 ROADMAP convergence target,Explicit convergence target — HITL prompt stuck-at-loop-construction
+  C-16,loom-converge Phase 0 loop-construction writes loop.toon; each iteration binds to exactly one loopId and runs only that command,e2e,true,all-pass,sub-8,F-18 ROADMAP convergence target,Explicit convergence target — one symptom = one named command
+  C-17,Stalls escalate the LOOP (down the ladder) not the fixer; escalationHistory[] records each escalation,integration,true,all-pass,sub-8,F-18 ROADMAP convergence target,Core Phase B behavioural change — escalation sharpens feedback not fixer
+  C-18,convergence-state.toon gains loops[] table; lint/typecheck failures spawn their own loops and surface via linkedLoops[] in convergence-state.toon,integration,true,all-pass,sub-8,F-18 ROADMAP convergence target,Explicit convergence target — separate loops per symptom with linkedLoops[]
+  C-19,loom-converge command flags --loop-id binds; --loops lists active loops as TOON table; --retire-loop archives a converged loop,e2e,true,all-pass,sub-8,F-18 ROADMAP convergence target,Explicit flag contract in sub-8
+  C-20,protocols/loom-converge.interaction.md documents Phase 0 loop-construction UX states and new flag behaviours,qa-review,true,zero-findings,sub-8,F-18 ROADMAP convergence target,Interaction spec deliverable in sub-8
+  C-21,tdd-coach agent edits-in-place adopts horizontal slice anti-pattern framing verbatim and enforces no-silent-regression-during-refactor rule,unit,true,all-pass,sub-9,F-18 ROADMAP convergence target,Vertical tracer-bullet TDD only; testable via test-count delta
+  C-22,findings.schema.md gains confidence:high|medium|low on every finding row with backward-compatible default medium,unit,true,all-pass,sub-9b,F-18 ROADMAP convergence target,Used by all review and convergence agents
+  C-23,/loom-deepen run on loom-ai itself produces ≥3 deepening candidates with before/after diagrams; default TOON; HTML only with --html,e2e,true,all-pass,sub-10,F-18 ROADMAP convergence target,Explicit convergence target — ≥3 candidates default TOON
+  C-24,/loom-prototype completion — writes one-line TOON summary to prototypes/{name}/answer.toon and updates originating ADR if exists,e2e,true,all-pass,sub-12,F-18 ROADMAP convergence target,User-visible completion contract in sub-12
+  C-25,loom-note triage state machine all transitions explicit including 30-day timeout and explicit reopen,integration,true,all-pass,sub-13,F-18 ROADMAP convergence target,Explicit state-machine contract in sub-13
+  C-26,Each triage entry carries createdAt updatedAt transitions[]; bot-posted comments carry AI disclaimer prefix,unit,true,all-pass,sub-13,F-18 ROADMAP convergence target,Explicit timestamping and disclaimer contracts
+  C-27,Two redundancy checks at triage — already implemented? prior rejection queries .out-of-scope/,integration,true,all-pass,sub-13,F-18 ROADMAP convergence target,Explicit redundancy-check contract in sub-13
+  C-28,protocols/out-of-scope.schema.md defines OutOfScopeEntry fields and lands in Phase A,unit,true,all-pass,sub-14,F-18 ROADMAP convergence target,Foundation schema for persistent rejection log
+  C-29,A second loom-roadmap converge pass over previously-rejected idea reads .out-of-scope/ and surfaces a visible one-line suppression callout,e2e,true,all-pass,sub-14,F-18 ROADMAP convergence target,Explicit convergence target — visible suppression
+  C-30,ADR conflict callouts — roadmap-converge-reviewer and code reviewers cross-check ADRs and flag conflicts with contradicts ADR-NNNN framing,qa-review,true,zero-findings,sub-15,F-18 ROADMAP convergence target,Cross-check contract for reviewer agents
+  C-31,Conditional HTML report mode — --html opt-in flag with plain-text fallback when open fails,integration,true,all-pass,sub-18,F-18 ROADMAP convergence target,Headless/SSH fallback contract in sub-18
+  C-32,Sediment sweep across all Loom SKILL.md files retires ≥20% of body lines; mid-flight pass after Phase B plus final pass at Phase E,qa-review,true,zero-findings,sub-21,F-18 ROADMAP convergence target,Explicit convergence target — ≥20% retirement claim
+  C-33,Test-coverage audit — every F-18 sub-item maps to ≥1 convergence target or carries no-test:<rationale>; output is TOON manifest,qa-review,true,zero-findings,sub-22,F-18 ROADMAP convergence target,Self-referential audit — this criteria-plan IS the input to that manifest
+  C-34,Attribution audit — NOTICE file lists patterns; README has acknowledgment; no per-file inline attribution,qa-review,true,zero-findings,sub-5+sub-6+sub-9+sub-17+sub-21,F-18 ROADMAP convergence target,Explicit convergence target — attribution audit covers all imported-content sub-items
+  C-35,HITL prompts criterion-unverifiable and harness-output-incompatible halt with structured guidance rather than silent failure,e2e,true,all-pass,sub-7,F-18 ROADMAP convergence target,Bootstrap-testing safety — HITL prompts must exist
+  C-36,Planning-agent sharpening — loom-plan/create.md + loom-plan/materialize.md + parallelization-agent + phasing-agent adopt tracer-bullet vertical-slice framing with ideal-seam-count=1 and explicit Wave-0 prefactor step ("make the change easy then make the easy change") verbatim,integration,true,all-pass,sub-11,F-18 ROADMAP convergence target,Plan Phase 3 S-05 verifies this — closes interpretation-review CG-001 plan-only gap
+  C-37,loom-pause handoff hygiene — tmp-dir default; suggested-skills section; secret redaction pass; no-duplication rule — verified by Phase 5 S-01 secret-redaction scenario,integration,true,all-pass,sub-16,F-18 ROADMAP convergence target,Promoted from no-test per interpretation-review IC-001 — plan ships concrete vitest scenarios
+  C-38,protocols/grilling.md 12-question cap enforces session halt + progress indicator + /skip escape — verified by Phase 5 S-03 cap-enforcement scenario,e2e,true,all-pass,sub-17,F-18 ROADMAP convergence target,Promoted from no-test per interpretation-review IC-001 — plan tests cap deterministically
+  C-39,Skill autoload audit produces TOON report classifying every /loom-* skill on model-invoked vs user-invoked axis; deprecation advisory via /loom-doctor when autoload trigger changes — verified by Phase 5 S-05,qa-review,true,zero-findings,sub-20,F-18 ROADMAP convergence target,Promoted from no-test per interpretation-review IC-001 — plan tests audit output structure
+  C-40,protocols/skill-authoring.md content audit — verifies the 6 named principles (predictability leading-word completion-criterion premature-completion sediment duplication) are present with non-trivial body content; no-op test pre-check on the protocol file itself,qa-review,true,zero-findings,sub-4,F-18 ROADMAP convergence target,Promoted from no-test per iter1 FC-B5 — sub-4 must map to a real target per Phase 6 audit; C-12 and C-32 indirectly cover it but C-40 is the direct contract
+
+noTest[2]{subItemRef,rationale}:
+  sub-19,Item moved to Phase A sub-4c (covered by C-09). Placeholder line in roadmap with no independent content.
+  sub-23,Bootstrap testing note is a documentation/discipline statement; not itself a deliverable that can fail.
+
+reviewers[5]{id,type,agent,dimensions,blocking,model}:
+  R-01,test-runner,vitest-runner,all-tests,true,
+  R-02,qa-review,qa-reviewer,vocabulary-collision+attribution-audit+sediment-sweep+content-audit,true,sonnet
+  R-03,code-review,code-reviewer,clarity+duplication+error-handling+naming+schema-conformance,true,sonnet
+  R-04,security-review,security-reviewer,secrets-exposure+redaction,false,sonnet
+  R-05,architecture-review,architecture-reviewer,seam+leverage+depth+locality,false,sonnet
+
+testConfig:
+  runner: vitest
+  testDir: .plan-execution/convergence/criteria/tests
+  setupFile: .plan-execution/convergence/criteria/setup.ts
+  timeout: 30000
+
+reviewConfig:
+  maxFindingsPerReviewer: 20
+  conflictWindow: 3
+  severityLevels: critical+high+medium+low+info
+  blockingSeverities: critical+high
+
+budget:
+  maxIterations: 10
+  agentBudget: 40
+  estimatedWorstCase: 55
+
+decisions[4]{id,question,answer,source}:
+  CP-01,Bootstrap testing autoconverge enabled?,No — F-18 Phase B tested with prior-generation /loom-plan test one-shot per sub-23,F-18 ROADMAP convergence target
+  CP-02,Sub-items 4/16/17/19/20/23 convergence target or no-test?,no-test with explicit rationale per sub-22 test-coverage audit candidate list,F-18 ROADMAP convergence target
+  CP-03,conflictWindow value?,3 (user-specified default for this run),user-choice
+  CP-04,Attribution audit scope?,Cross-cutting C-34 covers all imported-content sub-items per single audit semantics,F-18 ROADMAP convergence target

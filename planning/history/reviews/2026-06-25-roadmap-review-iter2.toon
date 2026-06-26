@@ -1,0 +1,53 @@
+type: roadmap-review-autoconverge
+roadmapFile: planning/ROADMAP.md
+scope: F-18 + M-08 (Matt Pocock Skills Adoption)
+startedAt: 2026-06-25T00:00:00Z
+totalIterations: 2 refinement passes + 3 review passes
+finalVerdict: converged
+
+iterations[3]{n,verdicts,blockingFindings,note}:
+  1,(strategy:needs-another-pass|ux:needs-another-pass|feature-coverage:needs-another-pass),24 findings 8 cross-cutting themes,baseline review
+  2,(strategy:converged|ux:converged|feature-coverage:needs-another-pass),3 blocking + 4 high (all data-model mechanical),applied first integration pass; 2 of 3 agents satisfied
+  3,(feature-coverage:converged),0 blocking,applied second integration pass; all agents satisfied
+
+cumulativeChangesApplied[N]:
+  attribution-policy-switched-to-NOTICE
+  priority-split-PhaseB-P1-others-P2
+  CONTEXT-md-split-into-glossary-and-DECISIONS
+  ADR-vs-wiki-decision-pages-ADR-primary
+  FeedbackLoop-schema-expanded-escalationHistory-linkedLoops-trda-escapeReason
+  Phase-B-gate-escape-hatch-override-loop-gate-and-named-stuck-state
+  loop-in-progress-states-named-explicitly
+  /loom-which-moved-to-Phase-A
+  OutOfScopeEntry-schema-authored
+  loom-bugfix-gate-applies-all-paths
+  convergence-state-toon-migration-v1-to-v2-Phase-A
+  HTML-report-mode-opt-in-with-headless-fallback
+  vocabulary-mapping-table-Section-0
+  triage-state-machine-all-transitions-defined
+  findings-confidence-field-added
+  tdd-coach-edit-not-new-file
+  no-silent-regression-during-refactor-rule
+  sediment-sweep-mid-flight-after-B-plus-final
+  Data-Model-new-entities-FeedbackLoop-OutOfScopeEntry-TriageState-ADR-CodebaseDesignVocab-SkillAuthoringPrinciple-Handoff-Prototype
+  Data-Model-new-relationships-ConvergenceTier-FeedbackLoop-self-parent-child-OutOfScope-Feature-Triage-Feature-ADR-Feature
+  M-08-dependency-reframed-no-hard-M-07-dep
+  loom-converge-loops-flag-format-specified
+  loom-converge-interaction-spec-listed
+  schema-migration-version-label-detect-migrate-functions
+
+residualNonBlockingItems[3]:
+  vision-section-could-be-updated-to-acknowledge-DX-enablement-phases (strategy F8, non-blocking)
+  /loom-which-empty-state-for-pre-shipped-conventions (ux Issue 2, low)
+  CONTEXT-split-migration-edge-case-no-locked-decisions-section (ux Issue 3, low)
+
+readiness:
+  /loom-plan-create: ready
+  approvalGate: passed
+  attribution: NOTICE-based, no per-file inline
+  schemaCoverage: complete
+  uxStates: complete
+
+attribution: |
+  This roadmap feature draws on patterns from mattpocock/skills (MIT, GitHub).
+  Full acknowledgment will land in the project NOTICE file when Phase A ships.

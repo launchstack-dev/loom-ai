@@ -212,6 +212,14 @@ library:
         - "scripts/**"
         - "hooks/*.sh"
 
+    - name: feedback-loop
+      description: Feedback-loop construction discipline — 10-rung ladder (failing test → curl → CLI+fixture diff → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash), TRDA gate definition, and tighten-the-loop heuristics. Auto-loads during loom-converge loop construction, loom-bugfix Phase-1 gate, or any session where you are writing or evaluating a FeedbackLoop artifact.
+      source: skills/feedback-loop/SKILL.md
+      triggers:
+        - ".plan-execution/loops/**"
+        - "**/loop.toon"
+        - "**/feedback-loop*"
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -635,4 +643,12 @@ kits:
     includes:
       - type: skill
         name: shell-conventions
+
+  - name: feedback-loop
+    description: Feedback-loop construction skill — 10-rung ladder, TRDA gate, tighten-the-loop heuristics. Auto-loads in any session involving FeedbackLoop artifacts or loom-converge loop construction.
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: feedback-loop
 

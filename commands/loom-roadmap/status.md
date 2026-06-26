@@ -24,6 +24,19 @@ runs as a deterministic script.
 | `--roadmap <path>` | `planning/ROADMAP.md` | Target roadmap. Slug derived as filename sans extension. |
 | `--all` | off | Scan `.roadmap-converge/*/state.toon` and render one digest per slug, ordered by mtime descending. |
 | `--json` | off | Emit `RoadmapConvergeDigest` as a JSON object to stdout (one object per slug with `--all`). Suppresses glyphs. Stable schema for `/loom-next`, `/loom-status`, and CI consumers. |
+| `--html` | off | Render output as an HTML file and attempt to open it in the OS default browser. Plain-text/TOON output to stdout is ALWAYS produced; `--html` is strictly additive. See § HTML rendering below. |
+
+### HTML Rendering (`--html`)
+
+When `--html` is passed:
+
+1. Produce the normal digest output to stdout as usual.
+2. Pipe that same output to `scripts/html-renderer/loom-roadmap-status.ts --slug {slug}`, which:
+   - Writes an HTML file atomically to `.plan-execution/reports/loom-roadmap-status-{slug}-{ISO8601}.html`.
+   - Calls the OS open shim (`open` on macOS, `xdg-open` on Linux).
+   - **Headless fallback:** if the open shim is unavailable or returns non-zero, the renderer prints `open this in a browser: {path}` to stdout and exits 0. The HTML file is still written.
+3. `--html` is incompatible with `--json` (both flags together → error: "cannot combine --html and --json"). The `--json` flag takes precedence; warn and ignore `--html`.
+4. Exit code is 0 whenever the HTML file was written successfully.
 
 ### What this command does
 

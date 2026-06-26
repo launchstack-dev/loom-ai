@@ -1,0 +1,36 @@
+schemaVersion: 1
+feature: F-18
+title: Matt Pocock Skills Adoption — Test Coverage Audit
+createdAt: 2026-06-26T00:00:00Z
+source: .plan-execution/criteria-plan.toon (inverted subItemRef index)
+totalSubItems: 23
+totalWithConvergenceTargets: 23
+totalWithNoTest: 0
+
+# Sub-item list: 1, 2, 3, 4, 4b, 4c, 5, 6, 7, 8, 9, 9b, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21
+# Columns: subItemId, summary, convergenceTargetRefs[], noTestRationale, tier
+
+rows[23]{subItemId,summary,convergenceTargetRefs[],noTestRationale,tier}:
+  sub-1,Codebase-design vocabulary (protocols/codebase-design.md with Module/Interface/Seam/Adapter/Leverage/Locality/Depth table and Loom-native vs mattpocock precedence rules),C-01+C-02,,unit+qa-review
+  sub-2,CONTEXT.md split — always-loaded ≤50-term glossary; locked decisions migrate to DECISIONS.md; first-run empty-state advisory; vocabulary-diff adoption test,C-03+C-04+C-05,,integration+qa-review
+  sub-3,ADR convention — docs/adr/NNNN-*.md; one-shot migration from wiki decision-*.md; ADR creation trigger contract (converge/roadmap-converge only),C-06+C-07,,integration
+  sub-4,protocols/skill-authoring.md — predictability philosophy; leading words; no-op test framing; doc-only content audited by sediment sweep and ladder audit,C-12+C-32,,qa-review
+  sub-4b,convergence-state.toon v1→v2 migration — detectConvergenceStateVersion + migrateConvergenceStateV1toV2 validated against pre-F-18 fixtures,C-08,,integration
+  sub-4c,/loom-which decision-tree router skill (complements /loom-do and /loom-reference),C-09,,e2e
+  sub-5,FeedbackLoop schema (protocols/feedback-loop.schema.md) — full field set validation; retirement ceremony (retiredAt set on verified green; immutable after),C-10+C-11+C-34,,unit+integration+qa-review
+  sub-6,feedback-loop skill — 10-rung ladder + TRDA gates + leading words tight/red imported verbatim,C-12+C-34,,qa-review
+  sub-7,loom-bugfix Phase 1 gate — verifiedRed:true + TRDA before theory; escape hatch --override-loop-gate; exhausted-ladder HITL stuck-at-loop-construction; HITL structured-guidance prompts,C-13+C-14+C-15+C-35,,e2e
+  sub-8,loom-converge loop binding — loop.toon write on Phase 0; one loopId per symptom; stall escalates loop not fixer; linkedLoops[] in convergence-state; --loop-id/--loops/--retire-loop flags; interaction spec doc,C-16+C-17+C-18+C-19+C-20,,e2e+integration+qa-review
+  sub-9,tdd-coach agent — horizontal-slice anti-pattern framing verbatim; no-silent-regression rule; vertical tracer-bullet TDD only,C-21+C-34,,unit+qa-review
+  sub-9b,findings.schema.md — confidence:high|medium|low on every finding row; backward-compatible default medium,C-22,,unit
+  sub-10,/loom-deepen — ≥3 deepening candidates with before/after diagrams; default TOON output; HTML only with --html,C-23,,e2e
+  sub-11,Planning-agent sharpening — loom-plan/create.md + loom-plan/materialize.md + parallelization-agent + phasing-agent adopt tracer-bullet vertical-slice framing; ideal-seam-count=1; explicit Wave-0 prefactor step verbatim,C-36,,integration
+  sub-12,/loom-prototype completion ceremony — writes prototypes/{name}/answer.toon TOON summary; updates originating ADR if exists,C-24,,e2e
+  sub-13,loom-note triage state machine — all transitions explicit; 30-day timeout; reopen; createdAt/updatedAt/transitions[]; AI disclaimer prefix; two redundancy checks querying .out-of-scope/,C-25+C-26+C-27,,integration+unit
+  sub-14,protocols/out-of-scope.schema.md — OutOfScopeEntry fields; visible suppression callout on second roadmap-converge pass,C-28+C-29,,unit+e2e
+  sub-15,ADR conflict callouts — roadmap-converge-reviewer and code reviewers cross-check ADRs; contradicts ADR-NNNN framing,C-30,,qa-review
+  sub-16,loom-pause handoff hygiene — tmp-dir default; suggested-skills section; secret redaction pass; no-duplication rule,C-37,,integration
+  sub-17,protocols/grilling.md 12-question cap — session halt + progress indicator + /skip escape,C-38+C-34,,e2e+qa-review
+  sub-18,Conditional HTML report mode — --html opt-in flag; plain-text fallback when open fails,C-31,,integration
+  sub-20,Skill autoload audit — TOON report classifying every /loom-* skill on model-invoked vs user-invoked axis; deprecation advisory via /loom-doctor when autoload trigger changes,C-39,,qa-review
+  sub-21,Sediment sweep — retires ≥20% of SKILL.md body lines; mid-flight Phase-B pass + final Phase-E pass,C-32+C-34,,qa-review

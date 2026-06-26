@@ -199,9 +199,68 @@ impactSummary:
   - `riskLevel` — `high` / `medium` / `low` computed per the mapping in Phase 1's Wiki Cross-Ref Graph Walk
 
 
+## Phase 1: Loop-Construction Gate (F-18)
+
+**This gate applies to ALL entry paths — autoconverge AND the default analyst path. There is no ungated branch.**
+
+Before ANY hypothesis work (Phase 2 diagnosis), read `.plan-execution/loops/{loopId}.toon` (or the single `.plan-execution/loops/*.toon` file if exactly one exists) and evaluate the TRDA gate:
+
+### Gate Check — Default (non-override) Path
+
+1. **If no `loop.toon` exists** in `.plan-execution/loops/`:
+   - Write to stderr (verbatim):
+     ```
+     errorCode: LOOP_NOT_VERIFIED_RED
+     message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+     hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+     ```
+   - Exit with code `4`. Do NOT proceed to Phase 2.
+
+2. **If `loop.toon` exists but `verifiedRed: false`**:
+   - Write the SAME error block to stderr (verbatim above).
+   - Exit with code `4`. Do NOT proceed to Phase 2.
+
+3. **If `loop.toon` exists and `verifiedRed: true`**:
+   - Proceed to Phase 2. Bind all hypothesis work to `loop.toon.loopId` and `loop.toon.command`.
+
+### Gate Check — Override Path (`--override-loop-gate "<reason>"`)
+
+When `--override-loop-gate "<reason>"` is passed:
+1. Read the existing `loop.toon` (or create a minimal construction-state one if absent).
+2. Write `escapeReason: "<reason>"` to `loop.toon` atomically (`.tmp` then rename).
+3. Proceed to Phase 2.
+4. In the convergence digest output, emit a prominent callout:
+   ```
+   ⚠ ESCAPE-SET: override-loop-gate active — escapeReason: "<reason>"
+   ```
+   This callout MUST appear before any hypothesis or findings output.
+
+### 10-Rung Ladder Exhaustion
+
+If all 10 rungs have been attempted (`rung == 10`) and `verifiedRed: false`:
+- Write to stderr (verbatim):
+  ```
+  errorCode: STUCK_AT_LOOP_CONSTRUCTION
+  message: The 10-rung ladder was exhausted without a verified-red loop.
+  hint: See HITL escalation guidance below.
+  ```
+- Emit the HITL guidance block (verbatim):
+  ```
+  hitlGuidance:
+    state: stuck-at-loop-construction
+    operatorQuestions[3]:
+      - Q1: Is the symptom reproducible by a human manually running the command outside the harness?
+      - Q2: Is the harness the right tool for this symptom (vs. a one-off REPL, a unit test refactor, or a debugger session)?
+      - Q3: Should this be escalated to a human-only path — i.e., taken out of the convergence loop entirely?
+    reviseLoopCommand: "loom-converge --revise-loop <loopId> --reason \"<one-sentence-reason>\""
+    fallback: "If revision is not productive after 2 attempts, retire the loop with --retire-loop <loopId> and open a HITL issue."
+  ```
+- Exit with code `5`. Do NOT proceed to Phase 2.
+
 ## Rules
 
 - **Read before writing.** Always read the target files before modifying them.
+- **Loop gate is unconditional.** There is NO path that bypasses the gate except `--override-loop-gate`.
 - **Minimal changes.** Fix the bug, nothing else.
 - **Wiki is context, not authority.** Wiki pages inform your understanding but the code is the source of truth. If wiki conflicts with code, trust the code and note the discrepancy.
 - **Archive is mandatory.** Every fix gets an archive entry, even if verification fails.

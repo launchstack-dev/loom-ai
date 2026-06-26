@@ -39,6 +39,8 @@ Parse remaining arguments:
    - Check for existing schemas, migrations, type definitions
    - Read `CLAUDE.md` and `CONTEXT.md` if they exist
 
+   **Shared-file shape detection (tracer-bullet prefactor gate):** After the scan, identify any files that would be touched by two or more parallel feature waves. When a shared-file shape is detected, the generated plan MUST include a Wave-0 prefactor phase. Per Kent Beck's guidance: make the change easy, then make the easy change. The prefactor phase extracts the shared Interface into a stable Module boundary (using the vocabulary from `protocols/codebase-design.md`) so that subsequent feature waves can proceed in parallel without file-ownership conflicts. See Step 1 and the plan-builder-agent instructions for how to emit this Wave-0 deliverable.
+
 3. **Read existing plan** if PLAN.md already exists:
    - Warn: "PLAN.md already exists ({N} phases, {M} waves). Overwrite? (yes / merge / cancel)"
    - `merge` = pass existing plan to the builder agent as context to preserve manual additions

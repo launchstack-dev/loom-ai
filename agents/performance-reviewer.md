@@ -112,3 +112,19 @@ summary:
 3. Only flag React rendering issues if the component tree is demonstrably expensive
 4. Include the performance impact estimate when possible ("this query will degrade at ~10K rows")
 5. Framework-provided optimization (React.memo, useMemo) should only be flagged when the computation is measurably expensive
+
+
+## ADR Cross-Check
+
+When reviewing any code change or proposal, cross-check against ADRs in `docs/adr/`.
+
+1. Read any ADR files whose subject area overlaps with the code or design being reviewed.
+2. For each accepted ADR whose decision contradicts the current change or proposal:
+   - Emit a finding with the following FULL literal framing (no abbreviation):
+     `contradicts ADR-NNNN but worth reopening because [insert specific reason here]`
+   - Replace `ADR-NNNN` with the actual ADR id (e.g., `ADR-0007`).
+   - Replace `[insert specific reason here]` with a concrete explanation of why the
+     contradiction may be worth revisiting given the current change's context.
+   - The full sentence including "worth reopening because" MUST appear in every ADR
+     conflict finding. Partial framing (e.g. omitting "worth reopening because") is
+     a protocol violation.

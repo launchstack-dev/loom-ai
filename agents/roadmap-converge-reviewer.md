@@ -81,10 +81,37 @@ The driver's reviewer adapter parses your envelope as follows:
 
 If you cannot determine a status (e.g. the roadmap file is unreadable, or your tools fail), return `status: failure` at the envelope level and write a one-line `integrationNotes` explaining what went wrong. The driver will treat this as `REVIEWER_NO_ENVELOPE` per AW-16, skip the dimension, and continue with the other dimensions.
 
+## Out-of-Scope Suppression Check
+
+Before emitting findings for any proposal or roadmap section, read `.out-of-scope/` using
+`scripts/out-of-scope/suppress.ts` `checkSuppressed(oosDir, proposalId, sectionText)`.
+
+If any entries match:
+- Emit a **visible suppression callout** for each matched entry as a `warning` finding.
+  The callout MUST appear verbatim in the `description` field:
+  `> [OOS-suppressed] {id} was rejected on {date} — Rationale: {rationale excerpt}`
+- Never silently skip or suppress a matched entry. The operator must see it and decide.
+- The proposal is NOT automatically rejected — it is flagged for operator decision.
+
+## ADR Cross-Check
+
+When reviewing any roadmap section or proposal, cross-check against ADRs in `docs/adr/`.
+
+1. Read all ADR files whose subject area overlaps with the section under review.
+2. For each accepted ADR whose decision contradicts the current proposal or section:
+   - Emit a `warning` finding with the following FULL literal framing (no abbreviation):
+     `contradicts ADR-NNNN but worth reopening because [insert specific reason here]`
+   - Replace `ADR-NNNN` with the actual ADR id (e.g., `ADR-0007`).
+   - Replace `[insert specific reason here]` with a concrete explanation of why the
+     contradiction may be worth revisiting given the current proposal's context.
+   - The full sentence including "worth reopening because" MUST appear in every ADR
+     conflict finding. Partial framing (e.g. omitting "worth reopening because") is
+     a protocol violation.
+
 ## Conventions
 
 - Stay under 500 chars in `evidence` and 200 chars per blocker.
 - Be specific: cite a sentence or a phrasing problem; do NOT critique what the section "feels like".
 - Do not propose mutations — your job is to evaluate, not to draft replacement text. The integrator (Phase 5) handles drafting.
-- Do not read files outside `rubricPath` and `roadmapPath` unless explicitly necessary to verify a cross-reference within the roadmap.
+- Do not read files outside `rubricPath` and `roadmapPath` unless explicitly necessary to verify a cross-reference within the roadmap, or unless executing the Out-of-Scope Suppression Check or ADR Cross-Check above.
 - Echo the green-band exemplar back into your finding text only when it improves clarity — the driver appends the exemplar automatically per the F-15 rendering rule for yellow/red statuses.

@@ -113,6 +113,10 @@ Community-supported. GitHub issues only. No SLA.
 
 Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https://github.com/launchstack-dev). File issues at [github.com/launchstack-dev/loom-ai/issues](https://github.com/launchstack-dev/loom-ai/issues). For kit authoring, see [`planning/notes/plugin-marketplace-rationale.md`](planning/notes/plugin-marketplace-rationale.md). For the install decision tree, see [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md).
 
+## Acknowledgments
+
+Several of Loom's core patterns — including the codebase-design vocabulary (Module/Seam/Adapter), the feedback-loop ladder, the no-op test framing for skill authoring, the horizontal-slice anti-pattern for TDD, the throwaway-prototype branch discipline, and the grilling discipline with a 12-question cap — were adapted from educational content by Matt Pocock. Full attribution, MIT-license source references, and a description of how each pattern was adapted are recorded in [`NOTICE`](NOTICE) at the root of this repository.
+
 ---
 
 ## Status

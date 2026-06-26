@@ -1,0 +1,17 @@
+subject: planning/PLAN-pre-f18-example.md
+harnessName: plan-review
+mode: document
+currentIteration: 3
+status: in-progress
+startedAt: 2026-06-20T10:00:00.000Z
+lastIterationAt: 2026-06-20T12:42:18.045Z
+
+iterations[3]{iteration,blockingCount,advisoryCount,producedAt}:
+  1,5,4,2026-06-20T10:30:00.000Z
+  2,3,5,2026-06-20T11:30:00.000Z
+  3,1,6,2026-06-20T12:42:18.045Z
+
+findings[3]{id,dimension,severity,locationPath,locationAnchor,summary,suggestion,reviewerAgent}:
+  F-01,strategy,blocking,planning/PLAN.md,##Overview,Overview omits C-06 reference,Cite C-06 in opening paragraph,strategy-reviewer-agent
+  F-02,phasing,warning,planning/PLAN.md,##Execution Phases > Phase 2,Phase 2 has 9 deliverables,Split Phase 2 into 2a/2b,phasing-reviewer-agent
+  F-03,ux,info,planning/PLAN.md,##Risks,Risk table missing owner column,Add owner column,ux-reviewer-agent

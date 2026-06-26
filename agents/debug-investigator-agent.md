@@ -47,10 +47,40 @@ Each issue row MUST set:
 
 The harness sets `reviewerAgent` to `debug-investigator-agent` on every row it emits from your envelope. You do NOT set `reviewerAgent` yourself — the harness owns that column.
 
+## Phase 0: Loop-Construction Gate (F-18)
+
+**This gate applies before ANY investigation output is emitted. There is no ungated path.**
+
+Before reading the symptom or subject, check `.plan-execution/loops/` for a verified-red `loop.toon`:
+
+### Gate Check — Default Path
+
+1. **If no `loop.toon` exists** in `.plan-execution/loops/`:
+   - Write to stderr (verbatim):
+     ```
+     errorCode: LOOP_NOT_VERIFIED_RED
+     message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+     hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+     ```
+   - Halt. Return an `AgentResult` with `status: failure` and `issues[1]` carrying this error. Exit code `4`.
+
+2. **If `loop.toon` exists but `verifiedRed: false`**:
+   - Same output as above. Exit code `4`.
+
+3. **If `loop.toon` exists and `verifiedRed: true`**:
+   - Proceed with the investigation below. Bind findings to `loop.toon.loopId`.
+
+### Gate Check — Override Path
+
+When the calling harness has set `escapeReason` on `loop.toon` (i.e., state is `escape-set` or `escape-iterating`):
+- Proceed with investigation.
+- Add a prominent note at the top of your output: `ESCAPE-SET active — escapeReason: {loop.toon.escapeReason}`.
+
 ## Rules
 
-1. **Read-only.** You MUST NOT create, modify, or delete any file. No `Write` / `Edit` tool calls.
-2. **Stay within investigation scope.** Do not investigate unrelated code paths. The subject + symptom + transitive imports are your boundary.
-3. **No synthetic symptom row.** The harness emits the `F-99 / "symptom still reproduces" / reviewerAgent=debug-harness` row itself when the post-iteration symptom re-run still fails (per `findings.applications-rows.md` § F-03 OQ-01 decision). You MUST NOT emit any row with `reviewerAgent: debug-harness`.
-4. **One file per finding.** Each hypothesis is one row. Do not combine multiple files in a single row.
-5. **Confidence-first ordering.** Emit high-confidence rows first so the integrator addresses them first.
+1. **Loop gate is unconditional.** Check `loop.toon` before any investigation. The gate has no bypass except the escape path.
+2. **Read-only.** You MUST NOT create, modify, or delete any file. No `Write` / `Edit` tool calls.
+3. **Stay within investigation scope.** Do not investigate unrelated code paths. The subject + symptom + transitive imports are your boundary.
+4. **No synthetic symptom row.** The harness emits the `F-99 / "symptom still reproduces" / reviewerAgent=debug-harness` row itself when the post-iteration symptom re-run still fails (per `findings.applications-rows.md` § F-03 OQ-01 decision). You MUST NOT emit any row with `reviewerAgent: debug-harness`.
+5. **One file per finding.** Each hypothesis is one row. Do not combine multiple files in a single row.
+6. **Confidence-first ordering.** Emit high-confidence rows first so the integrator addresses them first.

@@ -91,3 +91,32 @@ Per `protocols/doctor-report.schema.md`:
 - Glyphs (`✓`, `⚠`, `✗`) emitted only on a TTY (`process.stdout.isTTY`).
   Text labels (`PASS`, `WARN`, `FAIL`) are always present.
 - `--json` dumps the raw report.
+
+## Skill Autoload Advisory Output
+
+After the main check battery, `/loom-doctor` MUST read advisory notices produced by the skill-autoload-audit pipeline and render them as informational entries.
+
+**Advisory source:** `.plan-execution/reports/skill-autoload-advisories.toon`
+**Schema:** `entries[N]{skillName,priorTrigger,newInvocationPath,emittedAt}` (see `scripts/skill-autoload-audit/deprecation-notice.ts`).
+
+**Rendering rules:**
+1. If the advisory file does not exist, skip silently — no advisory section is shown.
+2. If the file exists and `entries` is empty, skip silently.
+3. If the file exists and has one or more entries, render a block after the check summary:
+
+```
+### Skill Autoload Advisories ({N} pending)
+
+  ⚠ ADVISORY  {skillName}
+    Prior invocation: {priorTrigger}
+    New invocation:   {newInvocationPath}
+    Detected at:      {emittedAt}
+    Action: Review {skillName}/SKILL.md frontmatter. Set `disable-model-invocation: true`
+            or strip the `description:` field if this skill should only be user-invoked.
+            Run `/loom-doctor --only skill-autoload` after updating to clear this advisory.
+```
+
+4. Each advisory renders as a `⚠ ADVISORY` entry (not `PASS`/`WARN`/`FAIL` — it is informational, not a health check failure).
+5. Advisories do NOT affect the `overallStatus` field or the exit code (they are advisory-only, not health failures).
+6. `--json` includes advisories under a top-level `skillAutoloadAdvisories` array in the DoctorReport payload.
+7. `--quiet` suppresses the advisory section (same suppression rule as `PASS` lines).

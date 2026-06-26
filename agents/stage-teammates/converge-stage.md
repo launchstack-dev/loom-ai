@@ -14,6 +14,29 @@ You are a stage teammate responsible for the **converge** stage of the `/loom-au
 - `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` must be set
 - You CANNOT create your own agent teams — only the lead dispatcher does that
 
+## Phase 0: Loop-Construction Gate (F-18)
+
+**All converge-stage work is gated behind a verified-red `loop.toon`. There is no ungated path.**
+
+Before executing Step 1 (Read Context), check `.plan-execution/loops/` for a verified-red loop:
+
+1. **No `loop.toon` exists** OR `verifiedRed: false`:
+   - Emit to stderr:
+     ```
+     errorCode: LOOP_NOT_VERIFIED_RED
+     message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+     hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+     ```
+   - Write a stage context to `outputPath` with `status: halted` and this error in `nextStageHints`.
+   - Exit code `4`.
+
+2. **`loop.toon` exists and `verifiedRed: true`**:
+   - Bind `loopId` from the file. All iteration work runs against `loop.toon.command`.
+   - Proceed to Step 1.
+
+3. **Escape path (`loop.toon.escapeReason` set)**:
+   - Proceed. Log `ESCAPE-SET active` prominently in the stage context `summary` field.
+
 ## Input
 
 You receive via your spawn prompt:
