@@ -31,7 +31,9 @@ const GENERATE_SCRIPT = path.join(REPO_ROOT, "scripts/generate-checksums.sh");
 // match handles duplicates for free; awk exits 0 on no-match so the line
 // survives `set -euo pipefail` without `|| true`. If install.sh's pipeline
 // changes shape, this constant must move in lockstep. (Gemini #28 round-2.)
-const VERIFY_PIPELINE = `awk -v src="__SRC__" '$2 == src {print $1; exit}' __FILE__ 2>/dev/null`;
+// `"__FILE__"` is quoted so substituted paths with spaces (e.g. a sandbox
+// under "/Users/Some Name/...") don't word-split. (Gemini #28 round-4 MEDIUM.)
+const VERIFY_PIPELINE = `awk -v src="__SRC__" '$2 == src {print $1; exit}' "__FILE__" 2>/dev/null`;
 
 let sandbox: string;
 

@@ -556,8 +556,12 @@ echo "The status line will notify you when updates are available."
 # is silently left as "unknown" again. Probe the flag with `-e ""` before
 # committing to it; otherwise fall through to `npx tsx` if available.
 # (Gemini #28 rounds 2-3.)
-if command -v bun >/dev/null 2>&1 && command -v bunx >/dev/null 2>&1; then
-  ( cd "${CLAUDE_DIR}" && bunx tsx scripts/loom-first-run.ts 2>/dev/null ) || true
+# Bun runs TypeScript natively — no need for `bunx tsx` (which goes through
+# Node's tsx loader via bunx and requires network/cache resolution on first
+# run). Plain `bun scripts/loom-first-run.ts` is faster, simpler, and works
+# offline. (Gemini #28 round-4 MEDIUM.)
+if command -v bun >/dev/null 2>&1; then
+  ( cd "${CLAUDE_DIR}" && bun scripts/loom-first-run.ts 2>/dev/null ) || true
 elif command -v node >/dev/null 2>&1; then
   if node --experimental-strip-types -e "" >/dev/null 2>&1; then
     ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
