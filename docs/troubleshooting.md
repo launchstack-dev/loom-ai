@@ -104,7 +104,21 @@ Loom watches your Claude Code context and warns you before it dies.
 
 ---
 
-## 8. Known issues (read these if your symptom is weird)
+## 8. `/loom-update` failures and upgrade-path confusion
+
+| Situation | Recovery |
+|---|---|
+| `install-state-missing: ~/.loom/install.toon not found` from `/loom-update` | The install envelope hasn't been written yet. Re-run the installer once: `curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/main/install.sh \| bash`. The first install writes `~/.loom/install.toon`; future `/loom-update` runs operate against it. |
+| `/loom-update` was interrupted (Ctrl-C, kernel panic, terminal closed) | Run `/loom-update --resume`. It reads the mid-update marker from `~/.loom/install.toon`, finishes the apply atomically, and clears the marker. If `--resume` reports `UNRECOVERABLE`, drop to `--rollback` to restore the prior version from the inventory snapshot, then re-run a fresh `/loom-update`. |
+| A new Loom version broke something | `/loom-update --rollback` restores the prior version from the v3 inventory snapshot. Restart Claude Code to pick up the rolled-back files. Then pin to a known-good tag: `/loom-update --pin v0.0.1`. |
+| "Loom system files changed upstream. Run /loom-update to apply safely" from `/loom-library update` or `sync` | Working as intended. `/loom-library` won't touch hooks / scripts / prompts because rewriting them mid-Claude-Code-session can wedge live hooks. Run `/loom-update` instead — it stages atomically and emits the restart signal. |
+| `/loom-update` says "Claude Code restart required to load new plugin version" | Quit Claude Code (Cmd-Q / `claude exit`) and reopen. The plugin loader only re-scans on session start. |
+| "Update flow" confusion — which command upgrades what? | `/loom-update` = Loom runtime (hooks, scripts, commands). `/loom-library update` = your kit catalog (third-party agents/kits). `/loom-upgrade` = per-project planning artifacts. See [README "Maintenance verbs"](../README.md#maintenance-verbs----loom-update-vs-loom-library-vs-loom-upgrade). |
+| Re-running `install.sh` after a crash and you had user-added kits/agents | Safe — the installer preserves any non-system rows in `install-state.toon` across re-runs. Look for `OK install-state.toon (preserved N user-added row(s))` in the install output. If N is wrong, the underlying file may be v3-format; the installer collapses v3 rows to v2 automatically and `/loom-library sync` will re-migrate to v3 on next run. |
+
+---
+
+## 9. Known issues (read these if your symptom is weird)
 
 - **Resume preflight gap (2026-06-13)** — `fileHashes` field defined in schema but never populated, plus no git-lineage tracking. If a mid-run PR merges and orphans a wave commit, resume detects file-hash drift inconsistently. Workaround in §7 above. Fix in flight per `planning/notes/2026-06-13-orphaned-wave-1-postmortem.md`.
 

@@ -49,7 +49,7 @@ Start
 | Install command | `/plugin marketplace add launchstack-dev/loom-ai` then `/plugin install loom` | `curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh \| bash` |
 | Anchor variable | `${CLAUDE_PLUGIN_ROOT}` | `${CLAUDE_PROJECT_DIR}` |
 | Files land in | Registry-managed plugin root | `~/.claude/` (regular files) |
-| Update flow | `/plugin update loom` | Re-run install one-liner, or `/loom-library sync` |
+| Update flow | `/plugin update loom` | `/loom-update` (channel-aware, atomic, `--check` / `--pin` / `--resume` / `--rollback`). Re-running the install one-liner also works and now preserves user-added rows on re-run. `/loom-library sync` is for **kit content only** and refuses to touch system files. |
 | Customization | Limited (registry-owned) | Full (regular files; edit freely) |
 | Version pinning | Registry-version-dependent | Pin to any tag in the one-liner URL |
 | Air-gap-friendly | No | Yes (vendor tarball) |
