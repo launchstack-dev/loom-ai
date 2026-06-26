@@ -21,13 +21,17 @@ Parse the optional argument after `which`:
 The canonical decision tree. Internal nodes carry a question and branches; leaf nodes carry a command recommendation. Each session starts at **N-01**.
 
 ```toon
-nodes[12]{id,question,branches,leafRecommendation}:
-  N-01,"What kind of task are you on?","[bug, feature, design, planning, audit, unclear]",null
+nodes[14]{id,question,branches,leafRecommendation}:
+  N-01,"What kind of task are you on?","[bug, feature, design, planning, audit, runtime, unclear]",null
   N-02,"Bug — do you have a tight, reliably-red reproduction command?","[yes, partial, no]",null
   N-03,"Feature — is there an approved ROADMAP.md entry for it yet?","[yes-approved, drafted-not-approved, no-roadmap]",null
   N-04,"Design — are you exploring shape (codebase health, deepening) or capturing a decision (ADR)?","[shape, decision, throwaway-prototype]",null
   N-05,"Planning — do you need to convert a roadmap to a plan, review an existing plan, or execute one?","[convert, review, execute]",null
   N-06,"Audit — what surface are you auditing?","[coverage, attribution, skill-autoload, sediment]",null
+  N-07,"Runtime — what state is the Loom installation in?","[upgrade, library-refresh, project-migrate]",null
+  L-runtime-upgrade,null,null,"/loom-update (channel-aware Loom-runtime upgrade — atomic staging, rollback snapshots)"
+  L-runtime-library,null,null,"/loom-library sync (refresh user-installed kits and agents — refuses to touch system files)"
+  L-runtime-upgrade-project,null,null,"/loom-upgrade (migrate THIS project's PLAN.md / ROADMAP.md / state files to current schemas)"
   L-bugfix-tight,null,null,"/loom-bugfix --autoconverge"
   L-bugfix-construct,null,null,"/loom-bugfix (default path; Phase-1 gate will help you construct loop.toon — start at rung 1 of the 10-rung ladder)"
   L-feature-roadmap,null,null,"/loom-plan create (roadmap exists; ready for plan)"
@@ -45,13 +49,17 @@ nodes[12]{id,question,branches,leafRecommendation}:
   L-audit-sediment,null,null,"scripts/sediment-sweep/no-op-test.ts"
   L-unclear-fallback,null,null,"/loom-reference (no clear match; consult the flat reference table)"
 
-edges[22]{fromNode,branch,toNode}:
+edges[26]{fromNode,branch,toNode}:
   N-01,bug,N-02
   N-01,feature,N-03
   N-01,design,N-04
   N-01,planning,N-05
   N-01,audit,N-06
+  N-01,runtime,N-07
   N-01,unclear,L-unclear-fallback
+  N-07,upgrade,L-runtime-upgrade
+  N-07,library-refresh,L-runtime-library
+  N-07,project-migrate,L-runtime-upgrade-project
   N-02,yes,L-bugfix-tight
   N-02,partial,L-bugfix-construct
   N-02,no,L-bugfix-construct

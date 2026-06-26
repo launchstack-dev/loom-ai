@@ -283,7 +283,7 @@ describe("S-06 — sediment sweep retires ≥20% of body lines", () => {
 
   // §1916 slip-rule waiver: production SKILL.md files contain no classic
   // sediment patterns at this baseline, so a runtime sweep finds 0 candidates.
-  // Operator accepts shortfall per .plan-execution/sediment-shortfall.toon.
+  // Operator accepts shortfall per planning/history/coverage/sediment-shortfall-phase5.toon.
   it.skip("S-06: netRetirementPercent >= 20 (post-sweep ≤ 346 of 433 baseline lines)", () => {
     const sweepOut = join(tmpDir, "sweep.toon");
     spawnSync(

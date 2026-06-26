@@ -1,0 +1,15 @@
+recordedAt: 2026-06-26T15:10:00Z
+phase: 5b
+slipRule: plan §1916 — operator-accepted documented shortfall
+baselineFile: planning/history/coverage/sediment-baseline-phase2.toon
+sweepFile: planning/history/coverage/sediment-sweep-phase5.toon
+
+targetPercent: 20
+runtimeFoundPercent: 0
+acceptedBy: operator (jensen)
+
+rationale: Production SKILL.md files (skills/feedback-loop, skills/python-conventions, skills/shell-conventions) contain no classic sediment patterns at this baseline. The no-op-test heuristic (heading-restatements, generic-filler-notes, transitional filler, empty-preamble) found 0 retirement candidates across all 433 baseline body lines. The hand-authored sweep report at sediment-sweep-phase5.toon reflects analytical-rather-than-runtime candidates and is preserved as a snapshot. Operator accepts the ≥20% target as not-met for this milestone; future authoring of new skills may surface real sediment for a subsequent sweep.
+
+testStatus: tests/scripts/sediment-sweep.test.ts S-06 cases (netRetirementPercent>=20 and thresholdPassed=true) are marked it.skip with citation to this waiver file.
+
+waiverLocationNote: Plan §1916 suggests .plan-execution/sediment-shortfall.toon. .plan-execution/ is gitignored in this repo, so the canonical waiver lives at planning/history/coverage/sediment-shortfall-phase5.toon (in git history) while the runtime artifact remains at .plan-execution/sediment-shortfall.toon for local-tooling compatibility.
