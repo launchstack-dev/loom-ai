@@ -218,10 +218,11 @@ Existing behavior — re-pull tracked items from their sources:
 
 1. Read install-state.toon
 2. For each installed item:
-   a. Fetch current source content from repo (handle missing sources gracefully)
-   b. **Symlink safety check**: if the target path is a symlink (any symlink, regardless of where it points), classify this item as `[link] {name} — symlinked, no write needed` and SKIP it. Writing through a symlinked target silently overwrites whatever the link points to — could be a dev-install pointing back to a Loom repo checkout, could be a user-managed dotfiles target, could be anything. The link's existence is the signal that the user (or their tooling) is managing this path themselves; sync defers to them. (In curl mode this safety check is a defensive belt-and-suspenders; local-dev mode is handled by Branch B below, not here.)
-   c. Read the installed target file.
-   d. Compare source and target byte-for-byte. If they differ, the item needs updating.
+   a. **Safe-upgrade guard**: if the row's `type` is in `{infrastructure, prompt, hook-template}`, classify this item as `[system] {name} — system-owned, use /loom-update` and SKIP it. These types are written exclusively by the channel-aware updater (`/loom-update`) or by re-running install.sh; replacing them mid-session can wedge live hooks, swap scripts during execution, or desync Claude Code against its loaded prompts. Surfacing them as "changed" without acting on them lets the user know an upgrade is available without `/loom-library sync` being the dangerous tool that delivers it.
+   b. Fetch current source content from repo (handle missing sources gracefully)
+   c. **Symlink safety check**: if the target path is a symlink (any symlink, regardless of where it points), classify this item as `[link] {name} — symlinked, no write needed` and SKIP it. Writing through a symlinked target silently overwrites whatever the link points to — could be a dev-install pointing back to a Loom repo checkout, could be a user-managed dotfiles target, could be anything. The link's existence is the signal that the user (or their tooling) is managing this path themselves; sync defers to them. (In curl mode this safety check is a defensive belt-and-suspenders; local-dev mode is handled by Branch B below, not here.)
+   d. Read the installed target file.
+   e. Compare source and target byte-for-byte. If they differ, the item needs updating.
 3. Report results:
 ```
 Checking 18 installed items...
@@ -418,9 +419,19 @@ Same check as `sync` above. If the local catalog has no `infrastructure:` sectio
 4. Report: `Catalog updated` or `Catalog is current`
 
 **Step 1 — Check installed items:**
-1. Run the same comparison as `sync` (fetch source, compare to target byte-for-byte)
+
+**SAFE-UPGRADE GUARD (Phase: safe-upgrade-path):** `update` MUST NOT modify rows whose `type` is in the system-owned set: `infrastructure`, `prompt`, `hook-template`. These rows are owned exclusively by Loom's channel-aware updater (`/loom-update`) or by re-running the installer; mutating them mid-session can wedge live hooks, replace scripts during execution, or desync a running Claude Code session against its loaded prompts.
+
+When `update` detects that any row needing change has `type ∈ {infrastructure, prompt, hook-template}`, it MUST:
+1. List those rows under a `## System files (skipped — use /loom-update)` section in the report
+2. NOT include them in the "Update changed items?" prompt
+3. Print a footer: `Loom system files changed upstream. Run /loom-update to apply safely (atomic, restart-aware, rollback-capable). If /loom-update is unavailable on this machine, re-run install.sh — but expect to restart Claude Code after.`
+
+The check below applies ONLY to non-system rows (agents, skills, protocols, kits, BYO-kit items).
+
+1. Run the same comparison as `sync` (fetch source, compare to target byte-for-byte) — non-system rows only
 2. Additionally, scan library.yaml for items NOT in install-state and not `deprecated: true` (new catalog entries)
-3. Include `infrastructure` items in both checks
+3. ~~Include `infrastructure` items in both checks~~ — system-owned types are surfaced read-only under the System files section above; they are never written by `/loom-library update`
 4. Display all sections:
 ```
 ## Catalog
@@ -429,9 +440,12 @@ Same check as `sync` above. If the local catalog has no `infrastructure:` sectio
 ## Changed items
   [rotate] implementer-agent  source changed
 
-## Infrastructure
+## System files (skipped — use /loom-update)
   [rotate] statusline-renderer  renderer updated
-  [check]  statusline-command   up to date
+  [rotate] loom-quick           prompt updated
+  Loom system files changed upstream. Run /loom-update to apply safely
+  (atomic, restart-aware, rollback-capable). If /loom-update is unavailable
+  on this machine, re-run install.sh — but expect to restart Claude Code after.
 
 ## New in catalog
   [new] loom-wiki             Wiki management — ingest, lint, query, status
@@ -440,6 +454,8 @@ Same check as `sync` above. If the local catalog has no `infrastructure:` sectio
 Update changed items? (yes / no)
 Install new items? (yes / all / select / no)
 ```
+
+The `System files` section is informational only — neither prompt at the bottom acts on those rows.
 
 **If `--check-only` flag is present:** Display the report above but do NOT apply any changes. Skip steps below.
 
