@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -100,9 +101,12 @@ describe("scripts/generate-checksums.sh dedupes duplicate path entries", () => {
     fs.mkdirSync(path.join(fakeRepo, "commands"));
     fs.writeFileSync(path.join(fakeRepo, "commands/foo.md"), "hello\n");
 
-    const expectedSha = spawnSync("shasum", ["-a", "256", path.join(fakeRepo, "commands/foo.md")], {
-      encoding: "utf-8",
-    }).stdout.split(/\s+/)[0];
+    // node:crypto avoids spawning shasum — faster, no subprocess, and
+    // platform-independent (shasum is BSD/macOS; some Linux distros only
+    // ship sha256sum). (Gemini #28 round-3 MEDIUM.)
+    const expectedSha = createHash("sha256")
+      .update(fs.readFileSync(path.join(fakeRepo, "commands/foo.md")))
+      .digest("hex");
 
     const manifest = path.join(fakeRepo, "checksums.sha256");
     fs.writeFileSync(manifest, `${expectedSha}  commands/foo.md\n`);

@@ -548,11 +548,20 @@ echo "The status line will notify you when updates are available."
 # (e.g. "bun (1.1.x)" or "npx tsx (fallback; ...)") — never literal "bun"
 # or "node" — so the old `[ "${hook_runtime}" = "bun" ]` form silently
 # never matched, first-run never executed, and installedVersion stayed
-# "unknown" forever in ~/.loom/install.toon. This was the real root cause
-# of /loom-doctor's persistent version-drift warning on curl installs.
-# (Gemini #28 round-2 HIGH.)
+# "unknown" forever in ~/.loom/install.toon.
+#
+# Node fallback runtime probe: `--experimental-strip-types` is Node 22.6+;
+# on Node 18, 20, and early 22 it errors out. Because the spawn is wrapped
+# in `2>/dev/null || true`, that error is invisible — and installedVersion
+# is silently left as "unknown" again. Probe the flag with `-e ""` before
+# committing to it; otherwise fall through to `npx tsx` if available.
+# (Gemini #28 rounds 2-3.)
 if command -v bun >/dev/null 2>&1 && command -v bunx >/dev/null 2>&1; then
   ( cd "${CLAUDE_DIR}" && bunx tsx scripts/loom-first-run.ts 2>/dev/null ) || true
 elif command -v node >/dev/null 2>&1; then
-  ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
+  if node --experimental-strip-types -e "" >/dev/null 2>&1; then
+    ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
+  elif command -v npx >/dev/null 2>&1; then
+    ( cd "${CLAUDE_DIR}" && npx --yes tsx scripts/loom-first-run.ts 2>/dev/null ) || true
+  fi
 fi
