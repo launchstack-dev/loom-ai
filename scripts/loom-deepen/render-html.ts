@@ -13,8 +13,8 @@
  *   - TOON is parsed with a minimal line-by-line reader (no schema library)
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Arg parsing

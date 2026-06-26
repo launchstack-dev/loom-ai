@@ -232,11 +232,6 @@ function main(): void {
   );
 }
 
-// Only run main when executed directly
-if (
-  process.argv[1] &&
-  (process.argv[1].endsWith("deprecation-notice.ts") ||
-    process.argv[1].endsWith("deprecation-notice.js"))
-) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }

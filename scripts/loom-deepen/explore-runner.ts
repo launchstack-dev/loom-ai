@@ -21,9 +21,9 @@
  *   Module, Interface, Depth, Seam, Adapter, Leverage, Locality, Tracer Bullet, Vertical Slice
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { execSync } from "child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
 
 // ---------------------------------------------------------------------------
 // Arg parsing
@@ -173,7 +173,7 @@ function runDeletionTest(mod: DiscoveredModule, rootDir: string): string {
 // Recommendation generator
 // ---------------------------------------------------------------------------
 
-const VOCAB_TERMS = ["Module", "Seam", "Depth", "Adapter", "Leverage", "Locality"];
+const VOCAB_TERMS = ["Module", "Seam", "Depth", "Adapter", "Leverage", "Locality", "Interface", "Tracer Bullet", "Vertical Slice"];
 
 function generateRecommendation(
   mod: DiscoveredModule,
@@ -276,7 +276,7 @@ function main() {
     try {
       const depthBefore = computeDepthScore(mod.lineCount, mod.exportCount);
       // depthAfter models the improved score after applying the recommendation
-      const depthAfter = Math.min(0.95, depthBefore + 0.25 + Math.random() * 0.1);
+      const depthAfter = Math.min(0.95, depthBefore + 0.25);
 
       const deletionTestResult = runDeletionTest(mod, target);
       const rawRecommendation = generateRecommendation(mod, depthBefore, depthAfter);

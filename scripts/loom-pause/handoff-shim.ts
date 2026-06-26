@@ -29,11 +29,18 @@ import { join, basename, dirname } from "node:path";
 import { tmpdir } from "node:os";
 
 /**
+ * Canonical filename regex for F-18 handoff files: loom-handoff-{id}.md
+ * Referenced from both LEGACY_FILENAME_PATTERNS[0] and deriveId() so there
+ * is a single point of truth (F-08).
+ */
+const CANONICAL_FILENAME_RE = /^loom-handoff-([a-zA-Z0-9_-]+)\.md$/;
+
+/**
  * Known pre-F-18 handoff filename patterns.  Ordered from most specific to
  * most generic so the first match wins.
  */
 const LEGACY_FILENAME_PATTERNS: RegExp[] = [
-  /^loom-handoff-([a-zA-Z0-9_-]+)\.md$/,   // already has an id — migrate as-is
+  CANONICAL_FILENAME_RE,                     // already has an id — migrate as-is
   /^handoff-([a-zA-Z0-9_-]+)\.md$/,         // handoff-{id}.md
   /^session-handoff\.md$/,                   // pre-F-18 older variant
   /^handoff\.md$/,                           // pre-F-18 most common
@@ -51,7 +58,7 @@ function deriveId(legacyPath: string): string {
   const filename = basename(legacyPath);
 
   // Pattern 0: filename already has the loom-handoff-{id} format — preserve id.
-  const alreadyCanonical = /^loom-handoff-([a-zA-Z0-9_-]+)\.md$/.exec(filename);
+  const alreadyCanonical = CANONICAL_FILENAME_RE.exec(filename);
   if (alreadyCanonical) return alreadyCanonical[1]!;
 
   // Pattern 1: handoff-{id}.md

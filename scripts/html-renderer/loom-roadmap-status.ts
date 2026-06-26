@@ -28,7 +28,7 @@ import {
 } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
+import { tryOpen } from "./open-shim.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -130,28 +130,6 @@ function renderHtml(statusText: string, generatedAt: string, slug: string): stri
   <pre>${escaped}</pre>
 </body>
 </html>`;
-}
-
-// ---------------------------------------------------------------------------
-// Open shim
-// ---------------------------------------------------------------------------
-
-/**
- * Attempt to open a file in the OS default browser.
- * Returns true on success, false on failure (headless / command not found).
- */
-function tryOpen(filePath: string): boolean {
-  if (process.env.LOOM_HEADLESS === "1") return false;
-  const openers = ["open", "xdg-open", "start"];
-  for (const opener of openers) {
-    try {
-      execSync(`${opener} "${filePath}"`, { stdio: "ignore", timeout: 5000 });
-      return true;
-    } catch {
-      // try next
-    }
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------

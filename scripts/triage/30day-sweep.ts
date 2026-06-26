@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, renameSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { transition, type TriageEntry, type TransitionRow } from "./state-machine.js";
+import { parseFrontmatter } from "../lib/frontmatter.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,27 +30,6 @@ export interface SweepResult {
   sweptCount: number;
   skippedCount: number;
   swept: SweptEntry[];
-}
-
-// ── TOON frontmatter parser (minimal, inbox-only) ────────────────────────────
-
-/**
- * Parse the TOON frontmatter block from an inbox .md file.
- * Frontmatter is delimited by `---` lines.
- */
-function parseFrontmatter(content: string): Record<string, string> {
-  const match = /^---\n([\s\S]*?)\n---/.exec(content);
-  if (!match) return {};
-
-  const result: Record<string, string> = {};
-  for (const line of match[1].split("\n")) {
-    const sep = line.indexOf(":");
-    if (sep === -1) continue;
-    const key = line.slice(0, sep).trim();
-    const value = line.slice(sep + 1).trim().replace(/^["']|["']$/g, "");
-    result[key] = value;
-  }
-  return result;
 }
 
 /**

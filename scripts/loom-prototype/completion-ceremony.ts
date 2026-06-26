@@ -13,14 +13,15 @@
  *     [--adr <ADR-NNNN>]
  *
  * Exit codes:
- *   0 — success
- *   1 — answer.toon already exists (duplicate completion attempt)
- *   2 — ADR file not found
- *   3 — prototype directory not found
+ *   0  — success
+ *   1  — answer.toon already exists (duplicate completion attempt)
+ *   2  — ADR file not found
+ *   3  — prototype directory not found
+ *   64 — missing required argument (usage error)
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 // ---------------------------------------------------------------------------
 // Arg parsing
@@ -49,11 +50,11 @@ function parseArgs(argv: string[]): CeremonyArgs {
 
   if (!name) {
     process.stderr.write("completion-ceremony: --name <prototype-name> is required\n");
-    process.exit(1);
+    process.exit(64);
   }
   if (!answer) {
     process.stderr.write("completion-ceremony: --answer \"<one-line finding>\" is required\n");
-    process.exit(1);
+    process.exit(64);
   }
 
   return { name, answer, adr };

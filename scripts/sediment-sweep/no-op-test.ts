@@ -144,33 +144,33 @@ function countBodyLines(content: string): number {
 //   - "this section describes..." (heading-restatement)
 //   - "note that..." (generic-filler-note)
 //   - "your mileage may vary" (generic disclaimer)
-const RETIREMENT_PATTERNS: RegExp[] = [
+const RETIREMENT_PATTERNS: Array<{ re: RegExp; label: string }> = [
   // Restatements of headings
-  /^(this|the following)\s+(section|part|chapter|skill)\s+(describes?|covers?|explains?|discusses?|outlines?|details?)/i,
-  /^in this (section|part|chapter|skill)/i,
+  { re: /^(this|the following)\s+(section|part|chapter|skill)\s+(describes?|covers?|explains?|discusses?|outlines?|details?)/i, label: "heading-restatement" },
+  { re: /^in this (section|part|chapter|skill)/i, label: "heading-restatement" },
 
   // Redundant filler / generic note markers
-  /^(please\s+)?note that\b/i,
-  /^it is important to note\b/i,
-  /^(be|please be) aware that\b/i,
-  /^(keep|please keep) in mind\b/i,
+  { re: /^(please\s+)?note that\b/i, label: "generic-filler-note" },
+  { re: /^it is important to note\b/i, label: "generic-filler-note" },
+  { re: /^(be|please be) aware that\b/i, label: "generic-filler-note" },
+  { re: /^(keep|please keep) in mind\b/i, label: "generic-filler-note" },
 
   // Generic disclaimers
-  /\byour mileage may vary\b/i,
-  /\bresults? may (differ|vary)\b/i,
-  /\bthis may vary\b/i,
+  { re: /\byour mileage may vary\b/i, label: "generic-disclaimer" },
+  { re: /\bresults? may (differ|vary)\b/i, label: "generic-disclaimer" },
+  { re: /\bthis may vary\b/i, label: "generic-disclaimer" },
 
   // Transitional filler
-  /^as (mentioned|described|noted|discussed|explained|outlined) (above|below|earlier|previously|later)\b/i,
-  /^(see|refer to) the (section|chapter|note|tip|warning) (above|below)\b/i,
+  { re: /^as (mentioned|described|noted|discussed|explained|outlined) (above|below|earlier|previously|later)\b/i, label: "transitional-filler" },
+  { re: /^(see|refer to) the (section|chapter|note|tip|warning) (above|below)\b/i, label: "transitional-filler" },
 
   // Empty preamble / skill intro
-  /^(in this skill,?\s*)?(we will|you will|we're going to|you're going to|i will|i'm going to)\b/i,
-  /^this skill (explains?|covers?|teaches?|shows?|demonstrates?|walks? you through)/i,
-  /^this (guide|document|page|article|tutorial) (explains?|covers?|teaches?|shows?|describes?)/i,
+  { re: /^(in this skill,?\s*)?(we will|you will|we're going to|you're going to|i will|i'm going to)\b/i, label: "empty-preamble" },
+  { re: /^this skill (explains?|covers?|teaches?|shows?|demonstrates?|walks? you through)/i, label: "empty-preamble" },
+  { re: /^this (guide|document|page|article|tutorial) (explains?|covers?|teaches?|shows?|describes?)/i, label: "empty-preamble" },
 
   // Trailing summary restatement
-  /^(in summary|to summarize|to recap|in conclusion)[,.]?\s*(we've|we have|you've|you have|this skill has)/i,
+  { re: /^(in summary|to summarize|to recap|in conclusion)[,.]?\s*(we've|we have|you've|you have|this skill has)/i, label: "trailing-summary-restatement" },
 ];
 
 interface CandidateLine {
@@ -193,12 +193,12 @@ function runNoOpTest(content: string): CandidateLine[] {
     const trimmed = line.trim();
     if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
 
-    for (const pattern of RETIREMENT_PATTERNS) {
-      if (pattern.test(trimmed)) {
+    for (const p of RETIREMENT_PATTERNS) {
+      if (p.re.test(trimmed)) {
         candidates.push({
           lineNumber: i + 1,
           text: trimmed.slice(0, 120), // truncate for report
-          reason: patternLabel(pattern),
+          reason: p.label,
         });
         break; // one reason per line is enough
       }
@@ -206,29 +206,6 @@ function runNoOpTest(content: string): CandidateLine[] {
   }
 
   return candidates;
-}
-
-function patternLabel(pattern: RegExp): string {
-  const src = pattern.source;
-  if (/this|section|describes/.test(src) && /^this/.test(src)) {
-    return "heading-restatement";
-  }
-  if (/note that|important to note|be aware|keep in mind/.test(src)) {
-    return "generic-filler-note";
-  }
-  if (/mileage|results? may|this may vary/.test(src)) {
-    return "generic-disclaimer";
-  }
-  if (/mentioned|described|refer to/.test(src)) {
-    return "transitional-filler";
-  }
-  if (/we will|you will|this skill/.test(src)) {
-    return "empty-preamble";
-  }
-  if (/in summary|to summarize/.test(src)) {
-    return "trailing-summary-restatement";
-  }
-  return "sediment";
 }
 
 // ---------------------------------------------------------------------------

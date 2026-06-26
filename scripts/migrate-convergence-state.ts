@@ -19,6 +19,7 @@ import {
   detectConvergenceStateVersion,
   migrateConvergenceStateV1toV2,
 } from "./lib/convergence-state-migrator.js";
+import { unifiedDiff } from "./lib/unified-diff.js";
 
 interface ParsedArgs {
   dryRun: boolean;
@@ -47,30 +48,6 @@ function printUsage(): void {
       "",
     ].join("\n"),
   );
-}
-
-/**
- * Minimal unified-diff renderer (no external dep). Compares two strings
- * line-by-line and emits a `--- before / +++ after` block with `+`/`-`
- * markers. Sufficient for human-readable dry-run output.
- */
-function unifiedDiff(before: string, after: string, label: string): string {
-  if (before === after) return `--- ${label} (unchanged)\n`;
-  const a = before.split(/\r?\n/);
-  const b = after.split(/\r?\n/);
-  const lines: string[] = [`--- ${label} (before)`, `+++ ${label} (after)`];
-  const max = Math.max(a.length, b.length);
-  for (let i = 0; i < max; i++) {
-    const av = a[i];
-    const bv = b[i];
-    if (av === bv) {
-      if (av !== undefined) lines.push(` ${av}`);
-    } else {
-      if (av !== undefined) lines.push(`-${av}`);
-      if (bv !== undefined) lines.push(`+${bv}`);
-    }
-  }
-  return lines.join("\n") + "\n";
 }
 
 /**
