@@ -157,7 +157,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -183,7 +183,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -210,7 +210,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },

@@ -151,7 +151,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -180,7 +180,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -212,7 +212,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "MY-ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -238,7 +238,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
