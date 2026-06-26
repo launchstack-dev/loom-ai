@@ -242,7 +242,14 @@ verify_checksum() {
   local dst="$2"
   if [ "${VERIFY_INTEGRITY}" != "true" ]; then return 0; fi
   local expected
-  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}')
+  # Defensive `head -n 1`: if checksums.sha256 ever contains duplicate path
+  # entries (e.g. a future installer that manually appends and forgets to
+  # dedupe before regenerating), the raw `grep | awk '{print $1}'` returns
+  # both hashes joined by a newline and the equality check below fails with
+  # a confusing "checksum mismatch" — even when both hashes are identical.
+  # Pick the first match. generate-checksums.sh also dedupes its input now,
+  # but defending here too is cheap insurance against future drift.
+  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}' | head -n 1)
   if [ -z "${expected}" ]; then
     echo "  WARN ${src} (no checksum in manifest — skipped)"
     return 0
