@@ -70,3 +70,4 @@ bdf02308e64c9f538968d4a5f1b487af1f51a9b51ac20e4b9eee7dd39830f987  commands/loom-
 5e73e516609d1dfbcef1bd9621b7fc3d38b23190fa16479a4f15164a79ecbcdc  scripts/lib/update/apply.ts
 629298bdefc6da86530b8769f17c4290f18e28a0cdb1d0d07ece4b7307e03ae2  scripts/lib/update/resume.ts
 6bab16a64b4d8fc3e1ccd171e55b3d4ba37dbd659c9a1e1608c678b75a5d5ff8  scripts/lib/update/rollback.ts
+1343a7bfa5fab9b82c1aaa0ce9cdf3d8dc0941e1c16d517fb438f77963992e36  .claude-plugin/plugin.json

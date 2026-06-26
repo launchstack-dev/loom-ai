@@ -75,7 +75,27 @@ describe("VersionDriftCheck", () => {
     });
     const result = await check.run(baseState({ installedVersion: "0.1.0" }));
     expect(result.status).toBe("warn");
-    expect(result.fixCommand).toBe("/loom-upgrade");
+    // /loom-update is the runtime updater. /loom-upgrade is per-project artifact
+    // migration. These commands are NOT interchangeable — directing users at
+    // the wrong one was the original UX bug. See README "Maintenance verbs"
+    // for the three-way scope distinction.
+    expect(result.fixCommand).toBe("/loom-update");
+    expect(result.remediation).toContain("/loom-update");
+  });
+
+  it("warns with a distinct message when installedVersion is 'unknown' (bootstrap gap)", async () => {
+    const check = new VersionDriftCheck({
+      fetch: mockFetch(200, { tag_name: "v0.9.0" }),
+    });
+    // installedVersion: "unknown" is what first-run.ts produces when it
+    // cannot read .claude-plugin/plugin.json — historically an install.sh
+    // gap that left curl users perpetually warned. The check now flags this
+    // as a bootstrap problem with its own remediation copy.
+    const result = await check.run(baseState({ installedVersion: "unknown" }));
+    expect(result.status).toBe("warn");
+    expect(result.message).toContain("plugin.json not bootstrapped");
+    expect(result.fixCommand).toBe("/loom-update");
+    expect(result.remediation).toContain("re-bootstrap");
   });
 });
 
