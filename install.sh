@@ -59,6 +59,12 @@ declare -a INFRA_FILES=(
   "scripts/lib/update/apply.ts:${CLAUDE_DIR}/scripts/lib/update/apply.ts"
   "scripts/lib/update/resume.ts:${CLAUDE_DIR}/scripts/lib/update/resume.ts"
   "scripts/lib/update/rollback.ts:${CLAUDE_DIR}/scripts/lib/update/rollback.ts"
+  # Plugin manifest — first-run.ts reads `version` from this file and writes it
+  # into ~/.loom/install.toon as installedVersion. Without this, curl installs
+  # leave installedVersion as "unknown" and /loom-doctor's version-drift check
+  # always warns "Installed unknown differs from latest X.Y.Z" — a confusing
+  # false positive masquerading as a real version-drift problem.
+  ".claude-plugin/plugin.json:${CLAUDE_DIR}/.claude-plugin/plugin.json"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -153,6 +159,7 @@ mkdir -p "${CLAUDE_DIR}/config"
 mkdir -p "${CLAUDE_DIR}/scripts"
 mkdir -p "${CLAUDE_DIR}/scripts/lib"
 mkdir -p "${CLAUDE_DIR}/scripts/lib/update"
+mkdir -p "${CLAUDE_DIR}/.claude-plugin"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CLAUDE_DIR}/templates/hooks"
 mkdir -p "${CLAUDE_DIR}/templates/scripts"
