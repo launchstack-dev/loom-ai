@@ -91,13 +91,28 @@ export default class VersionDriftCheck implements Check {
           remediation: "none",
         };
       }
+      // Distinguish "we don't know what's installed" from "we know and it's stale".
+      // The former is a bootstrap gap (plugin.json never landed); the latter is a
+      // legitimate drift signal. Conflating them was the original UX bug — the
+      // warning read like a version mismatch even when the real problem was an
+      // unpopulated install envelope.
+      if (installed === "unknown") {
+        return {
+          id: this.id,
+          category: this.category,
+          status: "warn",
+          message: `Installed version unknown (plugin.json not bootstrapped); latest is ${latest}`,
+          fixCommand: "/loom-update",
+          remediation: `Run /loom-update to re-bootstrap install state, or re-run install.sh to repair the plugin.json artifact`,
+        };
+      }
       return {
         id: this.id,
         category: this.category,
         status: "warn",
         message: `Installed ${installed} differs from latest ${latest}`,
-        fixCommand: "/loom-upgrade",
-        remediation: `Run /loom-upgrade to install ${latest}`,
+        fixCommand: "/loom-update",
+        remediation: `Run /loom-update to install ${latest} (channel-aware, atomic, rollback-capable)`,
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

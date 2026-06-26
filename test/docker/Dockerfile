@@ -22,8 +22,10 @@ RUN apk add --no-cache \
     nodejs=~20 \
     npm
 
-# --- bun (cache-stable; pinned channel) -----------------------------------
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.30" \
+# --- bun (latest; the old pin to bun-v1.1.30 lacked a linux-aarch64-musl
+# build, breaking the harness on Apple Silicon under OrbStack. Drop the pin
+# so the installer picks whatever the latest release ships for this arch.)
+RUN curl -fsSL https://bun.sh/install | bash \
  && ln -sf /root/.bun/bin/bun /usr/local/bin/bun
 
 # --- Claude Code CLI (cache-stable; the harness needs `claude` on PATH) ---

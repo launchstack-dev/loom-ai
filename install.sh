@@ -59,6 +59,12 @@ declare -a INFRA_FILES=(
   "scripts/lib/update/apply.ts:${CLAUDE_DIR}/scripts/lib/update/apply.ts"
   "scripts/lib/update/resume.ts:${CLAUDE_DIR}/scripts/lib/update/resume.ts"
   "scripts/lib/update/rollback.ts:${CLAUDE_DIR}/scripts/lib/update/rollback.ts"
+  # Plugin manifest — first-run.ts reads `version` from this file and writes it
+  # into ~/.loom/install.toon as installedVersion. Without this, curl installs
+  # leave installedVersion as "unknown" and /loom-doctor's version-drift check
+  # always warns "Installed unknown differs from latest X.Y.Z" — a confusing
+  # false positive masquerading as a real version-drift problem.
+  ".claude-plugin/plugin.json:${CLAUDE_DIR}/.claude-plugin/plugin.json"
   "config/starship-loom.toml:${CLAUDE_DIR}/config/starship-loom.toml"
 )
 
@@ -153,6 +159,7 @@ mkdir -p "${CLAUDE_DIR}/config"
 mkdir -p "${CLAUDE_DIR}/scripts"
 mkdir -p "${CLAUDE_DIR}/scripts/lib"
 mkdir -p "${CLAUDE_DIR}/scripts/lib/update"
+mkdir -p "${CLAUDE_DIR}/.claude-plugin"
 mkdir -p "${CLAUDE_DIR}/skills/library"
 mkdir -p "${CLAUDE_DIR}/templates/hooks"
 mkdir -p "${CLAUDE_DIR}/templates/scripts"
@@ -242,13 +249,46 @@ verify_checksum() {
   local dst="$2"
   if [ "${VERIFY_INTEGRITY}" != "true" ]; then return 0; fi
   local expected
-  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}')
+  # Defensive `head -n 1`: if checksums.sha256 ever contains duplicate path
+  # entries (e.g. a future installer that manually appends and forgets to
+  # dedupe before regenerating), the raw `grep | awk '{print $1}'` returns
+  # both hashes joined by a newline and the equality check below fails with
+  # a confusing "checksum mismatch" — even when both hashes are identical.
+  # Pick the first match. generate-checksums.sh also dedupes its input now,
+  # but defending here too is cheap insurance against future drift.
+  # Single awk: `$2 == src` is literal equality (no grep regex traps like `.`
+  # matching any char in a path); `exit` after the first match handles dedupes
+  # for free; awk naturally exits 0 on no-match so no `|| true` is needed
+  # to survive `set -euo pipefail`. (Gemini #28 round-2 MEDIUM.)
+  expected=$(awk -v src="${src}" '$2 == src {print $1; exit}' "${CHECKSUMS_FILE}" 2>/dev/null)
   if [ -z "${expected}" ]; then
     echo "  WARN ${src} (no checksum in manifest — skipped)"
     return 0
   fi
   local actual
-  actual=$(shasum -a 256 "${dst}" | awk '{print $1}')
+  # Portable SHA-256: BSD/macOS ship `shasum` (Perl), GNU/Alpine ship
+  # `sha256sum` from coreutils. install.sh runs in both worlds (macOS dev
+  # box, Linux CI, Alpine Docker harness). Original code used `shasum` only
+  # and silently failed on Alpine with "shasum: command not found" — the
+  # error was hidden because `command substitution` doesn't propagate
+  # exit codes under set -e, so `actual` ended up empty, equality failed,
+  # and the user saw "checksum mismatch" instead of "shasum missing".
+  # Mirror the same fallback already used at lines 224-227 for the tarball
+  # verification path. (Surfaced by docker harness 2026-06-26.)
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "${dst}" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    actual=$(shasum -a 256 "${dst}" | awk '{print $1}')
+  else
+    # Explicit error — neither hashing utility found. Without this branch,
+    # a missing-both environment would fall through to the equality check
+    # with `actual` empty and surface as "checksum mismatch" instead of
+    # the real "no hasher" cause. Same silent-failure-smokescreen pattern
+    # that hid the original Alpine shasum-missing bug. (Gemini #28 round-6.)
+    echo "  FAIL ${src} (neither sha256sum nor shasum found on PATH — cannot verify integrity)"
+    rm -f "${dst}"
+    return 1
+  fi
   if [ "${actual}" != "${expected}" ]; then
     echo "  FAIL ${src} (checksum mismatch)"
     echo "       expected: ${expected}"
@@ -526,8 +566,34 @@ echo "The status line will notify you when updates are available."
 # First-run: write ~/.loom/install.toon channel envelope (idempotent, no PII).
 # Skips silently if neither bun nor node is available — the envelope is opt-in
 # and not required for hook execution.
-if [ "${hook_runtime}" = "bun" ] && command -v bunx >/dev/null 2>&1; then
-  ( cd "${CLAUDE_DIR}" && bunx tsx scripts/loom-first-run.ts 2>/dev/null ) || true
-elif [ "${hook_runtime}" = "node" ] && command -v node >/dev/null 2>&1; then
-  ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
+# Check the commands directly. `hook_runtime` is a formatted display string
+# (e.g. "bun (1.1.x)" or "npx tsx (fallback; ...)") — never literal "bun"
+# or "node" — so the old `[ "${hook_runtime}" = "bun" ]` form silently
+# never matched, first-run never executed, and installedVersion stayed
+# "unknown" forever in ~/.loom/install.toon.
+#
+# Node fallback runtime probe: `--experimental-strip-types` is Node 22.6+;
+# on Node 18, 20, and early 22 it errors out. Because the spawn is wrapped
+# in `2>/dev/null || true`, that error is invisible — and installedVersion
+# is silently left as "unknown" again. Probe the flag with `-e ""` before
+# committing to it; otherwise fall through to `npx tsx` if available.
+# (Gemini #28 rounds 2-3.)
+# Bun runs TypeScript natively — no need for `bunx tsx` (which goes through
+# Node's tsx loader via bunx and requires network/cache resolution on first
+# run). Plain `bun scripts/loom-first-run.ts` is faster, simpler, and works
+# offline. (Gemini #28 round-4 MEDIUM.)
+if command -v bun >/dev/null 2>&1; then
+  ( cd "${CLAUDE_DIR}" && bun scripts/loom-first-run.ts 2>/dev/null ) || true
+elif command -v node >/dev/null 2>&1; then
+  # Try `node --experimental-strip-types` directly — if the flag is
+  # unsupported (pre-22.6) OR the script fails ESM extension resolution
+  # (`.js` imports under strip-types don't resolve to `.ts`), the if
+  # condition is false and we fall through to `npx tsx` which handles
+  # both. No separate `-e ""` probe needed; the real run is its own probe.
+  # (Gemini #28 rounds 5-6.)
+  if ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts >/dev/null 2>&1 ); then
+    :
+  elif command -v npx >/dev/null 2>&1; then
+    ( cd "${CLAUDE_DIR}" && npx --yes tsx scripts/loom-first-run.ts 2>/dev/null ) || true
+  fi
 fi

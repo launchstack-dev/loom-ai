@@ -70,6 +70,26 @@ MISSING=0
 TMP_MANIFEST="${MANIFEST}.tmp"
 : > "${TMP_MANIFEST}"
 
+# Dedupe path-bearing lines: if the manifest contains the same path more
+# than once (e.g. a future installer that manually appended without
+# deduping), keep the first occurrence and drop the rest. Without this,
+# install.sh's verify_checksum sees two hashes for one path, joins them
+# with a newline, and fails its equality check even when both hashes
+# match. Comments and blank lines pass through untouched.
+DUP_COUNT=0
+declare -a SEEN_PATHS=()
+_is_seen() {
+  local needle="$1" entry
+  # Bash 3.2 (macOS default) expands "${SEEN_PATHS[@]:-}" on an empty array
+  # to a single empty-string element, so the loop would run once with
+  # entry="" and match any empty needle. Return early instead. (Gemini #28 GEM-02.)
+  [ "${#SEEN_PATHS[@]}" -eq 0 ] && return 1
+  for entry in "${SEEN_PATHS[@]}"; do
+    [ "$entry" = "$needle" ] && return 0
+  done
+  return 1
+}
+
 while IFS= read -r line || [ -n "$line" ]; do
   # Preserve comments and blank lines verbatim
   if [ -z "${line}" ] || [ "${line:0:1}" = "#" ]; then
@@ -84,6 +104,11 @@ while IFS= read -r line || [ -n "$line" ]; do
     printf '%s\n' "${line}" >> "${TMP_MANIFEST}"
     continue
   fi
+  if _is_seen "${p}"; then
+    DUP_COUNT=$((DUP_COUNT + 1))
+    continue
+  fi
+  SEEN_PATHS+=("${p}")
   full="${REPO_ROOT}/${p}"
   if [ ! -f "${full}" ]; then
     echo "MISSING: ${p}" >&2
@@ -96,6 +121,10 @@ while IFS= read -r line || [ -n "$line" ]; do
   hash=$(shasum -a 256 "${full}" | awk '{print $1}')
   printf '%s  %s\n' "${hash}" "${p}" >> "${TMP_MANIFEST}"
 done < "${MANIFEST}"
+
+if [ "${DUP_COUNT}" -gt 0 ]; then
+  echo "  Note: deduped ${DUP_COUNT} duplicate path entry(s) from manifest" >&2
+fi
 
 if [ "${MISSING}" -gt 0 ]; then
   rm -f "${TMP_MANIFEST}"

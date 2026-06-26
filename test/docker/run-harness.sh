@@ -180,7 +180,10 @@ if [ -n "${LOOM_INSTALL_SOURCE:-}" ]; then
       mkdir -p /tmp/loom-curl-staging
       tar -xzf "$LOOM_INSTALL_SOURCE" -C /tmp/loom-curl-staging
       if [ -f /tmp/loom-curl-staging/install.sh ]; then
-        ( cd /tmp/loom-curl-staging && sh install.sh ) || { echo "install.sh failed" >&2; exit 5; }
+        # install.sh uses bashisms (declare -a, arrays). Alpine /bin/sh is
+        # busybox ash; explicit `bash` invocation needed. The Dockerfile
+        # installs bash for exactly this reason.
+        ( cd /tmp/loom-curl-staging && bash install.sh ) || { echo "install.sh failed" >&2; exit 5; }
       else
         echo "tarball does not contain install.sh for curl mode" >&2
         exit 6
