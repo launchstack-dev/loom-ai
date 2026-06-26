@@ -256,7 +256,11 @@ verify_checksum() {
   # a confusing "checksum mismatch" — even when both hashes are identical.
   # Pick the first match. generate-checksums.sh also dedupes its input now,
   # but defending here too is cheap insurance against future drift.
-  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}' | head -n 1)
+  # `|| true` is load-bearing: under `set -euo pipefail`, a no-match grep
+  # exits non-zero and the command substitution propagates that — the script
+  # would die here instead of falling through to the `-z "${expected}"`
+  # "no checksum in manifest — skipped" warning path below. (Gemini #28 GEM-01.)
+  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}' | head -n 1 || true)
   if [ -z "${expected}" ]; then
     echo "  WARN ${src} (no checksum in manifest — skipped)"
     return 0

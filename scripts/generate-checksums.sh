@@ -80,7 +80,11 @@ DUP_COUNT=0
 declare -a SEEN_PATHS=()
 _is_seen() {
   local needle="$1" entry
-  for entry in "${SEEN_PATHS[@]:-}"; do
+  # Bash 3.2 (macOS default) expands "${SEEN_PATHS[@]:-}" on an empty array
+  # to a single empty-string element, so the loop would run once with
+  # entry="" and match any empty needle. Return early instead. (Gemini #28 GEM-02.)
+  [ "${#SEEN_PATHS[@]}" -eq 0 ] && return 1
+  for entry in "${SEEN_PATHS[@]}"; do
     [ "$entry" = "$needle" ] && return 0
   done
   return 1
