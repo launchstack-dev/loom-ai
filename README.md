@@ -54,7 +54,7 @@ What each step does:
 2. **`/loom-init`** — same as plugin path: brownfield onboarding + per-project hook bootstrap.
 3. **`/loom-doctor`** — same verification surface as the plugin path.
 
-Update flow: re-run the install one-liner, or `/loom-library sync` (auto-detects curl vs local-dev pattern). Uninstall flow: `/loom-uninstall` cleans both per-project and per-machine state.
+Update flow: **`/loom-update`** is the canonical channel-aware updater for curl installs (atomic staging, rollback snapshots, `--check` / `--pin` / `--resume` / `--rollback` flags). Re-running the install one-liner also works and is now safe across re-runs — it preserves any user-added rows in `install-state.toon` (kits, BYO items, custom agents). `/loom-library sync` reconciles user-installed kits and agents but **refuses to touch system files** (hooks, scripts, prompts) — it surfaces stale system files read-only and points you at `/loom-update`. Uninstall flow: `/loom-uninstall` cleans both per-project and per-machine state.
 
 ## Decision matrix
 
@@ -168,24 +168,31 @@ For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minut
 | Run a change proposal over contract pages | `/loom-change {init\|review\|approve\|run\|…}` | OpenSpec-style atomic change-proposal lifecycle |
 | Author a project agent | `/loom-agent create` | Guided interview, registers in `orchestration.toml` |
 | Pull a published kit on demand (per-machine) | `/loom-library use <kit>` | See [Pull what you need](#pull-what-you-need) |
-| **Refresh your install tree** (per-machine `~/.claude/`) | `/loom-library sync` | Auto-detects curl vs local-dev pattern |
+| **Upgrade Loom itself** (per-machine, channel-aware) | `/loom-update` | Atomic staging, rollback snapshots, restart-signaled; curl + plugin channels |
+| **Refresh user-installed kits/agents** (per-machine `~/.claude/`) | `/loom-library sync` | Auto-detects curl vs local-dev. Refuses system files — directs you at `/loom-update` |
 | **Migrate this project's planning files** (per-project) | `/loom-upgrade` | Scans `PLAN.md` / `ROADMAP.md` / state TOON files, migrates to current schemas |
 | Run the project's wiki layer | `/loom-wiki {ingest\|lint\|query\|status}` | Ingest, lint, search, synthesis |
 
-### Maintenance verbs — `/loom-library` vs `/loom-upgrade`
+### Maintenance verbs — `/loom-update` vs `/loom-library` vs `/loom-upgrade`
 
-These two commands look like they overlap; they don't. Different scopes, different layers:
+Three commands, three distinct scopes. They never overlap:
 
 | Command | Operates on | When to use |
 |---------|-------------|-------------|
-| `/loom-library list / use / add / remove` | **Per-machine catalog** — `~/.claude/skills/library/library.yaml` + `install-state.toon` | "What Loom extensions are pulled into this Claude Code home tree?" |
-| `/loom-library sync` | **Per-machine install tree** — files under `~/.claude/{agents,commands,skills,…}` | "Bring `~/.claude/` up to date — re-pull (curl) or reconcile symlinks (local-dev)" |
-| `/loom-library update` | **Per-machine catalog refresh** — fetch new catalog entries from upstream `main` | "What new agents/kits has Loom published since I last looked?" |
+| `/loom-update` | **Loom system files** — `~/.claude/{commands,scripts,hooks}/loom-*`, install-state envelope at `~/.loom/install.toon` | "Upgrade Loom itself to the latest published version (or pin to a tag, or roll back)" |
+| `/loom-library list / use / add / remove` | **Per-machine kit catalog** — `~/.claude/skills/library/library.yaml` + `install-state.toon` user-domain rows | "What Loom extensions are pulled into this Claude Code home tree?" |
+| `/loom-library sync` | **Per-machine user-installed kits/agents** — non-system files under `~/.claude/{agents,skills,…}` | "Reconcile user-installed kit content. Will refuse to touch system files; use `/loom-update` for those." |
+| `/loom-library update` | **Per-machine catalog refresh** — fetch new catalog entries from upstream `main` | "What new agents/kits has Loom published since I last looked? (Still refuses to write system files.)" |
 | `/loom-upgrade` | **Per-project artifacts** — `PLAN.md`, `ROADMAP.md`, state TOON files inside whatever project you're cd'ed into | "Migrate this project's old-format planning files to current schemas" |
 
-The split is the layer they touch. `/loom-library` is your **Loom binary** (the install in your home tree). `/loom-upgrade` is your **project data** (whatever directory you `cd` into). They never overlap.
+The split is the layer they touch:
+- **`/loom-update`** = the Loom **runtime** (the hooks/scripts/commands that make Loom itself work).
+- **`/loom-library`** = your **kit catalog** (third-party agents and kits you've added on top of Loom).
+- **`/loom-upgrade`** = your **project data** (whatever directory you `cd` into).
 
-**Naming-collision note:** `/loom-library upgrade` exists as a deprecated alias for `/loom-library update` and emits a stderr warning. It's **NOT** the same as `/loom-upgrade`. If you want to migrate a project's planning artifacts → `/loom-upgrade`. If you want to refresh your install catalog → `/loom-library update` (or `/loom-library upgrade`, but you'll get a deprecation warning steering you to `update`).
+**Why `/loom-library sync` won't touch system files:** Loom's system files (hooks, scripts, prompts) are atomically version-managed by `/loom-update` with rollback snapshots. Letting `/loom-library sync` rewrite them mid-Claude-Code-session would risk wedging live hooks or desyncing the running session. `sync` and `update` now surface stale system files read-only under a "System files (skipped — use /loom-update)" section.
+
+**Naming-collision note:** `/loom-library upgrade` exists as a deprecated alias for `/loom-library update` and emits a stderr warning. It's **NOT** the same as `/loom-upgrade` (project-artifact migration) or `/loom-update` (the runtime upgrader). If unsure: project planning artifacts → `/loom-upgrade`; the Loom runtime → `/loom-update`; the kit catalog → `/loom-library update`.
 
 ### Per-command reference
 
@@ -199,7 +206,8 @@ The split is the layer they touch. `/loom-library` is your **Loom binary** (the 
 | `/loom-wiki` | ingest, lint, query, status | Wiki management — ingest, lint, search, synthesis |
 | `/loom-agent` | create, list | Create bespoke agents, view registered agents |
 | `/loom-note` | (add), --review, --assimilate, --backlog, --promote | Notes and backlog — capture, promote to roadmap |
-| `/loom-library` | list, use, sync, update, search, add, remove | Per-machine catalog + install-tree management (curl- and local-dev-aware) |
+| `/loom-library` | list, use, sync, update, search, add, remove | Per-machine kit catalog — refuses system files (delegates to `/loom-update`) |
+| `/loom-update` | (flags) --check, --channel, --pin, --resume, --rollback, --json | **Runtime upgrade for Loom itself** — channel-aware (curl or plugin), atomic staging, rollback snapshots, restart signal |
 | `/loom-upgrade` | — | Per-project artifact migration — scan old-format `PLAN.md` / `ROADMAP.md` / state files, migrate to current schemas |
 | `/loom-git` | commit, push, pr, merge, cleanup, review-pr | Git workflow automation |
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
@@ -421,17 +429,32 @@ After the bootstrap, kits are pulled on demand:
 
 ### Update and uninstall
 
-`/loom-library sync` is the single update command; it auto-detects which install pattern is in use (see [Two install patterns](#two-install-patterns)) and runs the right reconciliation.
+Two distinct commands, two distinct scopes:
 
-**Curl install — refresh the install tree:**
+- **`/loom-update`** — upgrades **Loom itself** (the runtime: hooks, scripts, commands, agents shipped by install.sh or the plugin). Channel-aware (curl or plugin), atomic staging, rollback snapshots. This is the safe, restart-signaled path for the Loom binary.
+- **`/loom-library sync` / `update`** — refreshes **user-installed kits and agents** (third-party items added on top of Loom). Refuses to write system files — if upstream changes a system file, sync surfaces it read-only and points you at `/loom-update`.
+
+**Curl install — upgrade Loom itself:**
 
 ```
-/loom-library sync                  Re-pull every tracked item; confirm before applying
-/loom-library update                Check all sources (catalog + items) for changes, show diff, confirm before applying
+/loom-update --check                Detect drift between installed and latest version (no changes)
+/loom-update                        Apply the upgrade (atomic stage + verify + commit + restart signal)
+/loom-update --pin v0.0.2           Pin to a specific version
+/loom-update --resume               Resume a mid-update marker after an interrupted run
+/loom-update --rollback             Restore the prior version from the inventory snapshot
+```
+
+If `/loom-update` isn't available on your machine (predates this PR), bootstrap once with the curl one-liner — it now preserves any user-added rows in `install-state.toon` across the re-run, so kits and BYO items survive.
+
+**Curl install — refresh the kit catalog (user-domain items):**
+
+```
+/loom-library sync                  Re-pull every tracked USER item; system files surfaced read-only and skipped
+/loom-library update                Check all sources for changes, plus new catalog entries; system files skipped
 /loom-library list                  Show installed vs available
 ```
 
-A `sync` on a curl-install env walks `~/.claude/skills/library/install-state.toon`, re-fetches each item from its `source` (curl-from-GitHub or local path), and — after the user confirms via `yes / no / select individually` — atomically replaces the `targetPath` and updates the install-state record. `update` is the broader operation: it ALSO surfaces new catalog entries published since the last run, then routes through the same apply step.
+A `sync` walks `~/.claude/skills/library/install-state.toon`, re-fetches each non-system item from its `source` (curl-from-GitHub or local path), and — after you confirm via `yes / no / select individually` — atomically replaces the `targetPath` and updates the install-state record. Any system file (type ∈ {infrastructure, prompt, hook-template}) that has changed upstream is listed under "System files (skipped — use /loom-update)" but never written.
 
 **Local-dev install — refresh symlinks from local checkout:**
 
