@@ -23,7 +23,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 // ---------------------------------------------------------------------------
 // Arg parsing
@@ -148,9 +148,19 @@ function runDeletionTest(mod: DiscoveredModule, rootDir: string): string {
 
   let grepOutput = "";
   try {
-    grepOutput = execSync(
-      `grep -r --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" -l "${importPattern}" "${rootDir}" 2>/dev/null`,
-      { encoding: "utf-8" }
+    grepOutput = execFileSync(
+      "grep",
+      [
+        "-r",
+        "--include=*.ts",
+        "--include=*.tsx",
+        "--include=*.js",
+        "--include=*.jsx",
+        "-l",
+        importPattern,
+        rootDir,
+      ],
+      { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
     ).trim();
   } catch {
     // grep exits 1 when no matches — that's fine
