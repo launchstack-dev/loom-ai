@@ -140,6 +140,10 @@ function countBodyLines(content: string): number {
  *   4. Transitional filler       ("As mentioned above/below…", "As described earlier…")
  *   5. Empty preamble            ("In this skill, we will…", "This skill explains how to…")
  */
+// Example sediment phrases the patterns below target:
+//   - "this section describes..." (heading-restatement)
+//   - "note that..." (generic-filler-note)
+//   - "your mileage may vary" (generic disclaimer)
 const RETIREMENT_PATTERNS: RegExp[] = [
   // Restatements of headings
   /^(this|the following)\s+(section|part|chapter|skill)\s+(describes?|covers?|explains?|discusses?|outlines?|details?)/i,
@@ -479,5 +483,6 @@ function main(): void {
     runSweep(BASELINE_PATH, outputPath ?? SWEEP_PATH);
   }
 }
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

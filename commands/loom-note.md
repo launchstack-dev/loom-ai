@@ -101,6 +101,34 @@ When the user runs `/loom-note add <text>` (or the intent routes here):
 3. On error: print the `errorCode` and `message`, exit non-zero.
 4. On success: write updated entry atomically; confirm the transition.
 
+#### Triage states (5)
+
+The triage state machine defines exactly 5 states:
+
+- `needs-triage` — new entry; un-classified (default on `loom-note add`).
+- `needs-info` — bot/agent asked the reporter for details.
+- `ready-for-agent` — sufficient detail; an agent can act.
+- `ready-for-human` — sufficient detail but requires human action/decision.
+- `wontfix` — terminal but reopenable via `/loom-note reopen`.
+
+#### Documented valid transitions
+
+| From | To | Trigger |
+|------|----|---------|
+| `needs-triage` | `needs-info` | Triage agent posts a clarifying question. |
+| `needs-triage` | `ready-for-agent` | Triage classifies — agent-actionable. |
+| `needs-triage` | `ready-for-human` | Triage classifies — needs human decision. |
+| `needs-triage` | `wontfix` | Explicit decision (mandatory `reason`). |
+| `needs-info` | `needs-triage` | Reporter activity (any wiki/issue comment). |
+| `needs-info` | `wontfix` | 30 days no response (`reason: timeout-30d`). |
+| `ready-for-agent` | `ready-for-human` | Agent escalates. |
+| `ready-for-human` | `ready-for-agent` | Human re-routes back to agent. |
+| `wontfix` | `needs-triage` | `/loom-note reopen <id> --reason "..."` (explicit reopen path only). |
+
+Any other transition is rejected by `scripts/triage/state-machine.ts` with
+`errorCode: INVALID_TRANSITION`. Attempting to leave `wontfix` without the
+explicit reopen path is rejected with `errorCode: WONTFIX_REOPEN_REQUIRED`.
+
 **Bot-posted comments (AI-generated triage questions):**
 
 Every comment or question posted by an AI agent during triage MUST begin with

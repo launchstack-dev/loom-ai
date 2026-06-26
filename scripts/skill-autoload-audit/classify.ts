@@ -326,5 +326,6 @@ function main(): void {
 
   console.log(`[skill-autoload-audit] Report written to: ${finalOutputPath}`);
 }
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

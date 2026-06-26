@@ -141,6 +141,7 @@ function renderHtml(statusText: string, generatedAt: string, slug: string): stri
  * Returns true on success, false on failure (headless / command not found).
  */
 function tryOpen(filePath: string): boolean {
+  if (process.env.LOOM_HEADLESS === "1") return false;
   const openers = ["open", "xdg-open", "start"];
   for (const opener of openers) {
     try {
@@ -213,5 +214,6 @@ function main(): void {
   // Always exit 0 when HTML file was written
   process.exit(0);
 }
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

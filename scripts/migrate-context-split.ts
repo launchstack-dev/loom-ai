@@ -276,4 +276,6 @@ async function main(): Promise<number> {
   return 0;
 }
 
-main().then((code) => process.exit(code));
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().then((code) => process.exit(code));
+}

@@ -45,7 +45,7 @@ describe("protocols/skill-authoring.md", () => {
 
 function extractPrincipleSection(content: string, name: string): string {
   const re = new RegExp(
-    `^##\\s+Principle\\s+\\d+\\s+—\\s+${name}\\b([\\s\\S]*?)(?=^##\\s|\\Z)`,
+    `^##\\s+Principle\\s+\\d+\\s+—\\s+${name}\\b([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`,
     "m",
   );
   const m = re.exec(content);

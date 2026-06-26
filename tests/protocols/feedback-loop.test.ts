@@ -31,7 +31,9 @@ describe("protocols/feedback-loop.schema.md", () => {
 
   it("documents every FeedbackLoop field", () => {
     for (const field of REQUIRED_FIELDS) {
-      expect(content.includes("`" + field + "`")).toBe(true);
+      const bare = "`" + field + "`";
+      const arr = "`" + field + "[]`";
+      expect(content.includes(bare) || content.includes(arr)).toBe(true);
     }
   });
 

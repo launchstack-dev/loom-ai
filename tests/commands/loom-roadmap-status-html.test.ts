@@ -111,9 +111,8 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
     );
 
     const result = spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -123,7 +122,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`, LOOM_HEADLESS: "1" },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -141,9 +140,8 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
     writeFileSync(inputFile, "=== Roadmap Convergence Status: ROADMAP ===\n");
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -153,7 +151,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -171,9 +169,8 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
     writeFileSync(inputFile, digestContent);
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -183,7 +180,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -204,9 +201,8 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
     writeFileSync(inputFile, "status text");
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -216,7 +212,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         "MY-ROADMAP",
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -233,9 +229,8 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
     writeFileSync(inputFile, "status text");
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -243,7 +238,7 @@ describe("scripts/html-renderer/loom-roadmap-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },

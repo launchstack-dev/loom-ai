@@ -78,7 +78,7 @@ function simulateReRetire(loopPath: string): {
   message: string;
 } {
   const content = readFileSync(loopPath, "utf8");
-  const isRetired = /retiredAt:\s*(?!null)/.test(content);
+  const isRetired = /^retiredAt:\s+(?!null\b).+$/m.test(content);
 
   if (isRetired) {
     return {

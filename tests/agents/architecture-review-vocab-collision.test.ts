@@ -60,9 +60,10 @@ index abc1234..def5678 100644
 --- a/src/adapters/db.ts
 +++ b/src/adapters/db.ts
 @@ -1,3 +1,10 @@
-+// In Phase 5 we ship this Adapter.
 +// The Adapter translates the repository interface to the DB driver shape.
-+// Phase 5 is an execution unit in the plan; the Adapter is a design concept.
++// It exposes read and write methods that the upstream caller uses directly.
++//
++// (Scheduled for Phase 5 — the planning surface tracks rollout separately.)
 `;
 
 // ---------------------------------------------------------------------------

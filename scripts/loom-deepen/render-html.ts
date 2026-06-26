@@ -237,5 +237,6 @@ function main() {
 
   process.stdout.write(`render-html: HTML written to ${output}\n`);
 }
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

@@ -308,5 +308,6 @@ function main() {
 
   process.exit(hasError ? 2 : 0);
 }
-
-main();
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

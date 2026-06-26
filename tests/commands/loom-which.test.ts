@@ -59,6 +59,7 @@ function parseNodeTable(content: string): DecisionNode[] {
       const parts = parseCsvRow(line.trim());
       const branchesRaw = parts[2] ?? "[]";
       const branches = branchesRaw
+        .replace(/^"|"$/g, "")
         .replace(/^\[|\]$/g, "")
         .split(",")
         .map((b) => b.trim())

@@ -113,9 +113,8 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
 
     // Run with PATH that has no 'open' or 'xdg-open' to simulate headless
     const result = spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -126,7 +125,8 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         env: {
           ...process.env,
           // Override PATH to exclude OS openers — force headless fallback
-          PATH: "/usr/bin:/bin",
+          PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin`,
+          LOOM_HEADLESS: "1",
         },
         timeout: 15000,
         encoding: "utf8",
@@ -148,9 +148,8 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
     writeFileSync(inputFile, "## Project Status\n  CLAUDE.md: found\n");
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -158,7 +157,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -175,9 +174,8 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
     writeFileSync(inputFile, statusContent);
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -185,7 +183,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },
@@ -203,9 +201,8 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
     writeFileSync(inputFile, "status text");
 
     spawnSync(
-      "bunx",
-      [
-        "tsx",
+      "bun", [
+        "run",
         RENDERER_SCRIPT,
         "--input",
         inputFile,
@@ -213,7 +210,7 @@ describe("scripts/html-renderer/loom-status.ts — execution", () => {
         outputFile,
       ],
       {
-        env: { ...process.env, PATH: "/usr/bin:/bin" },
+        env: { ...process.env, PATH: `${process.env.HOME}/.bun/bin:/usr/bin:/bin` },
         timeout: 15000,
         encoding: "utf8",
       },

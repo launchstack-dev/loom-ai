@@ -29,7 +29,7 @@ nodes[12]{id,question,branches,leafRecommendation}:
   N-05,"Planning — do you need to convert a roadmap to a plan, review an existing plan, or execute one?","[convert, review, execute]",null
   N-06,"Audit — what surface are you auditing?","[coverage, attribution, skill-autoload, sediment]",null
   L-bugfix-tight,null,null,"/loom-bugfix --autoconverge"
-  L-bugfix-construct,null,null,"/loom-bugfix (default path; Phase-1 gate will help you construct loop.toon)"
+  L-bugfix-construct,null,null,"/loom-bugfix (default path; Phase-1 gate will help you construct loop.toon — start at rung 1 of the 10-rung ladder)"
   L-feature-roadmap,null,null,"/loom-plan create (roadmap exists; ready for plan)"
   L-feature-draft-roadmap,null,null,"/loom-roadmap converge (drive the roadmap to ready first)"
   L-feature-new,null,null,"/loom-roadmap init (no roadmap yet)"
