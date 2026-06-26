@@ -266,7 +266,20 @@ verify_checksum() {
     return 0
   fi
   local actual
-  actual=$(shasum -a 256 "${dst}" | awk '{print $1}')
+  # Portable SHA-256: BSD/macOS ship `shasum` (Perl), GNU/Alpine ship
+  # `sha256sum` from coreutils. install.sh runs in both worlds (macOS dev
+  # box, Linux CI, Alpine Docker harness). Original code used `shasum` only
+  # and silently failed on Alpine with "shasum: command not found" — the
+  # error was hidden because `command substitution` doesn't propagate
+  # exit codes under set -e, so `actual` ended up empty, equality failed,
+  # and the user saw "checksum mismatch" instead of "shasum missing".
+  # Mirror the same fallback already used at lines 224-227 for the tarball
+  # verification path. (Surfaced by docker harness 2026-06-26.)
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "${dst}" | awk '{print $1}')
+  else
+    actual=$(shasum -a 256 "${dst}" | awk '{print $1}')
+  fi
   if [ "${actual}" != "${expected}" ]; then
     echo "  FAIL ${src} (checksum mismatch)"
     echo "       expected: ${expected}"
