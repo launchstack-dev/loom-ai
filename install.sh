@@ -256,11 +256,11 @@ verify_checksum() {
   # a confusing "checksum mismatch" — even when both hashes are identical.
   # Pick the first match. generate-checksums.sh also dedupes its input now,
   # but defending here too is cheap insurance against future drift.
-  # `|| true` is load-bearing: under `set -euo pipefail`, a no-match grep
-  # exits non-zero and the command substitution propagates that — the script
-  # would die here instead of falling through to the `-z "${expected}"`
-  # "no checksum in manifest — skipped" warning path below. (Gemini #28 GEM-01.)
-  expected=$(grep "  ${src}$" "${CHECKSUMS_FILE}" 2>/dev/null | awk '{print $1}' | head -n 1 || true)
+  # Single awk: `$2 == src` is literal equality (no grep regex traps like `.`
+  # matching any char in a path); `exit` after the first match handles dedupes
+  # for free; awk naturally exits 0 on no-match so no `|| true` is needed
+  # to survive `set -euo pipefail`. (Gemini #28 round-2 MEDIUM.)
+  expected=$(awk -v src="${src}" '$2 == src {print $1; exit}' "${CHECKSUMS_FILE}" 2>/dev/null)
   if [ -z "${expected}" ]; then
     echo "  WARN ${src} (no checksum in manifest — skipped)"
     return 0
@@ -544,8 +544,15 @@ echo "The status line will notify you when updates are available."
 # First-run: write ~/.loom/install.toon channel envelope (idempotent, no PII).
 # Skips silently if neither bun nor node is available — the envelope is opt-in
 # and not required for hook execution.
-if [ "${hook_runtime}" = "bun" ] && command -v bunx >/dev/null 2>&1; then
+# Check the commands directly. `hook_runtime` is a formatted display string
+# (e.g. "bun (1.1.x)" or "npx tsx (fallback; ...)") — never literal "bun"
+# or "node" — so the old `[ "${hook_runtime}" = "bun" ]` form silently
+# never matched, first-run never executed, and installedVersion stayed
+# "unknown" forever in ~/.loom/install.toon. This was the real root cause
+# of /loom-doctor's persistent version-drift warning on curl installs.
+# (Gemini #28 round-2 HIGH.)
+if command -v bun >/dev/null 2>&1 && command -v bunx >/dev/null 2>&1; then
   ( cd "${CLAUDE_DIR}" && bunx tsx scripts/loom-first-run.ts 2>/dev/null ) || true
-elif [ "${hook_runtime}" = "node" ] && command -v node >/dev/null 2>&1; then
+elif command -v node >/dev/null 2>&1; then
   ( cd "${CLAUDE_DIR}" && node --experimental-strip-types scripts/loom-first-run.ts 2>/dev/null ) || true
 fi

@@ -26,11 +26,11 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const GENERATE_SCRIPT = path.join(REPO_ROOT, "scripts/generate-checksums.sh");
 
 // Mirror of install.sh's verify_checksum pipeline — keep in sync.
-// `|| true` is load-bearing: under `set -euo pipefail`, a no-match grep
-// would otherwise propagate non-zero through the command substitution.
-// The test must use the same trailing `|| true` as install.sh or it
-// doesn't exercise the real shape. (Gemini #28 GEM-03.)
-const VERIFY_PIPELINE = `grep "  __SRC__$" __FILE__ 2>/dev/null | awk '{print $1}' | head -n 1 || true`;
+// Single awk: literal `$2 == src` (no grep-regex traps); `exit` after first
+// match handles duplicates for free; awk exits 0 on no-match so the line
+// survives `set -euo pipefail` without `|| true`. If install.sh's pipeline
+// changes shape, this constant must move in lockstep. (Gemini #28 round-2.)
+const VERIFY_PIPELINE = `awk -v src="__SRC__" '$2 == src {print $1; exit}' __FILE__ 2>/dev/null`;
 
 let sandbox: string;
 
