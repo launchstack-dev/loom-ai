@@ -81,9 +81,25 @@ The point: the spec doesn't stop converging when the initial build ships. Mainte
 
 ---
 
+## 6. Feedback Loop (F-18)
+
+A `FeedbackLoop` is a tight, deterministic, agent-runnable red signal that drives convergence — exactly one symptom bound to exactly one command. It lives on disk as `loop.toon` at `.plan-execution/loops/{loopId}.toon` and carries a **TRDA gate** (tight, redCapable, deterministic, agentRunnable — all four must be true) plus a **10-rung escalation ladder**: failing test → curl → CLI+fixture → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash.
+
+**Why this concept matters:** F-18 added an unconditional gate at Phase 0 of `loom-converge` and Phase 1 of `loom-bugfix`. Neither will produce a hypothesis or apply a fix until a verified-red `loop.toon` exists. If the harness can't generate one, the rung escalates — not the fixer. Stalls sharpen the signal; they don't trigger more guessing. When the ladder is exhausted without TRDA pass, the loop transitions to the named state `stuck-at-loop-construction` with explicit HITL escalation guidance.
+
+**Retirement ceremony:** when a symptom goes green and stays green across a verification re-run, `loom-converge` or `loom-bugfix` sets `retiredAt` on the loop. Retired loops are queryable but immutable — to revisit, spawn a new loop.
+
+**Escape hatch:** `--override-loop-gate "<reason>"` proceeds past the gate without TRDA pass, writes the reason to `loop.toon.escapeReason`, and surfaces an `ESCAPE-SET` callout in the convergence digest. Logged prominently so the deviation is never silent.
+
+**Why it sits next to the other concepts:** the loop is the atomic unit of feedback for both bugfix and converge — concept 4 (Convergence) is built on top of it. Concepts 1–3 still hold (you write the scope contract, run scenarios, get hook enforcement), but the feedback loop is what drives the actual red-green cycle inside each iteration.
+
+See `protocols/feedback-loop.schema.md` for the full field schema, `protocols/loom-converge.interaction.md` for the Phase-0 interaction states, and the wiki pages `protocol-feedback-loop.md` + `state-machine-feedback-loop.md` for an authoritative walkthrough.
+
+---
+
 ## The four pillars (recap)
 
-These five concepts compose into Loom's four pillars, which are what the README is really about:
+These six concepts compose into Loom's four pillars, which are what the README is really about:
 
 1. **Pre-flight scope contract** — concept 1, captured before any code.
 2. **Scenarios drive convergence** — concepts 2 and 4 wired together. Scenarios become convergence targets.

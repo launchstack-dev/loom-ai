@@ -216,6 +216,9 @@ The split is the layer they touch:
 | `/loom-git` | commit, push, pr, merge, cleanup, review-pr | Git workflow automation |
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
 | `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
+| `/loom-which` | (free-text) | Decision-tree router — asks 1–3 questions to recommend the right `/loom-*` command for your current task. Distinct from `/loom-do` (model-facing intent inference) and `/loom-reference` (flat table). |
+| `/loom-deepen` | (flags) `--target`, `--html`, `--limit` | Periodic codebase-health pass — Explore-subagent fan-out, deletion test, surfaces shallow modules with before/after diagrams. Default TOON output; `--html` opt-in with headless fallback. |
+| `/loom-prototype` | `<name> --branch logic\|ui [--adr]` | Author throwaway code as a deliberate phase. `logic` = terminal app, `ui` = parallel UI variants on one route. Completion ceremony writes `prototypes/{name}/answer.toon` and updates the linked ADR. |
 
 ## Extending Loom
 

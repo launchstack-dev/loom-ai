@@ -16,6 +16,7 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Go fully autonomous from a one-line idea | `/loom-auto --from "<idea>"` |
 | See what's installed vs. available | `/loom-library list` |
 | Install a kit on demand | `/loom-library use <kit>` |
+| Not sure which `/loom-*` command applies — get a decision-tree recommendation | `/loom-which` |
 
 ## Building a feature
 
@@ -39,6 +40,22 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Iterate convergence on one feature | `/loom-converge --criteria --feature F-01` |
 | Run just unit tier | `/loom-converge --criteria --tier unit` |
 | Run E2E with authenticated browser | `/loom-converge --criteria --tier e2e --chrome` |
+| List active feedback loops | `/loom-converge --loops` |
+| Retire a converged loop | `/loom-converge --retire-loop <loopId>` |
+| Skip the loop-construction gate (escape hatch) | `/loom-bugfix --override-loop-gate "<reason>"` |
+
+> **F-18 gate:** `loom-bugfix` and `loom-converge` halt at Phase-0/Phase-1 until a verified-red `loop.toon` exists (a tight, deterministic, agent-runnable red signal). If the harness can't produce one, escalate down the 10-rung ladder (`failing test → curl → CLI+fixture → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash`). The escape hatch `--override-loop-gate "<reason>"` proceeds without the gate but logs the reason prominently. See `protocols/feedback-loop.schema.md`.
+
+## Codebase health (F-18)
+
+| I want to… | Run this |
+|---|---|
+| Find shallow modules and deepening candidates | `/loom-deepen --target .` |
+| Limit candidate count | `/loom-deepen --target . --limit 5` |
+| Also emit an HTML report | `/loom-deepen --target . --html` |
+| Author a throwaway logic prototype (terminal app) | `/loom-prototype <name> --branch logic` |
+| Author a throwaway UI prototype (parallel UI variants on one route) | `/loom-prototype <name> --branch ui` |
+| Link the prototype to an ADR for completion ceremony | `/loom-prototype <name> --branch <type> --adr ADR-NNNN` |
 
 ## Code review and fixes
 

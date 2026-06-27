@@ -81,6 +81,27 @@ Loom watches your Claude Code context and warns you before it dies.
 
 ---
 
+## 5b. `loom-bugfix` / `loom-converge` halted at the loop-construction gate (F-18)
+
+F-18 added an unconditional Phase-0/Phase-1 gate. `loom-bugfix` and `loom-converge` will not produce a hypothesis or apply a fix until a verified-red `loop.toon` exists. The exit code tells you what to do.
+
+| Exit code | `errorCode` | What it means | Recovery |
+|---|---|---|---|
+| 4 | `NO_LOOP_CONSTRUCTED` | Phase 0 didn't produce a `loop.toon` and you didn't pass `--loop-id`. | `loom-converge --construct-loop` to author one, or bind an existing one with `--loop-id <id>`. List active loops with `loom-converge --loops`. |
+| 4 | `LOOP_NOT_VERIFIED_RED` | A `loop.toon` exists but `verifiedRed: false` — TRDA gate hasn't passed. | Escalate the rung (the gate prints the current rung and the next-rung suggestion), or pass `--override-loop-gate "<reason>"` to proceed under escape. |
+| 5 | `STUCK_AT_LOOP_CONSTRUCTION` | 10-rung ladder exhausted without TRDA pass. Terminal until HITL intervention. | Three operator questions, in order: (1) Is the symptom reproducible by a human running the command outside the harness? (2) Is the harness the right tool for this symptom (vs. a one-off REPL / unit test refactor / debugger session)? (3) Should this be escalated to a human-only path — taken out of the convergence loop entirely? Then revise: `loom-converge --revise-loop <loopId> --reason "<one-sentence>"`. If revision isn't productive after 2 attempts, retire with `--retire-loop <loopId>` and open an HITL issue. |
+| 6 | `LOOPID_NOT_FOUND` | `--loop-id` references a nonexistent file at `.plan-execution/loops/{loopId}.toon`. | `loom-converge --loops` lists active loops with their IDs. |
+| 7 | `RETIRE_NOT_GREEN` | `--retire-loop <id>` invoked while the symptom is still red. | Run the loop to green first; retire only after a verification re-run still passes. |
+| 8 | `LOOP_IMMUTABLE` | Attempted to mutate a retired loop. | Retired loops are queryable but never re-entered. Spawn a new loop instead. |
+| 9 | `HARNESS_OUTPUT_INCOMPATIBLE` | TRDA `redCapable` check failed — the harness's stdout/stderr can't be parsed into a verified-red signal (no exit code + structured stderr). | Escalate to the next rung on the 10-rung ladder OR refactor the harness to emit a parseable red marker. |
+| 10 | `CRITERION_UNVERIFIABLE` | TRDA evaluation determined no rung on the ladder can produce a deterministic red for the criterion. | Flag the criterion for human review: `loom-converge --flag-criterion <id> "<reason>"`. The criterion is recorded in the convergence digest and skipped from auto-iteration. |
+
+**`--criteria` mode is exempt.** `loom-converge --criteria <plan>` keeps its pre-F-18 semantics — no `loop.toon` is written and the gate doesn't fire. The boundary is enforced by `tests/regressions/loom-converge-criteria-boundary.test.ts`.
+
+See `protocols/loom-converge.interaction.md` for the literal stdout/stderr lines each state produces (doctest-parseable), and `protocols/feedback-loop.schema.md` for the full `FeedbackLoop` field schema.
+
+---
+
 ## 6. `/loom-plan execute` stuck or halted mid-wave
 
 | Situation | Recovery |
