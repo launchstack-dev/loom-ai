@@ -121,13 +121,20 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Merge a PR | `/loom-git merge` |
 | Review a PR | `/loom-git review-pr <num>` |
 
-## Authoring (extending Loom)
+## Authoring (extending Loom + creating new artifacts)
 
 | I want to… | Run this |
 |---|---|
 | Create a project-specific agent | `/loom-agent create` |
 | List registered agents | `/loom-agent list` |
 | Configure status line | `/loom-statusline-setup` |
+| Author a new model-invoked or user-invoked skill (guided interview) | `/loom-skill create` |
+| Author throwaway code as a deliberate phase (terminal app) | `/loom-prototype <name> --branch logic` |
+| Author throwaway code (parallel UI variants on one route) | `/loom-prototype <name> --branch ui` |
+| Link a prototype to an originating ADR (completion ceremony updates the ADR with a `prototypeAnswer:` line) | `/loom-prototype <name> --branch <type> --adr ADR-NNNN` |
+| Author a new ADR — only when triggered: `loom-converge` resolves a blocking conflict OR `loom-roadmap converge` records a load-bearing rejection (not lazy-on-first-write) | Write `docs/adr/{NNNN}-{kebab-title}.md` per `docs/adr/README.md` |
+| Construct a `loop.toon` for `loom-converge` (interactive Phase-0 walkthrough) | `/loom-converge --construct-loop` |
+| Not sure which authoring surface applies — get a decision-tree recommendation | `/loom-which` |
 
 ---
 

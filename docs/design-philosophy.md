@@ -88,18 +88,37 @@ For small one-off work, `/loom-quick` auto-emits a retroactive `quick-archive` p
 
 ---
 
+## Operational addition — Feedback Loops (F-18)
+
+**The failure mode.** Convergence requires a red signal. When the harness produces an ambiguous, flaky, or absent signal, stalls in the convergence loop look like fixer-effort problems and the orchestrator responds by escalating the fixer — more reasoning, more tokens, more retries. The actual problem is upstream: the signal isn't trustworthy in the first place.
+
+**Loom's answer.** A `FeedbackLoop` is a first-class on-disk artifact (`.plan-execution/loops/{loopId}.toon`) that binds exactly one symptom to exactly one command and carries a **TRDA gate** — `tight`, `redCapable`, `deterministic`, `agentRunnable` — all four must be true before iteration is allowed to begin. When TRDA fails, the rung escalates along a 10-step ladder (failing test → curl → CLI+fixture → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash) — not the fixer.
+
+`loom-bugfix` Phase-1 and `loom-converge` Phase-0 enforce this unconditionally. There is no ungated branch. The only escape is `--override-loop-gate "<reason>"`, which proceeds without TRDA pass but writes the reason to `loop.toon.escapeReason` and surfaces an `ESCAPE-SET` callout in the convergence digest — never silent. Ladder exhaustion produces a named terminal state, `stuck-at-loop-construction`, with explicit HITL escalation guidance (three operator questions: is the symptom human-reproducible outside the harness; is this the right tool for this symptom; should it leave the convergence loop entirely).
+
+When a symptom goes green and stays green across a verification re-run, `retiredAt` is set on the loop. Retired loops are queryable but immutable — to revisit, spawn a new loop. Lint or typecheck failures during an iteration spawn child loops via `linkedLoops[]`; they don't block the active loop.
+
+**Why this is operational, not a fifth pillar.** Pillars 1–4 govern *what gets built* and *how it stays trustworthy across the lifecycle*. The feedback loop governs *the iteration mechanic underneath convergence* — pillar 2 is still about scenarios as the spec-level unit; the loop is the runtime-level atom each iteration binds to. Adding it as a pillar would conflate two distinct layers; keeping it as a layered operational discipline is honest about scope.
+
+**The point.** Stalls sharpen the signal, not the fixer. When the harness can't deliver a verified red, the system halts visibly with named states and ladder positions rather than silently retrying against a noisy signal.
+
+See `protocols/feedback-loop.schema.md`, `protocols/loom-converge.interaction.md`, and the wiki pages `protocol-feedback-loop.md` + `state-machine-feedback-loop.md`.
+
+---
+
 ## Karpathy-inspired behavioral guidelines
 
 The four pillars are the systems-level discipline. There's a parallel agent-level discipline — drawn from Andrej Karpathy's observations on how LLMs fail at coding — that shapes every Loom agent's behavior.
 
 (`protocols/behavioral-guidelines.md`)
 
-Four guardrails every agent follows:
+Five guardrails every agent follows:
 
 1. **Surface assumptions instead of guessing silently** — when an agent encounters ambiguity, it records the assumption explicitly rather than making a quiet choice that downstream agents can't see.
 2. **Implement exactly what's specified** — no speculative abstractions, no "while I'm here" improvements. The scope contract defines what gets built.
 3. **Make surgical changes that match existing style** — agents read surrounding code before writing, preserving conventions rather than imposing new ones.
 4. **Verify against acceptance criteria before claiming done** — the scope contract's testable criteria are checked, not just "does it compile."
+5. **Iterate against verified-red signals, not assumed symptoms** *(F-18)* — fixer agents refuse to act on a symptom until a `loop.toon` with `verifiedRed: true` and TRDA-passing exists. When the signal isn't trustworthy, the rung escalates along the 10-step ladder rather than the fixer guessing harder.
 
 These guardrails are described in agent system prompts and enforced both by hooks (when possible) and by reviewers tagging violations during code review.
 
@@ -118,5 +137,6 @@ The wiki is Loom's answer to the "agents don't remember what they decided" probl
 - **Not a framework.** Loom doesn't build agents from scratch — it composes Claude Code's native agents, hooks, and skills.
 - **Not a methodology.** Every behavior is a swappable resource (agent, prompt, protocol, skill, infrastructure) registered per-project. See README's "Extending Loom" section.
 - **Not a single opinionated pipeline.** The five orchestration patterns (debate, chain, vote, triage, converge) and per-project `orchestration.toml` mean you assemble what your domain needs.
+- **Not a debugger replacement.** The feedback-loop discipline structures iteration but doesn't substitute for stepping through with `node --inspect`, `pdb`, or a real debugger when those are the right tool. The 10-rung ladder's final rung is "HITL bash" precisely because some symptoms aren't agent-runnable and should leave the convergence loop entirely.
 
 For comparison against adjacent tools (OpenSpec, Superpowers, GSD, CrewAI, Aider, Cursor), see [`comparison.md`](./comparison.md).
