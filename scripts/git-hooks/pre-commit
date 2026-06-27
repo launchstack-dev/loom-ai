@@ -62,6 +62,33 @@ if ! git diff --quiet -- "${MANIFEST}"; then
   echo "[checksums] checksums.sha256 updated and re-staged"
 fi
 
+# ── Install-coverage check (fail-closed) ──────────────────────────────
+# Closes the gap where a new commands/*.md file is added without being
+# wired into install.sh's COMMAND_FILES array (and checksums.sha256).
+# End-user symptom: typing the new /loom-foo in Claude Code returns
+# "Unknown command" because the curl install never copied it.
+#
+# Only runs when commands/ or install.sh are staged — keeps non-related
+# commits fast. Delegates to test/install-command-coverage.test.ts which
+# carries the actionable error output.
+#
+# Override: LOOM_SKIP_PRECOMMIT_QUALITY=1, or `git commit --no-verify`.
+
+STAGED_COMMANDS_OR_INSTALL=$(echo "${STAGED_PATHS}" | grep -E '^(commands/|install\.sh$)' || true)
+if [ -n "${STAGED_COMMANDS_OR_INSTALL}" ] && [ "${LOOM_SKIP_PRECOMMIT_QUALITY:-0}" != "1" ] && command -v bunx >/dev/null 2>&1; then
+  echo "[install-coverage] verifying commands/ ↔ install.sh COMMAND_FILES coverage"
+  if ! bunx vitest run --reporter=basic test/install-command-coverage.test.ts >/tmp/loom-install-coverage.log 2>&1; then
+    echo "[install-coverage] ERROR: drift detected. Failure output:" >&2
+    tail -30 /tmp/loom-install-coverage.log >&2
+    echo "[install-coverage] --- Recovery ---" >&2
+    echo "  1. Add the missing entries listed above to install.sh COMMAND_FILES." >&2
+    echo "  2. Run: bash scripts/generate-checksums.sh" >&2
+    echo "  3. git add install.sh checksums.sha256 && retry the commit." >&2
+    echo "[install-coverage] Bypass with LOOM_SKIP_PRECOMMIT_QUALITY=1 (NOT recommended)." >&2
+    exit 1
+  fi
+fi
+
 # ── Quality gates on staged files (fail-closed) ───────────────────────
 # The PostToolUse hooks (shellcheck-on-write, bash-portability-on-write,
 # pylint-on-write) catch issues at Claude write-time. This block is the
