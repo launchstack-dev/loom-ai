@@ -102,6 +102,10 @@ declare -a COMMAND_FILES=(
   "commands/loom-git.md:${CLAUDE_DIR}/commands/loom-git.md"
   "commands/loom-data.md:${CLAUDE_DIR}/commands/loom-data.md"
   "commands/loom-skill.md:${CLAUDE_DIR}/commands/loom-skill.md"
+  # F-18 commands — decision-tree router, codebase deepening, throwaway prototypes
+  "commands/loom-which.md:${CLAUDE_DIR}/commands/loom-which.md"
+  "commands/loom-deepen.md:${CLAUDE_DIR}/commands/loom-deepen.md"
+  "commands/loom-prototype.md:${CLAUDE_DIR}/commands/loom-prototype.md"
   # Progressive disclosure sub-files for loom-plan
   "commands/loom-plan/create.md:${CLAUDE_DIR}/commands/loom-plan/create.md"
   "commands/loom-plan/review.md:${CLAUDE_DIR}/commands/loom-plan/review.md"
