@@ -91,6 +91,11 @@ declare -a COMMAND_FILES=(
   "commands/loom-triage.md:${CLAUDE_DIR}/commands/loom-triage.md"
   "commands/loom-upgrade.md:${CLAUDE_DIR}/commands/loom-upgrade.md"
   "commands/loom-update.md:${CLAUDE_DIR}/commands/loom-update.md"
+  "commands/loom-uninstall.md:${CLAUDE_DIR}/commands/loom-uninstall.md"
+  "commands/loom-test.md:${CLAUDE_DIR}/commands/loom-test.md"
+  "commands/loom-doctor.md:${CLAUDE_DIR}/commands/loom-doctor.md"
+  # Shared init-guard prelude — included by reference from every /loom-* command
+  "commands/_loom-init-guard.md:${CLAUDE_DIR}/commands/_loom-init-guard.md"
   # Noun commands (registered as skills in library.yaml)
   "commands/loom-plan.md:${CLAUDE_DIR}/commands/loom-plan.md"
   "commands/loom-roadmap.md:${CLAUDE_DIR}/commands/loom-roadmap.md"
@@ -102,6 +107,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-git.md:${CLAUDE_DIR}/commands/loom-git.md"
   "commands/loom-data.md:${CLAUDE_DIR}/commands/loom-data.md"
   "commands/loom-skill.md:${CLAUDE_DIR}/commands/loom-skill.md"
+  "commands/loom-change.md:${CLAUDE_DIR}/commands/loom-change.md"
   # F-18 commands — decision-tree router, codebase deepening, throwaway prototypes
   "commands/loom-which.md:${CLAUDE_DIR}/commands/loom-which.md"
   "commands/loom-deepen.md:${CLAUDE_DIR}/commands/loom-deepen.md"
@@ -120,6 +126,13 @@ declare -a COMMAND_FILES=(
   "commands/loom-roadmap/explore.md:${CLAUDE_DIR}/commands/loom-roadmap/explore.md"
   "commands/loom-roadmap/analyze.md:${CLAUDE_DIR}/commands/loom-roadmap/analyze.md"
   "commands/loom-roadmap/util.md:${CLAUDE_DIR}/commands/loom-roadmap/util.md"
+  "commands/loom-roadmap/converge.md:${CLAUDE_DIR}/commands/loom-roadmap/converge.md"
+  "commands/loom-roadmap/sign-off.md:${CLAUDE_DIR}/commands/loom-roadmap/sign-off.md"
+  "commands/loom-roadmap/status.md:${CLAUDE_DIR}/commands/loom-roadmap/status.md"
+  # Progressive disclosure sub-files for loom-auto
+  "commands/loom-auto/links/execute.md:${CLAUDE_DIR}/commands/loom-auto/links/execute.md"
+  "commands/loom-auto/links/fix.md:${CLAUDE_DIR}/commands/loom-auto/links/fix.md"
+  "commands/loom-auto/links/verify.md:${CLAUDE_DIR}/commands/loom-auto/links/verify.md"
 )
 
 # Hook templates: shipped inert to ~/.claude/templates/. Nothing executes here.
