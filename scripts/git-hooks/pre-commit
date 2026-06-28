@@ -42,10 +42,28 @@ STAGED_PATHS=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | so
 # Intersection. `comm -12` shows lines common to both, requires sorted input.
 TOUCHED=$(comm -12 <(echo "${TRACKED_PATHS}") <(echo "${STAGED_PATHS}"))
 
-if [ -z "${TOUCHED}" ]; then
-  # No tracked file in this commit. Manifest can't have drifted via this commit.
+# Compute install-coverage trigger BEFORE the early-exit so a commit that
+# stages only install.sh (not in checksums.sha256) still runs the check.
+STAGED_COMMANDS_OR_INSTALL=""
+STAGED_COMMANDS_OR_INSTALL=$(echo "${STAGED_PATHS}" | grep -E '^(commands/|install\.sh$)') || {
+  _rc=$?
+  if [ "${_rc}" -ne 1 ]; then
+    echo "[install-coverage] grep failed rc=${_rc} — aborting" >&2
+    exit 1
+  fi
+}
+
+if [ -z "${TOUCHED}" ] && [ -z "${STAGED_COMMANDS_OR_INSTALL}" ]; then
+  # No tracked file in this commit and no commands/install.sh staged.
+  # Manifest can't have drifted via this commit.
   exit 0
 fi
+
+if [ -z "${TOUCHED}" ]; then
+  # Only commands/ or install.sh staged — skip checksums regeneration,
+  # fall through to the install-coverage check below.
+  true
+else
 
 echo "[checksums] regenerating manifest (tracked files staged):"
 echo "${TOUCHED}" | sed 's/^/  /'
@@ -62,6 +80,8 @@ if ! git diff --quiet -- "${MANIFEST}"; then
   echo "[checksums] checksums.sha256 updated and re-staged"
 fi
 
+fi  # end: if [ -n "${TOUCHED}" ]
+
 # ── Install-coverage check (fail-closed) ──────────────────────────────
 # Closes the gap where a new commands/*.md file is added without being
 # wired into install.sh's COMMAND_FILES array (and checksums.sha256).
@@ -74,18 +94,24 @@ fi
 #
 # Override: LOOM_SKIP_PRECOMMIT_QUALITY=1, or `git commit --no-verify`.
 
-STAGED_COMMANDS_OR_INSTALL=$(echo "${STAGED_PATHS}" | grep -E '^(commands/|install\.sh$)' || true)
-if [ -n "${STAGED_COMMANDS_OR_INSTALL}" ] && [ "${LOOM_SKIP_PRECOMMIT_QUALITY:-0}" != "1" ] && command -v bunx >/dev/null 2>&1; then
-  echo "[install-coverage] verifying commands/ ↔ install.sh COMMAND_FILES coverage"
-  if ! bunx vitest run --reporter=basic test/install-command-coverage.test.ts >/tmp/loom-install-coverage.log 2>&1; then
-    echo "[install-coverage] ERROR: drift detected. Failure output:" >&2
-    tail -30 /tmp/loom-install-coverage.log >&2
-    echo "[install-coverage] --- Recovery ---" >&2
-    echo "  1. Add the missing entries listed above to install.sh COMMAND_FILES." >&2
-    echo "  2. Run: bash scripts/generate-checksums.sh" >&2
-    echo "  3. git add install.sh checksums.sha256 && retry the commit." >&2
-    echo "[install-coverage] Bypass with LOOM_SKIP_PRECOMMIT_QUALITY=1 (NOT recommended)." >&2
-    exit 1
+if [ -n "${STAGED_COMMANDS_OR_INSTALL}" ] && [ "${LOOM_SKIP_PRECOMMIT_QUALITY:-0}" != "1" ]; then
+  if ! command -v bunx >/dev/null 2>&1; then
+    echo "[install-coverage] WARNING: bunx not found — install-coverage check SKIPPED. CI remains the backstop (install-command-coverage.yml)." >&2
+  else
+    echo "[install-coverage] verifying commands/ ↔ install.sh COMMAND_FILES coverage"
+    LOG=$(mktemp /tmp/loom-install-coverage.XXXXXX.log)
+    if ! bunx vitest run --reporter=basic test/install-command-coverage.test.ts >"${LOG}" 2>&1; then
+      echo "[install-coverage] ERROR: drift detected. Failure output:" >&2
+      cat "${LOG}" >&2
+      rm -f "${LOG}"
+      echo "[install-coverage] --- Recovery ---" >&2
+      echo "  1. Add the missing entries listed above to install.sh COMMAND_FILES." >&2
+      echo "  2. Run: bash scripts/generate-checksums.sh" >&2
+      echo "  3. git add install.sh checksums.sha256 && retry the commit." >&2
+      echo "[install-coverage] Bypass with LOOM_SKIP_PRECOMMIT_QUALITY=1 (NOT recommended)." >&2
+      exit 1
+    fi
+    rm -f "${LOG}"
   fi
 fi
 

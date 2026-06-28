@@ -18,9 +18,9 @@
  * INSTALL_EXEMPT below. Currently empty — every commands/*.md should ship.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "node:fs";
-import { resolve, relative } from "node:path";
+import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 
 const REPO_ROOT = resolve(__dirname, "..");
@@ -43,7 +43,7 @@ function listTrackedCommandFiles(): string[] {
   const out = execFileSync(
     "git",
     ["-C", REPO_ROOT, "ls-files", "commands/"],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: 10_000, maxBuffer: 10 * 1024 * 1024 },
   );
   return out
     .split("\n")
@@ -84,13 +84,15 @@ function extractInstallSources(installShContent: string): Set<string> {
   return sources;
 }
 
-describe("install.sh — commands/ distribution coverage", () => {
-  const installSh = readFileSync(INSTALL_SH, "utf8");
-  const installSources = extractInstallSources(installSh);
-  const tracked = listTrackedCommandFiles();
+// Hoist git ls-files call to module scope so both describe blocks share the
+// single spawn. Both previously called listTrackedCommandFiles() independently.
+const TRACKED_COMMAND_FILES = listTrackedCommandFiles();
 
+describe("install.sh — commands/ distribution coverage", () => {
   it("every commands/*.md tracked in git appears in install.sh COMMAND_FILES", () => {
-    const missing = tracked.filter((p) => !installSources.has(p));
+    const installSh = readFileSync(INSTALL_SH, "utf8");
+    const installSources = extractInstallSources(installSh);
+    const missing = TRACKED_COMMAND_FILES.filter((p) => !installSources.has(p));
     if (missing.length > 0) {
       const suggestions = missing
         .map((p) => `  "${p}:\${CLAUDE_DIR}/${p}"`)
@@ -110,13 +112,17 @@ describe("install.sh — commands/ distribution coverage", () => {
   });
 
   it("install.sh does not reference command files that do not exist on disk", () => {
-    const trackedSet = new Set(tracked);
+    const installSh = readFileSync(INSTALL_SH, "utf8");
+    const installSources = extractInstallSources(installSh);
+    const trackedSet = new Set(TRACKED_COMMAND_FILES);
     const orphans = [...installSources].filter((p) => !trackedSet.has(p));
     expect(orphans).toEqual([]);
   });
 
   it("install.sh sources match the commands/ directory exactly (no drift)", () => {
-    const expected = [...tracked].sort();
+    const installSh = readFileSync(INSTALL_SH, "utf8");
+    const installSources = extractInstallSources(installSh);
+    const expected = [...TRACKED_COMMAND_FILES].sort();
     const actual = [...installSources].sort();
     expect(actual).toEqual(expected);
   });
@@ -124,17 +130,27 @@ describe("install.sh — commands/ distribution coverage", () => {
 
 describe("checksums.sha256 — coverage for installable commands", () => {
   const checksumsPath = resolve(REPO_ROOT, "checksums.sha256");
-  const checksums = readFileSync(checksumsPath, "utf8");
-  const tracked = listTrackedCommandFiles();
+  let checksummed: Set<string>;
 
-  it("every installable command file appears in checksums.sha256", () => {
-    const checksummed = new Set<string>();
+  beforeAll(() => {
+    let checksums: string;
+    try {
+      checksums = readFileSync(checksumsPath, "utf8");
+    } catch (err) {
+      throw new Error(
+        `checksums.sha256 not found at ${checksumsPath} — is this running from the repo root? (${err})`,
+      );
+    }
+    checksummed = new Set<string>();
     for (const line of checksums.split("\n")) {
       // Format: "<64-hex>  <path>"
       const m = /^[0-9a-f]{64}\s+(.+)$/.exec(line.trim());
       if (m) checksummed.add(m[1]);
     }
-    const missing = tracked.filter((p) => !checksummed.has(p));
+  });
+
+  it("every installable command file appears in checksums.sha256", () => {
+    const missing = TRACKED_COMMAND_FILES.filter((p) => !checksummed.has(p));
     if (missing.length > 0) {
       throw new Error(
         `checksums.sha256 is missing ${missing.length} command file(s):\n` +
@@ -143,5 +159,14 @@ describe("checksums.sha256 — coverage for installable commands", () => {
       );
     }
     expect(missing).toEqual([]);
+  });
+
+  it("checksums.sha256 has no orphan entries for command files that no longer exist", () => {
+    const checksummedCommands = [...checksummed].filter((p) =>
+      p.startsWith("commands/"),
+    );
+    const trackedSet = new Set(TRACKED_COMMAND_FILES);
+    const orphans = checksummedCommands.filter((p) => !trackedSet.has(p));
+    expect(orphans).toEqual([]);
   });
 });

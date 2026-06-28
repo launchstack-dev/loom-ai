@@ -117,7 +117,7 @@ Next steps:
 
 ```
 CLAUDE.md                            # Claude Code project guidance (≤200 lines)
-CONTEXT.md                           # Always-loaded domain glossary (≤50 terms — F-18 Phase A split)
+CONTEXT.md                           # Always-loaded domain glossary (≤50 terms — F-18 split)
 DECISIONS.md                         # Locked decisions, constraints, doc gaps (was the old monolithic CONTEXT.md)
 .claude/settings.json                # Wiki health hooks registered (3 entries)
 .loom/wiki/                          # Persistent knowledge base
@@ -137,7 +137,7 @@ planning/                            # Planning skeleton
 
 **Open `.loom/wiki/index.toon`.** See the page list. These pages are the knowledge base every future Loom command will consult.
 
-**Open `CONTEXT.md` and `DECISIONS.md`.** `CONTEXT.md` is the domain glossary — ≤50 terms Claude Code loads at the start of every session, so agents speak your vocabulary in their first response. `DECISIONS.md` is where locked decisions live (formerly mixed into the monolithic `CONTEXT.md` before F-18 Phase A split them apart). If you upgraded from a pre-F-18 Loom install, run `bun scripts/migrate-context-split.ts .` to perform the split idempotently.
+**Open `CONTEXT.md` and `DECISIONS.md`.** `CONTEXT.md` is the domain glossary — ≤50 terms Claude Code loads at the start of every session, so agents speak your vocabulary in their first response. `DECISIONS.md` is where locked decisions live (formerly mixed into the monolithic `CONTEXT.md` before F-18 split them apart). If you upgraded from a pre-F-18 Loom install, run `bun scripts/migrate-context-split.ts .` to perform the split idempotently.
 
 ---
 

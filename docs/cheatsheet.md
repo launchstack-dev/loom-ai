@@ -44,7 +44,7 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Retire a converged loop | `/loom-converge --retire-loop <loopId>` |
 | Skip the loop-construction gate (escape hatch) | `/loom-bugfix --override-loop-gate "<reason>"` |
 
-> **F-18 gate:** `loom-bugfix` and `loom-converge` halt at Phase-0/Phase-1 until a verified-red `loop.toon` exists (a tight, deterministic, agent-runnable red signal). If the harness can't produce one, escalate down the 10-rung ladder (`failing test → curl → CLI+fixture → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash`). The escape hatch `--override-loop-gate "<reason>"` proceeds without the gate but logs the reason prominently. See `protocols/feedback-loop.schema.md`.
+> **F-18 gate:** `loom-bugfix` (Gate 1) and `loom-converge` (Gate 0) halt until a verified-red `loop.toon` exists (a tight, deterministic, agent-runnable red signal). If the harness can't produce one, escalate down the 10-rung ladder (`failing test → curl → CLI+fixture → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash`). The escape hatch `--override-loop-gate "<reason>"` proceeds without the gate but logs the reason prominently. See `protocols/feedback-loop.schema.md`.
 
 ## Codebase health (F-18)
 
@@ -53,9 +53,7 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Find shallow modules and deepening candidates | `/loom-deepen --target .` |
 | Limit candidate count | `/loom-deepen --target . --limit 5` |
 | Also emit an HTML report | `/loom-deepen --target . --html` |
-| Author a throwaway logic prototype (terminal app) | `/loom-prototype <name> --branch logic` |
-| Author a throwaway UI prototype (parallel UI variants on one route) | `/loom-prototype <name> --branch ui` |
-| Link the prototype to an ADR for completion ceremony | `/loom-prototype <name> --branch <type> --adr ADR-NNNN` |
+| Author a throwaway prototype to explore a design before committing | see [Authoring](#authoring-extending-loom--creating-new-artifacts) → `/loom-prototype` |
 
 ## Code review and fixes
 
@@ -133,7 +131,7 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | Author throwaway code (parallel UI variants on one route) | `/loom-prototype <name> --branch ui` |
 | Link a prototype to an originating ADR (completion ceremony updates the ADR with a `prototypeAnswer:` line) | `/loom-prototype <name> --branch <type> --adr ADR-NNNN` |
 | Author a new ADR — only when triggered: `loom-converge` resolves a blocking conflict OR `loom-roadmap converge` records a load-bearing rejection (not lazy-on-first-write) | Write `docs/adr/{NNNN}-{kebab-title}.md` per `docs/adr/README.md` |
-| Construct a `loop.toon` for `loom-converge` (interactive Phase-0 walkthrough) | `/loom-converge --construct-loop` |
+| Construct a `loop.toon` for `loom-converge` (interactive Gate-0 walkthrough) | `/loom-converge --construct-loop` |
 | Not sure which authoring surface applies — get a decision-tree recommendation | `/loom-which` |
 
 ---

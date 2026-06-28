@@ -1,4 +1,4 @@
-# Codebase Design Vocabulary (F-18 Phase A)
+# Codebase Design Vocabulary (F-18)
 
 This protocol defines the shared vocabulary Loom uses when reasoning about codebase shape — module boundaries, interfaces, depth, seams, adapters, leverage, and locality. Adopted from Matt Pocock's codebase-design skill per locked decision C-06.
 
@@ -19,6 +19,7 @@ When a term in this vocabulary conflicts with an existing Loom-native term (e.g.
 | Locality | How much of the answer to a question lives in one place — high locality reduces cognitive load. | — | Use "Locality" when arguing for co-located helpers; reserve "cohesion" for the textbook overload. |
 | Tracer Bullet | A vertical slice that exercises every layer end-to-end at minimum fidelity — proves the integration shape before any layer is hardened. | — | Use "Tracer Bullet" when validating an architecture hypothesis; reserve "spike" for time-boxed investigation that may produce nothing shippable. |
 | Vertical Slice | A user-meaningful capability cut top-to-bottom of the stack, owned end-to-end by one wave/plan-phase. | "Phase" in PLAN.md | Use "Vertical Slice" when scoping deliverables across layers; reserve "Phase" for plan-document execution units. |
+| Gate | An interaction-state checkpoint in `loom-converge` or `loom-bugfix` where execution halts pending a TRDA pass or an explicit operator escape. Numbered per command (Gate 0 in `loom-converge`, Gate 1 in `loom-bugfix`). | "Phase" in PLAN.md; "Wave" in plan execution | Use "Gate" for interaction-state checkpoints in the feedback-loop pipeline; reserve "Phase" for plan-document execution units (a Phase contains one or more Waves); reserve "Wave" for concurrent execution boundaries within a Phase. |
 
 ## Section 1 — Module
 

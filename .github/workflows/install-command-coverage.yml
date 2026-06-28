@@ -43,12 +43,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@4bc047ad8b82dae5df7b27d9459f6eb19f43a606 # v2.0.2
         with:
-          bun-version: latest
+          bun-version: "1.x"
 
       - name: Run install-command-coverage regression
         run: bunx vitest run test/install-command-coverage.test.ts

@@ -83,11 +83,11 @@ Loom watches your Claude Code context and warns you before it dies.
 
 ## 5b. `loom-bugfix` / `loom-converge` halted at the loop-construction gate (F-18)
 
-F-18 added an unconditional Phase-0/Phase-1 gate. `loom-bugfix` and `loom-converge` will not produce a hypothesis or apply a fix until a verified-red `loop.toon` exists. The exit code tells you what to do.
+F-18 added an unconditional Gate. `loom-bugfix` (Gate 1) and `loom-converge` (Gate 0) will not produce a hypothesis or apply a fix until a verified-red `loop.toon` exists. The exit code tells you what to do.
 
 | Exit code | `errorCode` | What it means | Recovery |
 |---|---|---|---|
-| 4 | `NO_LOOP_CONSTRUCTED` | Phase 0 didn't produce a `loop.toon` and you didn't pass `--loop-id`. | `loom-converge --construct-loop` to author one, or bind an existing one with `--loop-id <id>`. List active loops with `loom-converge --loops`. |
+| 4 | `NO_LOOP_CONSTRUCTED` | Gate 0 didn't produce a `loop.toon` and you didn't pass `--loop-id`. | `loom-converge --construct-loop` to author one, or bind an existing one with `--loop-id <id>`. List active loops with `loom-converge --loops`. |
 | 4 | `LOOP_NOT_VERIFIED_RED` | A `loop.toon` exists but `verifiedRed: false` — TRDA gate hasn't passed. | Escalate the rung (the gate prints the current rung and the next-rung suggestion), or pass `--override-loop-gate "<reason>"` to proceed under escape. |
 | 5 | `STUCK_AT_LOOP_CONSTRUCTION` | 10-rung ladder exhausted without TRDA pass. Terminal until HITL intervention. | Three operator questions, in order: (1) Is the symptom reproducible by a human running the command outside the harness? (2) Is the harness the right tool for this symptom (vs. a one-off REPL / unit test refactor / debugger session)? (3) Should this be escalated to a human-only path — taken out of the convergence loop entirely? Then revise: `loom-converge --revise-loop <loopId> --reason "<one-sentence>"`. If revision isn't productive after 2 attempts, retire with `--retire-loop <loopId>` and open an HITL issue. |
 | 6 | `LOOPID_NOT_FOUND` | `--loop-id` references a nonexistent file at `.plan-execution/loops/{loopId}.toon`. | `loom-converge --loops` lists active loops with their IDs. |
