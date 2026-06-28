@@ -147,6 +147,7 @@ function runDeletionTest(mod: DiscoveredModule, rootDir: string): string {
   const importPattern = modBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   let grepOutput = "";
+  let grepUnavailable = false;
   try {
     grepOutput = execFileSync(
       "grep",
@@ -162,8 +163,14 @@ function runDeletionTest(mod: DiscoveredModule, rootDir: string): string {
       ],
       { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
     ).trim();
-  } catch {
-    // grep exits 1 when no matches — that's fine
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      grepUnavailable = true;
+    }
+    // grep exit 1 = no matches; that's the normal "no importers" case — fall through
+  }
+  if (grepUnavailable) {
+    return `Deletion test SKIPPED: grep not found on PATH. Manual review required before any deletion.`;
   }
 
   const importingFiles = grepOutput

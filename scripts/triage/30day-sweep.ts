@@ -69,7 +69,7 @@ function serializeEntry(entry: TriageEntry, body: string): string {
 function parseTransitions(raw: Record<string, string>, fullContent: string): TransitionRow[] {
   // The minimal parser above only captures scalar key:value pairs.
   // Extract the transitions block from the raw content separately.
-  const blockMatch = /transitions\[\d+\]\{[^}]+\}:\n((?:  .+\n?)*)/m.exec(fullContent);
+  const blockMatch = /transitions\[\d+\]\{[^}]+\}:\r?\n((?:  .+\r?\n?)*)/m.exec(fullContent);
   if (!blockMatch || !blockMatch[1].trim()) return [];
 
   return blockMatch[1]
@@ -159,6 +159,10 @@ export function runSweep(
     }
 
     const updatedAtMs = new Date(entry.updatedAt).getTime();
+    if (isNaN(updatedAtMs)) {
+      skippedCount++;
+      continue;
+    }
     const ageMs = nowMs - updatedAtMs;
 
     if (ageMs < THIRTY_DAYS_MS) {
@@ -181,7 +185,7 @@ export function runSweep(
     }
 
     // Extract body (everything after closing ---)
-    const bodyMatch = /^---\n[\s\S]*?\n---([\s\S]*)$/.exec(content);
+    const bodyMatch = /^---\r?\n[\s\S]*?\r?\n---([\s\S]*)$/.exec(content);
     const body = bodyMatch ? bodyMatch[1] : "";
 
     const newContent = serializeEntry(result.entry, body);

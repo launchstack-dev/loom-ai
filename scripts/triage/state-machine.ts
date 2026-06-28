@@ -119,7 +119,7 @@ export function transition(
   const fromState = entry.state;
   const key = `${fromState}→${toState}`;
   const at = opts.at ?? new Date().toISOString();
-  const reason = opts.reason ?? null;
+  const reason = opts.reason?.trim() || null;
 
   // ── Guard: wontfix requires explicit reopen path ──────────────────────────
   if (fromState === "wontfix" && !opts.explicitReopen) {

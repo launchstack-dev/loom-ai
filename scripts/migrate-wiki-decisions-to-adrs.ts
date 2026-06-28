@@ -102,7 +102,7 @@ export function detectWikiDecisionAmbiguity(
 function stripToonFrontmatter(content: string): string {
   // Match opening ```toon or ``` toon fence (with or without language tag).
   const fenceStart = content.indexOf("```toon");
-  if (fenceStart === -1) return content;
+  if (fenceStart === -1 || fenceStart > 4) return content;
 
   const fenceEnd = content.indexOf("```", fenceStart + 3);
   if (fenceEnd === -1) return content;

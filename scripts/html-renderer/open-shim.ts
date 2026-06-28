@@ -20,7 +20,15 @@ import { execFileSync } from "node:child_process";
  */
 export function tryOpen(filePath: string): boolean {
   if (process.env.LOOM_HEADLESS === "1") return false;
-  const openers = ["open", "xdg-open", "start"];
+  if (process.platform === "win32") {
+    try {
+      execFileSync("cmd.exe", ["/c", "start", "", filePath], { stdio: "ignore", timeout: 5000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  const openers = ["open", "xdg-open"];
   for (const opener of openers) {
     try {
       execFileSync(opener, [filePath], { stdio: "ignore", timeout: 5000 });
