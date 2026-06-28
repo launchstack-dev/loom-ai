@@ -46,6 +46,26 @@ Parse arguments after `converge`:
 - `--integrator <agent>` -- integrator agent name (required when mode=document; resolved to `agents/{name}-agent.md` via the same dispatch path as production agents)
 - `--harness <path>` -- harness script path or registered name (required when mode=document; e.g., `scripts/plan-review-harness.ts`)
 
+**Loop construction options (F-18 — not applicable to `--criteria` mode):**
+- `--construct-loop` -- Phase 0: construct a new feedback loop. Interactive — prompts for symptom and command.
+- `--loop-id <id>` -- bind to an existing verified-red loop.toon at `.plan-execution/loops/{id}.toon`. Skips Phase 0 construction.
+- `--loops` -- list all active feedback loops as a TOON table (loopId, symptom, rung, verifiedRed, runtimeMs, linkedLoops, retiredAt). Print and stop.
+- `--retire-loop <id>` -- archive a converged loop (sets retiredAt; immutable after). Requires symptom to be green.
+- `--revise-loop <id>` -- apply a HITL revision to a stuck-at-loop-construction loop. Requires `--reason "<one-sentence-reason>"`.
+- `--override-loop-gate "<reason>"` -- escape the loop gate (writes escapeReason to loop.toon). Use for emergencies.
+
+**Exit Codes (loop-construction gate):**
+
+| Code | Name | When |
+|------|------|------|
+| `4` | `NO_LOOP_CONSTRUCTED` | Phase 0 has not produced a `loop.toon` and `--loop-id` was not passed. |
+| `4` | `LOOP_NOT_VERIFIED_RED` | A `loop.toon` exists but `verifiedRed: false`; surfaces current rung + ladder escalation. |
+| `5` | `STUCK_AT_LOOP_CONSTRUCTION` | 10-rung ladder exhausted without TRDA pass. Surfaces HITL guidance. |
+| `6` | `LOOPID_NOT_FOUND` | `--loop-id` passed but the file `.plan-execution/loops/{id}.toon` does not exist. |
+| `7` | `RETIRE_NOT_GREEN` | `--retire-loop <id>` invoked but the symptom is not currently green. |
+
+**Note:** `--criteria` mode is **EXEMPT** from the loop-construction gate (FC-H6). When `--criteria` is set, Phase 0 is skipped entirely — no `loop.toon` is written, and no `LOOP_NOT_VERIFIED_RED` exit fires. The `--criteria` mode preserves its pre-F-18 semantics.
+
 **Shared options:**
 - `--config <path>` -- path to an existing converge.config (skip planner + setup, either mode); for hand-managed configs in a clean output-dir
 - `--resume-config <path>` -- path to an **alternate** converge.config TOON file; signals "wrapper-driven invocation, tolerate any partial iteration files in output-dir from prior runs" — used by `/loom-plan create --autoconverge` Step 5 and by e2e fixtures running concurrently. Distinct from `--config`: `--config` expects a clean output-dir; `--resume-config` is re-entry-safe.
@@ -62,7 +82,96 @@ Parse arguments after `converge`:
 
 ### Instructions
 
-#### Step 0: Read Protocols and Resolve Models
+#### Step -1: Handle Loop-Management Flags (F-18)
+
+**Before any other step.** If any of the following flags are present, handle and stop.
+
+**`--loops`:**
+1. Read all `*.toon` files from `.plan-execution/loops/`.
+2. If empty: print `No active loops. Construct one with loom-converge --construct-loop.` Stop.
+3. Print a TOON table to stdout:
+   ```toon
+   loops[N]{loopId,symptom,rung,verifiedRed,runtimeMs,linkedLoops,retiredAt}:
+     {one row per loop file}
+   ```
+   Stop.
+
+**`--retire-loop <id>`:**
+1. Read `.plan-execution/loops/{id}.toon`. If not found: emit `LOOPID_NOT_FOUND` (exit 6). Stop.
+2. If `retiredAt` already set: emit `LOOP_IMMUTABLE` (exit 8). Stop.
+3. Verify symptom is currently green (run `loop.toon.command`; must exit 0). If not:
+   - Emit to stderr:
+     ```
+     errorCode: RETIRE_NOT_GREEN
+     message: Loop cannot be retired while the symptom is still red.
+     hint: Re-run loom-converge against the loop to reach green before retiring.
+     ```
+   - Exit 7. Stop.
+4. Write `retiredAt: {ISO 8601}` to the loop file atomically (`.tmp` then rename). Print confirmation. Stop.
+
+**`--revise-loop <id> --reason "<reason>"`:**
+1. Read `.plan-execution/loops/{id}.toon`. If not found: emit `LOOPID_NOT_FOUND` (exit 6). Stop.
+2. If `retiredAt` set: emit `LOOP_IMMUTABLE` (exit 8). Stop.
+3. If state is NOT `stuck-at-loop-construction`: emit info that revision is only for stuck loops. Stop.
+4. Append `escalationHistory[]` entry with `fromRung: {current}`, `toRung: 1`, `reason: hitl-revision`, `at: {now}`. Write atomically. Print confirmation. Stop.
+
+#### Step 0: Phase 0 — Loop Construction Gate (F-18)
+
+**This step applies to all modes EXCEPT `--criteria`. If `--criteria` is set, skip to the original Step 0 (Protocols + Models) below.**
+
+**`--criteria` is EXEMPT (FC-H6).** The `--criteria` mode preserves pre-F-18 semantics — no `loop.toon` is written, no gate check fires, `LOOP_NOT_VERIFIED_RED` is never emitted.
+
+**All other modes (target, document, default):**
+
+1. **If `--loop-id <id>` is provided:**
+   - Read `.plan-execution/loops/{id}.toon`. If not found: emit `LOOPID_NOT_FOUND` (exit 6).
+   - If `verifiedRed: false`: emit `LOOP_NOT_VERIFIED_RED` (exit 4 — loop exists but not verified).
+   - If `retiredAt` set: emit `LOOP_IMMUTABLE` (exit 8).
+   - Bind `activeLoopId = id`. Proceed to Step 0b (Protocols).
+
+2. **If no `--loop-id` and no verified-red loop exists:**
+   - Scan `.plan-execution/loops/*.toon`.
+   - If no files: emit `NO_LOOP_CONSTRUCTED` to stderr (exit 4):
+     ```
+     errorCode: NO_LOOP_CONSTRUCTED
+     message: Phase 0 of loom-converge did not produce a loop.toon and no --loop-id was passed.
+     hint: Construct a loop with loom-converge --construct-loop or bind an existing loop with --loop-id <id>; list active loops with loom-converge --loops.
+     ```
+   - If file(s) exist but all have `verifiedRed: false`: emit `LOOP_NOT_VERIFIED_RED` (exit 4):
+     ```
+     errorCode: LOOP_NOT_VERIFIED_RED
+     message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+     hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+     ```
+     Additionally print the rung-1 ladder recommendation to stdout:
+     ```
+     currentRung: {loop.rung}
+     suggestion: Escalate with loom-converge --construct-loop --escalate-rung to try rung {loop.rung + 1}.
+     ```
+   - If a loop has `rung == 10` and `verifiedRed: false`: emit `STUCK_AT_LOOP_CONSTRUCTION` (exit 5) + the HITL guidance block:
+     ```
+     hitlGuidance:
+       state: stuck-at-loop-construction
+       operatorQuestions[3]:
+         - Q1: Is the symptom reproducible by a human manually running the command outside the harness?
+         - Q2: Is the harness the right tool for this symptom (vs. a one-off REPL, a unit test refactor, or a debugger session)?
+         - Q3: Should this be escalated to a human-only path — i.e., taken out of the convergence loop entirely?
+       reviseLoopCommand: "loom-converge --revise-loop <loopId> --reason \"<one-sentence-reason>\""
+       fallback: "If revision is not productive after 2 attempts, retire the loop with --retire-loop <loopId> and open a HITL issue."
+     ```
+
+3. **Verified-red loop found** (`verifiedRed: true` and `retiredAt: null`):
+   - Bind `activeLoopId`. Proceed to Step 0b.
+
+4. **Override path (`--override-loop-gate "<reason>"`):**
+   - Read or create `loop.toon`. Write `escapeReason: "<reason>"` atomically.
+   - Emit prominent callout to stdout:
+     ```
+     ⚠ ESCAPE-SET: override-loop-gate active — escapeReason: "<reason>"
+     ```
+   - Proceed to Step 0b. Every iteration in the Convergence Loop emits the ESCAPE-SET callout in the convergence digest.
+
+#### Step 0b: Read Protocols and Resolve Models (formerly Step 0)
 
 **Model Resolution:** Before spawning any agent, resolve its model. Priority: (1) profile tier mapping from `orchestration.toml` `[settings] modelProfile`, (2) agent `.md` frontmatter `model:` field, (3) inherit parent. Tier mapping: convergence-planner = utility, target-parser = utility (haiku), harness-builder = utility, delta-analyzer = utility (haiku), convergence-driver = utility, fixer-agent = utility. Read `.claude/orchestration.toml` once, check `modelProfile`, resolve per spawn.
 

@@ -113,6 +113,10 @@ Community-supported. GitHub issues only. No SLA.
 
 Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https://github.com/launchstack-dev). File issues at [github.com/launchstack-dev/loom-ai/issues](https://github.com/launchstack-dev/loom-ai/issues). For kit authoring, see [`planning/notes/plugin-marketplace-rationale.md`](planning/notes/plugin-marketplace-rationale.md). For the install decision tree, see [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md).
 
+## Acknowledgments
+
+Several of Loom's core patterns — including the codebase-design vocabulary (Module/Seam/Adapter), the feedback-loop ladder, the no-op test framing for skill authoring, the horizontal-slice anti-pattern for TDD, the throwaway-prototype branch discipline, and the grilling discipline with a 12-question cap — were adapted from educational content by Matt Pocock. Full attribution, MIT-license source references, and a description of how each pattern was adapted are recorded in [`NOTICE`](NOTICE) at the root of this repository.
+
 ---
 
 ## Status
@@ -212,6 +216,9 @@ The split is the layer they touch:
 | `/loom-git` | commit, push, pr, merge, cleanup, review-pr | Git workflow automation |
 | `/loom-data` | — | Data-pipeline-aware orchestration (data agents and validators) |
 | `/loom-statusline-setup` | — | Configure the Claude Code status line (Starship integration) |
+| `/loom-which` | (free-text) | Decision-tree router — asks 1–3 questions to recommend the right `/loom-*` command for your current task. Distinct from `/loom-do` (model-facing intent inference) and `/loom-reference` (flat table). |
+| `/loom-deepen` | (flags) `--target`, `--html`, `--limit` | Periodic codebase-health pass — Explore-subagent fan-out, deletion test, surfaces shallow modules with before/after diagrams. Default TOON output; `--html` opt-in with headless fallback. |
+| `/loom-prototype` | `<name> --branch logic\|ui [--adr]` | Author throwaway code as a deliberate phase. `logic` = terminal app, `ui` = parallel UI variants on one route. Completion ceremony writes `prototypes/{name}/answer.toon` and updates the linked ADR. |
 
 ## Extending Loom
 

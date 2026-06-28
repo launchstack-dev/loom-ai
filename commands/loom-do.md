@@ -36,6 +36,37 @@ Examples:
 ```
 Stop.
 
+#### Step 1b: Redundancy Checks (BEFORE triage assignment)
+
+Before routing any intent that would create a new triage entry or assign work,
+run BOTH redundancy checks in the order listed:
+
+**Check A — Already implemented (wiki + plan query):**
+
+1. Query the wiki (`.loom/wiki/`) for pages whose title or summary matches the
+   user's described intent. Use keyword matching on the intent text.
+2. Query `PLAN.md` (if present) for phase or task entries that match the intent.
+3. If a match is found in EITHER source:
+   - Emit a one-line callout naming the matching wiki page AND/OR the matching
+     plan phase:
+     ```
+     > [already-implemented] Matches wiki page "{title}" and/or plan phase "{phase}".
+     ```
+   - Set the note's redundancy reason to `already-implemented`.
+   - Route the note to `ready-for-human` (not to triage agent).
+   - Do NOT silently drop the request.
+
+**Check B — Prior rejection (`.out-of-scope/` query):**
+
+1. Call `scripts/out-of-scope/suppress.ts` `checkSuppressed(oosDir, null, intentText)`.
+2. If matches are returned:
+   - Emit each match's `callout` string (format:
+     `> [OOS-suppressed] {id} was rejected on {date} — Rationale: {rationale}`).
+   - The request MUST NOT be silently dropped — it is marked for operator decision.
+   - Route to `ready-for-human` with reason `prior-rejection`.
+
+Only if BOTH checks pass (no matches) proceed to Step 2 and normal routing.
+
 #### Step 2: Gather Context
 
 Read project state to inform routing:

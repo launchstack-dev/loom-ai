@@ -22,15 +22,25 @@ If arguments are empty or equal `--help`, print the following help text and stop
 Rapidly fix a bug with wiki context, impact analysis, and archiving.
 
 Flags:
-  --severity <level>   Set severity: critical, high, medium, low (auto-detected if omitted)
-  --no-verify          Skip verification commands after fix
-  --no-commit          Skip the auto-commit offer
-  --no-archive         Skip writing to fix archive (not recommended)
-  --dry-run            Diagnose and assess impact without applying the fix
-  --path <hint>        Hint at suspected file/module path
-  --model <model>      Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
-  --autoconverge       Run as an F-03 convergence loop (debug-harness + fixer-agent integrator)
-  --symptom <path>     Path to failing test / repro script / error log (required with --autoconverge)
+  --severity <level>              Set severity: critical, high, medium, low (auto-detected if omitted)
+  --no-verify                     Skip verification commands after fix
+  --no-commit                     Skip the auto-commit offer
+  --no-archive                    Skip writing to fix archive (not recommended)
+  --dry-run                       Diagnose and assess impact without applying the fix
+  --path <hint>                   Hint at suspected file/module path
+  --model <model>                 Override agent model (opus, sonnet, haiku). Use --model opus for tough bugs.
+  --autoconverge                  Run as an F-03 convergence loop (debug-harness + fixer-agent integrator)
+  --symptom <path>                Path to failing test / repro script / error log (required with --autoconverge)
+  --override-loop-gate "<reason>" Bypass the loop-construction gate. Writes reason to loop.toon.escapeReason.
+                                  Use for emergency prod investigations. A prominent ESCAPE-SET callout
+                                  appears in the convergence digest.
+
+Exit Codes:
+  0   Success — fix applied and verified.
+  4   LOOP_NOT_VERIFIED_RED — no verified-red loop.toon exists. Construct a loop first,
+      or pass --override-loop-gate "<reason>" to proceed under escape.
+  5   STUCK_AT_LOOP_CONSTRUCTION — the 10-rung ladder was exhausted without a verified-red loop.
+      HITL escalation guidance is printed to stderr.
 
 Examples:
   /loom-bugfix --model opus Complex race condition in the queue worker
@@ -38,6 +48,7 @@ Examples:
   /loom-bugfix --severity critical Users can't check out — payment API timeout
   /loom-bugfix --path src/auth/ Token refresh fails silently
   /loom-bugfix --dry-run The dashboard is slow when filtering by date
+  /loom-bugfix --override-loop-gate "investigating prod P0 outage" Payment timeout
 ```
 
 ### Instructions
@@ -59,6 +70,7 @@ Supported flags:
 - `--model <model>` — takes next token as value (opus/sonnet/haiku). Overrides the agent's frontmatter model for this invocation. Use `--model opus` when the analyst is struggling with a complex bug.
 - `--autoconverge` — boolean. Switches the command into F-03 convergence mode (see § Autoconverge Mode below). Mutually exclusive with `--dry-run`.
 - `--symptom <path>` — takes next token as value. Required when `--autoconverge` is set. Repo-relative path to a failing test file, repro shell script, or error log.
+- `--override-loop-gate "<reason>"` — string escape hatch (min 8 chars). Bypasses the Phase-1 loop-construction gate. Writes `escapeReason` to `loop.toon` atomically. Emits a prominent `ESCAPE-SET` callout in the convergence digest. Use only for emergencies (e.g., investigating a live prod outage where loop construction is impractical).
 
 Unknown flags: print warning and continue.
 
@@ -137,6 +149,46 @@ Path: `.loom/fix-archive/{YYYY-MM-DD}-{slug}.toon`
 Create `.loom/fix-archive/` directory if it does not exist.
 
 If a file with the same name exists, append `-2`, `-3`, etc. before `.toon`.
+
+#### Step 3b: Phase-1 Loop-Construction Gate (F-18)
+
+**This gate applies to ALL entry paths — autoconverge AND default analyst. There is no ungated branch.**
+
+Execute BEFORE spawning any agent. This is a mandatory preflight gate, not part of the analyst's work.
+
+1. **Read `.plan-execution/loops/`** — scan for any `*.toon` loop files.
+
+2. **Gate evaluation:**
+
+   | Condition | Action |
+   |-----------|--------|
+   | No `loop.toon` file exists | Emit `LOOP_NOT_VERIFIED_RED` to stderr (see below); exit 4 |
+   | `loop.toon` exists but `verifiedRed: false` | Same; exit 4 |
+   | `loop.toon` exists and `verifiedRed: true` | Pass gate; proceed to Step 4 |
+   | `--override-loop-gate "<reason>"` provided | See escape path below |
+
+3. **Exit-4 stderr output (verbatim):**
+   ```
+   errorCode: LOOP_NOT_VERIFIED_RED
+   message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+   hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+   ```
+   Print the rung-1 ladder recommendation to stdout:
+   ```
+   RECOMMENDATION: Start loop construction with: loom-converge --construct-loop
+   The 10-rung ladder (rung 1 default) will run your test/repro command twice to verify deterministic red.
+   ```
+   Then halt — do NOT proceed to Step 4.
+
+4. **10-rung exhaustion** (rung == 10 with `verifiedRed: false`):
+   - Exit code `5`.
+   - Emit `STUCK_AT_LOOP_CONSTRUCTION` + HITL guidance block to stderr (see `agents/bugfix-analyst-agent.md` Phase 1 section for verbatim content).
+
+5. **Escape path (`--override-loop-gate "<reason>"`):**
+   - Read existing `loop.toon` (or create a minimal construction-state record if absent).
+   - Write `escapeReason: "<reason>"` to `loop.toon` atomically (`.tmp` then rename).
+   - Proceed to Step 4.
+   - Pass `escapeReason: "<reason>"` in the analyst prompt so the agent emits the `ESCAPE-SET` callout.
 
 #### Step 4: Spawn Bugfix Analyst
 

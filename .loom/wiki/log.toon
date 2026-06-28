@@ -1,8 +1,8 @@
 schemaVersion: 1
-entryCount: 7
-lastEntry: 2026-06-17T00:00:00Z
+entryCount: 22
+lastEntry: 2026-06-26T00:00:00Z
 
-entries[7]{timestamp,operation,pageId,agent,summary}:
+entries[22]{timestamp,operation,pageId,agent,summary}:
   2026-04-25T22:00:00Z,bootstrap,*,human,Initial wiki bootstrap: 19 pages across 6 categories covering hooks/infrastructure + command dispatch + agents/protocols
   2026-06-17T00:00:00Z,create,concept-roadmap-convergence,wiki-maintainer-agent,F-15/M-07 plan-created — capture roadmap convergence loop shape, dimensions/rubrics, sibling-to-code-convergence framing
   2026-06-17T00:00:00Z,create,component-roadmap-converge-driver,wiki-maintainer-agent,F-15/M-07 plan-created — capture driver pipeline, three /loom-roadmap commands, 10-state machine, 10 error codes, configuration block
@@ -10,3 +10,18 @@ entries[7]{timestamp,operation,pageId,agent,summary}:
   2026-06-17T00:00:00Z,create,decision-sign-off-purity,wiki-maintainer-agent,F-15/M-07 plan-created — record structural guarantee that only /loom-roadmap sign-off writes signed-off (file isolation + grep guard)
   2026-06-17T00:00:00Z,create,decision-archetype-rubrics,wiki-maintainer-agent,F-15/M-07 plan-created — record archetype-selected pedagogical rubrics with status-conditional inline rendering and retire/override hooks
   2026-06-17T00:00:00Z,cross-ref-add,concept-convergence,wiki-maintainer-agent,Added relates-to ref to concept-roadmap-convergence (subjective sibling of code convergence)
+  2026-06-26T00:00:00Z,create,feature-f18-mattpocock-skills-adoption,wiki-maintainer-agent,F-18 feature-complete — high-level overview of F-18: 23 sub-items across 9 phases, 6 attributed patterns, headline loop-construction gate, ADRs 0000-0003
+  2026-06-26T00:00:00Z,create,protocol-feedback-loop,wiki-maintainer-agent,F-18 feature-complete — FeedbackLoop schema (protocols/feedback-loop.schema.md): full field set, TRDA gate, retirement ceremony, 10 error codes
+  2026-06-26T00:00:00Z,create,protocol-codebase-design,wiki-maintainer-agent,F-18 feature-complete — 9-term vocabulary table with Loom-native conflict resolution, deletion test, interface-is-the-test-surface doctrine
+  2026-06-26T00:00:00Z,create,protocol-out-of-scope,wiki-maintainer-agent,F-18 feature-complete — OutOfScopeEntry immutable rejection log; visible suppression callout on second roadmap-converge pass
+  2026-06-26T00:00:00Z,create,protocol-grilling,wiki-maintainer-agent,F-18 feature-complete — grilling discipline: GR-01..GR-05, 12-question hard cap, [N of 12] progress indicator, /skip escape, STUCK_AT_GRILL_CAP error code
+  2026-06-26T00:00:00Z,create,command-loom-which,wiki-maintainer-agent,F-18 feature-complete — /loom-which: 14-node 26-edge decision tree, runtime branch, GR compliance table, comparison to /loom-do and /loom-reference
+  2026-06-26T00:00:00Z,create,command-loom-deepen,wiki-maintainer-agent,F-18 feature-complete — /loom-deepen: Explore subagent fan-out, TOON report, --html opt-in, EXPLORE_AGENT_FAILED error code
+  2026-06-26T00:00:00Z,create,command-loom-prototype,wiki-maintainer-agent,F-18 feature-complete — /loom-prototype: logic/ui branches, throwaway scaffolding, completion ceremony writing answer.toon, ADR linkage
+  2026-06-26T00:00:00Z,create,state-machine-feedback-loop,wiki-maintainer-agent,F-18 feature-complete — FeedbackLoop lifecycle: 8 states, 11 valid transitions, invalid-transition error codes, stuck-at-loop-construction terminal state
+  2026-06-26T00:00:00Z,create,state-machine-triage,wiki-maintainer-agent,F-18 feature-complete — TriageState: 5 states, 30-day timeout, reopen ceremony, mandatory reason fields on critical transitions (FC-B1)
+  2026-06-26T00:00:00Z,create,state-machine-adr,wiki-maintainer-agent,F-18 feature-complete — ADR status enum: proposed/accepted/deprecated/superseded, ADR_REVIVAL_BLOCKED, ADRs 0000-0003 shipped with F-18
+  2026-06-26T00:00:00Z,create,decision-context-decisions-split,wiki-maintainer-agent,F-18 feature-complete — F-18 Phase 1 split: CONTEXT.md (34-term always-loaded glossary) + DECISIONS.md (locked decisions D-01..D-03); migrate-context-split.ts sentinel detection
+  2026-06-26T00:00:00Z,create,convergence-target-ct-06-vocab-diff,wiki-maintainer-agent,F-18 feature-complete — CT-06 fresh-agent vocab-diff harness: scripts/context-vocab-diff.ts, analyseVocabularyDiff, >=3 threshold, not-yet-applicable mode
+  2026-06-26T00:00:00Z,create,waiver-m-06-precheck,wiki-maintainer-agent,F-18 feature-complete — M-08-PreCheck-M-06 waiver: F-12 OSS Launch Phase 1 incomplete; parallelism permitted per ROADMAP §873 (disjoint surfaces)
+  2026-06-26T00:00:00Z,create,waiver-sediment-phase5b,wiki-maintainer-agent,F-18 feature-complete — §1916 slip-rule waiver: 0% sediment found across 433 SKILL.md body lines; operator-accepted; S-06 tests marked it.skip

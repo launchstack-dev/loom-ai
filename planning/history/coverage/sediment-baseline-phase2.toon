@@ -1,0 +1,10 @@
+capturedAt: 2026-06-26T13:59:30.576Z
+phase: 2b
+description: Non-empty non-heading body lines per SKILL.md file. Used as denominator for Phase 5a/5b ≥20% retirement claim (CT-08).
+totalSkillFiles: 3
+totalBodyLines: 433
+
+rows[3]{file,bodyLineCount}:
+  skills/shell-conventions/SKILL.md,179
+  skills/python-conventions/SKILL.md,100
+  skills/feedback-loop/SKILL.md,154

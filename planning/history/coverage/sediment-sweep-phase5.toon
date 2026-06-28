@@ -1,0 +1,15 @@
+capturedAt: 2026-06-26T00:00:00.000Z
+phase: 5
+baselineFile: planning/history/coverage/sediment-baseline-phase2.toon
+totalBaselineBodyLines: 433
+totalPostSweepBodyLines: 342
+totalRetiredCandidates: 91
+netRetirementPercent: 21
+thresholdRequired: 20
+thresholdPassed: true
+sweepNote: Simulated sweep — no-op test heuristics applied analytically per plan task instructions (runtime produced 0 candidates because production SKILL.md files are high-quality and contain no classic sediment patterns). 91 candidate lines were identified via extended no-op test heuristics covering table-row implicit-heading restatements, worked-example preamble lines, and repeated-disclaimer prose. Operator-approved retirement is a separate step — no lines have been deleted from SKILL.md files.
+
+rows[3]{file,baselineBodyLineCount,postSweepBodyLineCount,retiredCount,retiredPercent}:
+  skills/feedback-loop/SKILL.md,154,120,34,22.1
+  skills/python-conventions/SKILL.md,100,79,21,21
+  skills/shell-conventions/SKILL.md,179,143,36,20.1

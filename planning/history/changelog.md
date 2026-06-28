@@ -570,3 +570,105 @@ Plan generation unlocked: `/loom-plan create planning/ROADMAP-byo-kits.md` is va
 - Archived review: planning/history/reviews/2026-06-25-pr24-safe-upgrade-review.md
 
 Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat error checks), STYLE-01/02 (scoped EXIT trap + awk row count), GEM-02/SILENT-03 (test parity + stderr assert), GEM-03 (two new v3-to-v2 conversion test cases).
+
+## 2026-06-25 — Feature added: Matt Pocock Skills Adoption
+- Feature ID: F-18
+- Slug: matt-pocock-skills-adoption
+- Milestone: M-08 (new — Matt Pocock Skills Adoption, NOT STARTED)
+- Placement: appended (after F-17)
+- Source: review of `mattpocock/skills` (MIT), conversation 2026-06-25
+- Scope: 5 sub-phases (A Foundations, B Tight-red feedback loop, C Codebase health + planning, D Inbox + convergence hygiene, E Session + presentation polish) covering 21 sub-items
+- Attribution: MIT — all adopted patterns credited inline ("Adapted from mattpocock/skills, MIT")
+
+## 2026-06-25 — Roadmap review-integrate iteration 1 applied to F-18 / M-08
+- Source: planning/history/reviews/2026-06-25-roadmap-review.toon (3 reviewers, 24 findings, 8 cross-cutting themes)
+- Applied:
+  - Attribution policy: removed inline per-file attribution requirement; switched to NOTICE + README acknowledgment (strategy F1)
+  - Priority split: Phase B P1, Phases A/C/D/E P2 (strategy F2 + ux F23 + feature-coverage)
+  - CONTEXT.md content separation: split into CONTEXT.md (glossary) + DECISIONS.md (locked decisions); precedence rule vs rolling-context [WIKI] documented (strategy F3 + feature-coverage F12)
+  - ADR vs wiki decision pages: ADRs primary, wiki decision-* deprecated with one-shot migration (strategy F4)
+  - FeedbackLoop schema expanded: escalationHistory[], linkedLoops[], parentLoopId, trda{} block, escapeReason, retirement ceremony (feature-coverage F10 + ux F22 + strategy F5)
+  - Phase B gate escape hatch: --override-loop-gate "<reason>" + named stuck-at-ladder dead-end (ux F21)
+  - Two in-progress UX states named explicitly (no loop / loop not red) (ux F22)
+  - /loom-which moved Phase E → Phase A (ux F23 + feature-coverage F16)
+  - OutOfScopeEntry schema authored in protocols/out-of-scope.schema.md (feature-coverage F9)
+  - loom-bugfix Phase 1 gate scope explicit: applies to ALL paths (feature-coverage F11)
+  - convergence-state.toon migration scheduled in Phase A (feature-coverage F19)
+  - HTML report mode: opt-in --html flag with plain-text fallback (strategy F8 + ux F24)
+  - Vocabulary mapping table added to protocols/codebase-design.md spec (all 3 agents)
+  - Triage state machine: all transitions defined + AI disclaimer prefix + timestamps (feature-coverage F18 + ux)
+  - findings.schema.md confidence field added (feature-coverage F13)
+  - tdd-coach: edit existing agent (not new file) + no-silent-regression rule (feature-coverage F14, F17)
+  - Sediment sweep: mid-flight after Phase B + final at Phase E (feature-coverage F20)
+  - Skill autoload audit gets deprecation notices (ux)
+  - /loom-prototype completion-signal defined (ux)
+  - /loom-which vs /loom-reference relationship clarified: decision-tree vs table (feature-coverage F16)
+  - Loop retirement ceremony defined (feature-coverage F15)
+  - Data Model section: added FeedbackLoop, OutOfScopeEntry, TriageState, ADR entities + 5 relationships
+  - M-08 dependency reframed: no hard dep on M-07; Phase A may parallel M-06 Phase 2
+
+## 2026-06-25 — Roadmap review-integrate iteration 2 applied to F-18 / M-08
+- Source: re-review iter2 (3 reviewers in parallel; strategy + ux verdict=converged, feature-coverage verdict=needs-another-pass with 3 blocking + 4 high)
+- Applied:
+  - Data Model FeedbackLoop row: added redOutput, runtimeMs, determinismRuns, typed trda{}/escalationHistory[]/linkedLoops[] (feature-coverage NEW-B1, NEW-B2)
+  - Data Model new rows: CodebaseDesignVocab, SkillAuthoringPrinciple, Handoff, Prototype (feature-coverage NEW-B3, GAP-1, GAP-2)
+  - Phase A sub-4b: explicit v1→v2 version label + detectConvergenceStateVersion/migrateConvergenceStateV1toV2 function names matching F-13 walker pattern (feature-coverage GAP-3)
+  - Phase B sub-8: --loops output format specified as TOON table with named columns; loom-converge interaction spec added to Phase B deliverables (feature-coverage GAP-4 + ux Issue 1)
+  - TriageState + OutOfScopeEntry + ADR rows tightened (typed enums, actor field on transitions)
+
+## 2026-06-25 — Feature added: F-19 Autoconverge Harness Extension into Test + Execute Metasteps
+- Feature ID: F-19
+- Slug: autoconverge-test-execute-extension
+- Milestone: M-08 (appended after F-18)
+- Source: verification of `commands/loom-plan/{create,test,execute}.md` + `commands/loom-converge.md` against autoconverge intent (2026-06-25 Explore agent report)
+- Five verified gaps closed:
+  - Orphaned criteria-plan.toon (written by /loom-plan create, never read by /loom-plan test)
+  - No /loom-plan test --autoconverge (generated tests never reviewed)
+  - No /loom-plan execute --autoconverge (only --auto for quality gates, no document-mode wrapper)
+  - No per-symptom binding anywhere (fixer reruns full wave; converge harness is single signal)
+  - Document-mode harness is single-file only (cannot converge a test directory)
+- Five phases (A bridge, B test-autoconverge, C execute-autoconverge, D harness primitives, E orchestration.toml lifecycle)
+- Reuses F-18 Phase B loop.toon as the per-symptom atom — one schema, four entry points
+- New entities: CriteriaTestBinding, ExecuteLoopMap
+- M-08 phasing updated to include F-19 phases 6–10
+- Frontmatter: totalFeatures 18 → 19
+
+## 2026-06-25 — F-19 review autoconverged in 2 iterations + polish pass
+- iter1: 3 reviewers, all needs-another-pass (4 blockers + 4 highs feature-coverage; 4 issues strategy; 6 issues UX)
+- iter2: 3 reviewers, all converged (1 low feature-coverage, 1 medium strategy, 1 low UX residuals)
+- Polish pass applied:
+  - regenerating added to CriteriaTestBinding status enum (feature-coverage residual)
+  - Phase B/D coupling note added to slip boundary (strategy residual)
+  - Phase C item 13 render mode specified — append-only with iteration header (UX residual)
+- Findings saved at planning/history/reviews/2026-06-25-F19-review-iter1.toon
+- Verdict: converged. F-19 ready for /loom-plan create.
+
+## 2026-06-25 — Testing-coverage additions to F-18 + F-19 (sanity sweep converged)
+- F-18 gains sub-22 (test-coverage audit) + sub-23 (bootstrap testing note). Sub-item count 21 → 23.
+- F-19 gains sub-27 (test-coverage audit) + sub-28 (bootstrap testing note) + sub-29 (test-fixture sub-deliverables — 4 fixtures: unverifiable-criterion, multi-tier-failure, broken-harness, well-formed-harness). Sub-item count 26 → 29.
+- Convergence targets extended: coverage audit + fixtures lines added.
+- M-08 Effort line updated to XL with full deliverable inventory.
+- M-08 Phasing step 8 corrected: F-19 Phase B P2 → P1 (pre-existing inconsistency).
+- 4th fixture added (well-formed-harness) closing positive-path coverage for Phase D --per-symptom-binding.
+- Sanity sweep: feature-coverage-agent verdict converged. No new blockers.
+
+## 2026-06-25 — PLAN.md created for F-18 (Matt Pocock Skills Adoption)
+- Plan: planning/plans/PLAN-F-18-matt-pocock-skills.md (1645 lines, planVersion 2)
+- Criteria: planning/plans/PLAN-F-18-criteria-plan.toon (39 criteria + 3 noTest)
+- Generation path:
+  - Step 1 triple-track: plan-builder (opus) + criteria-planner (opus) parallel, plan-critic (haiku) sequential
+  - Step 1.5 interpretation review: 7 conflicts + 8 gaps; 4 blockers resolved by promoting sub-11/16/17/20 from criteria-plan noTest to C-36..C-39
+  - Step 1.7 critic revise (opus integrator): 17 of 24 findings applied surgically; 7 info-level deferred to converge loop
+- All 10 F-18 convergence targets mapped to criteria
+- Plan structure: 7 phases (Phase 0 Contracts+Prefactor through Phase 6 Test-coverage audit) across 6 waves (Wave 0–5)
+
+## 2026-06-25 — F-18 PLAN autoconverged through 3 iterations
+- Iter 1 (6 reviewers): 19 blocking + 23 high findings; verdict needs-another-pass across all 6
+- Iter 2 (Bucket A + B integrator): 14 mechanical findings closed by direct edits + 9 substantive structural edits via opus integrator
+- Iter 3 (2-reviewer sanity sweep): parallelization converged; feature-coverage flagged 1 new residual (architecture-reviewer dual-phase ownership)
+- Polish pass: documented architecture-reviewer Phase 4/Phase 5b sequential carve-out
+- Final state: 1963 lines, 9 phases (0/1/2a/2b/3/4/5a/5b/6), 7 waves (0/1/2a/2b/3/4/5), 56 Applied: annotations, new Wave Gates section + Milestones with M-08-PreCheck-M-06 and M-08-MidCheckpoint
+- Frontmatter: totalPhases 9, totalWaves 7
+- All 10 F-18 roadmap convergence targets covered by ≥1 criterion AND ≥1 plan scenario
+- Snapshots: pass-0 (1647), pass-1 (1647), pass-2 (1963), pass-3 (1965)
+- Ready for /loom-plan execute or /loom-plan test

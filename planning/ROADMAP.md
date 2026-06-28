@@ -3,10 +3,10 @@ roadmapVersion: 1
 name: "Loom Convergence Testing & Planning Taxonomy"
 status: approved
 created: 2026-04-18
-lastReviewed: 2026-05-01
+lastReviewed: 2026-06-25
 targetDate: null
-totalFeatures: 14
-totalMilestones: 7
+totalFeatures: 19
+totalMilestones: 8
 ---
 
 # Roadmap: Loom Convergence Testing & Planning Taxonomy
@@ -496,6 +496,210 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 - A team that wants committed hooks (e.g. CI-enforced) can re-run with `--tier project` and get the prior behavior
 - Migration: existing committed `.claude/settings.json` hooks stay where they are; doctor offers a one-shot move-to-local migration
 
+### F-18: Matt Pocock Skills Adoption
+
+**Priority:** Split — Phase B at **P1**, Phases A/C/D/E at **P2** (refined per 2026-06-25 review).
+**Milestone:** M-08
+**Status:** Backlog — sourced from review of `mattpocock/skills` (MIT, GitHub). Attribution policy: a single `NOTICE` file lists all MIT-sourced patterns; the README has a one-paragraph acknowledgment section. **No per-file inline attribution** — keeps Loom's protocol surface clean and avoids derivative-positioning. MIT compliance is satisfied by NOTICE + preserved license text.
+
+**Description:** Adopt the highest-leverage engineering disciplines from Matt Pocock's public skills repo into Loom. Phase B (tight-red feedback loop) is the vision-coherent core — it sharpens the convergence signal that M-01–M-03 established. Phases A/C/D/E are DX hardening: shared vocabulary, ADR convention, codebase deepening, inbox triage, and skill-authoring polish. Sequencing: Phase A is pure foundation (no behavioural risk) and unlocks B–E; Phase B is highest-leverage *behavioural* change and ships before C/D/E; C and D parallelise; E is polish, last.
+
+**Vocabulary-conflict resolution (mandatory, lands in Phase A):**
+
+Loom's existing terms and the imported `codebase-design` glossary must coexist without competing factions. A mapping table lives in `protocols/codebase-design.md` Section 0 and is authoritative when terms collide:
+
+| Loom-native term | mattpocock term | When to use which |
+|---|---|---|
+| Phase / Wave | (no equivalent) | Loom term wins — execution-pipeline structure |
+| Deliverable | (no equivalent) | Loom term wins — concrete plan artifact |
+| Finding | (no equivalent) | Loom term wins — review output |
+| Criterion | (no equivalent) | Loom term wins — convergence gate |
+| Wiki page | (no equivalent) | Loom term wins — knowledge-base node |
+| (no equivalent) | Module | mattpocock term wins — a unit with an interface and an implementation |
+| (no equivalent) | Interface | mattpocock term wins — everything a caller must know |
+| (no equivalent) | Seam | mattpocock term wins — where the interface lives |
+| (no equivalent) | Adapter, Leverage, Locality, Depth | mattpocock term wins — design properties |
+
+`CONTEXT.md` vs rolling-context `[WIKI]` injection (F-08): **`CONTEXT.md` is the seed; `[WIKI]` is the live layer.** `CONTEXT.md` holds the canonical glossary (≤50 domain terms, hand-curated) and is always loaded; the rolling-context injector reads `CONTEXT.md` first and then augments with relevant wiki pages per-query. They are not redundant — different scopes, single precedence rule.
+
+`CONTEXT.md` content separation: the existing `loom-init`-generated `CONTEXT.md` (locked decisions and constraints) splits into two files in Phase A — `CONTEXT.md` (domain glossary, always-loaded) and `DECISIONS.md` (locked decisions, referenced on demand). Migration script ships in Phase A; one-shot, idempotent.
+
+ADR vs wiki decision pages (F-02): **ADRs are the primary decision record.** Wiki `decision-*.md` pages are deprecated and migrated to `docs/adr/NNNN-*.md` in Phase A. The migration preserves all content; the wiki page becomes a stub pointing at the ADR.
+
+**Entities involved:** FeedbackLoop (loopId, command, symptom, rung, verifiedRed, redOutput, runtimeMs, determinismRuns, retiredAt, escalationHistory[], linkedLoops[], trda{tight, redCapable, deterministic, agentRunnable}, parentLoopId, escapeReason), CodebaseDesignVocab (Module, Interface, Depth, Seam, Adapter, Leverage, Locality), Context (always-loaded glossary file, derived from wiki), ADR (lazy decision record, `docs/adr/NNNN-*.md`), SkillAuthoringPrinciple (predictability, leading-word, completion-criterion, premature-completion, sediment, duplication), TriageState (category × state, with createdAt/updatedAt timestamps and transition log), OutOfScopeEntry (id, idea, rejectedAt, rejectedBy, rationale, sourceProposalId), Prototype (logic-branch | ui-branch, with capturedAnswer ADR ref), Handoff (tmp-dir doc, suggested-skills section). All these entities are added to the Data Model section.
+
+**Phase A — Foundations** (P2; no behavioural change, unlocks everything else)
+
+1. `protocols/codebase-design.md` — shared design glossary (Module, Interface, Depth, Seam, Adapter, Leverage, Locality) plus Section 0 vocabulary-mapping table (see above). Includes the deletion test, "interface is the test surface", "one adapter = hypothetical seam, two = real". Referenced by every architecture-touching agent.
+2. `CONTEXT.md` split — `CONTEXT.md` becomes the always-loaded domain glossary (≤50 terms, derived view from `.loom/wiki/`); locked decisions migrate to `DECISIONS.md`. Migration script + first-run empty-state advisory ("CONTEXT.md not found — run `/loom-init` to generate") ship together. `loom-init` and `loom-wiki ingest` maintain both.
+3. ADR convention — `docs/adr/NNNN-*.md`. Wiki `decision-*.md` pages are deprecated; one-shot migration script converts existing wiki decisions to ADRs, leaves stub pointers. ADR creation is triggered explicitly when `loom-converge` resolves a blocking conflict or `loom-roadmap converge` records a load-bearing rejection — not lazy-on-first-write. Every reviewer cross-checks ADRs in the area they're touching.
+4. `protocols/skill-authoring.md` — import `writing-great-skills` philosophy: predictability as root virtue, leading words, information hierarchy, checkable + exhaustive completion criteria, failure modes (premature completion, duplication, sediment), no-op test, model-invoked vs user-invoked trade-off. Wired into `/loom-skill create`.
+4b. **Schema migration:** `convergence-state.toon` v1→v2 — gains a `loops[]` table. Follows the F-13 walker pattern exactly: `detectConvergenceStateVersion(content)` returns `{detected, current, outdated}`; `migrateConvergenceStateV1toV2()` performs the rewrite. One migrator, ships with Phase A so Phase B can land without schema friction.
+4c. **`/loom-which` (moved from Phase E):** human-facing router skill complementing `loom-do` (model-facing). Ships early because it is the discoverability index for the new conventions Phases B–E introduce. Decision on overlap with `/loom-reference`: `/loom-which` is a *decision tree* ("what should I run for this situation?"), `/loom-reference` is a *flat table* — both survive, scoped differently.
+
+**Phase B — Tight-red feedback loop** (P1; the headline behavioural change)
+
+5. `protocols/feedback-loop.schema.md` — `loop.toon` envelope. **Full field set:** `loopId, command, symptom, rung, verifiedRed, redOutput, runtimeMs, determinismRuns, retiredAt, escalationHistory[]{fromRung,toRung,reason,at}, linkedLoops[]{loopId,relation:child|sibling|spawned-from-symptom}, parentLoopId, trda{tight:bool,redCapable:bool,deterministic:bool,agentRunnable:bool}, escapeReason`. **Retirement ceremony:** `retiredAt` is set by `loom-converge`/`loom-bugfix` when the symptom goes green and stays green across a verification run; retired loops are immutable but queryable.
+6. New skill `feedback-loop` (model-invoked) — holds the 10-rung ladder (failing test → curl → CLI+fixture diff → headless browser → trace replay → throwaway harness → fuzz → bisection → differential → HITL bash), TRDA gates, and tighten-the-loop heuristics. Leading words "tight" and "red" imported verbatim.
+7. `loom-bugfix` + `bugfix-analyst-agent` + `debug-investigator-agent` — Phase 1 gate **applies to all entry paths** (autoconverge AND default analyst path) — there is no ungated branch. Requires a verified-red tight loop before hypothesising. No theory before red. **Escape hatch:** `--override-loop-gate "<reason>"` writes the reason to `loop.toon.escapeReason` and proceeds without TRDA pass; logged prominently in convergence digest. Without this flag, exhausting the 10-rung ladder produces an explicit "stuck-at-loop-construction" state that halts with HITL escalation guidance (not silent block).
+8. `loom-converge` + `converge-stage-teammate` — new Phase 0 "loop construction" writes `loop.toon`. Iterations bind to one `loopId` and run only that command. **Stalls escalate the LOOP (down the ladder), not the fixer** — `escalationHistory[]` records each escalation. `convergence-state.toon` gains a `loops[]` table (schema migration ships in Phase A sub-4b). New command flags: `--loop-id <id>` (bind to existing loop), `--loops` (list active loops as a TOON table with columns `loopId,symptom,rung,verifiedRed,runtimeMs,linkedLoops,retiredAt`), `--retire-loop <id>` (archive a converged loop). Also add an explicit `loom-converge` interaction spec to Phase B deliverables: `protocols/loom-converge.interaction.md` documents the Phase 0 loop-construction UX states and the new flag behaviours. Key distinction from current convergence: one symptom = one named command; lint/typecheck become *separate* loops with their own symptoms (`linkedLoops[]` records the relation, surfaced in `convergence-state.toon`); escalation sharpens feedback, not fixer capability. **In-progress UX states:** (a) "no loop.toon yet" — gate displays a one-line construction prompt with the ladder rung-1 recommendation; (b) "loop exists, verifiedRed: false" — gate displays current rung + escalation suggestion. Both states are explicit in the `loom-converge` interaction spec.
+9. `tdd-coach` agent — **edit existing agent** (no new file). Adopt "horizontal slice anti-pattern" framing verbatim ("DO NOT write all tests first, then all implementation" → produces tests of *imagined* behaviour). Vertical tracer-bullet red-green-refactor only. Add the "no silent regression during refactor" rule: test count must not decrease during a refactor step.
+9b. **Findings confidence field:** `findings.schema.md` gains `confidence: high|medium|low` on every finding row. Backward-compatible default `medium`. Used by all review and convergence agents.
+
+**Phase C — Codebase health + planning quality** (P2)
+
+10. `/loom-deepen` (new) — periodic "deepening report" surfacing shallow modules. Uses `Explore` subagents, applies the deletion test, outputs TOON findings to disk (canonical) and an **optional** HTML render — see sub-18 for HTML conditions. Output path convention: TOON to `.plan-execution/reports/deepen-{date}.toon`, HTML to `.plan-execution/reports/deepen-{date}.html` when `--html` flag is passed.
+11. Sharpen `loom-plan:create` + `loom-plan:materialize` + `parallelization-agent` + `phasing-agent` — adopt tracer-bullet vertical slices, "ideal seam count = 1", explicit prefactor step in wave 0 ("make the change easy, then make the easy change").
+12. `/loom-prototype` (new) — throwaway code as deliberate phase. Two branches: terminal app for state/logic, parallel UI variants on one route for visual. Rules: clearly marked throwaway, one command to run, no persistence, no polish. **User-visible completion:** prototype writes a one-line TOON summary to `prototypes/{name}/answer.toon` and updates the originating ADR (if one exists) — explicit done state, not just authoring rules. Slots into `loom-roadmap:explore` or between roadmap and plan.
+
+**Phase D — Inbox + convergence hygiene** (P2)
+
+13. `loom-note` + `loom-do` — formal triage state machine: `bug|enhancement` × `needs-triage|needs-info|ready-for-agent|ready-for-human|wontfix`. **All transitions explicit:** `needs-info → needs-triage` on reporter activity (any wiki/issue comment); `needs-info → wontfix` after 30 days no-response; `wontfix` is terminal but can be reopened only via explicit `/loom-note reopen <id>` with mandatory reason. Each entry carries `createdAt`, `updatedAt`, `transitions[]`. Two redundancy checks: (a) already implemented? (b) prior rejection (queries `.out-of-scope/`)? **AI disclaimer prefix** (`> *This was generated by AI during triage.*`) on every bot-posted comment.
+14. `.out-of-scope/*.md` persistent rejection log — wired into `loom-roadmap converge` so dropped ideas stop resurfacing. **Schema** (lands in `protocols/out-of-scope.schema.md`, Phase A foundation work): `{id, idea, rejectedAt, rejectedBy:human|agent, rationale, sourceProposalId}`. **Visible suppression:** when a match is found during converge, surface a one-line callout with the matched entry id, rejection date, and rationale — never silent suppression.
+15. ADR conflict callouts — `roadmap-converge-reviewer` + code reviewers cross-check ADRs and flag conflicts with the "contradicts ADR-NNNN but worth reopening because…" framing.
+
+**Phase E — Session + presentation polish** (P2)
+
+16. `loom-pause` / handoff — **edit existing `loom-pause`** (no new artifact). Tmp-dir default for handoff docs (workflow state stays in `.plan-execution/`), "suggested skills" section, secret redaction pass, no-duplication rule (reference PRDs/ADRs/issues by path). Pre-F-18 handoff docs remain valid via a one-line shim that resolves old paths to the new tmp-dir convention.
+17. `protocols/grilling.md` — leaf skill: one question at a time, recommend an answer, walk every branch, prefer codebase exploration over asking. Caps at **12 questions per session** with a progress indicator and `/skip` escape. Reachable from `loom-roadmap converge`, `loom-plan`, `loom-bugfix`.
+18. **Conditional HTML report mode** — `--html` opt-in flag on `loom-status`, `loom-roadmap:status`, `/loom-deepen`, post-converge audits. **Default is plain-text/TOON**; HTML is never the only output. When `--html` is passed and `open`/`xdg-open`/`start` fails (headless/SSH), the command falls back to writing the HTML file path to stdout with a "open this in a browser" line.
+19. *(`/loom-which` moved to Phase A sub-4c.)*
+20. Skill autoload audit — classify every `/loom-*` skill on the model-invoked vs user-invoked axis, strip descriptions from user-only ones, set `disable-model-invocation: true` where appropriate. **Deprecation notice:** each skill whose autoload trigger changes gets a one-time `/loom-doctor` advisory naming the change and the new invocation path. No silent behavior change.
+21. Sediment sweep — run `writing-great-skills` no-op test sentence-by-sentence across all Loom `SKILL.md` files. **Mid-flight pass after Phase B ships** plus a final pass at Phase E end, so new sediment introduced by A–D is caught early.
+22. **Test-coverage audit** — every F-18 sub-item maps to at least one convergence target OR carries an explicit `no-test: <rationale>` tag. Sub-items currently missing explicit coverage: sub-4 (`protocols/skill-authoring.md`), sub-16 (handoff hygiene), sub-17 (`protocols/grilling.md` 12-question cap), sub-20 (skill autoload audit) — these either gain a convergence target during plan creation or land with `no-test` justification. Audit output is a TOON manifest at `planning/history/coverage/F-18-coverage.toon`.
+23. **Bootstrap testing note** — F-18 Phase B is itself tested with the *prior-generation* harness (one-shot `/loom-plan test`, no autoconverge), because `--autoconverge` for plan-test is what F-19 Phase B *introduces*. Sub-items in F-18 Phases C/D/E may self-host on the new `loop.toon` primitive once Phase B ships. This bootstrap asymmetry is the right discipline (eat dogfood as soon as it ships), not a gap.
+
+**Convergence targets:**
+
+- A new `loom-bugfix` run on a hard bug halts at Phase 1 until `loop.toon` exists with `verifiedRed: true` and TRDA gates passed; no hypothesis work before then. Gate applies to autoconverge AND default paths.
+- An exhausted 10-rung ladder produces a named "stuck-at-loop-construction" state with HITL escalation guidance — verified by a regression test that hits the dead-end intentionally.
+- A `loom-converge` run binds each iteration to a single `loopId` and command; lint/typecheck failures spawn their own loops, tracked via `linkedLoops[]`, and surface in `convergence-state.toon`.
+- A second `loom-roadmap converge` pass over a previously-rejected idea reads `.out-of-scope/` and surfaces a visible suppression callout — oscillation stops, suppression is never silent.
+- `/loom-deepen` run on `loom-ai` itself produces ≥3 deepening candidates with before/after diagrams, each using the `protocols/codebase-design.md` vocabulary. Default output is TOON; HTML only with `--html`.
+- A fresh agent reading `CONTEXT.md` at session start uses domain terms (not generic words) in its first response — measurable via vocabulary diff.
+- A vocabulary collision test: agent output for an architecture review uses `Module/Seam/Adapter` terms consistently and never mixes them with `phase/wave/deliverable` for the same concept.
+- The `/loom-skill create` wizard's output for a new skill satisfies the no-op test sentence-by-sentence; sediment sweep across existing skills retires ≥20% of body lines.
+- Attribution audit: `NOTICE` file lists all mattpocock-sourced patterns; README has a one-paragraph acknowledgment; **no per-file inline attribution** in any protocol or skill file.
+- `convergence-state.toon` migration ships in Phase A and validates against pre-F-18 fixtures.
+
+**Non-goals (explicitly out of scope):**
+
+- `migrate-to-shoehorn` (TS-library-specific codemod, no conceptual content)
+- `scaffold-exercises` (course-authoring scaffold for Total TypeScript, not engineering)
+- `teach` (learning workspace, orthogonal to Loom's domain)
+- `obsidian-vault`, `edit-article` (personal-knowledge skills, not engineering)
+- Per-file inline MIT attribution (legally unnecessary, strategically harmful — see Status field)
+
+### F-19: Autoconverge Harness Extension into Test + Execute Metasteps
+
+**Priority:** Split — Phase A at **P1** (correctness fix, no F-18 dep), Phase B at **P1** (mechanically enforces the vision claim "tests before code"), Phases C/D/E at **P2** (refined per 2026-06-25 F-19 review iter 1).
+**Milestone:** M-08 with explicit M-09 slip boundary: if F-18 Phase B is not converged-green by the M-08 mid-checkpoint, F-19 Phases B/C/D shift to M-09 and only F-19 Phases A + E ship in M-08. **B/D coupling note:** Phase B item 5 requires Phase D's multi-file subject primitive. When B and D both ship in M-08 they sequence D-before-B. If Phase D slips to M-09 alongside B/C, Phase B inherits the slip. If only Phase B's M-08 sub-deliverables are needed before D lands (rare), Phase B may ship with the single-file-subject constraint and migrate to multi-file on D's landing — this is documented in the Phase B implementation notes, not the roadmap acceptance.
+**Status:** Backlog — surfaced by 2026-06-25 review of `/loom-plan` lifecycle against the autoconverge harness intent. Five gaps verified by direct read of `commands/loom-plan/{create,test,execute}.md` and `commands/loom-converge.md`. Refined per 2026-06-25 F-19 review iter 1.
+
+**Differentiator note (Positioning):** F-19's per-symptom loop isolation (one symptom = one bound command, escalation on the loop not the fixer) is a documented differentiator vs BMAD and Spec-Kit, which run convergence at the suite level only. The autoconverge harness extending uniformly across roadmap, plan, test, and implementation — same envelope, same lifecycle — is also new ground.
+
+**Description:** The autoconverge harness (`/loom-converge --mode document`) is generic but its application stops at the planning-document layer. `/loom-roadmap converge` converges ROADMAP.md prose; `/loom-plan create --autoconverge` converges PLAN.md prose + `criteria-plan.toon`. Nothing wraps the test-suite or the implementation in the same loop. F-19 extends the harness primitive into the two remaining metasteps (test and execute) and bridges the orphaned `criteria-plan.toon` artifact, using F-18 Phase B's `loop.toon` as the per-symptom atom.
+
+**The intent gap (verified by Explore):**
+
+| Metastep | Outer converge today | Per-symptom atom today | Gap |
+|---|---|---|---|
+| Roadmap | `/loom-roadmap converge` ✅ | n/a | none |
+| Plan create | `/loom-plan create --autoconverge` ✅ | n/a | none |
+| Plan test | — | flat test files, no red-verification | both missing |
+| Plan execute | — | full-wave retry; not per-symptom | both missing |
+
+**Five verified gaps:**
+
+1. **Orphaned `criteria-plan.toon`** — `/loom-plan create` writes it as the canonical criteria spec; `/loom-plan test` does not read it and re-derives from PLAN.md. Duplication + drift risk.
+2. **No `/loom-plan test --autoconverge`** — generated tests are kept as-is; no review-for-correctness loop.
+3. **No `/loom-plan execute --autoconverge`** — only `--auto` (quality gates) and per-task retry exist; no document-mode wrapper around the implementation.
+4. **No per-symptom command binding anywhere** — execute fixer re-runs the full wave on retry; converge harness treats `--harness` as the single signal. Pocock's "one symptom = one bound command" is absent.
+5. **Document-mode harness is single-file only** — `--subject` accepts a path, not a directory or glob. A test suite cannot be converged as one artifact.
+
+**Entities involved:** Reuses F-18's `FeedbackLoop` as the per-symptom atom. New: `CriteriaTestBinding` (criterionId → testFile → loopId), `ExecuteLoopMap` (per-wave map from failing tier criteria to bound loops). Both small.
+
+**Phase A — Bridge `criteria-plan.toon`** (P1; low risk, fixes the duplication-and-drift gap; independent of F-18)
+
+1. `/loom-plan test` reads `criteria-plan.toon` (written by `/loom-plan create`) as its canonical input. PLAN.md remains the secondary source; `criteria-plan.toon` wins on conflict.
+2. **Three-way artifact reconciliation** — there are currently THREE paths producing criteria-adjacent artifacts: `/loom-plan create` writes `criteria-plan.toon`; `/loom-plan test` writes `test-spec.toon` (internal); `loom-converge --criteria` re-derives and overwrites `criteria-plan.toon`. Phase A makes `criteria-plan.toon` the **single source of truth**; `/loom-plan test` consumes it; `/loom-converge --criteria` mode is updated to consume-or-supplement rather than re-derive-and-overwrite (writes via merge, never replace). `test-spec.toon` is deprecated in favor of `criteria-plan.toon` rows + per-criterion binding fields.
+3. **Recovery paths (orphan and partial states):**
+   - **Absent file** (legacy plans): fall back to current re-derivation, log stderr advisory.
+   - **Corrupt / truncated file**: detect via TOON parse failure or schema-validation; halt with named state `criteria-plan-corrupt` and recovery prompt ("re-run `/loom-plan create` or restore from `planning/history/snapshots/`").
+   - **Mixed-completeness rows** (some have `testFile`, some don't): default to `skip-and-resume` — only regenerate the rows missing `testFile`. Explicit `--regenerate-all` flag forces full regeneration.
+4. `criteria-plan.toon` gains `testFile: <path>`, `loopId: <id>`, `status: pending|good|missing|wrong-shape|flaky|spurious|unverifiable`, `tier: unit|integration|e2e|qa-review` (mirrors F-03), `criterionSource: <command-that-produced-it>` columns. Schema migration uses the F-13 walker pattern: `criteria-plan.toon v1→v2`.
+
+**Phase B — `/loom-plan test --autoconverge`** (P1; mechanically enforces the vision claim "tests before code"; depends on Phase A binding + F-18 Phase B loop.toon)
+
+5. New flag `--autoconverge` on `/loom-plan test`. Outer loop is document-mode autoconverge over the test-suite directory (requires Phase D primitive — multi-file subject). **Named harness:** `scripts/test-suite-review-harness.ts` (mirrors `scripts/plan-review-harness.ts`). **Named integrator:** `test-stage-teammate` (existing agent, extended — NOT a new agent).
+6. **Boundary vs `/loom-converge --criteria` (non-goal):** `/loom-plan test --autoconverge` is **semantically distinct** from `/loom-converge --criteria`. Criteria mode iterates the *implementation* against fixed tests; Phase B iterates the *tests themselves* against criteria specs to verify they go red against the absent-implementation state. The TRDA `redCapable` gate is the semantic difference. `/loom-converge --criteria` mode is NOT a substitute and is explicitly preserved for its current role (post-implementation criteria verification).
+7. **Per-criterion red-verification:** each criterion in `criteria-plan.toon` gets a `loop.toon` (F-18 envelope). The TRDA gate passes when the generated test goes red against the absence of the implementation, then goes green when the implementation lands. A test that cannot be made red fails TRDA `redCapable` — the test is wrong, not the code.
+8. **TRDA redCapable failure UX (named state):**
+   - User-visible message: `TRDA: test cannot go red — criterion <id> regenerating, iteration N of M`
+   - Row status in `criteria-plan.toon` updates to `regenerating` mid-flight; on exhaustion (3 attempts default), status flips to `unverifiable` and a halt-with-HITL prompt fires: `Criterion <id> is unverifiable — the generated test does not exercise the criterion's behavior. Resolve manually: rewrite criterion or accept that this criterion has no test.`
+   - Named stuck-state: `criterion-unverifiable` — surfaced in `convergence-state.toon` and propagated to `/loom-next` for guidance.
+9. Reviewer classifies each criterion's test as: `good | missing | wrong-shape | flaky | spurious | unverifiable`. Integrator edits or re-generates only the failing ones.
+10. Converge target: every row in `criteria-plan.toon` has `testFile`, `loopId`, `status: good`, and `verifiedRed: true` (against the un-implemented state at generation time).
+
+**Phase C — `/loom-plan execute --autoconverge`** (P2; depends on Phase B + F-18 Phase B loop.toon)
+
+11. New flag `--autoconverge` on `/loom-plan execute`. Outer loop is document-mode autoconverge over the implementation. **Subject computation:** the execute orchestrator computes `--subject` as the union of wave file-ownership paths (derived from `state.toon` wave manifest), passes the computed glob to `/loom-converge`. **Named integrator:** `execute-stage-teammate` (existing agent, extended with loop-binding behavior — NOT a new agent). **Named harness:** existing wave-verification harness (the same one `--auto` invokes today, but augmented to emit per-criterion `findingId` in its TOON output).
+12. **Per-failing-symptom binding:** each failing tier criterion at a wave gate spawns a `loop.toon` bound to *that one* test command (not the full suite). Iterations run only the bound command. Fixer re-runs only the bound command to verify.
+13. **Per-symptom execution summary view** (replaces wave-level dashboard during autoconverge): a running TOON table of active loops with columns `loopId, criterionId, boundCommand, tier, currentRung, status, retryCount`. **Render mode:** each iteration appends a full table block prefixed with an iteration header (`# iteration N — YYYY-MM-DDTHH:MM:SS`), append-only. Safe for CI pipes and non-TTY stdout. No ANSI in-place rewrite — preserves run-history readability and avoids TTY-detection branching. After all loops for a wave retire, the wave-level 4-tier gate verdict displays in the original dashboard format (`tier1: pass, tier2: pass, tier3: fail, tier4: warn`). Both views are emitted; users don't lose the wave dashboard, they gain the per-loop drilldown.
+14. **Escalation discipline (Pocock):** when a loop stalls, escalate the LOOP down the ladder (broaden fixture, add instrumentation, switch tier), not the fixer. `convergence-state.toon` `loops[]` table (lands in F-18 Phase A sub-4b) records the binding from wave→criterion→loopId.
+15. **4-tier model becomes the gate, not the loop.** Tier 1/2/3 hard gates fire at wave boundaries; the per-criterion loops drive iteration within the wave. Currently the 4-tier model fires per wave AS the loop — F-19 separates the two layers.
+16. **`scope-coverage.toon` reconciliation:** `scope-coverage.toon` (existing execute.md Step 1.5 artifact) becomes a *read-only view* derived from `ExecuteLoopMap` during autoconverge runs. Non-autoconverge runs keep writing `scope-coverage.toon` directly as today. The plan spec must declare `ExecuteLoopMap` as the authoritative artifact in autoconverge mode.
+17. Converge target: every failing tier criterion has its loop retired green; no loop in `escapeReason`-set state; wave-level 4-tier gate passes.
+
+**Phase D — Generic harness primitives** (P2; foundation for B+C, lands in `/loom-converge`)
+
+18. `/loom-converge --subject <path>` extended: accepts a directory or glob, treats the file set as one artifact. Document-mode iterates over the whole set; per-file findings keyed by relative path.
+19. `/loom-converge` gains `--per-symptom-binding` mode: each blocking finding in the harness output is bound to its own `loop.toon` with a `command` field; iterations rerun only the bound command.
+20. **Harness output schema extension:** `findings.schema.md` extended — every harness producing per-symptom bindings must emit `findingId` (stable hash of `{file, line, criterion, symptom}`) and `boundCommand` (the exact shell invocation to rerun for that finding) per blocking row. This is what `harnessFindingId` and `command` on `FeedbackLoop` bind to. Harnesses without these fields cannot be used with `--per-symptom-binding` — the flag fails with `harness-output-incompatible` named state and recovery prompt.
+21. `protocols/feedback-loop.schema.md` (lands in F-18 Phase B) gains: `boundFromHarness: bool`, `harnessFindingId`, `boundFromWaveGate: bool`, `waveId`. This covers both Phase D (harness-bound) loops and Phase C (wave-gate-bound) loops. Loops with neither flag set are bugfix/converge loops (F-18's original Phase B scope). All three origins are first-class.
+22. **F-18 vs F-19 loop context indicator:** `loop.toon` gains a `originContext: bugfix | converge-document | plan-test | plan-execute` field — surfaced in every HITL escalation prompt and named-state message so the user always knows which recovery path applies. Same envelope, different context labels.
+
+**Phase E — `orchestration.toml` customization gap + flag groups + discoverability** (P2; the one item from F-19's original sketch that's genuinely missing, plus the CLI-coherence and discoverability work the review surfaced)
+
+23. `protocols/orchestration-config.schema.md` extended: `[lifecycle.sequence]` section overrides the prescribed sequence (e.g., skip roadmap review, swap reviewers); `[lifecycle.caps]` overrides per-stage iteration caps; `[lifecycle.reviewers]` overrides per-stage reviewer sets. Single source of truth so `/loom-roadmap converge`, `/loom-plan create --autoconverge`, `/loom-plan test --autoconverge`, `/loom-plan execute --autoconverge` all read the same config.
+24. Caps default to current locked values (C-05: `maxIterations: 3` for plan create); overrides validate against the same range (1–10).
+25. **Flag groups for `/loom-plan` subcommands** (CLI coherence): three named groups documented in `commands/loom-plan.md` and enforced in each subcommand's parser:
+   - `mode` group: `--autoconverge`, `--auto`, `--dry-run`, `--estimate`. Mutually exclusive within group.
+   - `gate-control` group: `--no-tests`, `--no-e2e`, `--no-qa-review`, `--tests-only`, `--converge-criteria`, `--skip-validation`. Compatible with each other; semantic-conflict warnings emitted at parse time.
+   - `scope` group: `--subject`, `--max-iterations`, `--phase`, `--wave`, `--per-symptom-binding`, `--regenerate-all`. Compatible across groups.
+   Each subcommand documents which groups it accepts and which flags within those groups it ignores. `/loom-plan --help` renders flags grouped.
+26. **`/loom-which` update as F-19 deliverable:** `/loom-which` (lands in F-18 Phase A) gets a content update covering the two new entry points and a decision-tree node: "Want to verify your tests are correct? → `/loom-plan test --autoconverge`. Want tight-loop implementation iteration? → `/loom-plan execute --autoconverge`. Want to converge any document? → `/loom-converge --mode document`." Listed as an explicit F-19 acceptance criterion.
+27. **Test-coverage audit** — every F-19 sub-item maps to at least one convergence target OR carries an explicit `no-test: <rationale>` tag. Sub-items currently missing explicit coverage: sub-23 (`[lifecycle.*]` schema), sub-24 (cap defaults), sub-25 (flag groups), sub-26 (`/loom-which` content). These either gain a target during plan creation or land with `no-test` justification. Audit output at `planning/history/coverage/F-19-coverage.toon`.
+28. **Bootstrap testing note** — F-19 Phase B is itself tested with the *prior-generation* one-shot `/loom-plan test` (no `--autoconverge`, since Phase B IS the introduction of that flag). F-19 Phase C is then tested with the newly-shipped `/loom-plan test --autoconverge` (self-host on Phase B's primitive). F-19 Phase D primitives are tested by Phases B+C exercising them. F-19 Phase A + E (no F-18 dep) can be tested with current infrastructure.
+29. **Test-fixture sub-deliverables** (required for Phase B + C convergence targets):
+   - `fixtures/unverifiable-criterion/` — a fixture project with a criterion intentionally specified such that no test can make it red against absent implementation. Exercises Phase B item 8's TRDA `redCapable` failure path and `criterion-unverifiable` HITL state.
+   - `fixtures/multi-tier-failure/` — a fixture project where unit + integration tiers fail simultaneously on different criteria. Exercises Phase C item 13's per-symptom + wave-dashboard dual emission.
+   - `fixtures/broken-harness/` — a harness deliberately omitting `findingId` / `boundCommand` from output. Exercises Phase D item 20's `harness-output-incompatible` named state.
+   - `fixtures/well-formed-harness/` — positive-path fixture: a harness emitting valid `findingId` + `boundCommand` per blocking finding. Exercises Phase D item 19's `--per-symptom-binding` happy path (N findings → N `loop.toon` artifacts with `command` populated) in isolation from Phase B/C consumers.
+   - Fixtures land under `fixtures/F-19/` and are authored as part of the corresponding phase's test generation, not deferred.
+
+**Convergence targets:**
+
+- Phase A: `criteria-plan.toon` is the single source of truth for test specs. `/loom-plan test` reads it; `/loom-converge --criteria` merges into it (never overwrites). `test-spec.toon` is deprecated. Recovery paths (corrupt, partial, absent) are exercised by regression tests with named-state assertions.
+- Phase B: `/loom-plan test --autoconverge` produces a `criteria-plan.toon` where every row has `testFile`, `loopId`, `status: good`, and `verifiedRed: true`. A regression test exercises a criterion whose generated test cannot be made red (TRDA fail) and confirms the integrator regenerates it three times, then flips status to `unverifiable` with named HITL prompt.
+- Phase C: `/loom-plan execute --autoconverge` binds each failing tier criterion to its own `loop.toon`; iterations rerun only the bound command. A regression test introduces a failing-on-one-test fault and confirms iteration count stays bounded (no full-suite reruns). The per-symptom summary view + final wave dashboard both emit.
+- Phase D: `/loom-converge --subject <directory>` succeeds against a test suite path; per-file findings addressable. `/loom-converge --per-symptom-binding` produces N `loop.toon` artifacts for N blocking findings with `command` field populated; iterations rerun only bound commands. A harness lacking `findingId`/`boundCommand` in output fails with named state `harness-output-incompatible`.
+- Phase D context indicator: `loop.toon.originContext` is set on every loop creation and surfaced in every HITL prompt and named-state message — verified by a test that creates loops from all four origins and asserts the prompts show the correct context.
+- Phase E: `orchestration.toml` `[lifecycle.*]` overrides take effect across all four converge entry points uniformly; a project that sets `maxIterations: 5` sees it applied to roadmap, plan, test, and execute alike. `/loom-plan --help` renders flags grouped; mutually-exclusive flags within `mode` group are rejected at parse time. `/loom-which` decision tree includes the two new entry points.
+- Coverage audit: `planning/history/coverage/F-19-coverage.toon` exists; every F-19 sub-item is either tagged with ≥1 convergence target OR explicitly marked `no-test: <rationale>`. Zero un-justified gaps.
+- Fixtures: `fixtures/F-19/{unverifiable-criterion,multi-tier-failure,broken-harness,well-formed-harness}/` exist and are exercised by the relevant phase regression tests.
+
+**Non-goals:**
+
+- Replacing the 4-tier convergence model (F-03). F-19 layers per-symptom loops *under* the 4-tier gate; the gate stays.
+- Replacing `/loom-roadmap converge` or `/loom-plan create --autoconverge`. Those work; F-19 only adds the two missing layers and the harness primitives that make them possible.
+- Replacing `/loom-converge --criteria` mode. Criteria mode iterates implementation against fixed tests; Phase B iterates tests against criteria specs. Both are preserved; they serve distinct semantics.
+- Creating new agents. F-19 names `test-stage-teammate` (existing, extended) and `execute-stage-teammate` (existing, extended) as the integrators. No new agent authoring.
+
+**Composition with F-18:**
+
+F-18 Phase B introduces `loop.toon` as the per-symptom atom for `/loom-bugfix` and `/loom-converge`. F-19 reuses *the same envelope* across `/loom-plan test --autoconverge` and `/loom-plan execute --autoconverge`. One schema, four entry points. F-19 is structurally dependent on F-18 Phase B landing first — without `loop.toon`, F-19 Phases B and C have nothing to bind to.
+
 ## Data Model (Conceptual)
 
 ### Entities
@@ -517,6 +721,16 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 | ExecutionLog | events[] | Structured audit trail with timestamped events |
 | AgentResult | status, filesCreated, findings, verificationStatus, diagnoseLog | Standard agent output envelope |
 | PlanPhase | id, name, wave, feature, deliverables, acceptanceCriteria | Execution unit within a plan |
+| FeedbackLoop | loopId, command, symptom, rung, verifiedRed, redOutput, runtimeMs, determinismRuns, trda{tight,redCapable,deterministic,agentRunnable}, escalationHistory[]{fromRung,toRung,reason,at}, linkedLoops[]{loopId,relation}, parentLoopId, retiredAt, escapeReason | F-18: one-symptom feedback loop bound to a single command; convergence iterations attach to it. Lives in `loop.toon`. |
+| OutOfScopeEntry | id, idea, rejectedAt, rejectedBy (human\|agent), rationale, sourceProposalId | F-18: persistent rejection record consulted by `loom-roadmap converge` to suppress resurfacing of dropped ideas. Lives in `.out-of-scope/*.md`. |
+| TriageState | id, category (bug\|enhancement), state (needs-triage\|needs-info\|ready-for-agent\|ready-for-human\|wontfix), createdAt, updatedAt, transitions[]{from,to,at,actor} | F-18: explicit state machine for `loom-note`/`loom-do` triage; all transitions logged. |
+| ADR | id, title, status (proposed\|accepted\|deprecated\|superseded), decision, rationale, supersededBy | F-18: architecture decision record at `docs/adr/NNNN-*.md`; supersedes wiki `decision-*.md`. |
+| CodebaseDesignVocab | term, definition, useWhen, conflictsWithLoomTerm | F-18: glossary entry in `protocols/codebase-design.md`; Section 0 mapping table consults this. Protocol-document only — no runtime artifact. |
+| SkillAuthoringPrinciple | name, definition, failureMode, noOpTestRule | F-18: glossary entry in `protocols/skill-authoring.md`. Protocol-document only — no runtime artifact. |
+| Handoff | id, createdAt, suggestedSkills[], referencedArtifacts[], redactedSecretsCount | F-18: tmp-dir handoff doc written by `loom-pause` for cross-session continuation. |
+| Prototype | name, branch (logic\|ui), capturedAnswerAdrRef, answerToonPath, createdAt | F-18: throwaway code with explicit completion ceremony; lives at `prototypes/{name}/`. |
+| CriteriaTestBinding | criterionId, testFile, loopId, verifiedRedAt, status (pending\|good\|missing\|wrong-shape\|flaky\|spurious\|regenerating\|unverifiable), criterionSource, tier (unit\|integration\|e2e\|qa-review) | F-19: binds a `criteria-plan.toon` row to its generated test file and the per-criterion `loop.toon`. `status` mirrors reviewer classification. `criterionSource` traces provenance across the three derivation paths. `tier` lets the execute path filter bindings without re-reading `criteria-plan.toon`. |
+| ExecuteLoopMap | waveId, criterionId, loopId, tier, status (pending\|running\|retired-green\|escape-set), command, retryCount, escalationRung | F-19: per-wave map from a failing tier criterion to the bound `loop.toon` driving its iterations. `command` is the denormalized shell command (no need to chase `loopId → loop.toon` on every retry). `retryCount` + `escalationRung` enable map-level escalation decisions without scanning the loop's full `escalationHistory[]`. |
 
 ### Relationships
 
@@ -533,6 +747,14 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 | ConvergenceTier | DeltaReport | 1:1 | Each tier produces a delta report |
 | StageContext | WikiPage | N:N | Stage summaries trigger wiki updates |
 | ExecutionLog | StageContext | 1:N | Log events reference stage completions |
+| ConvergenceTier | FeedbackLoop | 1:N | A convergence tier may host multiple feedback loops, each bound to one symptom |
+| FeedbackLoop | FeedbackLoop | parent/child via parentLoopId + linkedLoops[] | Loops can spawn child/sibling loops (e.g. lint/typecheck split off from a main symptom) |
+| OutOfScopeEntry | Feature | N:0 | Rejected ideas reference their source proposal but do not bind to a feature |
+| TriageState | Feature | 1:0..1 | A triage-state entry may eventually graduate to a feature (ready-for-agent → F-NN), otherwise stays in inbox |
+| ADR | Feature | N:N | ADRs record decisions across one or more features; features may cite multiple ADRs |
+| CriteriaPlan | CriteriaTestBinding | 1:N | Each criterion row in `criteria-plan.toon` produces one binding once `/loom-plan test --autoconverge` runs |
+| CriteriaTestBinding | FeedbackLoop | 1:1 | Each binding owns one loop.toon; the loop's lifecycle (verifiedRed → retired) drives the binding's status |
+| ExecuteLoopMap | FeedbackLoop | N:N | Multiple loops per wave; loops may be shared across waves when symptoms recur |
 
 ## Milestones
 
@@ -643,6 +865,27 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 2. **Phase 1 (doctor):** Ship `/loom-doctor` skill + SessionStart auto-migration with ownership-evidence guarding. F-16.
 3. **Phase 2 (tier flip):** Flip register-loom-hooks.ts default target to `.claude/settings.local.json`; add `--tier project` opt-in; update `/loom-init` prompt. F-17.
 4. **Phase 3 (docs):** Update README's "Hook enforcement" section to lead with the plugin path; demote curl to the "alternative installs" subsection.
+
+### M-08: Matt Pocock Skills Adoption -- NOT STARTED
+
+**Features:** F-18, F-19
+**Status:** Not started. F-18 sourced from review of `mattpocock/skills` (MIT, GitHub) on 2026-06-25. F-19 surfaced 2026-06-25 by verifying the autoconverge harness intent against `commands/loom-plan/{create,test,execute}.md`. F-19 depends structurally on F-18 Phase B (the `loop.toon` envelope).
+**Depends on:** None hard. **Sequencing:** Phase A may begin in parallel with M-06 Phase 2 (launch) — its protocol/CONTEXT-split/ADR/migration work has no M-07 dependency. Phase B begins post-launch so it benefits from M-06 demand-validation feedback. Phases C/D/E begin after Phase B and may overlap with each other.
+**Acceptance:** All Phase A foundations land (codebase-design protocol, CONTEXT.md split, ADR convention + wiki-decision migration, skill-authoring protocol, convergence-state.toon migration, `/loom-which` shipped early). Phase B tight-red loop discipline replaces the current hypothesise-first bug/convergence flow — verified by (a) a regression run where convergence halts at Phase 0 until `loop.toon` exists, (b) a stuck-at-ladder regression test that exercises the named dead-end state and HITL escalation, (c) lint/typecheck failures spawning linked loops rather than blocking the active loop. `.out-of-scope/` log is read by `loom-roadmap converge` and surfaces a *visible* suppression callout for at least one previously-oscillating idea. NOTICE file lists all mattpocock-sourced patterns; no per-file inline attribution exists in any protocol or skill file. Triage state machine has all transitions defined and timestamps logged.
+**Effort:** L → XL after F-19 addition. F-18: 23 sub-items (5 phases + test-coverage audit + bootstrap note). F-19: 29 sub-items (5 phases + audit + bootstrap note + 3 fixtures). Combined: ≥6 new protocols (out-of-scope schema, codebase-design, skill-authoring, feedback-loop, lifecycle-config, loom-converge interaction), ≥3 new skills (feedback-loop, grilling, /loom-which), ≥8 agent edits, 3 new slash commands (`/loom-deepen` + `/loom-prototype` + `/loom-which` moved early), 4 new flags (`--autoconverge` on test+execute, `--subject <dir>`, `--per-symptom-binding`), 2 schema migrations (`convergence-state.toon` v1→v2, `criteria-plan.toon` v1→v2), 3 test fixtures, 2 coverage audits, 2 sediment sweeps, 2 one-shot content migrations.
+
+#### Phasing
+
+1. **Phase A (Foundations, P2):** `protocols/codebase-design.md` with vocabulary-mapping table, `CONTEXT.md`/`DECISIONS.md` split + migration, ADR convention + wiki-decisions→ADRs migration, `protocols/skill-authoring.md`, `protocols/out-of-scope.schema.md`, `convergence-state.toon` schema migration, `/loom-which` (moved from E). Zero behavioural risk. May begin in parallel with M-06 Phase 2.
+2. **Phase B (Tight-red loop, P1):** `protocols/feedback-loop.schema.md` (full schema with escalationHistory/linkedLoops/trda/escapeReason), `feedback-loop` skill, `loom-bugfix` Phase 1 gate + `--override-loop-gate` escape + stuck-at-ladder dead-end, `loom-converge` Phase 0 loop construction + new flags, `tdd-coach` horizontal-slice anti-pattern + no-silent-regression rule, `findings.schema.md` confidence field. **Highest-leverage change in the milestone — vision-coherent; ships before C/D/E.**
+3. **Phase C (Codebase health + planning, P2):** `/loom-deepen`, plan/parallelization/phasing sharpening, `/loom-prototype` with completion-signal. Parallelisable with Phase D.
+4. **Phase D (Inbox + convergence hygiene, P2):** Triage state machine with all transitions defined + AI disclaimer, `.out-of-scope/` rejection log with visible suppression, ADR conflict callouts. Parallelisable with Phase C.
+5. **Phase E (Session + presentation polish, P2):** Handoff hygiene (edit existing `loom-pause`), `protocols/grilling.md` with 12-question cap, conditional HTML report mode with plain-text fallback, skill autoload audit with deprecation notices, final sediment sweep. (Mid-flight sediment sweep ran after Phase B.)
+6. **F-19 Phase A (Bridge `criteria-plan.toon`, P2):** `/loom-plan test` consumes `criteria-plan.toon` instead of re-deriving from PLAN.md. Low risk, fixes a duplication-and-drift gap. Independent of F-18.
+7. **F-19 Phase D (Generic harness primitives, P2):** `/loom-converge --subject <directory>` + `--per-symptom-binding` mode. Foundation for F-19 B+C. Depends on F-18 Phase B `loop.toon` schema.
+8. **F-19 Phase B (`/loom-plan test --autoconverge`, P1):** per-criterion red-verification loop; mechanically enforces the vision claim "tests before code." Depends on F-19 A, F-19 D, F-18 Phase B.
+9. **F-19 Phase C (`/loom-plan execute --autoconverge`, P2):** per-failing-symptom bound iterations at wave gates. The 4-tier model becomes the gate, not the loop. Depends on F-19 B + F-18 Phase B.
+10. **F-19 Phase E (`orchestration.toml` lifecycle customization, P2):** sequence/caps/reviewers overrides apply uniformly across all four converge entry points. Closes the one item from the original F-19 sketch that's genuinely missing.
 
 ## Risks & Mitigations
 

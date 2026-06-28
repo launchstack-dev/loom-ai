@@ -1,0 +1,60 @@
+NOTICE — Third-party pattern attribution
+========================================
+
+Loom incorporates design patterns, vocabulary, and pedagogical frameworks
+originally articulated by Matt Pocock in his TypeScript and developer-tooling
+educational content. These patterns are adapted under the MIT License that
+governs the relevant source material.
+
+The following six patterns are attributed to Matt Pocock:
+
+1. codebase-design vocabulary
+   The Module / Interface / Seam / Adapter / Leverage / Locality / Depth
+   vocabulary table (protocols/codebase-design.md) and the guidance on
+   how to reason about software architecture using those terms were inspired
+   by Matt Pocock's codebase-design vocabulary as described in his public
+   TypeScript educational material.
+   Source: mattpocock/skills (MIT License)
+
+2. feedback-loop ladder
+   The 10-rung feedback-loop ladder structure encoded in the feedback-loop
+   skill (skills/feedback-loop/SKILL.md), including the TRDA gate criteria
+   and the leading words "tight" and "red", was adapted from the
+   feedback-loop ladder pattern in Matt Pocock's skills content.
+   Source: mattpocock/skills (MIT License)
+
+3. writing-great-skills no-op test
+   The no-op test pattern described in protocols/skill-authoring.md —
+   where a skill is evaluated by running it on a task it should handle,
+   verifying it does not silently pass a task it cannot handle — was
+   derived from the writing-great-skills no-op test framing in
+   Matt Pocock's skill-authoring guidance.
+   Source: mattpocock/skills (MIT License)
+
+4. horizontal-slice anti-pattern
+   The horizontal-slice anti-pattern (avoid dividing work by technical
+   layer; instead cut vertically through all layers for each tracer bullet)
+   adopted verbatim in the tdd-coach agent (agents/tdd-coach.md) was
+   adapted from the horizontal-slice anti-pattern teaching in
+   Matt Pocock's TDD framing.
+   Source: mattpocock/skills (MIT License)
+
+5. throwaway-prototype branches
+   The throwaway-prototype branch discipline — create a named prototype
+   branch, explore freely, write a one-line answer.toon at the completion
+   ceremony, then delete the branch — was adapted from the
+   throwaway-prototype branches pattern in Matt Pocock's skills content.
+   Source: mattpocock/skills (MIT License)
+
+6. grilling discipline
+   The grilling discipline — structured interrogation using a capped
+   question count (12 questions maximum per session), a progress indicator,
+   and a /skip escape hatch — encoded in protocols/grilling.md was adapted
+   from the grilling discipline pattern in Matt Pocock's skills content.
+   Source: mattpocock/skills (MIT License)
+
+---
+
+All six patterns above are adapted under the MIT License. The original
+source material is copyright Matt Pocock. Loom's adaptations are subject
+to the Apache License 2.0 (see LICENSE in the root of this repository).

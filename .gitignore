@@ -26,6 +26,10 @@ Thumbs.db
 # Claude Code per-project state (machine-specific, must not ship)
 .claude/projects/
 .claude/settings.local.json
+.claude/hookify.worktree-boundary.local.md
+
+# Worktree-local sidecar (written by wt.sh; per-worktree state)
+.worktree.json
 
 # Backup files
 *.bak

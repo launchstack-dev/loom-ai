@@ -240,6 +240,39 @@ Prompt: "Read your instructions from `~/.claude/agents/wiki-maintainer-agent.md`
 
 **If wiki-maintainer-agent fails:** Display a warning: "Cross-reference maintenance failed. Pages were created but cross-references may be incomplete. Run `/loom-wiki lint --fix` to repair." Continue to Step 6 with a note that cross-reference count is unknown.
 
+#### Step 5b: Maintain CONTEXT.md and DECISIONS.md (F-18 split)
+
+After wiki maintenance (Step 5), re-derive and atomically rewrite both split files if the ingest changed any glossary entries or decision pages.
+
+**When to run:** If any `glossary-*`, `decision-*`, or `convention-*` pages were created or updated in this ingest, re-derive both files. Otherwise skip (idempotent no-op).
+
+**CONTEXT.md update (atomic):**
+
+1. Collect all glossary terms from the wiki: read each page whose `category == "component"` or `category == "concept"` for the primary entity name and one-sentence summary. Limit to ≤50 terms; prefer pages with `confidence: high` first.
+2. Write to `CONTEXT.md.tmp`:
+   - Header line: `# Project Context — Glossary`
+   - Subtitle: `_Maintained by /loom-wiki ingest. Last updated: {ISO timestamp}_`
+   - Glossary table sorted alphabetically by term.
+   - Tech stack and architecture summary if available from the wiki.
+3. `fs.renameSync("CONTEXT.md.tmp", "CONTEXT.md")` — atomic.
+
+**DECISIONS.md update (atomic):**
+
+1. Collect all decisions from the wiki: read each page whose `category == "decision"`. Extract title, `summary` field, `createdAt`, and `staleness`.
+2. Write to `DECISIONS.md.tmp`:
+   - Header: `# Locked Decisions`
+   - Subtitle: `_Maintained by /loom-wiki ingest. Last updated: {ISO timestamp}. See docs/adr/ for formal ADRs._`
+   - One `## {title}` section per decision page, with fields: Date, Status (default `accepted`), Summary, Source (from `sourceRefs[0]`).
+3. `fs.renameSync("DECISIONS.md.tmp", "DECISIONS.md")` — atomic.
+
+**Failure semantics:** If CONTEXT.md write succeeds but DECISIONS.md write fails, CONTEXT.md retains the new content and DECISIONS.md retains its prior state. Neither file is left partially written (`.tmp` + rename guarantee).
+
+**Empty-state advisory:** If `CONTEXT.md` does not exist before this step and no glossary terms were collected, print to stderr:
+
+```
+CONTEXT.md not found — run /loom-init to generate
+```
+
 #### Step 6: Summary
 
 ```
@@ -250,6 +283,8 @@ Pages created: {N}
 Pages updated: {M}
 Cross-references added: {K}
 Wiki page count: {new total}
+CONTEXT.md: {updated | unchanged | not found (run /loom-init)}
+DECISIONS.md: {updated | unchanged}
 
 Next steps:
   /loom-wiki lint              Check wiki health

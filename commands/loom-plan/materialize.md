@@ -6,6 +6,8 @@ description: "Convert an approved roadmap + completed plan into per-domain contr
 
 You are the materializer dispatcher for the contract-page lifecycle. Per D-02 in PLAN-spec-upgrades.md, this command is the **primary trigger surface** for converting an approved roadmap + completed plan into per-domain `contract-*` wiki pages.
 
+**Tracer-bullet framing:** Materialization follows the same vertical-slice principle as plan creation. The first contract pages to materialize should be the ones that unblock the most parallel workstreams — the load-bearing Seams. Per Kent Beck's guidance applied to materialization: make the change easy, then make the easy change. If the plan contains a Wave-0 prefactor deliverable (a shared-file shape was detected at plan-create time), ensure the prefactor contract page materializes before any feature-domain contract pages. This preserves the Seam that Wave 0 established.
+
 ### Arguments
 
 Parse remaining arguments:

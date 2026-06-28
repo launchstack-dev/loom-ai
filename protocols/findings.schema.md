@@ -71,6 +71,7 @@ Each row in the `findings[]` typed array has these columns:
 | `summary` | string | yes | One-line statement of the issue. |
 | `suggestion` | string | no | Recommended remedy. Consumed by the integrator agent. |
 | `reviewerAgent` | string | no | Reviewer attribution (locked W-03). Populated by plan-review harness with one of the 6 reviewer agent names (`feature-coverage-reviewer-agent`, `strategy-reviewer-agent`, `ux-reviewer-agent`, `phasing-reviewer-agent`, `parallelization-reviewer-agent`, `agentic-workflow-reviewer-agent`) OR the synthetic identifier `validation-rules-stages-1-4` when the row is written by the `/loom-plan create --autoconverge` Step 5.5 post-converge validation gate (NOT a real agent — names the rule set that produced the finding). Optional for non-harness contexts (e.g., when a single-agent harness writes findings directly). |
+| `confidence` | enum | no | One of: `high`, `medium`, `low`. **Default: `medium`** (applied when the column is absent from a row or the entire `confidence` column is omitted from the typed-array header). Reflects the reviewer's certainty in the finding. Added in F-18 Phase 0; backward-compatible — existing pre-F-18 fixtures parse unchanged because the missing column resolves to `confidence: medium` per the default rule. |
 
 ---
 
@@ -121,7 +122,8 @@ A mismatch on any of the above invariants is a `FINDINGS_SCHEMA_INVALID` blockin
 8. **Severity enum.** Each finding's `severity` MUST be one of: `blocking`, `warning`, `info`, `advisory`.
 9. **No duplicate IDs.** Two findings with the same `id` within a single `findings.toon` is a `FINDINGS_SCHEMA_INVALID` defect.
 10. **`reviewerAgent` enum (when populated).** When the harness is the plan-review harness, `reviewerAgent` MUST be one of the 6 locked reviewer agent names (see findings[] row schema). The synthetic identifier `validation-rules-stages-1-4` is ALSO permitted on rows whose `dimension == structural-validation` — these rows are written by the `/loom-plan create --autoconverge` Step 5.5 wrapper, not by a reviewer agent, but co-mingle in the same `findings.toon` so the integrator can resolve them through the existing convergence loop. For other harnesses, `reviewerAgent` is free-form or omitted.
-11. **`structural-validation` dimension coupling.** A row with `dimension == structural-validation` MUST have `reviewerAgent == validation-rules-stages-1-4` (or omit `reviewerAgent`). A row with any other `dimension` MUST NOT use `validation-rules-stages-1-4` as its `reviewerAgent`. This coupling makes the wrapper-vs-reviewer origin of each row unambiguous to the integrator and to downstream tooling.
+11. **`confidence` enum and default (F-18).** When present, `confidence` MUST be one of: `high`, `medium`, `low`. When absent — either the row omits the column OR the typed-array header omits `confidence` entirely — parsers MUST resolve the value to `medium`. This rule is backward-compatible: pre-F-18 fixtures parse unchanged.
+12. **`structural-validation` dimension coupling.** A row with `dimension == structural-validation` MUST have `reviewerAgent == validation-rules-stages-1-4` (or omit `reviewerAgent`). A row with any other `dimension` MUST NOT use `validation-rules-stages-1-4` as its `reviewerAgent`. This coupling makes the wrapper-vs-reviewer origin of each row unambiguous to the integrator and to downstream tooling.
 
 ---
 

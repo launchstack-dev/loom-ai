@@ -18,6 +18,8 @@ Three prereqs (full list in the README):
 
 Platforms: macOS Apple Silicon + Intel, Ubuntu 22.04+. Windows is not supported today.
 
+> **Not sure which `/loom-*` command applies to your task?** Run `/loom-which` at any point. It walks a short decision tree (1–3 questions) and recommends the right command. Different from `/loom-do` (which infers intent silently from a natural-language prompt) and `/loom-reference` (which is a flat lookup table).
+
 ---
 
 ## Install (~30 seconds)
@@ -115,7 +117,8 @@ Next steps:
 
 ```
 CLAUDE.md                            # Claude Code project guidance (≤200 lines)
-CONTEXT.md                           # Locked decisions, constraints, doc gaps
+CONTEXT.md                           # Always-loaded domain glossary (≤50 terms — F-18 split)
+DECISIONS.md                         # Locked decisions, constraints, doc gaps (was the old monolithic CONTEXT.md)
 .claude/settings.json                # Wiki health hooks registered (3 entries)
 .loom/wiki/                          # Persistent knowledge base
   index.toon                         # Page catalog
@@ -134,6 +137,8 @@ planning/                            # Planning skeleton
 
 **Open `.loom/wiki/index.toon`.** See the page list. These pages are the knowledge base every future Loom command will consult.
 
+**Open `CONTEXT.md` and `DECISIONS.md`.** `CONTEXT.md` is the domain glossary — ≤50 terms Claude Code loads at the start of every session, so agents speak your vocabulary in their first response. `DECISIONS.md` is where locked decisions live (formerly mixed into the monolithic `CONTEXT.md` before F-18 split them apart). If you upgraded from a pre-F-18 Loom install, run `bun scripts/migrate-context-split.ts .` to perform the split idempotently.
+
 ---
 
 ## Step 2: Run a small task — `/loom-quick`
@@ -145,6 +150,8 @@ planning/                            # Planning skeleton
 ```
 
 (Substitute your own task. If you can't think of one, try something like "Rename the `logger` variable to `log`" or "Add a TODO comment above the broken function" — anything where you can see whether Loom did it.)
+
+> **Bug fix instead?** Reach for `/loom-bugfix "<symptom>"` rather than `/loom-quick`. F-18 added a Phase-1 gate: `loom-bugfix` (and `/loom-converge` in default mode) now refuses to produce a hypothesis until a verified-red `loop.toon` exists — a tight, deterministic, agent-runnable red signal. If your harness can't reliably reproduce the bug, the gate halts with a named state (`stuck-at-loop-construction`) and HITL escalation guidance. Exit codes 4–10 each map to a specific recovery step in [`troubleshooting.md`](./troubleshooting.md#5b-loom-bugfix--loom-converge-halted-at-the-loop-construction-gate-f-18).
 
 ### The four phases
 
@@ -199,7 +206,8 @@ Pick one based on what your project needs:
 
 1. **`/loom-status`** — see what Loom now thinks about your project (test metrics, convergence state, context budget). 30 seconds.
 2. **`/loom-wiki query "<a real question about your codebase>"`** — ask the wiki something. E.g., "where is auth handled?" or "what tests cover the billing module?" Tests whether the wiki is actually useful for your project.
-3. **`/loom-auto --from "<a real feature you want>"`** — the full autonomous pipeline (scope contract → roadmap → plan → execute → converge → review). This is where Loom really shows what it does. Budget ~30-60 min.
+3. **`/loom-deepen --target .`** — F-18's codebase-health pass. Fans out `Explore` subagents, surfaces shallow modules (modules with thin or low-leverage interfaces), applies the deletion test, and emits before/after diagrams for ≥3 deepening candidates. Default TOON output; `--html` opt-in adds an HTML report. Useful early — it points at the parts of your codebase Loom thinks are easiest to refactor.
+4. **`/loom-auto --from "<a real feature you want>"`** — the full autonomous pipeline (scope contract → roadmap → plan → execute → converge → review). This is where Loom really shows what it does. Budget ~30-60 min.
 
 If you hit anything weird, [`troubleshooting.md`](./troubleshooting.md) is the first stop. If it's not there, that's a doc bug — tell me.
 
@@ -210,3 +218,4 @@ If you hit anything weird, [`troubleshooting.md`](./troubleshooting.md) is the f
 - **Don't** run `/loom-roadmap init` on a half-baked idea just to see what happens. Roadmap creation is interview-heavy; do it when you have a real next-milestone goal.
 - **Don't** edit files inside `.plan-execution/` or `.loom/wiki/pages/` directly. Hooks will mostly block you; the parts that don't block will create drift later.
 - **Don't** skip `/loom-init` and jump straight to `/loom-auto` on an existing project. Loom needs the wiki + CLAUDE.md context for its agents to make sense of your code.
+- **Don't** hand-author `loop.toon` files. Let `/loom-converge --construct-loop` build them — the TRDA gate (tight, redCapable, deterministic, agentRunnable) enforces a specific shape and the 10-rung ladder picks the right harness type. Writing one by hand bypasses the gate that exists to keep iterations against verified-red signals.

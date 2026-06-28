@@ -15,6 +15,7 @@ $ARGUMENTS
 Parse arguments after `status`:
 - No args: show project status overview
 - `--verbose`: show detailed status including all state files
+- `--html`: render output as an HTML file and attempt to open it in the OS default browser; plain-text/TOON output to stdout is ALWAYS produced regardless of this flag. See § HTML rendering below.
 
 ### Instructions
 
@@ -104,6 +105,18 @@ When `.loom/wiki/` exists at the project root, render an additional block:
 - `stale` count: same source, filter `staleness == "stale"`.
 - `days since lint`: parse `.loom/wiki/log.toon` for the last entry where `operation == "lint"`.
 - `days since ingest`: parse `.loom/wiki/log.toon` for the last entry where `operation == "ingest"` (or fall back to `lastUpdated` in index.toon).
+
+#### HTML Rendering (`--html`)
+
+When `--html` is passed:
+
+1. Produce the normal plain-text/TOON status output to stdout as usual (this never changes).
+2. Pipe that same output to `scripts/html-renderer/loom-status.ts`, which:
+   - Writes an HTML file atomically to `.plan-execution/reports/loom-status-{ISO8601}.html`.
+   - Calls the OS open shim (`open` on macOS, `xdg-open` on Linux).
+   - **Headless fallback:** if the open shim is unavailable or returns a non-zero exit code, the renderer prints the literal line `open this in a browser: {path}` to stdout and exits 0. The HTML file is still written.
+3. The `--html` flag MUST NOT change the plain-text/TOON stdout stream — it is strictly additive.
+4. Exit code is 0 whenever the HTML file was written successfully, regardless of whether the browser was opened.
 
 ### Error Handling
 

@@ -434,7 +434,6 @@ describe("convergence-summary schema regression (AC5)", () => {
     const schemaPath = path.resolve(
       __dirname,
       "..",
-      "agents",
       "protocols",
       "convergence-summary.schema.md",
     );

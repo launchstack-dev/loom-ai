@@ -17,6 +17,7 @@ Parse arguments after `pause`:
 - `--no-commit`: skip the WIP git commit
 - `--compact`: optimized for context pressure -- writes stage summaries, updates rolling-context.md, writes continue-here.toon, skips git commit. Designed for use before `/clear` when context is running low.
 - `--message "text"`: add a human-readable note to the snapshot
+- `--out <path>`: override the default handoff document path (default: `$TMPDIR/loom-handoff-{id}.md`)
 
 ### Instructions
 
@@ -86,6 +87,53 @@ stateFiles[N]: {list of all .plan-execution/ state files that exist}
 
 The `wikiContext` line uses TOON-array syntax: `wikiContext[3]: decision-auth, convention-naming, contract-billing`. On the next session start, `hooks/wiki-session-status.ts` Tier 3 reads this field and re-injects the listed pages — closing the pause/resume loop for wiki state.
 
+#### Step 3b: Write Handoff Document
+
+After writing `continue-here.toon`, generate the session handoff document.
+
+**Handoff document location:**
+- Default: `$TMPDIR/loom-handoff-{id}.md` where `{id}` follows the pattern
+  `HANDOFF-{ISO8601-compact}-{shortHash}` (e.g. `HANDOFF-20260626T120000Z-a3f7`).
+- Override: if `--out <path>` was provided, use that path instead.
+- Workflow state MUST remain in `.plan-execution/`; the handoff doc is a
+  human-readable companion written to the OS temp directory so it does not
+  pollute the repo.
+
+**Handoff document body — call `loom-pause-handoff-author` subagent:**
+
+Invoke the `agents/loom-pause-handoff-author.md` subagent with:
+
+```toon
+sessionId: {generated id, HANDOFF-{ISO8601-compact}-{shortHash}}
+createdAt: {current ISO-8601 timestamp}
+continueHerePath: {absolute path to .plan-execution/continue-here.toon}
+rollingContextPath: {absolute path to .plan-execution/rolling-context.md, or null}
+rawAgentOutput: {concatenation of continue-here.toon contents + any recent agent output}
+outPath: {$TMPDIR/loom-handoff-{id}.md, or --out override}
+```
+
+The subagent:
+1. Derives `suggestedSkills[]` from the running command and phase.
+2. Collects `referencedArtifacts[]` (paths only — no content duplication).
+3. Runs `scripts/loom-pause/secret-redactor.ts` `redact()` on the raw body,
+   setting `redactedSecretsCount` to the number of stripped secrets.
+4. Writes the handoff document atomically (`.tmp` then rename).
+
+The handoff document format:
+
+```toon
+id: {sessionId}
+createdAt: {createdAt}
+suggestedSkills[N]: skill-name-1, skill-name-2, ...
+referencedArtifacts[N]: path/to/plan.md, path/to/roadmap.md, ...
+redactedSecretsCount: {integer}
+
+context:
+  {redacted session body, ≤ 3000 tokens}
+```
+
+**Display the handoff path to the operator** in the Step 5 output (see below).
+
 #### Step 4: Git Commit (unless --no-commit)
 
 If `--no-commit` was NOT set:
@@ -110,6 +158,8 @@ Phase:      {phase}
 Next action: {nextAction}
 Git ref:    {gitRef} (short SHA)
 Snapshot:   .plan-execution/continue-here.toon
+Handoff:    {absolute path to handoff doc, e.g. /tmp/loom-handoff-HANDOFF-20260626T120000Z-a3f7.md}
+Secrets redacted: {redactedSecretsCount}
 
 {if --message was set:}
 Note: {message}

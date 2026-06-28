@@ -1,0 +1,33 @@
+type: roadmap-review
+roadmapFile: planning/ROADMAP.md
+scope: F-19 (Autoconverge Harness Extension into Test + Execute Metasteps)
+iteration: 1
+reviewedAt: 2026-06-25T00:00:00Z
+agentCount: 3
+
+verdicts[3]{agent,verdict}:
+  feature-coverage-agent,needs-another-pass
+  strategy-agent,needs-another-pass
+  ux-agent,needs-another-pass
+
+findings[18]{id,agent,severity,title,resolution}:
+  FC1,feature-coverage,blocking,Phase B harness + integrator agent unspecified,Named scripts/test-suite-review-harness.ts + test-stage-teammate (existing)
+  FC2,feature-coverage,blocking,CriteriaTestBinding missing status field,Added status enum + criterionSource + tier
+  FC3,feature-coverage,blocking,ExecuteLoopMap missing command field,Added command + retryCount + escalationRung
+  FC4,feature-coverage,blocking,FeedbackLoop extension incomplete for Phase C,Added boundFromWaveGate + waveId + originContext
+  FC5,feature-coverage,high,Three-way criteria artifact proliferation unresolved,Phase A makes criteria-plan.toon authoritative; scope-coverage.toon derived from ExecuteLoopMap in autoconverge mode
+  FC6,feature-coverage,high,loom-converge --criteria mode overlap unacknowledged,Added explicit non-goal + semantic distinction
+  FC7,feature-coverage,high,Phase D harness output schema unspecified,Added findings.schema.md findingId + boundCommand requirement
+  FC8,feature-coverage,high,Third criteria-plan.toon derivation path unaddressed,Phase A item 2 covers loom-converge --criteria (merge not overwrite)
+  S1,strategy,high,F-19 B/C/D P2 but blocked by F-18 P1; no slip plan,Added M-09 slip boundary; Phases A+B promoted to P1
+  S2,strategy,high,Phase A bundled with F-18-blocked phases unnecessarily,Phase A declared independent of F-18 and promoted to P1
+  S3,strategy,medium,Vision claim not enforced until B ships,Phase B promoted to P1; vision-enforcement framing added
+  S4,strategy,low,Positioning omits per-symptom binding as differentiator,Added Differentiator note in Status field
+  U1,ux,blocking,Flag explosion 20+ flags no grouping,Phase E item 25 defines three named groups + parser enforcement
+  U2,ux,blocking,TRDA redCapable failure mode unnamed,Phase B item 8 names criterion-unverifiable state + HITL prompt + iteration message
+  U3,ux,high,/loom-which not listed as F-19 deliverable,Phase E item 26 added as explicit acceptance criterion
+  U4,ux,high,Bound-command UX regression no replacement summary,Phase C item 13 defines per-symptom + wave-dashboard dual emission
+  U5,ux,high,Orphan recovery for partial criteria-plan.toon undefined,Phase A item 3 defines three recovery paths + named states
+  U6,ux,high,F-18 vs F-19 loop boundary not user-visible,Phase D item 22 adds originContext field surfaced in all HITL prompts
+
+verdict-after-integration: pending-iter2

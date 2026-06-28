@@ -40,6 +40,121 @@ Read `convergenceMode` from `converge.config`:
 
 Any other value is a blocking config error — surface it as a preflight issue and halt. The mode names here MUST stay in sync with the mode flag table in `commands/loom-converge.md`; if you accept a new mode, register it there too.
 
+## Phase 0: Loop Construction Gate (F-18)
+
+**This gate applies to all `loom-converge` entry paths except `--criteria` mode (FC-H6 boundary). The `--criteria` mode preserves its pre-F-18 semantics and never writes or checks `loop.toon`.**
+
+Phase 0 executes BEFORE the Convergence Loop. It is NOT preflight — it is a mandatory prerequisite loop-construction step.
+
+### Invocation Variants
+
+**`--loop-id <id>`** — Bind to an existing `loop.toon` at `.plan-execution/loops/{id}.toon`. Skip construction; proceed directly to gate check.
+
+**`--loops`** — List all active loops from `.plan-execution/loops/` as a TOON table:
+```toon
+loops[N]{loopId,symptom,rung,verifiedRed,runtimeMs,linkedLoops,retiredAt}:
+  {row per loop file}
+```
+Print the table to stdout and stop. Do not enter the Convergence Loop.
+
+**`--retire-loop <id>`** — Archive the loop at `.plan-execution/loops/{id}.toon`:
+1. Check `verifiedRed: true` and that the last iteration was green (symptom passes). If not, emit to stderr:
+   ```
+   errorCode: RETIRE_NOT_GREEN
+   message: Loop cannot be retired while the symptom is still red.
+   hint: Re-run loom-converge against the loop to reach green before retiring.
+   ```
+   Exit code `7`.
+2. On success, write `retiredAt: {ISO 8601}` to the loop file atomically (`.tmp` + rename). The loop is now immutable.
+3. Any subsequent write attempt to a retired loop emits:
+   ```
+   errorCode: LOOP_IMMUTABLE
+   message: Retired loops are queryable but never re-entered; spawn a new loop instead.
+   ```
+   Exit code `8`.
+
+**`--revise-loop <id>`** — Apply a HITL revision to a stuck loop in `stuck-at-loop-construction` state. Resets `rung` to 1, appends an `escalationHistory[]` entry with `reason: hitl-revision`, and returns the loop to `construction` state. Available only after operator provides `--reason "<one-sentence-reason>"`.
+
+**Default path (no `--loop-id`)** — Phase 0 must check for an existing verified-red loop or construct one:
+
+### Phase 0 Gate Check (Default Path)
+
+1. **No `loop.toon` exists** in `.plan-execution/loops/`:
+   - Emit to stderr:
+     ```
+     errorCode: NO_LOOP_CONSTRUCTED
+     message: Phase 0 of loom-converge did not produce a loop.toon and no --loop-id was passed.
+     hint: Construct a loop with loom-converge --construct-loop or bind an existing loop with --loop-id <id>; list active loops with loom-converge --loops.
+     ```
+   - Exit code `4`.
+
+2. **`loop.toon` exists but `verifiedRed: false`**:
+   - Emit to stderr:
+     ```
+     errorCode: LOOP_NOT_VERIFIED_RED
+     message: No verified-red loop is bound to this command — a tight, deterministic, agent-runnable red signal is required before hypothesis work begins.
+     hint: Run loom-converge --construct-loop or pass --override-loop-gate "<reason>" to proceed under escape.
+     ```
+   - Also emit the current rung and escalation suggestion:
+     ```
+     currentRung: {loop.rung}
+     suggestion: Escalate with loom-converge --construct-loop --escalate-rung to try rung {loop.rung + 1}.
+     ```
+   - Exit code `4` (`LOOP_NOT_VERIFIED_RED`, **not** `NO_LOOP_CONSTRUCTED`).
+
+3. **`loop.toon` exists and `verifiedRed: true`**:
+   - Bind `loopId` from the file. The Convergence Loop MUST run ONLY `loop.toon.command` per iteration. No other command may be substituted.
+
+4. **`--loop-id <id>` passed** but file `.plan-execution/loops/{id}.toon` does not exist:
+   - Emit to stderr:
+     ```
+     errorCode: LOOPID_NOT_FOUND
+     message: Loop file .plan-execution/loops/{id}.toon does not exist.
+     hint: List active loops with loom-converge --loops.
+     ```
+   - Exit code `6`.
+
+### Iteration Binding
+
+Once Phase 0 passes:
+- Every iteration of the Convergence Loop MUST execute exactly `loop.toon.command`. No substitution allowed.
+- Stalls escalate the LOOP (append `escalationHistory[]`, bump `rung`), NOT the fixer.
+- Write `loopId` to `convergence-state.toon` so resume can rebind.
+
+### Lint/Typecheck Failures — Sibling Loop Spawning
+
+When a fixer agent's changes trigger a lint or typecheck failure (detected during harness re-run at step 8 of the Convergence Loop):
+1. Create a NEW `loop.toon` for the lint/typecheck symptom with a fresh UUID.
+2. Set `linkedLoops[]` on the PARENT loop to include the new child loop with `relation: sibling` (same code-change event).
+3. Write the sibling loop to `.plan-execution/loops/{newId}.toon` atomically.
+4. Add the sibling loop to `convergence-state.toon`'s `loops[]` table.
+5. **DO NOT block the active loop.** The parent loop continues iterating against its original `loop.toon.command`. The sibling loop is a separate queue item for a subsequent `loom-converge` invocation.
+
+### 10-Rung Ladder Exhaustion
+
+When `loop.toon.rung == 10` and `verifiedRed: false` after a failed escalation attempt:
+- Transition loop state to `stuck-at-loop-construction`.
+- Emit to stderr:
+  ```
+  errorCode: STUCK_AT_LOOP_CONSTRUCTION
+  message: The 10-rung ladder was exhausted without a verified-red loop.
+  hint: See HITL escalation guidance below.
+  ```
+- Emit the HITL guidance block (verbatim):
+  ```
+  hitlGuidance:
+    state: stuck-at-loop-construction
+    operatorQuestions[3]:
+      - Q1: Is the symptom reproducible by a human manually running the command outside the harness?
+      - Q2: Is the harness the right tool for this symptom (vs. a one-off REPL, a unit test refactor, or a debugger session)?
+      - Q3: Should this be escalated to a human-only path — i.e., taken out of the convergence loop entirely?
+    reviseLoopCommand: "loom-converge --revise-loop <loopId> --reason \"<one-sentence-reason>\""
+    fallback: "If revision is not productive after 2 attempts, retire the loop with --retire-loop <loopId> and open a HITL issue."
+  ```
+- Exit code `5`.
+
+---
+
 ## Preflight Validation
 
 Before entering the Convergence Loop, run preflight checks against the loaded `converge.config`. Preflight failures HALT the run before iteration 1 begins. Per `convergence-summary.schema.md`, preflight failures do NOT produce a `ConvergenceSummary` (the run never reached a terminal-state transition) — instead, write only an `AgentResult` envelope whose `issues[]` row carries the preflight diagnostic, then exit. The driver must be able to reconstruct what happened from disk: write the `AgentResult` atomically to `.plan-execution/convergence-preflight.toon` (write to `{path}.tmp`, then `fs.renameSync` to `{path}`).

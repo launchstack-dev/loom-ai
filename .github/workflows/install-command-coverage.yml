@@ -1,0 +1,54 @@
+# install-command-coverage — guard against commands/*.md files being added
+# without being wired into install.sh's COMMAND_FILES array (and checksums).
+#
+# End-user symptom when this drifts: typing /loom-<name> in Claude Code
+# returns "Unknown command" because the curl install never copied the file
+# to ~/.claude/commands/. F-18 shipped 3 such files and we didn't catch it
+# until weeks later. This workflow ensures it can't happen again.
+#
+# Pairs with:
+#   - scripts/git-hooks/pre-commit  (local-side, runs the same test)
+#   - test/install-command-coverage.test.ts  (the actual assertion)
+#
+# Failure remediation is one or two commands:
+#   1. Add the missing entries to install.sh COMMAND_FILES (failure output
+#      includes the exact lines to copy in).
+#   2. bash scripts/generate-checksums.sh
+
+name: install-command-coverage
+
+on:
+  pull_request:
+    paths:
+      - 'commands/**'
+      - 'install.sh'
+      - 'checksums.sha256'
+      - 'test/install-command-coverage.test.ts'
+      - '.github/workflows/install-command-coverage.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'commands/**'
+      - 'install.sh'
+      - 'checksums.sha256'
+      - 'test/install-command-coverage.test.ts'
+      - '.github/workflows/install-command-coverage.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify commands/ ↔ install.sh coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.x"
+
+      - name: Run install-command-coverage regression
+        run: bunx vitest run test/install-command-coverage.test.ts

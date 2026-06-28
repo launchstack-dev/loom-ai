@@ -1,0 +1,55 @@
+type: roadmap-review
+roadmapFile: planning/ROADMAP.md
+reviewedAt: 2026-06-25T00:00:00Z
+scope: F-18 + M-08 (Matt Pocock Skills Adoption)
+agentCount: 3
+structuralErrors: 0
+structuralWarnings: 1
+note: scope-feasibility-agent not registered in this project; coverage absorbed by strategy-agent + feature-coverage-agent
+
+agents[3]{name,findingCount,blockingCount,warningCount,infoCount}:
+  feature-coverage-agent,13,4,8,1
+  strategy-agent,8,1,5,2
+  ux-agent,18,2,12,4
+
+findings[24]{id,agent,severity,dimension,title,recommendation}:
+  F1,strategy-agent,blocking,attribution,Inline per-file MIT attribution positions Loom as derivative,Replace per-file attribution convergence target with single NOTICE + README acknowledgment. Drop inline-attribution requirement from F-18 acceptance.
+  F2,strategy-agent,warning,priority,F-18 P1 designation miscalibrated — only Phase B is P1,Split F-18 priority: Phase B at P1, Phases A+C+D+E at P2. Update feature entry.
+  F3,strategy-agent,warning,vocabulary,CONTEXT.md overlaps rolling-context wiki injection (F-08) with no precedence rule,Define relationship in protocols/context-management.md before Phase A ships. Pick: replace WIKI section, seed-and-live-layer, or human-vs-agent split.
+  F4,strategy-agent,warning,vocabulary,ADR convention collides with wiki decision pages (F-02) with no routing rule,Resolve before Phase A. Simplest: ADRs primary, deprecate wiki decision pages. Or write explicit routing rule.
+  F5,strategy-agent,warning,data-model,FeedbackLoop missing from Data Model Entities and Relationships,Add FeedbackLoop + fields to Entities table. Define relationship to ConvergenceTier.
+  F6,strategy-agent,warning,sequencing,M-08→M-07 dependency is distribution-convenience not logical prerequisite,Add explicit sequencing statement: M-08 Phase A may begin in parallel with M-06 Phase 2. Phases B-E post-launch.
+  F7,strategy-agent,info,frontmatter,totalFeatures and totalMilestones stale,Updated this review to 18/8.
+  F8,strategy-agent,info,vision,Phases A+C+D+E have no connection to stated vision,Update vision section OR scope F-18 to Phase B only and move Phases C/D/E to a new F-19 DX Hardening.
+  F9,feature-coverage-agent,blocking,schema,OutOfScopeEntry has no defined schema,Author protocols/out-of-scope.schema.md before sub-14 begins. Fields: id idea rejectedAt rejectedBy rationale sourceProposalId.
+  F10,feature-coverage-agent,blocking,schema,FeedbackLoop missing escalationHistory linkedLoops trda fields,Add to feedback-loop.schema.md. Without linkedLoops the lint/typecheck separate-loops convergence target is unverifiable.
+  F11,feature-coverage-agent,blocking,scope-ambiguity,loom-bugfix Phase 1 gate scope unclear (autoconverge vs default analyst),Specify in F-18 text whether gate applies universally or only to --autoconverge.
+  F12,feature-coverage-agent,blocking,duplication,CONTEXT.md content-separation decision required,Specify split: vocabulary in CONTEXT.md, locked decisions in DECISIONS.md (or two sections under one file).
+  F13,feature-coverage-agent,warning,missing,Confidence/uncertainty tagging on findings missing from F-18,Add confidence high|medium|low to findings.schema.md findings[]. One-line addition.
+  F14,feature-coverage-agent,warning,missing,No-silent-regression-during-refactor rule missing,Add to behavioral-guidelines.md Section 5: test count must not decrease during refactor.
+  F15,feature-coverage-agent,warning,missing,Loop retirement ceremony undefined for retiredAt field,Specify in feedback-loop.schema.md who writes retiredAt and on what trigger.
+  F16,feature-coverage-agent,warning,duplication,/loom-which overlaps existing /loom-reference,Clarify relationship: supersede deprecate or different format. Decide before Phase E.
+  F17,feature-coverage-agent,warning,duplication,tdd-coach + loom-pause should be edits not new files,Confirm sub-9 and sub-16 are edits to existing files in plan text.
+  F18,feature-coverage-agent,warning,missing,AI disclaimer prefix on bot triage comments missing,Add to sub-13. One-line convention from GSD/mattpocock.
+  F19,feature-coverage-agent,warning,sequencing,Schema migration for convergence-state.toon loops[] not planned,Add Phase A migration task using F-13 walker pattern.
+  F20,feature-coverage-agent,warning,duplication,Sediment sweep only at Phase E will miss sediment introduced by A-D,Add mid-point sweep after Phase B.
+  F21,ux-agent,blocking,dead-end,Phase B loop gate has no escape when TRDA ladder exhausted,Add --override-loop-gate with mandatory reason field written to loop.toon. Or HITL escalation path.
+  F22,ux-agent,blocking,state-coverage,Loop-in-progress states unnamed (no loop.toon yet | verifiedRed:false climbing ladder),Define both states explicitly in feedback-loop.schema.md and loom-converge/loom-bugfix UX before Phase B ships.
+  F23,ux-agent,warning,sequencing,/loom-which ships in Phase E but discoverability needed in B/C/D,Move /loom-which to Phase A or B. Or ship --help on loom-do that lists all commands during gap.
+  F24,ux-agent,warning,fallback,HTML report mode (sub-18) breaks silently on headless/SSH,Add plain-text fallback when open fails. Or restrict HTML to opt-in --html flag. Or drop sub-18.
+
+crossCuttingThemes[8]{theme,findingIds,confidence,agentsAgreed}:
+  attribution-posture-harmful,F1,high,strategy+feature-coverage
+  P1-only-fits-phase-B,F2+F23,high,strategy+ux+feature-coverage
+  CONTEXT-md-content-separation,F3+F12,high,strategy+feature-coverage+ux
+  vocabulary-mapping-table-needed,F3+F4,high,all-3
+  FeedbackLoop-schema-underspecified,F5+F10+F22,high,all-3
+  /loom-which-mis-phased-and-duplicates,F16+F23,medium,feature-coverage+ux
+  HTML-mode-fits-poorly,F8+F24,medium,strategy+ux
+  loom-bugfix-gate-scope-ambiguous,F11+F21,medium,feature-coverage+ux
+
+verdict: |
+  Phase B is the right work and vision-coherent. Packaging is the problem: Phases A/C/D/E inflate scope with DX work
+  unrelated to the convergence-testing vision, attribution posture undermines positioning, vocabulary collisions
+  with existing Loom concepts are unresolved, and a critical UX dead-end exists in the Phase B gate itself.
+  Recommended next: refine F-18 to address blocking findings before /loom-plan create.

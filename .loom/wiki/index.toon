@@ -1,11 +1,11 @@
 schemaVersion: 1
 projectName: loom-ai
 domain: code
-wikiVersion: 2
-pageCount: 24
-lastUpdated: 2026-06-17T00:00:00Z
+wikiVersion: 3
+pageCount: 39
+lastUpdated: 2026-06-26T00:00:00Z
 
-pages[24]{pageId,title,category,staleness,updatedAt}:
+pages[39]{pageId,title,category,staleness,updatedAt}:
   component-command-dispatch,Command Dispatch System,component,fresh,2026-04-25T22:00:00Z
   component-context-budget,Context Budget Hook,component,fresh,2026-04-25T22:00:00Z
   component-context-monitor,Context Monitor Hook,component,fresh,2026-04-25T22:00:00Z
@@ -30,11 +30,32 @@ pages[24]{pageId,title,category,staleness,updatedAt}:
   pattern-subcommand-dispatch,Subcommand Dispatch Pattern,pattern,fresh,2026-04-25T22:00:00Z
   structure-agent-taxonomy,Agent Taxonomy,structure,fresh,2026-04-25T22:00:00Z
   structure-command-layout,Command File Layout,structure,fresh,2026-04-25T22:00:00Z
+  feature-f18-mattpocock-skills-adoption,F-18 Matt Pocock Skills Adoption,feature,fresh,2026-06-26T00:00:00Z
+  protocol-feedback-loop,FeedbackLoop Schema and TRDA Gate,protocol,fresh,2026-06-26T00:00:00Z
+  protocol-codebase-design,Codebase Design Vocabulary,protocol,fresh,2026-06-26T00:00:00Z
+  protocol-out-of-scope,OutOfScopeEntry Schema,protocol,fresh,2026-06-26T00:00:00Z
+  protocol-grilling,Grilling Discipline,protocol,fresh,2026-06-26T00:00:00Z
+  command-loom-which,/loom-which Decision-Tree Router,command,fresh,2026-06-26T00:00:00Z
+  command-loom-deepen,/loom-deepen Deepening Report,command,fresh,2026-06-26T00:00:00Z
+  command-loom-prototype,/loom-prototype Throwaway Prototype,command,fresh,2026-06-26T00:00:00Z
+  state-machine-feedback-loop,FeedbackLoop State Machine,state-machine,fresh,2026-06-26T00:00:00Z
+  state-machine-triage,TriageState State Machine,state-machine,fresh,2026-06-26T00:00:00Z
+  state-machine-adr,ADR Status Enum,state-machine,fresh,2026-06-26T00:00:00Z
+  decision-context-decisions-split,CONTEXT.md / DECISIONS.md Split,decision,fresh,2026-06-26T00:00:00Z
+  convergence-target-ct-06-vocab-diff,CT-06 Vocabulary Diff Harness,convergence-target,fresh,2026-06-26T00:00:00Z
+  waiver-m-06-precheck,M-08-PreCheck-M-06 Waiver,waiver,fresh,2026-06-26T00:00:00Z
+  waiver-sediment-phase5b,Sediment Phase 5b Slip-Rule Waiver,waiver,fresh,2026-06-26T00:00:00Z
 
-categories[6]{name,count}:
+categories[12]{name,count}:
   component,10
   concept,3
   convention,4
-  decision,3
+  decision,4
   pattern,2
   structure,2
+  feature,1
+  protocol,4
+  command,3
+  state-machine,3
+  convergence-target,1
+  waiver,2

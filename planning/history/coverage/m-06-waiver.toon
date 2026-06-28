@@ -1,0 +1,14 @@
+recordedAt: 2026-06-26T15:30:00Z
+gate: M-08-PreCheck-M-06 (plan §1953)
+requirement: F-12 OSS Launch Distribution Phase 1 MUST be complete OR a waiver MUST be on disk before Phase 2a implementer-agent spawns.
+waiverGranted: true
+grantedBy: operator (jensen)
+
+f12Phase0Status: in-flight (4 of 6 deliverables shipped; cosign workflow_dispatch verification + 5-stranger cold-install demand test still open per ROADMAP §841)
+f12Phase1Status: not-started (gated on Phase 0 completion)
+
+rationale: ROADMAP.md §873 explicitly permits this parallelism: "Phase A may begin in parallel with M-06 Phase 2 (launch) — its protocol/CONTEXT-split/ADR/migration work has no M-07 dependency. Phase B begins post-launch so it benefits from M-06 demand-validation feedback." F-18 Phases A through 6 were executed against this roadmap-level permission. F-18 ships no runtime-distribution changes that conflict with the in-flight M-06 OSS launch work (no install.sh, signing, or release-workflow edits — disjoint surfaces).
+
+waiverLocationNote: Plan §1953 specifies .plan-execution/m-06-waiver.toon. .plan-execution/ is gitignored in this repo, so the canonical waiver lives at planning/history/coverage/m-06-waiver.toon (in git history). A symlink/copy at the plan-cited path is maintained for any tooling that reads the literal path.
+
+revisitWhen: F-12 Phase 1 ships — at that point this waiver becomes historical and Phase B's post-launch demand-validation feedback loop can be exercised against real install telemetry.
