@@ -100,7 +100,7 @@ if [ -n "${STAGED_COMMANDS_OR_INSTALL}" ] && [ "${LOOM_SKIP_PRECOMMIT_QUALITY:-0
   else
     echo "[install-coverage] verifying commands/ ↔ install.sh COMMAND_FILES coverage"
     LOG=$(mktemp /tmp/loom-install-coverage.XXXXXX.log)
-    if ! bunx vitest run --reporter=basic test/install-command-coverage.test.ts >"${LOG}" 2>&1; then
+    if ! bunx vitest run --reporter=dot test/install-command-coverage.test.ts >"${LOG}" 2>&1; then
       echo "[install-coverage] ERROR: drift detected. Failure output:" >&2
       cat "${LOG}" >&2
       rm -f "${LOG}"

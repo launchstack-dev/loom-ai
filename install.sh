@@ -193,6 +193,11 @@ fetch_file() {
     *) echo "  FAIL ${src} (target outside allowed directories)"; return 1 ;;
   esac
 
+  # Ensure parent dir exists so mktemp can create the staging file.
+  # Avoids drift between the explicit mkdir block above and any
+  # newly-added nested command paths (e.g. commands/loom-auto/links/).
+  mkdir -p "$(dirname "${dst}")"
+
   local tmp
   tmp=$(mktemp "${dst}.XXXXXX")
 
