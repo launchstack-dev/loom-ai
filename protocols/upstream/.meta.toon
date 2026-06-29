@@ -1,2 +1,2 @@
 upstreamSchemas[1]{filename,sourceUrl,snapshotDate,snapshotMethod}:
-  plugin.schema.json,https://code.claude.com/docs/en/plugins-reference.md,2026-06-25,refresh-upstream-schemas.sh
+  plugin.schema.json,https://code.claude.com/docs/en/plugins-reference.md,2026-06-29,refresh-upstream-schemas.sh
