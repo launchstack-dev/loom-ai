@@ -1181,27 +1181,9 @@ Available as direct commands (`/loom-debate`) or flags on any command (`--debate
 
 ## Hooks (Deterministic Enforcement)
 
-Thirteen Claude Code hooks enforce invariants at the tool-call level. Fail-open on missing state, fail-closed on schema-version mismatches.
+Thirteen Claude Code hooks enforce Loom invariants at the tool-call level — file ownership, contract locks, context budgets, deploy guards, wiki integrity. Fail-open on missing state, fail-closed on schema-version mismatches. For the severity convention (which event type to slot a hook into when authoring a kit), see [Install → Hook enforcement](#hook-enforcement-per-project) above.
 
-| Hook | Event | What it does |
-|------|-------|-------------|
-| `file-ownership` | PreToolUse (Write/Edit) | Blocks writes outside the active task's file ownership boundary |
-| `contract-lock` | PreToolUse (Write/Edit) | Locks `contracts/` after Wave 0 |
-| `context-budget` | PreToolUse (Agent) | Estimates spawn prompt size, blocks if > `agentBudgetCap` (default 100k) |
-| `budget-tracker` | PreToolUse + SubagentStop | Tracks agent count vs budget |
-| `checkpoint-trigger` | (various) | Triggers stage-summary checkpoints at thresholds |
-| `context-monitor` | (various) | Streams context state into the statusline |
-| `deploy-guard` | PreToolUse (Bash) | Blocks destructive bash commands without explicit confirmation |
-| `quality-gate` | Stop | Prevents premature pipeline stops |
-| `typecheck-on-write` | PostToolUse (Write/Edit on .ts) | Runs `tsc` after TS writes, feeds errors back |
-| `wiki-write-guard` | PreToolUse | Enforces wiki page format + cross-ref integrity |
-| `wiki-impact-warner` | PreToolUse | Warns when code edits affect contract-page-tracked domains |
-| `wiki-session-status` | SessionStart | Loads wiki context summary on session start |
-| `wiki-commit-ledger` | PostToolUse | Records wiki-affecting commits for drift detection |
-
-Plus three infrastructure scripts: `statusline-renderer.cjs` (pipeline + test metrics + convergence segments), `loom-update-checker.cjs` (background catalog version check, 4h throttle), and `status-updater.ts` (writes `status.toon` timestamps and ambient state on SubagentStop). Plus one test harness: `context-budget-test.ts`.
-
-Register wiki hooks into `~/.claude/settings.json` via `scripts/register-wiki-hooks.ts`.
+**Full hook reference, infra scripts, and registration:** see [`docs/hooks.md`](docs/hooks.md).
 
 ## Per-Project Extensibility
 
@@ -1233,34 +1215,9 @@ Or `/loom-agent create` for an interactive flow.
 
 **Model resolution** is 3-level: profile tier mapping (`quality`/`balanced`/`budget`) → agent frontmatter `model:` → inherit parent. The default tiering follows the principle *opus for decisions, sonnet for generation, haiku for plumbing*.
 
-## Wiki Maintenance
+## Internals
 
-The project wiki (`.loom/wiki/`) stays current automatically at state-change points.
-
-| Trigger | What's captured |
-|---------|-----------------|
-| `/loom-roadmap` (after write) | Strategic intent, features, milestones, constraints |
-| `/loom-plan create` (after validation) | Architecture, schemas, scenarios, phase structure |
-| `/loom-plan execute` (after each wave) | Contracts, implementation decisions, files built |
-| `/loom-plan materialize` (after milestone) | Per-domain `contract-*` pages |
-| `/loom-change archive` | Mutations applied; History entry appended per page |
-| `/loom-code fix` (after verification) | Applied fixes, unfixable items as design constraints |
-| `SessionStart` | Wiki summary loaded via `wiki-session-status` hook |
-
-Manual: `/loom-wiki ingest`, `/loom-wiki lint`, `/loom-wiki query "question"`.
-
-## Data Formats
-
-- **TOON** (Token-Oriented Object Notation) for all on-disk artifacts and agent communication — token-efficient, structured, machine-diffable. Spec at `protocols/toon-format.md`. ~30–60% smaller than JSON for typical Loom payloads.
-- **JSON** for AJV schema validation tests only.
-- **Markdown** for plans, roadmaps, and wiki pages; TOON appears as fenced blocks inside.
-
-## Persistence
-
-- `.loom/wiki/` — persistent knowledge base: wiki pages (including `contract-*`, `assumption-*`), index, operation log (git-tracked)
-- `.loom/changes/` — per-change-proposal directories (git-tracked)
-- `.plan-execution/` — execution state, scope contract, stage summaries (selectively git-tracked; `ephemeral/` is gitignored)
-- `planning/history/` — reviews, decisions, explorations, wave summaries, milestones (git-tracked)
+Project layout, persistence directories, data formats, and the wiki-maintenance trigger map are reference material — see [`docs/internals.md`](docs/internals.md).
 
 ## Tests
 
@@ -1296,6 +1253,19 @@ scripts/generate-checksums.sh        # rewrite checksums.sha256 in place
 scripts/verify-checksums.sh          # exit 1 if drift; suggests the fix
 ```
 
+## Deep dives
+
+Reference material kept out of the main README to keep it scannable:
+
+- [`docs/hooks.md`](docs/hooks.md) — Full table of the 13 enforcement hooks, infra scripts, and registration.
+- [`docs/internals.md`](docs/internals.md) — Wiki maintenance triggers, data formats (TOON), persistence layout, and repo file structure.
+- [`docs/concepts.md`](docs/concepts.md) — The five concepts behind everything Loom does.
+- [`docs/first-30-minutes.md`](docs/first-30-minutes.md) — Narrated walkthrough of your first session.
+- [`docs/scenarios-and-changes.md`](docs/scenarios-and-changes.md) — End-to-end walkthroughs of scenarios and change proposals.
+- [`docs/cheatsheet.md`](docs/cheatsheet.md) — Everyday command reference.
+- [`docs/comparison.md`](docs/comparison.md) — How Loom compares to OpenSpec, Superpowers, CrewAI, Aider, and others.
+- [`docs/troubleshooting.md`](docs/troubleshooting.md) — Decodes specific error messages.
+
 ## Status
 
 Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
@@ -1318,27 +1288,3 @@ The wiki system and behavioral-guidelines draw from Andrej Karpathy's observatio
 
 [Apache 2.0](LICENSE)
 
-## File Structure
-
-```
-agents/                      67 agent definitions + 5 stage teammates
-  protocols/                 48 protocol files (31 schemas + 17 supporting docs)
-  stage-teammates/           Stage-teammate agents for /loom-auto agent-team mode
-commands/                    29 top-level files (12 noun-grouped roots + /loom dispatcher + subcommand verbs)
-  loom-plan/                 5 subcommand decomposition files
-  loom-roadmap/              6 subcommand decomposition files
-  loom-plan/materialize.md   Contract-page materializer
-hooks/                       17 files: 13 enforcement + 3 infrastructure + 1 context-budget test harness
-  lib/                       Shared harness, TOON reader, context resolver, change paths, spec validators
-  __tests__/                 Hook tests (ambient-state, statusline, wiki-impact, wiki-session, register-wiki-hooks, …)
-skills/library.yaml          Catalog (104 entries: commands, agents, protocols, kits)
-docs/                        scenarios-and-changes, scenarios-authoring-template,
-                             version-cadence, design-philosophy
-scripts/                     verify-release.sh, register-wiki-hooks.ts, loom-change/*
-.github/workflows/           cosign-spike (release signing validation)
-install.sh / uninstall.sh    Curl-friendly bootstrap (gh api fallback)
-test/protocol/               Protocol tests
-test-fixtures/               Test plan + contract-page + spec-upgrades fixtures
-.loom/wiki/                  Persistent knowledge base (git-tracked)
-.loom/changes/               Change-proposal directories (git-tracked)
-```
