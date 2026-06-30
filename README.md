@@ -14,8 +14,9 @@
 
 Loom is a discipline layer for Claude Code that enforces agent boundaries at the tool call, not in the prompt. File ownership, contract locks, context budgets, and wiki integrity are real Claude Code hooks that block bad actions before they happen. When tests fail or reviewers find issues, Loom loops on the fix until it's green — or tells you exactly why it can't.
 
-```bash
-/plugin marketplace add launchstack-dev/loom-ai && /plugin install loom
+```text
+/plugin marketplace add launchstack-dev/loom-ai
+/plugin install loom
 /loom-auto --from "add Stripe webhook handling with retries"
 ```
 
@@ -83,7 +84,7 @@ Update flow: **`/loom-update`** is the canonical channel-aware updater for curl 
 
 Loom is installed. Now run something useful.
 
-```bash
+```text
 /loom-auto --from "add password reset with email magic links"
 ```
 
