@@ -6,7 +6,7 @@
 [![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-8A2BE2.svg)](https://docs.anthropic.com/claude-code)
 [![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey.svg)](#prerequisites)
 
-[Install](#quickstart--plugin-path) · [First Run](#first-run) · [Commands](#commands) · [Concepts](docs/concepts.md) · [30-min tour](docs/first-30-minutes.md)
+[Install](#quickstart) · [First Run](#first-run) · [Commands](#commands) · [Concepts](docs/concepts.md) · [30-min tour](docs/first-30-minutes.md)
 
 ---
 
@@ -37,43 +37,47 @@ What you actually get when you run Loom on a project:
 - **Given/When/Then scenarios as the canonical testable unit** — the convergence-planner emits verification targets directly from scenarios at four tiers (unit / integration / e2e / qa-review).
 - **Tool-call-level discipline** — fourteen enforcement hooks plus a 100k-token context-budget cap per spawn keep long agentic runs predictable and auditable.
 
-## Quickstart — Plugin path
+## Quickstart
+
+Two install paths. Pick the one that matches your setup:
+
+| You are… | Use | One-liner |
+|---|---|---|
+| Default — single developer, latest stable | **Plugin** | `/plugin marketplace add launchstack-dev/loom-ai` then `/plugin install loom` |
+| Enterprise / air-gapped / pinned-version / kit author | **Curl** | `curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh \| bash` |
+
+Then, in either case:
+
+```text
+/loom-init
+/loom-doctor
+```
+
+- **`/loom-init`** — brownfield onboarding: scans your repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/`, and (with your consent) wires the per-project enforcement hooks. Skip if you're greenfield and want to go straight to `/loom-roadmap init --full`.
+- **`/loom-doctor`** — verifies the install: checks anchor variables, hook registration, agent reachability, and prints a pass/fail summary. Run after every install or update.
+
+<details>
+<summary><strong>Plugin path — details and update flow</strong></summary>
 
 The default path. Recommended for new users, casual evaluators, and anyone who wants a one-command install with registry-managed updates.
 
-```text
-/plugin marketplace add launchstack-dev/loom-ai
-/plugin install loom
-/loom-init
-/loom-doctor
-```
-
-What each step does:
-
 1. **`/plugin marketplace add launchstack-dev/loom-ai`** — registers Loom's marketplace listing with your Claude Code plugin registry.
 2. **`/plugin install loom`** — installs Loom under `${CLAUDE_PLUGIN_ROOT}`. Restart your Claude Code session so the new commands and agents load.
-3. **`/loom-init`** — brownfield onboarding: scans your repo, writes a tailored `CLAUDE.md` and `CONTEXT.md`, seeds `.loom/wiki/`, and (with your consent) wires the per-project enforcement hooks. Skip if you're greenfield and want to go straight to `/loom-roadmap init --full`.
-4. **`/loom-doctor`** — verifies the install: checks anchor variables, hook registration, agent reachability, and prints a pass/fail summary. Run after every install or update.
 
 Update flow: `/plugin update loom`. Uninstall flow: `/plugin uninstall loom` then `/loom-uninstall` to clean per-project state.
 
-## Quickstart — Curl path
+</details>
+
+<details>
+<summary><strong>Curl path — details, trust model, and update flow</strong></summary>
 
 For enterprise (MDM-blocked plugin install), air-gapped networks, pinned-version teams, contributors, and anyone authoring kits.
 
-```text
-curl -fsSL https://raw.githubusercontent.com/launchstack-dev/loom-ai/v0.0.1/install.sh | bash
-/loom-init
-/loom-doctor
-```
-
-What each step does:
-
-1. **`curl … install.sh | bash`** — pinned-tag installer. Writes regular files into `~/.claude/` (anchored against `${CLAUDE_PROJECT_DIR}` per-project). Replace `v0.0.1` with `main` to track latest, or any tag for pinned-version installs. The installer fetches a small bootstrap and verifies it against `checksums.sha256` from the same ref; no `sudo`, no system paths, no shell-init writes. Inspect before piping — see [Install](#install).
-2. **`/loom-init`** — same as plugin path: brownfield onboarding + per-project hook bootstrap.
-3. **`/loom-doctor`** — same verification surface as the plugin path.
+The curl one-liner is a **pinned-tag installer**: writes regular files into `~/.claude/` (anchored against `${CLAUDE_PROJECT_DIR}` per-project). Replace `v0.0.1` with `main` to track latest, or any tag for pinned-version installs. The installer fetches a small bootstrap and verifies it against `checksums.sha256` from the same ref; no `sudo`, no system paths, no shell-init writes. Inspect before piping — see [Install](#install).
 
 Update flow: **`/loom-update`** is the canonical channel-aware updater for curl installs (atomic staging, rollback snapshots, `--check` / `--pin` / `--resume` / `--rollback` flags). Re-running the install one-liner also works and is now safe across re-runs — it preserves any user-added rows in `install-state.toon` (kits, BYO items, custom agents). `/loom-library sync` reconciles user-installed kits and agents but **refuses to touch system files** (hooks, scripts, prompts) — it surfaces stale system files read-only and points you at `/loom-update`. Uninstall flow: `/loom-uninstall` cleans both per-project and per-machine state.
+
+</details>
 
 ## First Run
 
