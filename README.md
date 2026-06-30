@@ -3,10 +3,29 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-v0.0.1-blue.svg)](https://github.com/launchstack-dev/loom-ai/releases)
 [![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
+[![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-8A2BE2.svg)](https://docs.anthropic.com/claude-code)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-lightgrey.svg)](#prerequisites)
 
-## Hero
+[Install](#quickstart--plugin-path) · [First Run](#first-run) · [Commands](#commands) · [Concepts](docs/concepts.md) · [30-min tour](docs/first-30-minutes.md)
 
-**A discipline layer on top of Claude Code that ships its own enforcement.** Most multi-agent tools enforce boundaries with prompts. Loom enforces them at the tool-call level — file ownership, contract locks, context budget, and wiki integrity are Claude Code hooks, not instructions. Give Loom a one-line idea and it drives a hook-enforced multi-agent pipeline from scope decisions through wave-based execution to passing tests and reviewed code — and the artifacts (plans, scenarios, contracts, wiki) keep working after the initial build through structured change proposals.
+---
+
+**Give Claude Code a one-line idea. Get reviewed code that passes tests.**
+
+Loom is a discipline layer for Claude Code that enforces agent boundaries at the tool call, not in the prompt. File ownership, contract locks, context budgets, and wiki integrity are real Claude Code hooks that block bad actions before they happen. When tests fail or reviewers find issues, Loom loops on the fix until it's green — or tells you exactly why it can't.
+
+```bash
+/plugin marketplace add launchstack-dev/loom-ai && /plugin install loom
+/loom-auto --from "add Stripe webhook handling with retries"
+```
+
+### Key terms
+
+- **Scope contract** — locked decisions and success criteria produced before any code is written.
+- **Scenario** — a Given/When/Then statement the test pipeline must turn green.
+- **Wave** — a batch of work executed in parallel under file-ownership locks.
+- **Contract page** — a per-domain wiki page mutated atomically by `/loom-change`.
+- **Convergence** — the do-work → check → remediate loop that runs until tests pass and reviewers approve.
 
 ## Outcomes
 
@@ -55,6 +74,54 @@ What each step does:
 3. **`/loom-doctor`** — same verification surface as the plugin path.
 
 Update flow: **`/loom-update`** is the canonical channel-aware updater for curl installs (atomic staging, rollback snapshots, `--check` / `--pin` / `--resume` / `--rollback` flags). Re-running the install one-liner also works and is now safe across re-runs — it preserves any user-added rows in `install-state.toon` (kits, BYO items, custom agents). `/loom-library sync` reconciles user-installed kits and agents but **refuses to touch system files** (hooks, scripts, prompts) — it surfaces stale system files read-only and points you at `/loom-update`. Uninstall flow: `/loom-uninstall` cleans both per-project and per-machine state.
+
+## First Run
+
+Loom is installed. Now run something useful.
+
+```bash
+/loom-auto --from "add password reset with email magic links"
+```
+
+That one command drives the full pipeline — prompt refiner → scope contract → roadmap → plan → execute → converge → test → review → fix — from a one-line idea to passing tests and reviewed code. Add `--auto` to accept defaults at every gate. **This is the easy button; use it unless you have a reason not to.**
+
+### Three journeys cover ~90% of real use
+
+| You have… | Run | What you get |
+|---|---|---|
+| **A one-line idea, want the pipeline to drive** (default) | `/loom-auto --from "<idea>"` | End-to-end: roadmap → plan → execute → test → review → fix |
+| **A fresh idea, want approval gates between stages** | `/loom-roadmap init --full` | Interactive: roadmap → review → approve → plan, pauses at each gate |
+| **An existing codebase to extend** | `/loom-init` then `/loom-roadmap init --brownfield --full` | Loom learns your code first, then plans the feature around what exists |
+
+### Side-loops (use alongside any journey)
+
+| Task | Command |
+|---|---|
+| Tiny task, retroactive change proposal | `/loom-quick "<task>"` |
+| Bug-scoped convergence with wiki context | `/loom-bugfix "<symptom>"` |
+| Hand off session to another machine | `/loom-pause` / `/loom-resume` |
+
+### The pipeline, visually
+
+```
+  IDEA ──┐
+         │
+         ▼
+  ┌──────────────┐   ┌────────────┐   ┌─────────────┐   ┌────────────┐   ┌────────────┐   ┌───────────────┐
+  │  /loom-init  │──>│  roadmap   │──>│    plan     │──>│  execute   │──>│  converge  │──>│  code review  │──> SHIPPABLE
+  │ (brownfield) │   │ (scope +   │   │ (dual-track │   │ (wave-by-  │   │ (criteria  │   │ (9+ reviewers │
+  └──────────────┘   │  features) │   │  + criteria)│   │   wave)    │   │  TDD loop) │   │  + contracts) │
+                     └────────────┘   └─────────────┘   └────────────┘   └────────────┘   └───────────────┘
+                           │                                                                      │
+                           │                                                                      ▼
+                           │                                                              /loom-change init
+                           │                                                              (atomic mutations
+                           │                                                               over contract-*
+                           │                                                               wiki pages)
+                           └────── /loom-auto --from "<idea>" collapses all stages into one pipeline ──────┘
+```
+
+For long `/loom-auto` runs, turn on [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each stage gets a fresh context window. Want a narrated 30-minute tour? See [`docs/first-30-minutes.md`](docs/first-30-minutes.md).
 
 ## Decision matrix
 
@@ -106,24 +173,6 @@ If something looks wrong:
 - **For filing issues, run `/loom-doctor --bundle`.** It writes a redacted diagnostic bundle (config snapshots, hook entries, install-state, recent agent results — secrets stripped) to a temp file and prints the path. Attach that file to the GitHub issue so we have everything we need without back-and-forth.
 - **Common gotchas:** `/loom` returns "Unknown command" → restart the Claude Code session so it picks up new commands. Hooks aren't firing → run `node scripts/register-loom-hooks.ts --replace` from the project root. Install drift after a `git pull` (local-dev) → `/loom-library sync --apply`.
 - **Deeper guidance:** [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes specific error messages and walks the diagnostic tree.
-
-## Support
-
-Community-supported. GitHub issues only. No SLA.
-
-Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https://github.com/launchstack-dev). File issues at [github.com/launchstack-dev/loom-ai/issues](https://github.com/launchstack-dev/loom-ai/issues). For kit authoring, see [`planning/notes/plugin-marketplace-rationale.md`](planning/notes/plugin-marketplace-rationale.md). For the install decision tree, see [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md).
-
-## Acknowledgments
-
-Several of Loom's core patterns — including the codebase-design vocabulary (Module/Seam/Adapter), the feedback-loop ladder, the no-op test framing for skill authoring, the horizontal-slice anti-pattern for TDD, the throwaway-prototype branch discipline, and the grilling discipline with a 12-question cap — were adapted from educational content by Matt Pocock. Full attribution, MIT-license source references, and a description of how each pattern was adapted are recorded in [`NOTICE`](NOTICE) at the root of this repository.
-
----
-
-## Status
-
-Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
-
-See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for v0.1.0 scope.
 
 ## Starting points
 
@@ -420,7 +469,7 @@ Either mode produces the same on-disk artifacts (`stage-context/*.toon`, `wave-N
 
 ### Your first run
 
-See the [Quickstart](#quickstart) section at the top of this README, or the narrated walkthrough in [`docs/first-30-minutes.md`](docs/first-30-minutes.md).
+See the [First Run](#first-run) section at the top of this README, or the narrated walkthrough in [`docs/first-30-minutes.md`](docs/first-30-minutes.md).
 
 ### Pull what you need
 
@@ -1243,7 +1292,21 @@ scripts/generate-checksums.sh        # rewrite checksums.sha256 in place
 scripts/verify-checksums.sh          # exit 1 if drift; suggests the fix
 ```
 
+## Status
+
+Loom is **alpha (`v0.0.x`)** — the core pipeline (planning, execution, convergence, code review, change lifecycle) is stable and exercised on real work. The distribution layer is still settling: install is curl-only, signed tarballs and a Homebrew formula land in v0.1.0. Schemas can evolve with migrations; `/loom-upgrade` handles per-project migration when new versions ship.
+
+See [`planning/plans/PLAN-oss-launch.md`](planning/plans/PLAN-oss-launch.md) for v0.1.0 scope.
+
+## Support
+
+Community-supported. GitHub issues only. No SLA.
+
+Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https://github.com/launchstack-dev). File issues at [github.com/launchstack-dev/loom-ai/issues](https://github.com/launchstack-dev/loom-ai/issues). For kit authoring, see [`planning/notes/plugin-marketplace-rationale.md`](planning/notes/plugin-marketplace-rationale.md). For the install decision tree, see [`docs/install-decision-matrix.md`](docs/install-decision-matrix.md).
+
 ## Acknowledgments
+
+Several of Loom's core patterns — including the codebase-design vocabulary (Module/Seam/Adapter), the feedback-loop ladder, the no-op test framing for skill authoring, the horizontal-slice anti-pattern for TDD, the throwaway-prototype branch discipline, and the grilling discipline with a 12-question cap — were adapted from educational content by Matt Pocock. Full attribution, MIT-license source references, and a description of how each pattern was adapted are recorded in [`NOTICE`](NOTICE) at the root of this repository.
 
 The wiki system and behavioral-guidelines draw from Andrej Karpathy's observations on LLM failure patterns. The change-proposal lifecycle is inspired by OpenSpec; Loom departs from it by treating scenarios as enforcement gates rather than documentation. See [docs/design-philosophy.md](docs/design-philosophy.md).
 
