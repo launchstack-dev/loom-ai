@@ -205,6 +205,14 @@ library:
       description: "VERSION-slot registry schema at ~/.loom/version-slots.toon. Defines slots[]{repo,version,branch,worktreePath,prNumber,prState,claimedAt,lastSeenAt} written by scripts/loom-version-slot.ts and read by /loom-ship + /loom-landing-report. Stale rows are ejected when branch is gone AND no open PR. Shipped by M-10 (gstack adoption Phase 11 F-30)."
       source: protocols/version-slot.schema.toon
 
+    - name: learnings-schema
+      description: "Learnings registry schema at .loom/learnings.toon. Defines learnings[]{id,capturedAt,category,summary,context,appliesTo,confidence} consumed by plan-review agents (CEO/eng/design/devex) at preamble to inject prior lessons into review passes. Shipped by M-04 (gstack adoption Phase 4)."
+      source: protocols/learnings.schema.toon
+
+    - name: regressions-schema
+      description: "Regressions registry schema at .loom/regressions.toon. Defines regressions[]{id,capturedAt,summary,rootCause,detection,preventionRule} consumed by plan-eng-review-agent to enforce anti-skip clauses citing named regressions. Shipped by M-04 (gstack adoption Phase 4)."
+      source: protocols/regressions.schema.toon
+
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
     - name: python-conventions

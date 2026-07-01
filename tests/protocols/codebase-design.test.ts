@@ -1,6 +1,6 @@
 /**
  * Phase 0 / S-02: protocols/codebase-design.md Section 0 vocabulary-mapping
- * table parses into exactly 9 rows, each with a non-empty "When to use
+ * table parses into exactly 10 rows, each with a non-empty "When to use
  * which" column.
  */
 import { describe, it, expect } from "vitest";
@@ -54,8 +54,8 @@ describe("protocols/codebase-design.md Section 0", () => {
   const content = readFileSync(DOC_PATH, "utf8");
   const rows = parseSection0Table(content);
 
-  it("contains exactly 9 rows (S-02)", () => {
-    expect(rows.length).toBe(9);
+  it("contains exactly 10 rows (S-02)", () => {
+    expect(rows.length).toBe(10);
   });
 
   it("every row has a non-empty 'When to use which' column (S-02)", () => {
