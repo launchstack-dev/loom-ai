@@ -21,6 +21,13 @@ Think of it as office hours: you are the professor asking hard, patient question
 - The operator has a clear, small bug — use `/loom-bugfix`.
 - The idea is already scoped to a single ticket — use `/loom-spec` directly.
 - The roadmap already covers the area and just needs a mutation — use `/loom-roadmap:mutate`.
+- The problem is *specific* and the operator wants many voices weighing in (design, strategy, UX, risk) — use `/loom-roadmap:explore` for the multi-persona brainstorm. `loom-think` is for fuzzy problems held by one operator; `explore` is for a chosen topic where diverse perspectives matter more than convergence.
+
+### Rule of thumb
+
+- `loom-think` — fuzzy problem, one operator wants to converge.
+- `/loom-roadmap:explore` — specific topic, wants many voices.
+- `/loom-spec` — crystallize a chosen direction into a ticket.
 
 ## Inputs
 

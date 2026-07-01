@@ -157,6 +157,7 @@ IDEA ─▶│  /loom-think ──▶ /loom-spec ─▶ /loom-roadmap ─▶ /lo
 ```
 
 - **`/loom-think`** — 5-phase interview producing a durable design doc under `.loom/thinks/{slug}-{date}.md`, with a cross-model second opinion. Precedes `/loom-roadmap init` for genuinely fuzzy problems.
+- **`/loom-roadmap:explore`** *(optional detour between `/loom-think` and `/loom-spec`)* — when the topic is specific but you want many voices before crystallizing, fan out a multi-persona brainstorm (design, strategy, UX, risk). Rule of thumb: `loom-think` = fuzzy problem, one operator wants to converge; `explore` = specific topic, wants many voices; `loom-spec` = crystallize a chosen direction into a ticket.
 - **`/loom-spec`** — 5-phase interview from vague idea to a precise ROADMAP feature block or GitHub issue, with optional worktree spawn.
 - **`/loom-ship`** — pre-flight rebase-from-base + drift detection + VERSION-slot reservation + plan-completion audit inline in the PR body via `gh pr create`. Chief ship-engineer skill.
 - **`/loom-canary`** — progressive deploy with health-check gates and auto-rollback. Reads deploy config from `CLAUDE.md`; wraps `fly` / `vercel` / `wrangler` / `netlify` / `railway` / `render`. Configure with `/loom-setup:deploy`.

@@ -18,6 +18,13 @@ Use this skill when the operator has an idea sentence and needs a precise delive
 - The idea is still fuzzy — run `/loom-think` first.
 - The change is a hotfix — use `/loom-bugfix`.
 - The roadmap does not yet exist — start with `/loom-roadmap init`.
+- The operator wants many voices weighing in on a specific topic before crystallizing — run `/loom-roadmap:explore` first. `explore` gathers multi-persona perspectives (design, strategy, UX, risk); `loom-spec` then crystallizes the chosen direction into a ticket.
+
+### Rule of thumb
+
+- `loom-think` — fuzzy problem, one operator wants to converge.
+- `/loom-roadmap:explore` — specific topic, wants many voices.
+- `loom-spec` — crystallize a chosen direction into a ticket.
 
 ## Inputs
 
