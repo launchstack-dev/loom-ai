@@ -26,6 +26,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 interface HookInput {
   tool_name?: string;
@@ -38,8 +39,7 @@ const PREFLIGHT_WARN_CODE = "WORKTREE_PREFLIGHT_OVERLAP";
 
 function readStdinSync(): string {
   try {
-    const nodeFs = require("node:fs");
-    return nodeFs.readFileSync(0, "utf-8");
+    return fs.readFileSync(0, "utf-8");
   } catch {
     return "";
   }
@@ -168,6 +168,9 @@ function main(): void {
 // Exported for unit tests.
 export { PREFLIGHT_WARN_CODE };
 
-if (typeof require !== "undefined" && require.main === module) {
+// Entrypoint: only run when invoked as a script (ESM-safe equivalent of
+// `require.main === module` — compares the CLI entry path against this
+// module's own URL).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }

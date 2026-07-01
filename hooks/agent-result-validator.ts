@@ -70,6 +70,9 @@ export function validateAgentResultToon(content: string): string[] {
     for (let j = i + 1; j < lines.length; j++) {
       const row = lines[j];
       if (!/^\s{2,}\S/.test(row)) break; // end of block
+      // Skip TOON comment rows (indented `#` lines) so they don't fail the
+      // confidence check as if they were data rows.
+      if (row.trim().startsWith("#")) continue;
       const rawCells = splitCsvRow(row.trim());
       const cell = rawCells[confidenceIdx];
       if (cell === undefined || cell === "") {

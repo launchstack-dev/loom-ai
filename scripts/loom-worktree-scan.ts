@@ -149,7 +149,10 @@ export function looksLikeGlob(s: string): boolean {
   if (!s) return false;
   if (s.length > 200) return false;
   if (/[\s()<>"'`|]/.test(s)) return false;
-  if (s.startsWith("#") || s.startsWith("*") || s.startsWith("-")) return false;
+  // Do NOT exclude leading `*` — that filters out valid globs like `*.ts` or
+  // `**/*.tsx`. Only strip narrative-prose leaders: comment (#) and dash (-)
+  // list markers.
+  if (s.startsWith("#") || s.startsWith("-")) return false;
   // Must have a path-like character OR a common source extension.
   if (s.includes("/") || s.includes("*")) return true;
   return /\.(ts|tsx|js|jsx|md|toon|json|yaml|yml|sh|py|rs|go|css|html|schema)$/i.test(s);

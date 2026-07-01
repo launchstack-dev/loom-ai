@@ -18,6 +18,9 @@
  * Contract: PLAN-gstack-adoption.md Phase 2 F-06 CAREFUL_BLOCKED error code.
  */
 
+import * as fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
 interface HookInput {
   tool_name?: string;
   tool_input?: {
@@ -92,7 +95,6 @@ function evaluate(command: string): { blocked: boolean; ruleId?: string; message
 function readStdinSync(): string {
   try {
     // Node 20 supports readFileSync on stdin fd 0.
-    const fs = require("node:fs");
     return fs.readFileSync(0, "utf-8");
   } catch {
     return "";
@@ -143,7 +145,9 @@ function main(): void {
 // Exported for unit tests.
 export { evaluate, RULES, CAREFUL_BLOCKED };
 
-// Entrypoint: only run when invoked as a script.
-if (require.main === module) {
+// Entrypoint: only run when invoked as a script (ESM-safe equivalent of
+// `require.main === module` — compares the CLI entry path against this
+// module's own URL).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main();
 }

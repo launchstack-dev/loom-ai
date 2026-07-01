@@ -25,9 +25,12 @@ const LOOM_HOOK_NAMES = [
   "wiki-write-guard",
   "wiki-impact-warner",
   "deploy-guard",
+  "loom-careful",
+  "preflight-worktree-scan",
   "context-budget",
   "budget-tracker",
   "typecheck-on-write",
+  "agent-result-validator",
   "wiki-commit-ledger",
   "context-monitor",
   "checkpoint-trigger",
@@ -87,14 +90,15 @@ const baseArgs = () => [
 ];
 
 describe("scripts/register-loom-hooks.ts", () => {
-  it("creates settings.json with all 14 hook registrations (15 entries since context-monitor appears twice)", () => {
+  it("creates settings.json with all 17 hook registrations (19 entries since context-monitor appears twice and the M-13 additions bumped the manifest)", () => {
     const result = runScript(baseArgs());
     expect(result.exitCode).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report.ok).toBe(true);
-    // LOOM_HOOKS has 16 entries (context-monitor on both PostToolUse and Stop;
-    // loom-migration on SessionStart added in Phase 10A for curl-path migration).
-    expect(report.changes).toBe(16);
+    // LOOM_HOOKS has 19 entries: 15 legacy + 1 duplicate (context-monitor on
+    // both PostToolUse and Stop) + 3 M-13 additions (loom-careful,
+    // preflight-worktree-scan, agent-result-validator).
+    expect(report.changes).toBe(19);
     expect(report.settingsExisted).toBe(false);
 
     const settings = readSettings();
@@ -245,7 +249,7 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(result.exitCode).toBe(0);
       const report = JSON.parse(result.stdout);
       expect(report.purged).toBeGreaterThanOrEqual(1);
-      expect(report.changes).toBe(16);
+      expect(report.changes).toBe(19);
 
       const settings = readSettings();
       const preCommands = settings.hooks.PreToolUse.flatMap((e: any) =>

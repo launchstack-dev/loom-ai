@@ -108,9 +108,13 @@ function enumerateSiblingWorktrees(): string[] {
   for (const dir of [parent, path.join(os.homedir(), ".worktrees")]) {
     if (!fs.existsSync(dir)) continue;
     try {
-      for (const entry of fs.readdirSync(dir)) {
-        const full = path.join(dir, entry);
-        if (!fs.statSync(full).isDirectory()) continue;
+      // withFileTypes avoids a per-entry statSync; a broken symlink there
+      // would throw and abort the whole scan, silently truncating the
+      // sibling-worktree list.
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const full = path.join(dir, entry.name);
         if (full === cwd) continue;
         if (fs.existsSync(path.join(full, ".git"))) out.push(full);
       }

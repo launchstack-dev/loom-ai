@@ -117,8 +117,15 @@ async function importForDomain(domain: string, store: { browser: string; path: s
   } catch {
     throw new Error("MISSING_LIB");
   }
+  // chrome-cookies-secure is CommonJS; when imported dynamically in ESM its
+  // exports may land on `.default` instead of the module object. Try both.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getCookies = lib!.getCookies ?? (lib as any).default?.getCookies;
+  if (typeof getCookies !== "function") {
+    throw new Error("chrome-cookies-secure loaded but getCookies not found on module or .default");
+  }
   return new Promise((resolve, reject) => {
-    lib!.getCookies(`https://${domain}`, "puppeteer", (err, cookies) => {
+    getCookies(`https://${domain}`, "puppeteer", (err: Error | null, cookies: unknown) => {
       if (err) return reject(err);
       const rows: CookieRow[] = [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

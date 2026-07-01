@@ -23,6 +23,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 type Host = "claude-code" | "hermes" | "openclaw" | "codex";
 type Action = "link" | "unlink" | "check";
@@ -62,7 +63,9 @@ function hostTargetPath(host: Host): string {
 
 function repoRoot(): string {
   // scripts/loom-install.ts → parent is scripts/, grandparent is repo root.
-  return path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+  // `fileURLToPath` handles the Windows `/C:/…` leading-slash pitfall that
+  // `new URL(import.meta.url).pathname` produces.
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 }
 
 function readLoomVersion(root: string): string {
@@ -184,7 +187,12 @@ function ensureSymlink(source: string, target: string): { created: boolean; alre
       );
     }
   }
-  fs.symlinkSync(source, target, "dir");
+  // On Windows, creating a directory symlink (`dir`) requires elevated
+  // Administrator privileges by default. Directory junctions (`junction`) do
+  // not require elevation and behave equivalently for our purposes (symlink
+  // to an existing local directory).
+  const type = os.platform() === "win32" ? "junction" : "dir";
+  fs.symlinkSync(source, target, type);
   return { created: true, already: false };
 }
 
