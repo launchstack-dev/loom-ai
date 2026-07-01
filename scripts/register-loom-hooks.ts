@@ -81,8 +81,12 @@ interface HookEntry {
  * NOTE: `context-monitor` appears twice intentionally — once on PostToolUse
  * for ambient telemetry, once on Stop for the end-of-session snapshot. Both
  * entries are independent and registered separately.
+ *
+ * Exported so the vitest fixture in hooks/__tests__/register-loom-hooks.test.ts
+ * can derive names and the expected `changes` count instead of hardcoding
+ * a magic number that drifted twice during M-13. See note 047.
  */
-const LOOM_HOOKS: HookEntry[] = [
+export const LOOM_HOOKS: HookEntry[] = [
   // PreToolUse Write|Edit — gating
   { hookName: "contract-lock",       event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 10000 },
   { hookName: "file-ownership",      event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 10000 },
@@ -678,4 +682,18 @@ function main(): void {
   process.exit(0);
 }
 
-main();
+// Guard main() so `import { LOOM_HOOKS }` from a test file does not
+// invoke the CLI at module load. Executed directly (node/bun/tsx path
+// or via npx tsx) argv[1] resolves to this file; a vitest import does
+// not match. Note 047.
+const invokedAsScript = (() => {
+  const arg1 = process.argv[1];
+  if (!arg1) return false;
+  try {
+    return path.resolve(arg1) === path.resolve(__filename);
+  } catch {
+    return false;
+  }
+})();
+
+if (invokedAsScript) main();

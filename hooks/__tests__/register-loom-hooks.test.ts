@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { execSync, spawnSync } from "node:child_process";
+import { LOOM_HOOKS } from "../../scripts/register-loom-hooks";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const SCRIPT = path.join(REPO_ROOT, "scripts", "register-loom-hooks.ts");
@@ -17,28 +18,14 @@ const TSX_RUNNER: [string, string[]] = (() => {
   }
 })();
 
-// Names that must exist in the hooks-root stub directory for the script to
-// consider registration. Keep aligned with LOOM_HOOKS in register-loom-hooks.ts.
-const LOOM_HOOK_NAMES = [
-  "contract-lock",
-  "file-ownership",
-  "wiki-write-guard",
-  "wiki-impact-warner",
-  "deploy-guard",
-  "loom-careful",
-  "preflight-worktree-scan",
-  "context-budget",
-  "budget-tracker",
-  "typecheck-on-write",
-  "agent-result-validator",
-  "wiki-commit-ledger",
-  "context-monitor",
-  "checkpoint-trigger",
-  "status-updater",
-  "quality-gate",
-  "wiki-session-status",
-  "loom-migration",
-];
+// Derived from LOOM_HOOKS at import time — do NOT hardcode. Note 047:
+// this list drifted twice during M-13 (once when 3 hooks were added,
+// again when the test failed to reflect the manifest). Derivation
+// keeps the test in lockstep with the manifest by construction.
+const LOOM_HOOK_NAMES = Array.from(
+  new Set(LOOM_HOOKS.map((e) => e.hookName))
+);
+const EXPECTED_CHANGES = LOOM_HOOKS.length;
 
 let tmpDir: string;
 let hooksRoot: string;
@@ -90,15 +77,15 @@ const baseArgs = () => [
 ];
 
 describe("scripts/register-loom-hooks.ts", () => {
-  it("creates settings.json with all 17 hook registrations (19 entries since context-monitor appears twice and the M-13 additions bumped the manifest)", () => {
+  it("creates settings.json with a registration per LOOM_HOOKS entry (count derived, not hardcoded — note 047)", () => {
     const result = runScript(baseArgs());
     expect(result.exitCode).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report.ok).toBe(true);
-    // LOOM_HOOKS has 19 entries: 15 legacy + 1 duplicate (context-monitor on
-    // both PostToolUse and Stop) + 3 M-13 additions (loom-careful,
-    // preflight-worktree-scan, agent-result-validator).
-    expect(report.changes).toBe(19);
+    // Derived from LOOM_HOOKS at import time. context-monitor appears
+    // twice by design (PostToolUse ambient telemetry + Stop end-of-session
+    // snapshot) — LOOM_HOOKS.length counts both.
+    expect(report.changes).toBe(EXPECTED_CHANGES);
     expect(report.settingsExisted).toBe(false);
 
     const settings = readSettings();
@@ -249,7 +236,7 @@ describe("scripts/register-loom-hooks.ts", () => {
       expect(result.exitCode).toBe(0);
       const report = JSON.parse(result.stdout);
       expect(report.purged).toBeGreaterThanOrEqual(1);
-      expect(report.changes).toBe(19);
+      expect(report.changes).toBe(EXPECTED_CHANGES);
 
       const settings = readSettings();
       const preCommands = settings.hooks.PreToolUse.flatMap((e: any) =>
