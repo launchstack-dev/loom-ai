@@ -41,3 +41,7 @@ roadmap-converge-driver = "agents/roadmap-converge-driver.md"
 roadmap-converge-reviewer = "agents/roadmap-converge-reviewer.md"
 roadmap-converge-integrator = "agents/roadmap-converge-integrator.md"
 roadmap-archetype-detector = "agents/roadmap-archetype-detector.md"
+
+[settings.decisionPrinciples]
+enabled = true
+path = "protocols/loom-decision-principles.md"

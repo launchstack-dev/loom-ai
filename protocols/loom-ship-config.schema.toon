@@ -1,0 +1,27 @@
+# Loom Ship Config Schema
+#
+# Purpose: Result of deploy-target detection, written as a CLAUDE.md hint block
+#          and cached to .loom/ship-config.toon.
+# Consumers: /loom-setup:deploy, /loom-ship, /loom-canary, /loom-landing-report
+#
+# Rules:
+#   - READ-ONLY against native deploy config files (vercel.json, fly.toml, etc.) per C-06
+#   - target must be one of the declared enum values; unknown targets use "other"
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   target          enum     one of: fly, vercel, render, cloudflare, netlify, railway, other
+#   configPath      string   path to detected native config (e.g., "vercel.json", "fly.toml"); "" if none
+#   deployCommand   string   canonical deploy invocation for this target (e.g., "vercel --prod")
+#   healthCheckUrl  string   fully-qualified URL for post-deploy health probe; "" if unknown
+#   envVarKeys      string   comma-separated env var names required by the target
+#   detectedAt      string   ISO 8601 timestamp of detection run
+
+target: vercel
+configPath: vercel.json
+deployCommand: "vercel --prod"
+healthCheckUrl: "https://example.com/api/health"
+envVarKeys: "VERCEL_TOKEN,NEXT_PUBLIC_APP_URL"
+detectedAt: 2026-06-30T00:00:00Z

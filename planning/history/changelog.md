@@ -672,3 +672,14 @@ Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat
 - All 10 F-18 roadmap convergence targets covered by ≥1 criterion AND ≥1 plan scenario
 - Snapshots: pass-0 (1647), pass-1 (1647), pass-2 (1963), pass-3 (1965)
 - Ready for /loom-plan execute or /loom-plan test
+
+## 2026-07-01 — Feature added: /loom-spec --auto-mutate flag
+- Feature ID: F-37
+- Slug: loom-spec-auto-mutate-flag
+- Milestone: M-03 (Think + Spec Flow)
+- Placement: appended (into M-03 after F-09)
+- Priority: P1
+- Target roadmap: planning/ROADMAP-gstack-adoption.md
+- Origin: dogfooded via /loom-spec (skill run on itself) during first live-test of gstack-adoption skills
+- Related SKILL/command updates: skills/loom-spec/SKILL.md (Inputs + Phase 4 Mutation cadence section), commands/loom-spec.md (description)
+- Notes: mutation performed via /loom-roadmap:mutate (proper audit-trail path). `--name` flag treated as target-roadmap convention despite not being documented in the mutate command spec — flag as a UX gap for a future backlog note.

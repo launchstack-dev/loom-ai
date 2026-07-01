@@ -1285,6 +1285,48 @@ Several of Loom's core patterns — including the codebase-design vocabulary (Mo
 
 The wiki system and behavioral-guidelines draw from Andrej Karpathy's observations on LLM failure patterns. The change-proposal lifecycle is inspired by OpenSpec; Loom departs from it by treating scenarios as enforcement gates rather than documentation. See [docs/design-philosophy.md](docs/design-philosophy.md).
 
+## Direct install (power-user)
+
+Loom ships through **two parallel channels**. Neither deprecates the other
+(roadmap decision C-07). Pick whichever fits your setup.
+
+| Channel | Command | Best for |
+|---|---|---|
+| Plugin marketplace | Anthropic plugin flow | End users on stable releases |
+| Direct symlink | `bin/loom-install` | Contributors, power users, cross-host |
+
+The direct-symlink channel points a host's skill directory at a local Loom
+checkout. Upgrades become `git pull` — no tarball, no version pin, no cache to
+invalidate. It also targets non-Anthropic hosts (Hermes, OpenClaw, Codex) that
+the plugin marketplace does not reach.
+
+```bash
+# Install (default host: claude-code)
+bin/loom-install --link
+
+# Cross-host — bind one checkout into multiple hosts
+bin/loom-install --link --host hermes
+bin/loom-install --link --host openclaw
+bin/loom-install --link --host codex
+
+# Status
+bin/loom-install --check
+bin/loom-install --check --host codex
+
+# Upgrade — just pull; the symlink means changes are live immediately.
+git pull
+
+# Uninstall one host at a time
+bin/loom-install --unlink --host hermes
+```
+
+State lives at `~/.loom/install-manifest.toon` (schema:
+`protocols/install-manifest.schema.toon`). `--link` is idempotent; `--unlink`
+raises `INSTALL_MANIFEST_INVALID` on a corrupt manifest. See
+[`skills/loom-install/SKILL.md`](skills/loom-install/SKILL.md) for the full
+flow and [`planning/ROADMAP-plugin-distribution.md`](planning/ROADMAP-plugin-distribution.md)
+for the pivot rationale.
+
 ## License
 
 [Apache 2.0](LICENSE)

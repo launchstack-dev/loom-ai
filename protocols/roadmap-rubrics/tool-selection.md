@@ -30,3 +30,8 @@ This is yellow because the structure exists but the commitments are absent. "Pos
 > "We'll use modern tools and best practices."
 
 This is red because no technology is named at any layer. There is no table, no version, no purpose. Downstream agents (contracts-agent, verification-agent) cannot generate type files, database migrations, or test commands because they have nothing to read. The Constraints & Decisions section cannot reference the stack because there is no stack to reference. Reviewer must mark as blocking — the roadmap is structurally incomplete until at least the runtime, language, and primary data store are named.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

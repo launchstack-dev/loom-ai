@@ -1,0 +1,26 @@
+# Regressions Schema
+#
+# Path: .loom/regressions.toon (repo-local, append-only)
+# Consumers: plan-eng-review (preamble Known-Failure-Modes injection),
+#            hooks/agent-result-validator.ts (detectionRegex scan),
+#            reviewer agents (anti-skip clause enforcement)
+#
+# Rules:
+#   - append-only; never mutate historic rows
+#   - unique on `id`
+#   - detectionRegex OPTIONAL; when present, must be a valid JS/ECMA regex
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   id              string   R-NNN, sequential, unique per file
+#   title           string   short human-readable name; non-empty
+#   description     string   prose: what went wrong and why; non-empty
+#   detectedDate    string   ISO 8601 (YYYY-MM-DD or full datetime)
+#   sourceIncident  string   freeform description, plan path, or PR reference
+#   antiPattern     string   short code snippet or prose signature agents can grep for
+#   detectionRegex  string   optional JS/ECMA regex; empty string = no automated hook
+
+regressions[N]{id,title,description,detectedDate,sourceIncident,antiPattern,detectionRegex}:
+  R-001,"Example regression","Prose describing the failure mode and its origin",2026-06-30,"PR #123","function badPattern()",""

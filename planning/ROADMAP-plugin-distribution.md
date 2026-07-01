@@ -530,3 +530,57 @@ Beta channel — **RESOLVED** as `source: beta-channel` enum value, documented i
 Remaining:
 1. **Marketplace telemetry availability:** Confirmed with Anthropic before M-01 start? If unavailable, F-11 fallback (opt-in pings) becomes the primary signal — C-09 fallback rule (GitHub Release download ratio) is the backstop. **This is a research item, not a design decision** — answer determines fallback weighting, not the overall plan.
 2. **Sunset trigger numerics:** the 5× ratio in C-03 is a working assumption from PM round 2. Validate against historical curl install rates at first sunset evaluation; revisit if ratio is unreachable in normal adoption curves.
+
+## 2026-06-30: Direct-symlink pivot
+
+**Milestone:** M-12 Distribution (gstack adoption Phase 12, F-35).
+
+**Change:** Added a second distribution channel — `bin/loom-install` — that
+symlinks a local Loom checkout into a host's skill directory. This channel
+sits **alongside** the plugin marketplace, not in place of it. Per roadmap
+decision **C-07**, neither channel deprecates the other; the sunset framework
+in C-03 continues to apply only to the legacy curl installer, not to
+direct-symlink.
+
+**Rationale:**
+
+1. **Contributor loop.** The plugin marketplace requires a release cut to see
+   changes land in a host. Direct-symlink collapses that to `git pull` and
+   removes tarball, version-pin, and cache-invalidation friction for the
+   people who ship Loom itself.
+2. **Cross-host reach.** The Anthropic plugin marketplace does not target
+   non-Anthropic hosts. Hermes, OpenClaw, and Codex users need a first-party
+   install path. `--host <name>` binds one checkout into any of the four
+   supported hosts.
+3. **Power-user override.** Some users prefer direct-symlink semantics
+   regardless of contributor status (e.g., they run Loom from a mono-repo
+   checkout). Forcing them through the plugin flow is friction with no
+   corresponding safety win.
+4. **Manifest-driven reversal.** `--unlink` reads a schema-defined manifest
+   (`protocols/install-manifest.schema.toon`) and reverses only what it wrote,
+   so the two channels can coexist on the same machine without stepping on
+   each other's directories.
+
+**What's shipped:**
+
+- `bin/loom-install` — thin bash wrapper (bunx→npx fallback).
+- `scripts/loom-install.ts` — TypeScript entry with `--link`, `--unlink`,
+  `--check`, `--host <claude-code|hermes|openclaw|codex>`.
+- `skills/loom-install/SKILL.md` and `commands/loom-install.md`.
+- Registered in `skills/library.yaml` under `library.skills`,
+  `library.prompts`, and `library.infrastructure`.
+- README §"Direct install (power-user)" documents the alternative flow.
+
+**Non-goals:**
+
+- Deprecating the plugin marketplace channel. C-07 stands.
+- Changing the C-03 sunset framework for the curl installer.
+- Auto-detecting which channel a user has active — hosts can safely see both,
+  and the manifest records which one placed the symlinks.
+
+**Follow-ups:**
+
+- Homebrew formula (planned in v0.1.0) will wrap `bin/loom-install` for
+  brew-installed source trees.
+- A future `loom-doctor` check should verify manifest consistency (linked
+  paths still resolve to the recorded `sourcePath`).

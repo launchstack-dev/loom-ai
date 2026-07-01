@@ -26,3 +26,8 @@ This is yellow because the four required fields are partially present (Alternati
 > "We'll make good architectural decisions as we go."
 
 This is red because no decision IDs exist, no decisions are recorded, no rationales are documented, and no alternatives are evaluated. The downstream pipeline has no invariants to honor — every code review must re-derive every architectural choice from first principles. The Tech Stack section cannot be cross-referenced against the constraints because none exist. Reviewer must mark as blocking — the schema requires at least one constraint with all four fields.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

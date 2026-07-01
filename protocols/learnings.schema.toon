@@ -1,0 +1,26 @@
+# Learnings Schema
+#
+# Path: .loom/learnings.toon (repo-local, append-only)
+# Consumers: /loom-retro, /loom-learn, plan-*-review agents (preamble injection),
+#            plan-eng-review (regression cross-check)
+#
+# Rules:
+#   - append-only; never mutate historic rows
+#   - unique on `key` (kebab-case slug)
+#   - confidence 1..10 (per protocols/agent-result.schema.md confidence semantics)
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   id           string   L-NNN, sequential, unique per file
+#   key          string   kebab-case slug used for keyword search; unique per file
+#   description  string   prose lesson learned; non-empty
+#   confidence   integer  1..10 (see agent-result.schema.md § Confidence Semantics)
+#   sourcePlan   string   plan path (planning/plans/PLAN-*.md) or literal "manual"
+#   sourceDate   string   ISO 8601 (YYYY-MM-DD or full datetime)
+#   domain       string   freeform tag (e.g., "convergence", "planning", "distribution")
+#   tags         string   comma-separated tags for filtering
+
+learnings[N]{id,key,description,confidence,sourcePlan,sourceDate,domain,tags}:
+  L-001,example-key,"Example lesson learned prose",8,planning/plans/PLAN-example.md,2026-06-30,planning,"example,seed"
