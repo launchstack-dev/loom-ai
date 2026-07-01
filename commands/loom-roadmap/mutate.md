@@ -26,7 +26,7 @@ Extract from args:
 - **description** (required): the feature description string
 - **--name \<slug\>** (optional): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Slug is lowercase-hyphen (validate against `^[a-z0-9][a-z0-9-]*$`). Reject unknown/invalid slugs with a clear error listing valid `planning/ROADMAP-*.md` files.
 - **--milestone \<name\>** (optional): target milestone. Default: the current (last incomplete) milestone.
-- **--priority high** (optional): if set, place the feature at the top of the target milestone's feature list instead of appending.
+- **--priority \<value\>** (optional): sets the feature's priority. Accepted values: `P0`, `P1`, `P2`, `high`, `medium`, `low`. Placement rules: `P0` and `high` place the feature at the top of the target milestone's feature list; `P1`/`medium` and `P2`/`low` append. The exact string is persisted verbatim on the feature block as `Priority: {value}`. Unknown values MUST be rejected with an error listing the accepted set — do NOT silently coerce or drop the flag.
 - **--after \<feature-name\>** (optional): place the feature immediately after the named existing feature. Error if the named feature does not exist.
 
 If neither `--priority` nor `--after` is specified, append to the end of the target milestone's feature list.
@@ -35,7 +35,7 @@ If neither `--priority` nor `--after` is specified, append to the end of the tar
 
 1. Generate a feature ID: next sequential `F-XX` after the last feature in the roadmap.
 2. Generate a slug from the description (lowercase, hyphens, strip non-alphanumeric). E.g., "user management with RBAC" becomes `user-management-rbac`.
-3. Place the feature in the feature list at the determined position (top if `--priority high`, after the named feature if `--after`, otherwise append).
+3. Place the feature in the feature list at the determined position (top if `--priority` is `P0`/`high`, after the named feature if `--after`, otherwise append). If `--priority` was provided, persist `Priority: {value}` verbatim on the feature block.
 
 ### Step A4: Create Phase Entry (if roadmap has phases)
 
