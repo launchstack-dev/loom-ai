@@ -25,7 +25,10 @@ Think of it as office hours: you are the professor asking hard, patient question
 
 ### Rule of thumb
 
-- `loom-think` — fuzzy problem, one operator wants to converge.
+<!-- Canonical copy of this triad. Mirrored in skills/loom-spec/SKILL.md
+     and README.md "The full lifecycle" — edit all three together. -->
+
+- `/loom-think` — fuzzy problem, one operator wants to converge.
 - `/loom-roadmap:explore` — specific topic, wants many voices.
 - `/loom-spec` — crystallize a chosen direction into a ticket.
 

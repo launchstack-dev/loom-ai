@@ -22,9 +22,12 @@ Use this skill when the operator has an idea sentence and needs a precise delive
 
 ### Rule of thumb
 
-- `loom-think` — fuzzy problem, one operator wants to converge.
+<!-- Mirror of the canonical triad in skills/loom-think/SKILL.md (also in
+     README.md "The full lifecycle") — edit all three together. -->
+
+- `/loom-think` — fuzzy problem, one operator wants to converge.
 - `/loom-roadmap:explore` — specific topic, wants many voices.
-- `loom-spec` — crystallize a chosen direction into a ticket.
+- `/loom-spec` — crystallize a chosen direction into a ticket.
 
 ## Inputs
 
