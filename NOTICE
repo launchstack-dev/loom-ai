@@ -58,3 +58,73 @@ The following six patterns are attributed to Matt Pocock:
 All six patterns above are adapted under the MIT License. The original
 source material is copyright Matt Pocock. Loom's adaptations are subject
 to the Apache License 2.0 (see LICENSE in the root of this repository).
+
+========================================
+gstack — Garry Tan
+========================================
+
+Loom's judgment layer, ship-engineer cluster, retrospective ceremony,
+browser daemon foundation, and direct-symlink distribution path were
+adapted from Garry Tan's gstack (https://github.com/garrytan/gstack)
+under the terms of gstack's published license. Per the M-13 gstack-
+adoption locked decision, every idea was re-authored as a Loom-native
+resource (agent / prompt / protocol / skill / infrastructure); no gstack
+code was copied verbatim.
+
+The following thirteen milestones and thirty-six features are attributed
+to gstack as the source of the underlying idea (see
+planning/ROADMAP-gstack-adoption.md for the one-to-one mapping):
+
+  M-01 Learnings + regressions registry     (.loom/learnings.toon,
+                                             .loom/regressions.toon,
+                                             /loom-learn)
+  M-02 Retrospective ceremony               (/loom-retro)
+  M-03 Pre-plan think + spec                (/loom-think, /loom-spec)
+  M-04 Planning reviewers                   (plan-ceo-review-agent,
+                                             plan-eng-review-agent,
+                                             plan-design-review-agent,
+                                             plan-devex-review-agent)
+  M-05 Code review lenses                   (code-design-review-agent
+                                             with AI-slop detection,
+                                             code-llm-trust-review-agent,
+                                             code-codex-review-agent)
+  M-06 Design build                         (/loom-design:consultation,
+                                             /loom-design:html,
+                                             /loom-design:shotgun)
+  M-07 Doc lifecycle                        (/loom-docs:generate,
+                                             /loom-docs:release)
+  M-08 Codebase-design vocabulary adoption  (composes with the Matt
+                                             Pocock attribution above)
+  M-09 Cross-worktree fan-in coordination   (/loom-worktree,
+                                             worktree-lease schema)
+  M-10 Ship engineer                        (/loom-ship, /loom-canary,
+                                             /loom-landing-report,
+                                             /loom-setup:deploy,
+                                             VERSION-slot registry)
+  M-11 Browser infrastructure               (/loom-browser daemon,
+                                             /loom-qa, cookie import)
+  M-12 Benchmarking                         (/loom-benchmark:models,
+                                             /loom-benchmark:perf)
+  M-13 Distribution overhaul + capstone     (/loom-install direct-
+                                             symlink path, capstone
+                                             feature F-37)
+
+Also attributed to gstack, adopted as cross-cutting principles rather
+than as milestone features:
+
+  - Confidence-calibrated finding scoring (confidence:1-10) applied
+    across all reviewer AgentResult envelopes.
+  - Decision Principles + Mechanical / Taste / User-Challenge
+    classifier consumed by every auto-flow agent
+    (protocols/loom-decision-principles.md).
+  - The 0-10 rate + prescribe-to-10 rubric shape used in
+    protocols/roadmap-rubrics/*.md.
+  - The plan-completion audit classifier
+    (DIFF-VERIFIABLE / CROSS-REPO / EXTERNAL-STATE / CONTENT-SHAPE)
+    inlined into /loom-ship PR bodies.
+  - The security-review two-tier model (daily 8/10 gate + monthly
+    2/10 deep-scan) used by /loom-cso.
+
+gstack itself is an opinionated, rigorously documented methodology worth
+reading directly; we recommend it as a companion reference to anyone
+building agentic tooling on Claude Code.

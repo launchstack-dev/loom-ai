@@ -28,6 +28,18 @@ Loom is a discipline layer for Claude Code that enforces agent boundaries at the
 - **Contract page** — a per-domain wiki page mutated atomically by `/loom-change`.
 - **Convergence** — the do-work → check → remediate loop that runs until tests pass and reviewers approve.
 
+### The lineage — Loom is a synthesis
+
+Loom didn't invent any of its five load-bearing patterns; it composed them into a single tool-call-enforced pipeline and added the boundaries that let them run unattended:
+
+- **Judgment** — learnings, regressions, decision principles, confidence-scored reviews, retrospectives — adopted from Garry Tan's [gstack](https://github.com/garrytan/gstack) and re-authored as Loom-native resources.
+- **Detail** — spec-driven change proposals mutating per-domain `contract-*` pages atomically — inherits OpenSpec's shape, but treats scenarios as enforcement gates instead of documentation.
+- **Orchestration** — parallel waves under file-ownership locks with contract-lock hooks — in the spirit of the get-shit-done (GSD) pattern of turning agentic runs into a real pipeline.
+- **TDD** — red-green-refactor with a tight feedback-loop ladder and the tdd-coach agent — in the Superpowers tradition, with Matt Pocock's codebase-design vocabulary underneath (see [NOTICE](NOTICE)).
+- **Convergence** — the do-work → check → remediate loop with circuit breakers (stalled, regression, budget-exhausted) — the sophisticated cousin of Ralph's endless-refinement pattern, with typed findings, snapshots, and a driver that halts instead of spinning.
+
+The differentiator is not any one layer — it's that Loom composes all five and enforces the boundaries at the tool call, not in the prompt. Full attribution and adaptation notes live in [NOTICE](NOTICE) and [Acknowledgments](#acknowledgments).
+
 ## Outcomes
 
 What you actually get when you run Loom on a project:
@@ -1232,11 +1244,13 @@ Invoke directly or as flags on any command:
 | **Onboarding** | project-guidance, api-explorer, docs-auditor | `/loom-init` |
 | **Strategy & UX** | strategy-agent, ux-agent | review pipelines |
 | **Roadmap** | roadmap-builder, scope-feasibility, questioner | `/loom-roadmap init` |
-| **Dual-track Planning** | plan-builder, criteria-planner, interpretation-reviewer, feature-coverage, phasing, parallelization, agentic-workflow, context-budget-reviewer | `/loom-plan create`, `/loom-plan review` |
+| **Dual-track Planning** | plan-builder, criteria-planner, interpretation-reviewer, feature-coverage, phasing, parallelization, agentic-workflow, context-budget-reviewer, plan-critic | `/loom-plan create`, `/loom-plan review` |
+| **Plan Reviewers (M-04)** | plan-ceo-review (11-section CEO lens + 4 modes), plan-eng-review (7 passes + anti-skip clauses citing named regressions), plan-design-review (7 passes with 0–10 + prescribe-to-10), plan-devex-review (8 passes emitting predictedTTHW for the `/loom-devex:review` boomerang) | `/loom-plan review` |
 | **Execution** | contracts, implementer, api-route-creator, api-connector, wiring, verification | `/loom-plan execute` |
 | **Convergence** | convergence-planner, target-parser, harness-builder, criteria-harness-builder, delta-analyzer, convergence-driver | `/loom-converge` |
 | **Testing** | acceptance-criteria, unit-test, integration-test, e2e-test-writer, e2e-runner, e2e-test, qa-review | `/loom-plan test`, `/loom-converge --criteria` |
 | **Code Review** | security, architecture, plan-compliance + 6 built-in | `/loom-code review` |
+| **Code Review Lenses (M-05)** | code-design-review (designer-eye visual QA + AI-slop detection), code-llm-trust-review (prompt-injection / tool-result trust boundary), code-codex-review (cross-vendor evaluator for adversarial diversity) | `/loom-code review` |
 | **Extended Review** | performance, accessibility, dependency-auditor, api-design, database-schema, infra, observability | `/loom-code review --full` |
 | **Stage Teammates** | execute-stage, test-stage, review-stage, fix-stage, converge-stage | `/loom-auto` agent-team mode |
 | **Architecture Debaters** | tech-stack-debater, migration-architect | debate/chain |
@@ -1358,9 +1372,11 @@ Loom is open-source under Apache 2.0 and maintained by [Launchstack Dev](https:/
 
 ## Acknowledgments
 
+Loom's judgment layer — learnings, regressions, decision principles, confidence-calibrated findings, retrospectives, the ship-engineer cluster, the browser daemon foundation, and the direct-symlink distribution path — was adapted from Garry Tan's [gstack](https://github.com/garrytan/gstack). Every idea is re-authored as a Loom-native resource (agent / prompt / protocol / skill / infrastructure) rather than copied verbatim, per the M-13 gstack adoption locked decision (`planning/ROADMAP-gstack-adoption.md`). The 36 features across 13 milestones landed in commit `050ff24`; browsing `planning/ROADMAP-gstack-adoption.md` shows the one-to-one mapping from gstack idea to Loom resource. gstack itself is a rigorous, opinionated methodology worth reading directly — we recommend it to anyone building agentic tooling on Claude Code.
+
 Several of Loom's core patterns — including the codebase-design vocabulary (Module/Seam/Adapter), the feedback-loop ladder, the no-op test framing for skill authoring, the horizontal-slice anti-pattern for TDD, the throwaway-prototype branch discipline, and the grilling discipline with a 12-question cap — were adapted from educational content by Matt Pocock. Full attribution, MIT-license source references, and a description of how each pattern was adapted are recorded in [`NOTICE`](NOTICE) at the root of this repository.
 
-The wiki system and behavioral-guidelines draw from Andrej Karpathy's observations on LLM failure patterns. The change-proposal lifecycle is inspired by OpenSpec; Loom departs from it by treating scenarios as enforcement gates rather than documentation. See [docs/design-philosophy.md](docs/design-philosophy.md).
+The wiki system and behavioral-guidelines draw from Andrej Karpathy's observations on LLM failure patterns. The change-proposal lifecycle is inspired by OpenSpec; Loom departs from it by treating scenarios as enforcement gates rather than documentation. The parallel-orchestration shape is in the tradition of the get-shit-done (GSD) pattern of turning agentic runs into a pipeline. TDD discipline (red-green-refactor, tracer bullets, tight feedback loop) is in the Superpowers tradition. The convergence loop is a sophisticated cousin of Ralph's endless-refinement pattern with typed findings, snapshots, and a driver that halts instead of spinning. See [docs/design-philosophy.md](docs/design-philosophy.md) for the fuller lineage.
 
 ## Direct install (power-user)
 
