@@ -1,0 +1,3 @@
+schemaVersion: 1
+description: Registry of diagram triplets emitted by /loom-diagram. Rows added by skills/loom-diagram/SKILL.md.
+diagrams[0]{slug,path,source,generatedAt,shaShort}:

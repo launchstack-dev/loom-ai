@@ -19,3 +19,8 @@ This is yellow because the **what** is generic ("task-management tool"), the **f
 > "A platform for productivity."
 
 This is red because all three required answers are absent. "Platform" reveals nothing about what is being built. "Productivity" is not an audience. There is no temporal framing. A roadmap with this vision cannot constrain its own scope, prioritization, or success metrics — every feature is equally defensible because nothing is excluded. Reviewer must mark as blocking and refuse to evaluate downstream dimensions until the vision is rewritten.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

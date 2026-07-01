@@ -1,0 +1,27 @@
+schemaVersion: 1
+project: gstack-adoption
+source: planning/ROADMAP-gstack-adoption.md
+generatedAt: 2026-06-30
+
+decisions[3]{id,question,answer,source}:
+  D-01,"Should we adopt gstack skills into Loom?","Yes — 35 features across 13 milestones per ROADMAP-gstack-adoption.md","user-choice"
+  D-02,"Should evaluation/metrics framework work be in scope?","No — per roadmap C-03 and Q-04","user-choice"
+  D-03,"Should each port be re-authored as Loom-native or copied verbatim?","Loom-native (Loom's 5 resource types) — per roadmap C-01","codebase-pattern"
+
+acceptanceCriteria[3]{id,description}:
+  A-01,"Each ported skill lands as a Loom resource (agent/prompt/protocol/skill/infrastructure) registered in skills/library.yaml"
+  A-02,"All new schema files use TOON format per CLAUDE.md convention"
+  A-03,"File-ownership enforced per PLAN.md phase globs — no same-wave overlaps"
+
+nonGoals[4]{id,description}:
+  N-01,"Copying gstack code verbatim — everything is re-authored Loom-native"
+  N-02,"Ship-time cutover from plugin distribution to symlink — both routes remain (C-07)"
+  N-03,"Building an evaluation/measurement framework (C-03, Q-04)"
+  N-04,"Hosting the Chromium binary — /loom-browser wraps user's existing install"
+
+techContext:
+  language: typescript
+  runtime: bun (fallback npm/node)
+  hookRuntime: node
+  artifactFormat: toon
+  extensibilityModel: 5-resource-types

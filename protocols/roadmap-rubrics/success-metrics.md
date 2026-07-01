@@ -28,3 +28,8 @@ This is yellow because the metric names are present but the targets are subjecti
 > "Success means the project ships and users are happy."
 
 This is red because no metric is named, no target is specified, and no measurement method exists. There is nothing for the plan-builder-agent to translate into acceptance criteria, nothing for the verification-agent to check, and nothing for a reviewer to gate against. The roadmap effectively has no definition of done. Reviewer must mark as blocking and require at least two measurable metrics (the schema minimum) before downstream dimensions are evaluated.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

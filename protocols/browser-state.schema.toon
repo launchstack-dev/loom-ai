@@ -1,0 +1,40 @@
+# Browser Daemon State Schema
+#
+# Path: .loom/browser/state.toon
+# Consumers: /loom-browser (start/stop/status), /loom-qa, /loom-devex:review,
+#            /loom-cso, /loom-design:*, /loom-benchmark, agents/browser-daemon-agent
+#
+# Lifecycle (see PLAN § State Machines):
+#   stopped -> starting -> running -> stopping -> stopped
+#                             |
+#                             +-> crashed -> stopped
+#
+# Rules:
+#   - written by /loom-browser start after health probe passes
+#   - deleted (or marked stopped) by /loom-browser stop
+#   - if pid missing but state.toon on disk => crashed state
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   daemonPid                integer  OS process id of the Chromium daemon; 0 when stopped
+#   daemonPort               integer  port the daemon listens on for CDP
+#   startedAt                string   ISO 8601 timestamp of daemon start
+#   chromiumBinaryPath       string   absolute path to the Chromium/Chrome binary
+#   cdpEndpoint              string   ws:// URL for Chrome DevTools Protocol
+#   activeTabs[N]            table    open tabs; may be empty
+#     tabId                  string   Chrome tab identifier
+#     url                    string   current tab URL
+#     title                  string   current tab title
+#   cookiesLoaded            boolean  true if any per-domain cookies from .loom/browser/cookies/ are loaded
+#   injectionDefenseEnabled  boolean  true if prompt-injection defense hooks are attached
+
+daemonPid: 0
+daemonPort: 0
+startedAt: ""
+chromiumBinaryPath: ""
+cdpEndpoint: ""
+activeTabs[N]{tabId,url,title}:
+cookiesLoaded: false
+injectionDefenseEnabled: true

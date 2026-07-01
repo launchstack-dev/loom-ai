@@ -1,0 +1,27 @@
+# Canary History
+#
+# Path: .loom/canary-history.toon (per-project)
+# Writer: skills/loom-canary
+# Purpose: Append-only record of every /loom-canary phased rollout, so
+#          /loom-landing-report and /loom-retro can trace deploy health over time.
+#
+# Rules:
+#   - append-only; earlier rows are never rewritten
+#   - phaseVerdict is "pass" for a healthy gate, "fail" for a rollback trigger
+#   - rolledBack=true when any gate failed and the rollback path executed
+
+schemaVersion: 1
+
+# Field descriptions:
+#   runs[N]              table   one row per phased rollout
+#     canaryId           string  short id (e.g., "canary-2026-06-30-abc")
+#     target             string  deploy target from CLAUDE.md (fly|vercel|render|cloudflare|netlify|railway|other)
+#     version            string  semver being rolled out
+#     startedAt          string  ISO 8601 timestamp
+#     finishedAt         string  ISO 8601 timestamp; "" if in-flight
+#     phasesCompleted    int     0..3 for 10%/50%/100%
+#     rolledBack         bool    true|false
+#     healthCheckUrl     string  URL probed between phases
+#     notes              string  free-form summary (single line)
+
+runs[0]{canaryId,target,version,startedAt,finishedAt,phasesCompleted,rolledBack,healthCheckUrl,notes}:

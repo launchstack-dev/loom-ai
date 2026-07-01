@@ -44,3 +44,8 @@ This is yellow because the entities exist but key fields are missing (a downstre
 > "We will have users and stuff."
 
 This is red because no entities are enumerated, no key fields are named, no relationships exist, and nothing the Features section references can be validated against this model. Stage 4 of validation (Data Model Coverage) cannot run because there is no data model to compare against. Reviewer must mark as blocking — the entire downstream pipeline (contracts-agent type generation, plan-builder-agent schema expansion, criteria-planner test design) is starved of input.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

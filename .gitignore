@@ -34,5 +34,12 @@ Thumbs.db
 # Backup files
 *.bak
 
+# Browser daemon per-project state (M-11 F-33/F-34) — cookies and profile must never ship
+.loom/browser/cookies/
+.loom/browser/profile/
+.loom/browser/daemon.pid
+.loom/browser/state.toon
+.loom/browser/queue.toon
+
 # Git worktrees managed by wt.sh
 .worktrees/

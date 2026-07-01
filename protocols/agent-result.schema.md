@@ -25,6 +25,9 @@ integrationNotes: "Used Zod for runtime validation. Downstream agents should imp
 issues[N]{severity,description,file,line}:
   warning,"Missing index on users.email — add before production",src/schema.ts,42
 
+findings[N]{id,category,severity,confidence,message}:
+  F-01,performance,warning,7,"Missing index on users.email — add before production"
+
 contractAmendments[N]{file,issue}:
 
 crossBoundaryRequests[N]{file,reason,suggestedChange}:
@@ -57,6 +60,35 @@ retryMax: 3
    - `unverified` — output was produced but not yet verified
    - `skipped` — verification was intentionally skipped (e.g., contracts-only wave)
 8. **diagnoseLog** is an optional narrative written by the agent before applying fixes. It captures the diagnosis reasoning so downstream agents or reviewers can understand what was found and why fixes were applied. Omit if no diagnosis was performed.
+
+## Findings Row Schema
+
+Reviewer and audit agents emit a `findings[]` typed array in addition to (or in place of) the free-form `issues[]` list. Each row conforms to:
+
+```
+findings[N]{id,category,severity,confidence,message}:
+  <id>,<category>,<severity>,<confidence>,<message>
+```
+
+| Column | Type | Constraints |
+|---|---|---|
+| id | string | `F-NN`, unique per envelope. |
+| category | string | Reviewer-defined (e.g., `performance`, `llm-trust`, `ai-slop`, `decision-audit`). |
+| severity | enum | `blocking`, `warning`, `info`. |
+| confidence | integer | **Required. 1..10.** See Confidence Semantics below. |
+| message | string | Non-empty prose describing the finding. |
+
+### Confidence Semantics
+
+The `confidence` column is a required integer 1..10 expressing the reviewer's certainty that the finding is real and actionable:
+
+| Range | Handling | Rationale |
+|---|---|---|
+| 1..4 | **Suppressed.** Consumers MUST NOT surface the finding to the user or gate on it. It is retained in the envelope for offline analysis only. | Low-confidence noise degrades trust in the reviewer pipeline. |
+| 5..6 | **Shown with caveat.** Consumers surface the finding but MUST annotate it with a low-confidence marker (e.g., "possible" prefix, dimmer UI) and MUST NOT gate on it. | Medium confidence deserves visibility without triggering blocks. |
+| 7..10 | **Promoted.** Consumers surface the finding at full weight. Gate agents MAY block on `severity: blocking` findings at this confidence tier. | High-confidence findings drive the user-facing feedback loop. |
+
+Validator behavior: an envelope containing any `findings[]` row missing the `confidence` field MUST be rejected with error code `FINDING_MISSING_CONFIDENCE` (blocking). This is enforced by `hooks/agent-result-validator.ts`.
 
 ## Gate Primitive
 

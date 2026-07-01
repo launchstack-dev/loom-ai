@@ -1,0 +1,3 @@
+schemaVersion: 1
+description: Append-only trend log of /loom-benchmark models runs. Rows added by skills/loom-benchmark-models/SKILL.md.
+runs[0]{runId,timestamp,vendorsRun,avgQualityByVendor,estCostUsdByVendor}:

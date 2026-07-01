@@ -1,0 +1,36 @@
+# Install Manifest Schema
+#
+# Path: ~/.loom/install-manifest.toon (user-global)
+# Consumers: bin/loom-install (--link / --unlink), scripts/loom-install.ts
+#
+# Purpose: Track direct-symlink installs of the Loom source tree into
+#          host-specific Claude Code (and sibling host) skill directories.
+#          Enables clean reversal via --unlink.
+#
+# Rules:
+#   - written by bin/loom-install --link; read (and rewritten) by --unlink
+#   - installMode "plugin" means installed via the standard Claude Code plugin
+#     mechanism; "direct-symlink" means bin/loom-install placed symlinks by hand
+#   - hostBindings[] tracks every host receiving a symlink pointing at sourcePath
+#   - INSTALL_MANIFEST_INVALID (blocking) raised on parse failure during --unlink
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   installMode      enum     plugin | direct-symlink
+#   sourcePath       string   absolute path to the Loom source tree (symlink target)
+#   targetPath       string   primary symlink location (usually the first hostBinding path)
+#   installedAt      string   ISO 8601 timestamp of install
+#   loomVersion      string   semver of the Loom source at install time
+#   hostBindings[N]  table    per-host symlink records
+#     host           enum     claude-code | hermes | openclaw | codex
+#     path           string   absolute path where the symlink lives
+
+installMode: direct-symlink
+sourcePath: /Users/example/Projects/loom-ai
+targetPath: /Users/example/.claude/skills/loom
+installedAt: 2026-06-30T00:00:00Z
+loomVersion: "0.0.0"
+hostBindings[N]{host,path}:
+  claude-code,/Users/example/.claude/skills/loom

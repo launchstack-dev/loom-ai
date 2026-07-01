@@ -27,3 +27,8 @@ This is yellow because the section exists with the right number of items but the
 > *(none)*"
 
 This is red because the section is empty (or absent). The schema requires at least 2 items. An empty Out-of-Scope section means every feature request during execution must be re-evaluated from first principles, which defeats the section's purpose. It also signals to reviewers that the author has not seriously considered which adjacent features they will say no to — a roadmap that excludes nothing is committing to everything, and downstream convergence will surface the resulting contradictions as repeated late-stage scope debates. Reviewer must mark as blocking.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

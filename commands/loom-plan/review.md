@@ -55,6 +55,10 @@ Launch all agents in parallel using the Agent tool. Each agent must receive the 
 - **phasing-agent** -- Review phase boundaries, dependencies, and sequencing risks
 - **parallelization-agent** -- Design multi-agent execution waves and merge strategy
 - **agentic-workflow-agent** -- Decompose phases into discrete context-bounded tasks for AI agents
+- **plan-ceo-review-agent** -- CEO-lens 11-section review (vision, impact, positioning, scope, architecture, error/rescue map, security, data model, metrics, risks, distribution) with 4 modes and confidence-calibrated findings (M-04)
+- **plan-eng-review-agent** -- Engineering-lens 7-pass review with anti-skip clauses citing named regressions from `.loom/regressions.toon` (M-04)
+- **plan-design-review-agent** -- Design-lens 7 sequential passes (IA, interaction, journey, state coverage, empty/error/loading, a11y, visual hierarchy) rated 0-10 with prescribe-to-10 (M-04)
+- **plan-devex-review-agent** -- DevEx 8-pass review benchmarked against a DX Hall of Fame reference; emits `predictedTTHW` for the `/loom-devex:review` boomerang comparison (M-04)
 
 For each built-in agent, use `subagent_type` matching the agent name. For project-specific agents from `orchestration.toml`, use `subagent_type: "general-purpose"` and instruct the agent to read its own `.md` file from the path declared in `orchestration.toml` -- do NOT embed the file contents. Include the full plan content in each prompt along with the instruction: "Review this plan from your specialized perspective and produce your structured report."
 

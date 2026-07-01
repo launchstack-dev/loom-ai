@@ -1,0 +1,3 @@
+schemaVersion: 1
+description: Append-only trend log of /loom-benchmark perf runs. Rows added by skills/loom-benchmark/SKILL.md.
+runs[0]{runId,timestamp,prRef,LCP,CLS,FID,INP,verdict}:

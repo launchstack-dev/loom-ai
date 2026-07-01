@@ -173,6 +173,32 @@ Prompt: "Read your instructions from `~/.claude/agents/plan-compliance-reviewer.
 
 If `scope-contract.toon` exists, add to the plan-compliance-reviewer prompt: "Also check code against these scope contract decisions: {include all contract decisions}. Flag violations as [CONTRACT] severity warnings. Example: 'Decision D-03 specified repository pattern but file uses Prisma ORM.'"
 
+##### 2d. Design Review Agent -- if UI files changed (`.tsx`, `.jsx`, `.html`, `.css`, `.scss`, `.vue`, `.svelte`), or if `--full`
+Prompt: "Read your instructions from `~/.claude/agents/code-design-review-agent.md` first." Then provide:
+- The git diff (filtered to UI files)
+- Tech stack from package.json
+- Screenshot pairs (optional; only when the M-11 browser daemon is available — omit until Phase 7 lands)
+
+Findings arrive tagged `[DESIGN]` with the first-class `ai-slop` category surfacing detected AI-slop patterns.
+
+##### 2e. LLM Trust Review Agent -- if any file touches an LLM SDK / MCP / agent boundary, or if `--full`
+Detection heuristic: file imports `@anthropic-ai/sdk`, `openai`, `@google/generative-ai`, `ai` (Vercel AI SDK), `langchain`, `@modelcontextprotocol/*`, or the diff mentions `tool_result`, `messages:`, `system:`, `mcp`, `agent`. If unsure, include it in default mode.
+
+Prompt: "Read your instructions from `~/.claude/agents/code-llm-trust-review-agent.md` first." Then provide:
+- The git diff
+- Tech stack from package.json (LLM SDK, MCP servers, agent framework)
+- Scope: `full` (or `boundaries-only` for `--quick`)
+
+Findings arrive tagged `[LLM-TRUST]` across four categories: prompt-injection-surface, tool-result-trust, mcp-response-trust, agent-output-as-code.
+
+##### 2f. Codex (Cross-Vendor) Review Agent -- only if `--full` OR env `LOOM_CODEX_VENDOR` is set
+Prompt: "Read your instructions from `~/.claude/agents/code-codex-review-agent.md` first." Then provide:
+- The git diff
+- Tech stack from package.json
+- CLAUDE.md if available
+
+Config read from env: `LOOM_CODEX_VENDOR` (default `openai`), `LOOM_CODEX_MAX_COST_CENTS` (default `50`). Findings arrive tagged `[CODEX-OPENAI]` or `[CODEX-GEMINI]` per vendor. If the agent returns `status: skipped` (cost cap or vendor unavailable), note the skip in the report but do not fail the review.
+
 #### Parallel Execution Strategy
 
 Launch ALL applicable agents in a SINGLE message with multiple Agent tool calls. This is critical for performance -- don't serialize them.
@@ -185,8 +211,11 @@ For default mode, launch:
 - 1a, 1b, 1d (built-in: code review, silent failures, test coverage)
 - 2a, 2b (bespoke: security, architecture)
 - 2c if plan exists
+- 2d if UI files changed
+- 2e if LLM-boundary files changed
+- 2f if `LOOM_CODEX_VENDOR` env is set
 
-For `--full` mode, launch all: 1a-1f + 2a-2c.
+For `--full` mode, launch all: 1a-1f + 2a-2f.
 
 #### Step 3: Collect and Deduplicate
 
@@ -285,6 +314,9 @@ Each finding is tagged with the reviewer that found it:
 - `[PLAN]` -- plan-compliance-reviewer
 - `[CONTRACT]` -- scope contract violation (plan-compliance-reviewer)
 - `[API-MAP]` -- api-explorer
+- `[DESIGN]` -- code-design-review-agent (includes first-class `ai-slop` finding category)
+- `[LLM-TRUST]` -- code-llm-trust-review-agent (prompt-injection-surface | tool-result-trust | mcp-response-trust | agent-output-as-code)
+- `[CODEX-OPENAI]` / `[CODEX-GEMINI]` -- code-codex-review-agent (per-vendor attribution)
 
 ## Subcommand: review --autoconverge
 

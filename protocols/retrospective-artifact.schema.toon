@@ -1,0 +1,46 @@
+# Retrospective Artifact Schema
+#
+# Path: .loom/retros/{YYYY-MM-DD}.md (frontmatter conforms to this schema;
+#       body is human-authored markdown)
+# Consumers: /loom-retro, agents/retrospective-agent, /loom-learn (import),
+#            plan-eng-review (regression cross-reference)
+#
+# Purpose: Structured record of a retrospective session — what worked, what
+#          didn't, and pointers to the learnings/regressions the retro produced.
+#
+# Rules:
+#   - one file per retroDate; overwrites are appends via supersedes chain
+#   - insightsExtractedTo points at the .loom/learnings.toon file (or empty)
+#   - regressionsIdentified lists R-NNN ids appended to .loom/regressions.toon
+#   - roadmapMutationsSuggested items are freeform prose the user may hand to
+#     /loom-roadmap:mutate; not auto-applied
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   retroDate                       string   ISO 8601 date of the retro (YYYY-MM-DD)
+#   periodStart                     string   ISO 8601 date; start of retro window
+#   periodEnd                       string   ISO 8601 date; end of retro window
+#   gitActivity[N]                  table    commits in window
+#     commit                        string   short SHA
+#     summary                       string   commit subject line
+#   closedPrs[N]                    table    PRs closed in window
+#     number                        integer  PR number
+#     title                         string   PR title
+#   whatWorked[N]                   string[] prose bullets; append-only within a retro
+#   whatDidntWork[N]                string[] prose bullets; append-only within a retro
+#   insightsExtractedTo             string   path to learnings.toon updates; "" if none
+#   regressionsIdentified[N]        string[] R-NNN ids appended to regressions.toon
+#   roadmapMutationsSuggested[N]    string[] prose suggestions for /loom-roadmap:mutate
+
+retroDate: 2026-06-30
+periodStart: 2026-06-23
+periodEnd: 2026-06-30
+gitActivity[N]{commit,summary}:
+closedPrs[N]{number,title}:
+whatWorked[N]:
+whatDidntWork[N]:
+insightsExtractedTo: ""
+regressionsIdentified[N]:
+roadmapMutationsSuggested[N]:

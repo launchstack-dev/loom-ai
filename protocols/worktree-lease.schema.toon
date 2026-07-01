@@ -1,0 +1,37 @@
+# Worktree Lease Schema
+#
+# Purpose: Registry of active worktree ownership leases used by the
+#          cross-worktree preflight scan (F-01, M-09 Phase 10).
+# Consumers:
+#   - scripts/loom-worktree-scan.ts (writer)
+#   - hooks/preflight-worktree-scan.ts (reader, PreToolUse on `/loom-git pr`)
+#   - skills/loom-worktree/SKILL.md (documentation)
+#
+# Storage location: ~/.loom/leases/{repo}.toon
+#   - User-scoped, one file per repo (repo = basename of primary worktree)
+#   - NOT created by installer — created on first `loom-worktree scan`
+#   - Directory itself is created lazily by the scan script
+#
+# Rules:
+#   - schemaVersion is bumped on any breaking field change
+#   - Writes are atomic: write to {path}.tmp then fs.renameSync
+#   - Advisory only — nothing enforces the leases; the preflight hook only warns
+#   - `status` enum: active | released | expired
+#   - `ownedGlobs` is a semicolon-separated string of gitignore-style globs
+#     (semicolons used because commas are the TOON column separator)
+#   - `expiresAt` uses ISO 8601; a scan that finds `now > expiresAt` marks the
+#     lease `expired` and rewrites the row rather than deleting it
+#
+# Field descriptions:
+#   id             string   stable slug: "{repoBasename}:{branch}"
+#   workspacePath  string   absolute filesystem path to the worktree
+#   branch         string   git branch owned by this worktree
+#   ownedGlobs     string   semicolon-separated list of file globs (see above)
+#   claimedAt      string   ISO 8601 timestamp of first scan that saw this branch
+#   expiresAt      string   ISO 8601 expiry; default = claimedAt + 14 days
+#   status         enum     one of: active, released, expired
+
+schemaVersion: 1
+
+leases[N]{id,workspacePath,branch,ownedGlobs,claimedAt,expiresAt,status}:
+  loom-ai:m07,/Users/example/Projects/loom-ai/.worktrees/m07,m07,src/auth/*;src/session/**,2026-06-30T10:00:00Z,2026-07-14T10:00:00Z,active

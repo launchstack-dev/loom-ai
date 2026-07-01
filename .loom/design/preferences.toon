@@ -1,0 +1,8 @@
+schemaVersion: 1
+description: "Time-decaying taste memory for /loom-design:shotgun (M-13 F-24). Each row is one user preference capture. Decay: rows older than 90 days are weight-reduced; older than 180 days drop from active influence (retained for provenance)."
+
+preferences[0]{capturedAt,slug,n,winnerVariant,winnerAxis,rejectedAxes,notes}:
+
+archived[0]{capturedAt,slug,n,winnerVariant,winnerAxis,rejectedAxes,notes}:
+
+lastUpdated: 2026-06-30T00:00:00Z

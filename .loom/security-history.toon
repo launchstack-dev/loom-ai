@@ -1,0 +1,2 @@
+schemaVersion: 1
+entries[0]{timestamp,mode,score,confidenceFloor,secretsCount,depVulnCount,authGaps,inputValidationGaps,llmTrustIssues,filePermIssues,cicdIssues,gitSha}:

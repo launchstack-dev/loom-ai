@@ -1,0 +1,2 @@
+schemaVersion: 1
+entries[0]{timestamp,score,tsErrors,testFailures,lintErrors,unused,shellIssues}:

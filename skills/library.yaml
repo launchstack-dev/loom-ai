@@ -193,6 +193,26 @@ library:
       description: Per-dimension rubric files for the roadmap-converge harness — green/yellow/red exemplars for vision, milestones, tool-selection, data-model, success-metrics, constraints, risks, out-of-scope; archetype overrides in roadmap-converge.rubricOverrides
       source: protocols/roadmap-rubrics/vision.md
 
+    - name: loom-decision-principles
+      description: Decision Principles + classifier (mechanical / taste / user-challenge) consulted by auto-flow agents. Defines P1–P6 precedence, per-phase tiebreakers, and the required decision emission contract.
+      source: protocols/loom-decision-principles.md
+
+    - name: worktree-lease
+      description: "Cross-worktree lease registry schema for the M-09 F-01 fan-in preflight. Defines leases[]{id,workspacePath,branch,ownedGlobs,claimedAt,expiresAt,status} written to ~/.loom/leases/{repo}.toon. Advisory only — no enforcement in M-09. Shipped by M-09 (gstack adoption Phase 10)."
+      source: protocols/worktree-lease.schema.toon
+
+    - name: version-slot
+      description: "VERSION-slot registry schema at ~/.loom/version-slots.toon. Defines slots[]{repo,version,branch,worktreePath,prNumber,prState,claimedAt,lastSeenAt} written by scripts/loom-version-slot.ts and read by /loom-ship + /loom-landing-report. Stale rows are ejected when branch is gone AND no open PR. Shipped by M-10 (gstack adoption Phase 11 F-30)."
+      source: protocols/version-slot.schema.toon
+
+    - name: learnings-schema
+      description: "Learnings registry schema at .loom/learnings.toon. Defines learnings[]{id,capturedAt,category,summary,context,appliesTo,confidence} consumed by plan-review agents (CEO/eng/design/devex) at preamble to inject prior lessons into review passes. Shipped by M-04 (gstack adoption Phase 4)."
+      source: protocols/learnings.schema.toon
+
+    - name: regressions-schema
+      description: "Regressions registry schema at .loom/regressions.toon. Defines regressions[]{id,capturedAt,summary,rootCause,detection,preventionRule} consumed by plan-eng-review-agent to enforce anti-skip clauses citing named regressions. Shipped by M-04 (gstack adoption Phase 4)."
+      source: protocols/regressions.schema.toon
+
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
     - name: python-conventions
@@ -220,6 +240,86 @@ library:
         - "**/loop.toon"
         - "**/feedback-loop*"
 
+    - name: loom-install
+      description: Direct-symlink install path for Loom — alternative to plugin marketplace, cross-host (claude-code, hermes, openclaw, codex). Documents install/upgrade/uninstall flow, git-pull upgrade path, cross-host binding, and the install manifest schema. Auto-loads when working under bin/loom-install, scripts/loom-install.ts, or ~/.loom/install-manifest.toon.
+      source: skills/loom-install/SKILL.md
+      triggers:
+        - "bin/loom-install"
+        - "scripts/loom-install.ts"
+        - "**/install-manifest.toon"
+
+    - name: loom-retro
+      description: Retrospective ceremony — reads git activity, closed PRs, and planning artifacts, then appends structured learnings and regressions to .loom/. 5-phase workflow — gather activity, structured interview, extract learnings with confidence scores, extract anti-patterns, suggest ROADMAP mutations.
+      source: skills/loom-retro/SKILL.md
+
+    - name: loom-think
+      description: 5-phase office-hours deep-think interview for fuzzy problems — Problem, Demand Evidence, Status Quo, Approach Candidates (cross-model review marker), Target User / Narrowest Wedge, Synthesis. Writes a durable design doc to .loom/thinks/{slug}-{ISO-timestamp}.md with a Supersedes chain, feeding /loom-roadmap init --from.
+      source: skills/loom-think/SKILL.md
+
+    - name: loom-spec
+      description: 5-phase interview from vague idea to precise ROADMAP feature block or GH issue — Elicit, Sharpen, Classify (bug/feature/enhancement/refactor/debt), Draft, Optional worktree spawn. Emits a SpecRecord TOON envelope; documents auto-close-on-merge for the source GH issue.
+      source: skills/loom-spec/SKILL.md
+
+    - name: loom-docs-release
+      description: "Post-ship doc sync — diff-driven README/CHANGELOG/ARCH updates, diagram drift detection, and a CHANGELOG sell-test rubric (names user benefit, scannable in <3s, no marketing prose). Emits a DocSyncReport and surfaces doc-debt in the PR body; exits non-zero when README is missing an entry for a shipped surface. Shipped by M-06 (gstack adoption Phase 6)."
+      source: skills/loom-docs-release/SKILL.md
+
+    - name: loom-skillify
+      description: "Retrospective codification — walks back the conversation transcript, distills a successful one-shot flow into script.ts + test.ts + TOON fixture under scripts/skillified/, and runs vitest before registering. The backward-direction pair to /loom-agent create and /loom-skill create. Shipped by M-06 (gstack adoption Phase 6)."
+      source: skills/loom-skillify/SKILL.md
+
+    - name: loom-browser
+      description: "Persistent Chromium daemon at .loom/browser/ with tiered READ/WRITE/META command semantics, a11y-tree refs (role+name+index), anti-bot stealth stubs, and prompt-injection defense hook that M-05 F-15 wires to code-llm-trust-review-agent. Wraps existing user Chrome install — no binary bundled. Shipped by M-11 (gstack adoption Phase 7)."
+      source: skills/loom-browser/SKILL.md
+
+    - name: loom-setup-browser-cookies
+      description: "Import real Chrome/Chromium/Brave/Edge cookies into .loom/browser/cookies/{domain}.toon for authenticated live-site QA. Detects cookie store on macOS/Linux/Windows, reads domain list from .loom/browser/cookie-domains.toon, tracks per-cookie expiry. Gitignored. Shipped by M-11 (gstack adoption Phase 7)."
+      source: skills/loom-setup-browser-cookies/SKILL.md
+
+    - name: loom-cso
+      description: "Chief Security Officer plan/code audit — two-tier: daily 8/10 gate (confidence >= 8, blocks PR on regression) + monthly 2/10 deep-scan (confidence >= 2). Seven lenses: secrets, dep vulns, auth boundaries, input validation, LLM trust, file perms, CI/CD supply chain. Appends to .loom/security-history.toon. Shipped by M-07 (gstack adoption Phase 8)."
+      source: skills/loom-cso/SKILL.md
+
+    - name: loom-qa
+      description: "Live-site iterative test-fix loop. Browser-drives site via /loom-browser daemon, finds bugs, fixes iteratively with atomic commits, re-verifies until stable or tier budget exhausted. Three tiers: Quick (5 min happy-path), Standard (15 min + top 5 states), Exhaustive (45 min full a11y + edge + regression). Emits before/after health scores + shipReadiness. Shipped by M-07 (gstack adoption Phase 8)."
+      source: skills/loom-qa/SKILL.md
+
+    - name: loom-devex-review
+      description: "Live DX audit — measures actual TTHW (time-to-hello-world) in a fresh temp dir and reports a boomerang delta vs plan-devex-review-agent's predictedTTHW. Scores CLI help, error messages, config-surface complexity. Archives to planning/history/reviews/{date}-devex-audit.toon so the next plan review can adjust. Shipped by M-07 (gstack adoption Phase 8)."
+      source: skills/loom-devex-review/SKILL.md
+
+    - name: loom-worktree
+      description: "Cross-worktree fan-in preflight — enumerates sibling worktrees at ../ and $HOME/.worktrees, extracts owned globs from PLAN.md or git diff, writes advisory leases to ~/.loom/leases/{repo}.toon per protocols/worktree-lease.schema.toon, and reports overlap findings with confidence 1-10. Advisory only — see skill body for the three-mechanism roadmap (enforced leases, semantic AST scan, rebase-storm coordinator). Shipped by M-09 (gstack adoption Phase 10 F-01)."
+      source: skills/loom-worktree/SKILL.md
+
+    - name: loom-ship
+      description: "Chief ship-engineer skill — pre-flight rebase-from-base + drift detection + VERSION-slot reservation via scripts/loom-version-slot.ts + plan-completion audit (DIFF-VERIFIABLE / CROSS-REPO / EXTERNAL-STATE / CONTENT-SHAPE classifier, cap 50) inlined in PR body via gh pr create. Halts on rebase conflict, unresolved drift, or missing gh. Shipped by M-10 (gstack adoption Phase 11 F-30)."
+      source: skills/loom-ship/SKILL.md
+
+    - name: loom-canary
+      description: "Progressive deploy skill — three-phase rollout (10%/50%/100%) with health-check gates between phases and immediate rollback on any gate failure. Reads deploy config from CLAUDE.md ## Deploy Configuration block populated by /loom-setup:deploy; wraps target-native CLI (fly/vercel/wrangler/netlify/railway/render). Appends every run to .loom/canary-history.toon. Shipped by M-10 (gstack adoption Phase 11 F-31)."
+      source: skills/loom-canary/SKILL.md
+
+    - name: loom-landing-report
+      description: "Multi-workspace dashboard skill — enumerates sibling worktrees at ../ and $HOME/.worktrees, cross-references ~/.loom/version-slots.toon and open PRs via gh, and emits a TOON workspaces[] table with workspace/branch/versionSlot/lastCommit/prNumber/prState/stale columns. Stale = no commits in 24 h AND no matching open PR. Read-only. Shipped by M-10 (gstack adoption Phase 11 F-31)."
+      source: skills/loom-landing-report/SKILL.md
+
+    - name: loom-setup-deploy
+      description: "Deploy-target detection skill — scans repo signals (fly.toml → vercel.json/.vercel/ → wrangler.toml/wrangler.jsonc → netlify.toml/.netlify/ → railway.json → render.yaml → bare Dockerfile) and appends a ## Deploy Configuration TOON block to CLAUDE.md conforming to protocols/loom-ship-config.schema.toon. Read-only w.r.t. native deploy configs per C-06. Shipped by M-10 (gstack adoption Phase 11 F-32)."
+      source: skills/loom-setup-deploy/SKILL.md
+
+    - name: loom-design-consultation
+      description: "Ground-up brand kickoff — 5-phase interview (audience/tone → aesthetic direction → typography pairing → color system → motion principles) writing a durable premise artifact to .loom/design/{slug}-{ISO-timestamp}.md. Reads .loom/learnings.toon (domain: design) for prior cross-project decisions. Optional font-preview render delegated to /loom-design:html. Shipped by M-13 (gstack adoption Phase 13 F-22)."
+      source: skills/loom-design-consultation/SKILL.md
+
+    - name: loom-design-html
+      description: "Production HTML/CSS from mockup — Pretext-native rules (rem/em, flexbox/grid, computed heights, text-wrap: balance/pretty, semantic HTML5, tokenized colors) plus Phase 5 F-14 anti-AI-slop guards (no gradient overuse, no marketing-prose comments, no default palettes without customization). Emits docs/design/{slug}/index.html + styles.css atomically. Shipped by M-13 (gstack adoption Phase 13 F-23)."
+      source: skills/loom-design-html/SKILL.md
+
+    - name: loom-design-shotgun
+      description: "Parallel UI variant board — generates N variants (default 4) on distinct axes (minimalist/dense/brutalist/editorial), renders side-by-side via /loom-browser daemon (fallback to .loom/design/shotgun/{slug}/variant-{n}.html), captures user preference with capturedAt ISO-8601 timestamp to .loom/design/preferences.toon, time-decays old preferences (weight-down at 90 d, drop-out at 180 d) so taste memory adapts without ossifying. Shipped by M-13 (gstack adoption Phase 13 F-24)."
+      source: skills/loom-design-shotgun/SKILL.md
+
   infrastructure:
     - name: statusline-renderer
       description: Node.js statusline renderer for Claude Code — pipeline state, context bar, update indicator
@@ -235,6 +335,66 @@ library:
       description: Background update check — fetches catalog version from GitHub, writes cache
       source: hooks/loom-update-checker.cjs
       target: ~/.claude/loom-update-checker.cjs
+
+    - name: agent-result-validator
+      description: PostToolUse hook that scans AgentResult TOON envelopes for findings[] rows and emits FINDING_MISSING_CONFIDENCE (non-blocking warning) when the confidence:1-10 field is absent or out of range. Contract - protocols/agent-result.schema.md § Confidence Semantics. Register via scripts/register-loom-hooks.ts.
+      source: hooks/agent-result-validator.ts
+
+    - name: loom-learnings-search
+      description: CLI utility to search .loom/learnings.toon by keyword on key/description/tags, filter by --min-confidence, sort by confidence desc, and print top-N as a TOON typed array. Always exits 0.
+      source: scripts/loom-learnings-search.ts
+
+    - name: loom-careful
+      description: PreToolUse hook that blocks destructive Bash commands (rm -rf against /, ~, ., *, DROP TABLE, git push --force, git reset --hard, chmod -R 777, dd to /dev/*, mkfs, redirects to /dev/sda*). Emits CAREFUL_BLOCKED. Override with env LOOM_CAREFUL_OVERRIDE=1. Fail-open on parse errors.
+      source: hooks/loom-careful.ts
+
+    - name: loom-health
+      description: CLI that runs typecheck (30%), tests (30%), lint (20%), dead-code (10%), and shellcheck (10%) and prints a composite 0-10 quality score as TOON, appending a HealthScoreHistory row to .loom/health-history.toon. Missing tools emit HEALTH_TOOL_MISSING and drop from the re-normalised composite.
+      source: scripts/loom-health.ts
+
+    - name: loom-browser-daemon
+      description: "Persistent Chromium daemon runtime for M-11 F-33. Subcommands start|stop|status|exec. Writes .loom/browser/state.toon per protocols/browser-state.schema.toon. Detects Chrome/Chromium/Brave/Edge binary; falls back to stub mode (queue-only, no hard fail) when no binary is present. Prompt-injection defense hook is a no-op in M-11 and is wired to code-llm-trust-review-agent in M-05 F-15."
+      source: scripts/loom-browser-daemon.ts
+
+    - name: loom-import-cookies
+      description: "Chrome cookie import runtime for M-11 F-34. Detects cookie store on macOS/Linux/Windows for Chrome/Chromium/Brave/Edge, reads domain list from .loom/browser/cookie-domains.toon, decrypts cookies via chrome-cookies-secure (best-effort — prints install hint if missing), and writes per-domain files to .loom/browser/cookies/{domain}.toon with expiresAt per cookie."
+      source: scripts/loom-import-cookies.ts
+
+    - name: loom-benchmark-models
+      description: "Side-by-side comparison of Claude+GPT+Gemini on same prompt with LLM judge scoring quality; dashboard reports latency, tokens, cost, and quality per vendor. Appends to .loom/benchmark-history.toon. Shipped by M-08 (gstack adoption Phase 9 F-25)."
+      source: skills/loom-benchmark-models/SKILL.md
+
+    - name: loom-learn
+      description: "Review/search/prune/export learnings from .loom/learnings.toon (from M-01 F-04). Proactively surfaces top 3 prior learnings when the user prompt contains 'didn't we', 'before', 'again', 'recurring'. Shipped by M-08 (gstack adoption Phase 9 F-26)."
+      source: skills/loom-learn/SKILL.md
+
+    - name: loom-benchmark
+      description: "Perf regression via /loom-browser daemon — Core Web Vitals baseline/PR-diff with LCP/CLS/FID/INP per PR; appends to .loom/perf-history.toon. Shipped by M-08 (gstack adoption Phase 9 F-27)."
+      source: skills/loom-benchmark/SKILL.md
+
+    - name: loom-docs-generate
+      description: "Cold-start docs via Diataxis quadrant (tutorial/how-to/reference/explanation) — emits 4 stub docs under docs/ with diataxis: frontmatter tags. Shipped by M-08 (gstack adoption Phase 9 F-28)."
+      source: skills/loom-docs-generate/SKILL.md
+
+    - name: loom-diagram
+      description: "English or mermaid → excalidraw triplet (source .md + editable .excalidraw + rendered .svg/.png). Registers each triplet in .loom/diagrams/index.toon for drift detection by /loom-docs:release. Shipped by M-08 (gstack adoption Phase 9 F-29)."
+      source: skills/loom-diagram/SKILL.md
+
+    - name: loom-worktree-scan
+      description: "CLI utility that scans sibling worktrees at ../ and $HOME/.worktrees, derives file-ownership from PLAN.md or git diff --name-only base...HEAD, and writes an advisory lease registry to ~/.loom/leases/{repo}.toon per protocols/worktree-lease.schema.toon. Subcommands - scan, preflight (exit 1 on overlap), leases, release <id>. Shipped by M-09 (gstack adoption Phase 10 F-01)."
+      source: scripts/loom-worktree-scan.ts
+
+    - name: preflight-worktree-scan
+      description: "PreToolUse hook that watches Bash tool calls for /loom-git pr invocations and runs the cross-worktree ownership scanner. Non-blocking - emits stderr warning findings (each with confidence:1-10 + suggestedAction) when sibling-worktree overlap is detected. Bypass with LOOM_WORKTREE_PREFLIGHT_DISABLE=1. Fail-open on all errors. Register via scripts/register-loom-hooks.ts. Shipped by M-09 (gstack adoption Phase 10 F-01)."
+      source: hooks/preflight-worktree-scan.ts
+
+    - name: loom-version-slot
+      description: "VERSION-slot reservation runtime for /loom-ship. Scans sibling worktrees for claimed versions (package.json/pyproject.toml/Cargo.toml/VERSION) and layers open-PR data via gh pr list. Writes registry to ~/.loom/version-slots.toon per protocols/version-slot.schema.toon (atomic .tmp+rename). Subcommands: scan | next --bump patch|minor|major | reserve <version> | release <version>. Shipped by M-10 (gstack adoption Phase 11 F-30)."
+      source: scripts/loom-version-slot.ts
+
+    - name: loom-install
+      description: "Direct-symlink install path for Loom (F-35, M-12 Distribution). Alternative to plugin marketplace; neither channel deprecates the other (roadmap C-07). bin/loom-install wraps scripts/loom-install.ts and supports --link, --unlink, --check across four hosts: claude-code (default), hermes, openclaw, codex. Writes ~/.loom/install-manifest.toon per protocols/install-manifest.schema.toon (atomic .tmp+rename). Idempotent --link, INSTALL_MANIFEST_INVALID blocking on corrupt manifest during --unlink. Shipped by M-12 (gstack adoption Phase 12)."
+      source: scripts/loom-install.ts
 
   agents:
     # Planning agents
@@ -396,6 +556,50 @@ library:
     - name: plan-critic-checklist
       description: 30-item distilled concern checklist (5 per dimension across feature-coverage, strategy, ux, phasing, parallelization, agentic-workflow) — paired with plan-critic-agent; the agent reads this file inline as a guide for its critique
       source: agents/plan-critic-checklist.md
+
+    # M-04 Planning Reviewers (gstack adoption Phase 4)
+    - name: plan-ceo-review-agent
+      description: "CEO-lens plan review — 11 sections (vision fit, business impact, positioning, scope discipline, architecture, error/rescue map, security/threat model, data model, success metrics, risks, distribution). 4 modes: SCOPE_EXPANSION / SELECTIVE / HOLD / REDUCTION. Findings carry confidence 1..10. Reads .loom/learnings.toon at preamble."
+      source: agents/plan-ceo-review-agent.md
+      requires: [protocol:agent-result-schema, protocol:learnings-schema]
+      kit: plan-review
+
+    - name: plan-eng-review-agent
+      description: "Engineering-lens plan review — 7 passes (architecture, dependencies, error handling, sizing, phasing, parallelization, contracts) each with an anti-skip clause citing named regressions from .loom/regressions.toon. Findings carry confidence 1..10."
+      source: agents/plan-eng-review-agent.md
+      requires: [protocol:agent-result-schema, protocol:learnings-schema, protocol:regressions-schema]
+      kit: plan-review
+
+    - name: plan-design-review-agent
+      description: "Design-lens plan review — 7 sequential passes (IA, interaction flow, user journey, state coverage, empty/error/loading states, accessibility, visual hierarchy). Rate 0-10 + prescribe-to-10. Findings carry confidence 1..10."
+      source: agents/plan-design-review-agent.md
+      requires: [protocol:agent-result-schema, protocol:learnings-schema]
+      kit: plan-review
+
+    - name: plan-devex-review-agent
+      description: "DevEx plan review — 8 passes with DX Hall of Fame reference (install DX, TTHW prediction, CLI ergonomics, error quality, doc-first vs code-first, config surface, upgrade path, uninstall/rollback). Emits predictedTTHW for /loom-devex:review boomerang. Findings carry confidence 1..10."
+      source: agents/plan-devex-review-agent.md
+      requires: [protocol:agent-result-schema, protocol:learnings-schema]
+      kit: plan-review
+
+    # M-05 Code Review Lenses (gstack adoption Phase 5)
+    - name: code-design-review-agent
+      description: "Designer-eye visual QA code review — iterative fix + screenshot diff. Detects AI slop patterns (excessive gradients, generic emoji, marketing prose, over-symmetric grids, default shadcn palette, Lorem-Ipsum fake data) as a first-class finding category. Static-inspection mode until M-11 browser daemon ships. Findings carry confidence 1..10."
+      source: agents/code-design-review-agent.md
+      requires: [protocol:agent-result-schema]
+      kit: code-review
+
+    - name: code-llm-trust-review-agent
+      description: "LLM trust-boundary code review — 4 categories (prompt-injection surfaces, tool-result trust, MCP response trust, agent-output-as-code). Flags user-controlled strings interpolated into prompts, tool_result re-injected as instruction, MCP responses trusted as authoritative, and agent-produced strings that flow into eval/exec/query. Findings carry confidence 1..10."
+      source: agents/code-llm-trust-review-agent.md
+      requires: [protocol:agent-result-schema]
+      kit: code-review
+
+    - name: code-codex-review-agent
+      description: "Cross-vendor code review — wraps OpenAI Codex or Gemini as an adversarial evaluator alongside Claude reviewers in /loom-code review and /loom-vote. Vendor selected via LOOM_CODEX_VENDOR (default openai); cost capped via LOOM_CODEX_MAX_COST_CENTS (default 50). Findings tagged [CODEX-{vendor}] and carry confidence 1..10."
+      source: agents/code-codex-review-agent.md
+      requires: [protocol:agent-result-schema]
+      kit: code-review
 
     # Utility agents
     - name: meta-agent
@@ -610,6 +814,128 @@ library:
       source: commands/loom-data.md
       kit: data-engineering
 
+    - name: loom-careful
+      description: "Toggle destructive-command guard — documents the loom-careful PreToolUse hook, its blocklist, and per-command / per-session / global override paths"
+      source: commands/loom-careful.md
+
+    - name: loom-health
+      description: "Composite 0-10 quality score with trend history — runs scripts/loom-health.ts and displays current score plus trend from .loom/health-history.toon"
+      source: commands/loom-health.md
+
+    - name: loom-think
+      description: "5-phase deep-think interview producing a structured design doc under .loom/thinks/ — precedes /loom-roadmap init for fuzzy problems"
+      source: commands/loom-think.md
+
+    - name: loom-spec
+      description: "5-phase interview from vague idea to precise ROADMAP feature block or GH issue, with optional worktree spawn and auto-close-on-merge"
+      source: commands/loom-spec.md
+
+    - name: loom-docs
+      description: "Doc lifecycle dispatcher — subcommands for post-ship doc sync (release) with future room for /loom-docs:generate under M-08"
+      source: commands/loom-docs.md
+
+    - name: loom-docs-release
+      description: "Post-ship doc sync subcommand — diff-driven README/CHANGELOG/ARCH updates + diagram drift + CHANGELOG sell-test; exits non-zero on unresolved doc-debt"
+      source: commands/loom-docs/release.md
+
+    - name: loom-browser
+      description: "Persistent Chromium daemon (M-11 F-33) — start/stop/status/exec subcommands with tiered READ/WRITE/META semantics, a11y-tree refs, prompt-injection defense hook. Wraps existing user Chrome install."
+      source: commands/loom-browser.md
+
+    - name: loom-setup
+      description: "Setup dispatcher for one-time project-local resource priming (cookies, credentials, fixtures). First subcommand is browser-cookies (M-11 F-34)."
+      source: commands/loom-setup.md
+
+    - name: loom-setup-browser-cookies
+      description: "Import real Chrome/Chromium/Brave/Edge cookies into .loom/browser/cookies/{domain}.toon for authenticated live-site QA (M-11 F-34). Gitignored."
+      source: commands/loom-setup/browser-cookies.md
+
+    - name: loom-skillify
+      description: "Retrospective codification of a successful one-shot flow into scripts/skillified/{slug}.ts + test.ts + TOON fixture with a vitest gate before registration"
+      source: commands/loom-skillify.md
+
+    - name: loom-cso
+      description: "Chief Security Officer two-tier security review dispatcher — subcommands: daily (fast 8/10 gate, blocks PR on regression) and monthly (exhaustive 2/10 deep scan). Seven lenses: secrets, dep vulns, auth, input validation, LLM trust, file perms, CI/CD supply chain. Trend-tracked via .loom/security-history.toon. Shipped by M-07 (gstack adoption Phase 8)."
+      source: commands/loom-cso.md
+
+    - name: loom-qa
+      description: "Live-site iterative test-fix loop dispatcher — --tier quick|standard|exhaustive drives target URL through /loom-browser daemon, iterates fix→verify with atomic commits, emits before/after health scores and shipReadiness verdict. Refuses to run if daemon is stopped/crashed. Shipped by M-07 (gstack adoption Phase 8)."
+      source: commands/loom-qa.md
+
+    - name: loom-devex
+      description: "DX lifecycle dispatcher — subcommands for live DX audits (review) with future room for /loom-devex:trace. Shipped by M-07 (gstack adoption Phase 8)."
+      source: commands/loom-devex.md
+
+    - name: loom-devex-review
+      description: "Live TTHW boomerang subcommand — measures actual install-to-hello-world time in a fresh temp dir, scores CLI help / error messages / config surface, reports delta vs plan-devex-review-agent's predictedTTHW. Shipped by M-07 (gstack adoption Phase 8)."
+      source: commands/loom-devex/review.md
+
+    - name: loom-benchmark
+      description: "Benchmark dispatcher — subcommands: models (cross-vendor LLM comparison with LLM judge) and perf (Core Web Vitals regression via /loom-browser daemon). Shipped by M-08 (gstack adoption Phase 9 F-25, F-27)."
+      source: commands/loom-benchmark.md
+
+    - name: loom-benchmark-models
+      description: "Cross-vendor LLM comparison subcommand — runs the same prompt across Claude/GPT/Gemini with LLM judge scoring; dashboard reports latency, tokens, cost, and quality per vendor. Shipped by M-08 (gstack adoption Phase 9 F-25)."
+      source: commands/loom-benchmark/models.md
+
+    - name: loom-benchmark-perf
+      description: "Perf regression subcommand — measures Core Web Vitals (LCP/CLS/FID/INP) on baseline vs PR head via /loom-browser daemon; verdict blocks PR on >10%% deltas. Shipped by M-08 (gstack adoption Phase 9 F-27)."
+      source: commands/loom-benchmark/perf.md
+
+    - name: loom-learn
+      description: "Learnings management UI — list/search/prune/export subcommands over .loom/learnings.toon; proactively surfaces prior learnings on 'didn't we'/'before'/'again'/'recurring'. Shipped by M-08 (gstack adoption Phase 9 F-26)."
+      source: commands/loom-learn.md
+
+    - name: loom-docs-generate
+      description: "Cold-start Diataxis docs subcommand — generates docs/tutorial, docs/how-to, docs/reference, docs/explanation with diataxis: frontmatter. Shipped by M-08 (gstack adoption Phase 9 F-28)."
+      source: commands/loom-docs/generate.md
+
+    - name: loom-diagram
+      description: "English or mermaid → excalidraw triplet (source .md + editable .excalidraw + rendered .svg). Registers each triplet in .loom/diagrams/index.toon. Shipped by M-08 (gstack adoption Phase 9 F-29)."
+      source: commands/loom-diagram.md
+
+    - name: loom-worktree
+      description: "Cross-worktree fan-in coordination dispatcher — subcommands: scan (refresh advisory lease registry + print overlaps), preflight (same, exit 1 on overlap), leases (print current lease file), release <id>. Wraps scripts/loom-worktree-scan.ts and pairs with hooks/preflight-worktree-scan.ts on /loom-git pr. Advisory only; enforced mechanisms are roadmap. Shipped by M-09 (gstack adoption Phase 10 F-01)."
+      source: commands/loom-worktree.md
+
+    - name: loom-ship
+      description: "One-shot pre-PR pipeline — rebase onto base, reserve next free VERSION slot, drift detection, plan-completion audit (DIFF-VERIFIABLE / CROSS-REPO / EXTERNAL-STATE / CONTENT-SHAPE classifier, cap 50), assemble PR body with ledger + test plan + optional doc-debt from /loom-docs:release, gh pr create. Halts on rebase conflict, unresolved drift, or missing gh. Shipped by M-10 (gstack adoption Phase 11 F-30)."
+      source: commands/loom-ship.md
+
+    - name: loom-canary
+      description: "Progressive deploy — three phases (10%/50%/100%) gated by health-check probe with immediate rollback on any gate failure. Reads ## Deploy Configuration block from CLAUDE.md; refuses to run without config or healthCheckUrl. Appends every run to .loom/canary-history.toon. Shipped by M-10 (gstack adoption Phase 11 F-31)."
+      source: commands/loom-canary.md
+
+    - name: loom-landing-report
+      description: "Cross-workspace dashboard — enumerates sibling worktrees, cross-references ~/.loom/version-slots.toon and open PRs, emits TOON workspaces[]{workspace,branch,versionSlot,lastCommit,prNumber,prState,stale} table. Read-only. Stale = no commits in 24 h AND no matching open PR. Shipped by M-10 (gstack adoption Phase 11 F-31)."
+      source: commands/loom-landing-report.md
+
+    - name: loom-setup-deploy
+      description: "Deploy-target detection subcommand — scans fly.toml → vercel.json/.vercel/ → wrangler.toml/wrangler.jsonc → netlify.toml/.netlify/ → railway.json → render.yaml → bare Dockerfile and appends the ## Deploy Configuration block to CLAUDE.md (LoomShipConfig from protocols/loom-ship-config.schema.toon). Read-only w.r.t. native deploy configs per C-06. Shipped by M-10 (gstack adoption Phase 11 F-32)."
+      source: commands/loom-setup/deploy.md
+
+    - name: loom-install
+      description: "Direct-symlink install path for Loom — alternative to the plugin marketplace. Actions: --link (idempotent), --unlink, --check. Cross-host: claude-code (default), hermes, openclaw, codex. Writes ~/.loom/install-manifest.toon per protocols/install-manifest.schema.toon (atomic .tmp+rename). Shipped by M-12 (gstack adoption Phase 12 F-35)."
+      source: commands/loom-install.md
+      requires: [skill:loom-install, infrastructure:loom-install]
+
+    - name: loom-design
+      description: "Design dispatcher — subcommands: consultation (5-phase brand kickoff → .loom/design premise), html (Pretext-native HTML/CSS from mockup with anti-AI-slop guards → docs/design/{slug}/), shotgun (N parallel UI variants on distinct axes, side-by-side render via /loom-browser with file-fallback, time-decaying preference memory at .loom/design/preferences.toon). Shipped by M-13 (gstack adoption Phase 13 F-22, F-23, F-24)."
+      source: commands/loom-design.md
+      requires: [skill:loom-design-consultation, skill:loom-design-html, skill:loom-design-shotgun]
+
+    - name: loom-design-consultation
+      description: "Ground-up brand kickoff subcommand — runs the 5-phase interview and writes a premise artifact to .loom/design/{slug}-{ISO-timestamp}.md. Reads .loom/learnings.toon (domain: design) for cross-project prior decisions. Shipped by M-13 (gstack adoption Phase 13 F-22)."
+      source: commands/loom-design/consultation.md
+
+    - name: loom-design-html
+      description: "Mockup-to-HTML subcommand — accepts prose description or image path, emits docs/design/{slug}/index.html + styles.css with Pretext-native rules and Phase 5 F-14 anti-slop guards, validates structural parse. Shipped by M-13 (gstack adoption Phase 13 F-23)."
+      source: commands/loom-design/html.md
+
+    - name: loom-design-shotgun
+      description: "Parallel UI variant board subcommand — N variants on distinct axes, side-by-side render via /loom-browser (file fallback), preference capture with capturedAt to .loom/design/preferences.toon, 90 d/180 d time decay. Shipped by M-13 (gstack adoption Phase 13 F-24)."
+      source: commands/loom-design/shotgun.md
+
 kits:
   # Kit entries are installed via /loom-library use <kit-name>
   # Each kit bundles related agents, commands, and protocols
@@ -651,4 +977,37 @@ kits:
     includes:
       - type: skill
         name: feedback-loop
+
+  - name: code-review
+    description: "Extended code-review lenses that fan out inside /loom-code review — designer-eye visual QA with AI-slop detection, LLM trust-boundary review, and cross-vendor (OpenAI/Gemini) adversarial review. Shipped by M-05 (gstack adoption Phase 5)."
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: agent
+        name: code-design-review-agent
+      - type: agent
+        name: code-llm-trust-review-agent
+      - type: agent
+        name: code-codex-review-agent
+
+  - name: design-build
+    description: "Build-time design kit — ground-up brand consultation, Pretext-native HTML/CSS from mockup with anti-AI-slop guards, and parallel UI variant board with time-decaying taste memory. Shipped by M-13 (gstack adoption Phase 13 F-22/F-23/F-24)."
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: loom-design-consultation
+      - type: skill
+        name: loom-design-html
+      - type: skill
+        name: loom-design-shotgun
+      - type: prompt
+        name: loom-design
+      - type: prompt
+        name: loom-design-consultation
+      - type: prompt
+        name: loom-design-html
+      - type: prompt
+        name: loom-design-shotgun
+    command: loom-design.md
 

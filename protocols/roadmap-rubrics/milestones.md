@@ -25,3 +25,8 @@ This is yellow because the structure is present but the content is hollow. "Foun
 > "We will deliver this in phases. The first phase is the basics, then we add features, then we polish."
 
 This is red because there are no identified milestone IDs, no feature assignments, no dependencies, no acceptance criteria, and no effort sizing. "Basics", "features", and "polish" are not deliverable units — they are placeholder labels. Cycle detection, orphan-feature checks, and forward-reference validation all fail because there is nothing to validate. The reviewer must mark as blocking and require a structured milestone table.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

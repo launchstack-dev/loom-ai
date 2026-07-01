@@ -1,0 +1,31 @@
+# Version Slot Schema
+#
+# Path: ~/.loom/version-slots.toon (user-global)
+# Consumers: scripts/loom-version-slot.ts, skills/loom-ship, skills/loom-landing-report
+#
+# Purpose: Track semver slots reserved across sibling worktrees and open PRs
+#          so /loom-ship can pick the next free slot without collision.
+#
+# Rules:
+#   - written atomically (write .tmp then rename) by scripts/loom-version-slot.ts
+#   - a slot is claimed by (repo, semver) — the pair is unique
+#   - reservations expire (are ignored) when their branch is deleted OR their PR is closed/merged
+#   - schemaVersion bumped on any breaking field change
+
+schemaVersion: 1
+
+# Field descriptions:
+#   updatedAt        string   ISO 8601 timestamp of last write
+#   slots[N]         table    per-reservation records
+#     repo           string   repository name (basename of top-level git dir)
+#     version        string   semver reserved (e.g., "0.4.2")
+#     branch         string   branch name that claimed the slot
+#     worktreePath   string   absolute path to worktree that claimed the slot; "" if only from PR
+#     prNumber       int      GitHub PR number; 0 if no PR yet
+#     prState        enum     open | draft | closed | merged | none
+#     claimedAt      string   ISO 8601 timestamp of reservation
+#     lastSeenAt     string   ISO 8601 timestamp of most-recent scan that still saw this claim
+
+updatedAt: 2026-06-30T00:00:00Z
+slots[N]{repo,version,branch,worktreePath,prNumber,prState,claimedAt,lastSeenAt}:
+  loom-ai,0.4.2,m10,/Users/example/Projects/loom-ai/.worktrees/m10,42,open,2026-06-30T00:00:00Z,2026-06-30T00:00:00Z

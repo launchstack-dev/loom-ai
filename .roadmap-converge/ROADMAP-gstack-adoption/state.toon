@@ -1,0 +1,44 @@
+schemaVersion: 1
+roadmapPath: planning/ROADMAP-gstack-adoption.md
+roadmapSlug: ROADMAP-gstack-adoption
+archetype: default
+round: 2
+passLimit: 3
+roadmap_diff_summary: "pass 2 — M-07 split into M-07 (Build-time QA: F-19,F-20,F-21) and M-13 (Build-time Design: F-22,F-23,F-24); Q-04 added locking success-metrics as accepted red-exception; totalMilestones 12->13"
+paused_at: ""
+last_reviewer: roadmap-converge-driver
+next_action_hint: "sign-off eligible with success-metrics archived as C-03/Q-04 accepted exception; proceed to /loom-roadmap sign-off"
+content_hash: 4f8988c87557c8d151efa83ef77ca8e66ba00a81d807577693f1cc8a2a302d2b
+sign_off_state: eligible
+
+dimensions[8]{name,status,evidence,delta_since_last}:
+  vision,green,"what/for-whom/why-now all present — Loom adopters, gstack comparison as the temporal frame, scope bounded to 29 named patterns re-authored as Loom-native resources",unchanged
+  milestones,green,"13 milestones with features/deps/acceptance/effort; M-07 split into M-07 (F-19,F-20,F-21 QA/security/DX) and M-13 (F-22,F-23,F-24 design) — no milestone now exceeds 5 features; M-07 and M-13 acceptance rewritten with observable outcomes (predictedTTHW/measuredTTHW, shipReadiness, VariantPreference with capturedAt)",yellow->green
+  out-of-scope,green,"7 concrete exclusions naming specific surfaces (verbatim gstack code, transpiler, Chromium hosting, metrics framework, reviewer consolidation, prototype+change merge, plan create surface reduction) each with one-line rationale",unchanged
+  constraints,green,"7 C-* constraints plus Q-04 locked decision; every entry has Decision/Rationale/Alternatives/Impact — Q-04 explicitly ties success-metrics red-exception to C-03",unchanged
+  data-model,green,"32 entities enumerated with key fields; 9 typed relationships with 1:1/1:N/M:N cardinality; every entity referenced by at least one feature — no orphans found",unchanged
+  risks,green,"7 concrete risks with severity + actionable mitigations naming specific mechanisms (F-26 pruning UI, C-05 fallback, lenient parse mode, cost cap config)",unchanged
+  success-metrics,red,"ONE metric row target=Qualitative — rubric requires >=2 measurable metrics; archived via Q-04 as accepted red-exception per C-03; not a sign-off blocker",unchanged-but-archived
+  tool-selection,green,"7 rows across Language/Runtime/Testing/Platform/Data-Format/Browser layers with version pins and one-line purposes tied to project (TOON matches CLAUDE.md convention, chrome-devtools MCP for M-07)",unchanged
+
+dimensionSnapshot[8]{name,status}:
+  vision,green
+  milestones,green
+  out-of-scope,green
+  constraints,green
+  data-model,green
+  risks,green
+  success-metrics,red
+  tool-selection,green
+
+open_questions[1]{id,dimension,text,asked_at}:
+  Q-03,milestones,"Several acceptance lines in M-04, M-05, M-08 phrase completion as 'ships' or 'plug into fan-out' rather than observable-artifact form. Not a sign-off blocker (dimension is green after M-07/M-13 split) but tracked for future cleanup.",2026-06-30
+
+archivedDimensions[1]{name,reason,timestamp}:
+  success-metrics,"accepted red-exception per Q-04 locked decision anchored on C-03 (no evaluation/metrics framework in scope); qualitative-only adoption metric is intentional",2026-06-30
+
+suppressedFindings[0]{id,dimension,severity,text,suppressed_at}:
+
+resolvedQuestions[2]{id,dimension,resolution,resolved_at}:
+  Q-01,success-metrics,"resolved by Q-04 lock — success-metrics permanently accepted as red and archived; not a sign-off blocker",2026-06-30
+  Q-02,milestones,"resolved by M-07 split — M-07 (F-19,F-20,F-21 build-time QA) and M-13 (F-22,F-23,F-24 build-time design); both inherit M-04+M-11 deps; totalMilestones 12->13",2026-06-30

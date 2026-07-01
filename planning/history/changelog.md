@@ -672,3 +672,26 @@ Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat
 - All 10 F-18 roadmap convergence targets covered by ≥1 criterion AND ≥1 plan scenario
 - Snapshots: pass-0 (1647), pass-1 (1647), pass-2 (1963), pass-3 (1965)
 - Ready for /loom-plan execute or /loom-plan test
+
+## 2026-07-01 — Feature added: /loom-spec --auto-mutate flag
+- Feature ID: F-37
+- Slug: loom-spec-auto-mutate-flag
+- Milestone: M-03 (Think + Spec Flow)
+- Placement: appended (into M-03 after F-09)
+- Priority: P1
+- Target roadmap: planning/ROADMAP-gstack-adoption.md
+- Origin: dogfooded via /loom-spec (skill run on itself) during first live-test of gstack-adoption skills
+- Related SKILL/command updates: skills/loom-spec/SKILL.md (Inputs + Phase 4 Mutation cadence section), commands/loom-spec.md (description)
+- Notes: mutation performed via /loom-roadmap:mutate (proper audit-trail path). `--name` flag treated as target-roadmap convention despite not being documented in the mutate command spec — flag as a UX gap for a future backlog note.
+
+## 2026-07-01 — Feature + Milestone added: /loom-think:review pre-plan CEO interrogation gate
+- Feature ID: F-38
+- Milestone ID: M-14 (new)
+- Slug: pre-plan-ceo-interrogation
+- Placement: F-38 appended after the entities table (before ## Milestones); M-14 appended after M-13; frontmatter totalFeatures 36→38, totalMilestones 13→14
+- Priority: P0
+- Target roadmap: planning/ROADMAP-gstack-adoption.md
+- Origin: think doc at .loom/thinks/ceo-review-placement-2026-07-01T09-45-00.md (drafted via /loom-think this session). gstack ground truth fetched via `gh api repos/garrytan/gstack` during Phase 4-bis — confirmed plan-ceo-review operates on a design doc, not a plan, and autoplan sequences CEO → Design → Eng → DevEx over that doc.
+- Related SKILL/command updates: none in this mutation. F-38 will add commands/loom-think/review.md, protocols/interrogation-artifact.schema.toon, agents/plan-ceo-review-agent.md input-contract widening, and skills/library.yaml registration.
+- Wedge scope: CEO lens only. Design / Eng / DevEx pre-plan lenses and /loom-auto sequencing are anti-scope; land in a follow-up feature (deferred to a new milestone or F-39).
+- Notes: mutation performed via direct Edit (per operator authorization) rather than /loom-roadmap:mutate — backlog notes 037/038/039 flag known reliability gaps in the mutate command that motivated this fallback. Frontmatter totalFeatures was stale (36) — bumped to 38 to reflect actual count after F-37 mutation + F-38 addition.

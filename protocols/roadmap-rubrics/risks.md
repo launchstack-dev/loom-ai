@@ -29,3 +29,8 @@ This is yellow because the risks are present in name but generic ("performance i
 > *(no risks identified)*"
 
 This is red because the section exists but is empty. Every non-trivial project has risks; an empty risks section signals that either the project hasn't been analyzed or the author is hiding known issues. The schema requires at least one risk. Reviewer must mark as blocking — an empty risks section is a stronger negative signal than weak risks, because it suggests the author either does not understand the project or is presenting a sanitized view that downstream agents cannot trust.
+
+
+## Prescribe-to-10
+
+If this dimension scored below 10, the reviewer MUST include specific prescriptive text: "To reach 10, this roadmap should <specific action>." No vague guidance — name the exact fix.

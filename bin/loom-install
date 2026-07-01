@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# bin/loom-install — thin wrapper that dispatches to scripts/loom-install.ts
+#
+# Prefers `bunx tsx` (per project toolchain preference), falls back to `npx tsx`.
+# See scripts/loom-install.ts for full flag documentation.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+TS_ENTRY="${REPO_ROOT}/scripts/loom-install.ts"
+
+if [ ! -f "${TS_ENTRY}" ]; then
+  echo "loom-install: cannot find ${TS_ENTRY}" >&2
+  exit 1
+fi
+
+if command -v bunx >/dev/null 2>&1; then
+  exec bunx tsx "${TS_ENTRY}" "$@"
+elif command -v npx >/dev/null 2>&1; then
+  exec npx --yes tsx "${TS_ENTRY}" "$@"
+else
+  echo "loom-install: neither bunx nor npx is available on PATH" >&2
+  exit 1
+fi
