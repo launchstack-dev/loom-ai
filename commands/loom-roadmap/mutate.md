@@ -9,19 +9,25 @@ Appends a new feature and phase to ROADMAP.md without regenerating the entire do
 ```
 /loom-roadmap add "user management with RBAC"
 /loom-roadmap add "real-time notifications" --priority high --milestone v2
+/loom-roadmap add "billing rework" --name gstack-adoption   # targets planning/ROADMAP-gstack-adoption.md
 ```
 
 ### Step A1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve the target roadmap file:
+   - If **--name \<slug\>** is provided, resolve `ROADMAP-{slug}.md` via the named-variant rule in `protocols/planning-paths.md` (planning/ROADMAP-{slug}.md → ROADMAP-{slug}.md at root).
+   - Otherwise, resolve the default `ROADMAP.md` per the same protocol (planning/ROADMAP.md → ROADMAP.md at root).
+   - If the default is not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+   - If a named roadmap is not found, display: "No ROADMAP-{slug}.md found. Available named roadmaps: {list planning/ROADMAP-*.md slugs, or 'none'}. Check the slug, or create the roadmap first (`/loom-roadmap init` writes planning/ROADMAP.md; rename it to planning/ROADMAP-{slug}.md to make it a named variant — init has no --name flag)." and stop.
 2. Parse the existing feature list, milestone list, and phase list from the roadmap.
 
 ### Step A2: Parse Arguments
 
 Extract from args:
 - **description** (required): the feature description string
+- **--name \<slug\>** (optional): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Slug is lowercase-hyphen (validate against `^[a-z0-9][a-z0-9-]*$`). Reject unknown/invalid slugs with a clear error listing valid `planning/ROADMAP-*.md` files.
 - **--milestone \<name\>** (optional): target milestone. Default: the current (last incomplete) milestone.
-- **--priority high** (optional): if set, place the feature at the top of the target milestone's feature list instead of appending.
+- **--priority \<value\>** (optional): sets the feature's priority. Accepted values: `P0`, `P1`, `P2`, `high`, `medium`, `low`. Aliases normalize at write time to the canonical schema enum (`protocols/roadmap.schema.md`: `**Priority:** P0 | P1 | P2`): `high` → `P0`, `medium` → `P1`, `low` → `P2`. The feature block persists ONLY the canonical P-value (`**Priority:** P0`); record the verbatim user input in the changelog entry. Placement rules: `P0` places the feature at the top of the target milestone's feature list; `P1`/`P2` append. Unknown values MUST be rejected with an error listing the accepted set — do NOT silently coerce or drop the flag.
 - **--after \<feature-name\>** (optional): place the feature immediately after the named existing feature. Error if the named feature does not exist.
 
 If neither `--priority` nor `--after` is specified, append to the end of the target milestone's feature list.
@@ -30,7 +36,7 @@ If neither `--priority` nor `--after` is specified, append to the end of the tar
 
 1. Generate a feature ID: next sequential `F-XX` after the last feature in the roadmap.
 2. Generate a slug from the description (lowercase, hyphens, strip non-alphanumeric). E.g., "user management with RBAC" becomes `user-management-rbac`.
-3. Place the feature in the feature list at the determined position (top if `--priority high`, after the named feature if `--after`, otherwise append).
+3. Place the feature in the feature list at the determined position (top if the normalized priority is `P0`, after the named feature if `--after`, otherwise append). If `--priority` was provided, persist the normalized canonical value on the feature block (`**Priority:** P0 | P1 | P2` per `protocols/roadmap.schema.md`).
 
 ### Step A4: Create Phase Entry (if roadmap has phases)
 
@@ -53,15 +59,23 @@ If the roadmap contains phase definitions (sections like `### Phase N`):
 
 ### Step A5: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `planning/history/` directory exists (create if not).
-3. Append to `planning/history/changelog.md`:
+1. **Bump frontmatter counts.** Before writing, recompute the roadmap's frontmatter counts from the mutated document using the same counting recipe as `protocols/schema-upgrade.md` Tier A:
+   - `totalFeatures`: count of `### F-` headings (or any `###` headings under `## Features`).
+   - `totalMilestones`: count of `### M-` headings (or any `###` headings under `## Milestones`).
+   If either differs from the value already in the frontmatter, update in place. Silent drift here (was 36, actual 38 — see planning/history/changelog.md 2026-06 for the F-38 incident) is exactly what note 039 flagged.
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the same target file resolved in Step A1 (default `ROADMAP.md` or `ROADMAP-{slug}.md` when `--name` was set).
+3. **Invalidate roadmap-converge state.** Derive the converge slug from the roadmap **filename sans extension** — the same rule as `scripts/roadmap-converge/slug.ts` (`deriveSlug`): `planning/ROADMAP.md` → `ROADMAP`, `planning/ROADMAP-gstack-adoption.md` → `ROADMAP-gstack-adoption`. If `.roadmap-converge/{slug}/state.toon` exists, **delete it** and log `.roadmap-converge/{slug}/state.toon: deleted (mutation invalidates prior convergence)`. Rationale: converge state's `sign_off_state` can be `eligible` or `signed-off`; `/loom-roadmap:status` and `sign-off` read it directly, so a mutation without invalidation leaves a stale verdict pointing at a document that no longer matches. Do NOT instead recompute `content_hash` over the mutated document — the converge driver detects staleness by hash *mismatch* (`scripts/roadmap-converge/content-hash.ts`), so writing the new document's hash into state.toon would mask the mutation, the exact opposite of invalidation. Deletion forces a clean re-converge.
+4. Ensure `planning/history/` directory exists (create if not).
+5. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature added: {description}
    - Feature ID: {F-XX}
    - Slug: {slug}
    - Milestone: {milestone name}
    - Placement: {top | after {feature} | appended}
+   {- Priority: {verbatim input} → {canonical P-value} (if --priority provided)}
+   - Frontmatter: totalFeatures {before} → {after}, totalMilestones {before} → {after}
+   - Converge state: {invalidated ({slug}) | none}
    {- Phase: {N} (if phase was created)}
    ```
 
@@ -91,11 +105,12 @@ Inserts a new feature/phase at a specific position using decimal numbering (e.g.
 ```
 /loom-roadmap insert 3 "urgent auth fix"
 /loom-roadmap insert 3 "auth fix" --reason "security vulnerability discovered"
+/loom-roadmap insert 3 "auth fix" --name gstack-adoption
 ```
 
 ### Step I1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. Use `protocols/planning-paths.md` for the search order. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Parse all phases with their numbers, dependencies, and statuses.
 
 ### Step I2: Parse Arguments
@@ -103,6 +118,7 @@ Inserts a new feature/phase at a specific position using decimal numbering (e.g.
 Extract from args:
 - **position** (required, integer): the phase number to insert after. E.g., `3` means "insert after Phase 3."
 - **description** (required): the feature description string.
+- **--name \<slug\>** (optional): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Same slug rules as `add`.
 - **--reason "text"** (optional): rationale for the insertion (recorded in changelog).
 
 Validate:
@@ -136,14 +152,18 @@ Validate:
 
 ### Step I6: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `planning/history/` directory exists.
-3. Append to `planning/history/changelog.md`:
+1. Recompute and bump frontmatter `totalFeatures` / `totalMilestones` per Step A5.1 (silent drift is what note 039 flagged).
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the target resolved in Step I1.
+3. Invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3.
+4. Ensure `planning/history/` directory exists.
+5. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature inserted: {description}
    - Phase: {position.X} (inserted after Phase {position})
    - Slug: {slug}
    - Dependencies: {copied from Phase {position}}
+   - Frontmatter: totalFeatures {before} → {after}, totalMilestones {before} → {after}
+   - Converge state: {invalidated ({slug}) | none}
    {- Reason: {reason text} (if --reason provided)}
    ```
 
@@ -170,11 +190,12 @@ Removes a phase from the roadmap by phase number or slug. Checks for dependent p
 ```
 /loom-roadmap remove 5
 /loom-roadmap remove "user-management"    (by slug)
+/loom-roadmap remove 5 --name gstack-adoption
 ```
 
 ### Step R1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Parse all phases with their numbers, slugs, names, dependencies, and statuses.
 
 ### Step R2: Find the Target Phase
@@ -215,13 +236,17 @@ If no dependents exist, proceed without prompting.
 
 ### Step R6: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Append to `planning/history/changelog.md`:
+1. Recompute and bump frontmatter `totalFeatures` / `totalMilestones` per Step A5.1.
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the target resolved in Step R1.
+3. Invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3.
+4. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phase removed: Phase {N} ({slug})
    - Description: {phase name/description}
    - Dependents updated: {list of phases that had this dependency removed, or "none"}
    - Feature removed: {F-XX} ({feature name})
+   - Frontmatter: totalFeatures {before} → {after}, totalMilestones {before} → {after}
+   - Converge state: {invalidated ({slug}) | none}
    ```
 
 ### Step R7: Display Result
@@ -249,11 +274,14 @@ Moves phases to new positions in the roadmap. Validates that the move does not c
 ```
 /loom-roadmap reorder              (interactive)
 /loom-roadmap reorder 5 --after 2  (move phase 5 to after phase 2)
+/loom-roadmap reorder 5 --after 2 --name gstack-adoption
 ```
+
+**--name \<slug\>** (optional, all forms): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Same slug rules as `add`.
 
 ### Step O1: Read and Parse
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Extract all phases with their numbers, names, slugs, and dependency lists.
 3. Build the dependency adjacency list (same format as `deps` subcommand Step 1).
 
@@ -340,9 +368,10 @@ If "no", display "Reorder cancelled." and stop.
 
 ### Step O8: Write and Log
 
-1. Rewrite the phase sections in `ROADMAP.md` in the new order (atomic: write to `.tmp`, rename).
+1. Rewrite the phase sections in the target roadmap file (resolved in Step O1) in the new order (atomic: write to `.tmp`, rename).
    - **Important**: only the document order of phase sections changes. Phase numbers, slugs, dependency lists, and all other content remain unchanged.
-2. Append to `planning/history/changelog.md`:
+2. Frontmatter `totalFeatures` / `totalMilestones` are unchanged by reorder (counts don't move), but still invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3 — document body bytes moved, so any prior convergence verdict no longer describes this document.
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phases reordered
    - Moves: {list of "Phase N moved after Phase M"}

@@ -12,6 +12,8 @@ When a command needs to read **ROADMAP.md** (or a named variant), search in this
 2. `ROADMAP.md` at repo root (or `{name}.md`) — legacy layout, backward-compatible
 3. If neither exists, fail with: `ROADMAP not found. Run /loom-roadmap init to create one.`
 
+**Named-variant rule:** commands that accept `--name <slug>` (e.g. `/loom-roadmap:mutate`) target `ROADMAP-{slug}.md` — i.e. `{name}` above is `ROADMAP-{slug}`. Search `planning/ROADMAP-{slug}.md`, then `ROADMAP-{slug}.md` at root. `/loom-roadmap init` only writes the default `planning/ROADMAP.md`; named variants are created by renaming or by authoring the file directly.
+
 When a command needs to read **PLAN.md** (or `PLAN-{name}.md`), search in this order:
 
 1. `planning/plans/PLAN.md` (or `planning/plans/PLAN-{name}.md`) — active, modern
