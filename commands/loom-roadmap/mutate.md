@@ -9,17 +9,22 @@ Appends a new feature and phase to ROADMAP.md without regenerating the entire do
 ```
 /loom-roadmap add "user management with RBAC"
 /loom-roadmap add "real-time notifications" --priority high --milestone v2
+/loom-roadmap add "billing rework" --name gstack-adoption   # targets planning/ROADMAP-gstack-adoption.md
 ```
 
 ### Step A1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve the target roadmap file:
+   - If **--name \<slug\>** is provided, resolve `ROADMAP-{slug}.md` per `protocols/planning-paths.md` (planning/ROADMAP-{slug}.md → ROADMAP-{slug}.md at root).
+   - Otherwise, resolve the default `ROADMAP.md` per the same protocol (planning/ROADMAP.md → ROADMAP.md at root).
+   - If not found, display: "No ROADMAP{ -<slug> if named} found. Run `/loom-roadmap init{ --name <slug>}` to create one." and stop.
 2. Parse the existing feature list, milestone list, and phase list from the roadmap.
 
 ### Step A2: Parse Arguments
 
 Extract from args:
 - **description** (required): the feature description string
+- **--name \<slug\>** (optional): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Slug is lowercase-hyphen (validate against `^[a-z0-9][a-z0-9-]*$`). Reject unknown/invalid slugs with a clear error listing valid `planning/ROADMAP-*.md` files.
 - **--milestone \<name\>** (optional): target milestone. Default: the current (last incomplete) milestone.
 - **--priority high** (optional): if set, place the feature at the top of the target milestone's feature list instead of appending.
 - **--after \<feature-name\>** (optional): place the feature immediately after the named existing feature. Error if the named feature does not exist.
@@ -91,11 +96,12 @@ Inserts a new feature/phase at a specific position using decimal numbering (e.g.
 ```
 /loom-roadmap insert 3 "urgent auth fix"
 /loom-roadmap insert 3 "auth fix" --reason "security vulnerability discovered"
+/loom-roadmap insert 3 "auth fix" --name gstack-adoption
 ```
 
 ### Step I1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md` (planning/ROADMAP.md → ROADMAP.md at root). If not found, display: "No ROADMAP.md found. Run `/loom-roadmap init` to create one." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. Use `protocols/planning-paths.md` for the search order. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Parse all phases with their numbers, dependencies, and statuses.
 
 ### Step I2: Parse Arguments
@@ -103,6 +109,7 @@ Inserts a new feature/phase at a specific position using decimal numbering (e.g.
 Extract from args:
 - **position** (required, integer): the phase number to insert after. E.g., `3` means "insert after Phase 3."
 - **description** (required): the feature description string.
+- **--name \<slug\>** (optional): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Same slug rules as `add`.
 - **--reason "text"** (optional): rationale for the insertion (recorded in changelog).
 
 Validate:
@@ -170,11 +177,12 @@ Removes a phase from the roadmap by phase number or slug. Checks for dependent p
 ```
 /loom-roadmap remove 5
 /loom-roadmap remove "user-management"    (by slug)
+/loom-roadmap remove 5 --name gstack-adoption
 ```
 
 ### Step R1: Read and Validate Roadmap
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Parse all phases with their numbers, slugs, names, dependencies, and statuses.
 
 ### Step R2: Find the Target Phase
@@ -249,11 +257,14 @@ Moves phases to new positions in the roadmap. Validates that the move does not c
 ```
 /loom-roadmap reorder              (interactive)
 /loom-roadmap reorder 5 --after 2  (move phase 5 to after phase 2)
+/loom-roadmap reorder 5 --after 2 --name gstack-adoption
 ```
+
+**--name \<slug\>** (optional, all forms): target `ROADMAP-{slug}.md` instead of the default `ROADMAP.md`. Same slug rules as `add`.
 
 ### Step O1: Read and Parse
 
-1. Resolve `ROADMAP.md` per `protocols/planning-paths.md`. If not found, display: "No ROADMAP.md found." and stop.
+1. Resolve the target roadmap file per Step A1 semantics: `--name <slug>` selects `ROADMAP-{slug}.md`, otherwise default `ROADMAP.md`. If not found, display the corresponding "No ROADMAP{ -<slug>} found" message and stop.
 2. Extract all phases with their numbers, names, slugs, and dependency lists.
 3. Build the dependency adjacency list (same format as `deps` subcommand Step 1).
 
