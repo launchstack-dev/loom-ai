@@ -91,11 +91,16 @@ const LOOM_HOOKS: HookEntry[] = [
   { hookName: "wiki-impact-warner",  event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 3000  },
   // PreToolUse Bash — gating
   { hookName: "deploy-guard",        event: "PreToolUse",  matcher: "Bash",       timeoutMs: 10000 },
+  { hookName: "loom-careful",        event: "PreToolUse",  matcher: "Bash",       timeoutMs: 5000  },
+  // PreToolUse Bash — non-gating (warner) for /loom-git pr fan-in scan
+  { hookName: "preflight-worktree-scan", event: "PreToolUse", matcher: "Bash",    timeoutMs: 10000 },
   // PreToolUse Agent — preflight
   { hookName: "context-budget",      event: "PreToolUse",  matcher: "Agent",      timeoutMs: 10000 },
   { hookName: "budget-tracker",      event: "PreToolUse",  matcher: "Agent",      timeoutMs: 10000 },
   // PostToolUse Write|Edit — typecheck
   { hookName: "typecheck-on-write",  event: "PostToolUse", matcher: "Write|Edit", timeoutMs: 30000 },
+  // PostToolUse Write|Edit — non-blocking AgentResult confidence validator
+  { hookName: "agent-result-validator", event: "PostToolUse", matcher: "Write|Edit", timeoutMs: 5000 },
   // PostToolUse Bash — wiki ledger
   { hookName: "wiki-commit-ledger",  event: "PostToolUse", matcher: "Bash",       timeoutMs: 5000  },
   // PostToolUse * — ambient monitors
