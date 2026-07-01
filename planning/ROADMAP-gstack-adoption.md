@@ -5,8 +5,8 @@ status: approved
 created: 2026-06-30
 lastReviewed: 2026-06-30
 targetDate: null
-totalFeatures: 36
-totalMilestones: 13
+totalFeatures: 38
+totalMilestones: 14
 ---
 
 # Roadmap: gstack Skill Adoption
@@ -1227,6 +1227,49 @@ This is a meta / tooling initiative. Entities are Loom-scoped artifacts, not use
 | RetrospectiveArtifact | Regression | 1:N | Retro surfaces new regressions |
 | BrowserState | BrowserCookies | 1:N | Daemon session loads cookies per domain |
 | InstallManifest | InstallManifest | 1:1 | Successive installs supersede prior manifests |
+| InterrogationRecord | ThinkArtifact | 1:1 | Pre-plan CEO interrogation reads one think doc |
+
+### F-38: `/loom-think:review` — pre-plan CEO interrogation gate
+
+**Priority:** P0
+**Milestone:** M-14
+**Slug:** pre-plan-ceo-interrogation
+**Origin:** `.loom/thinks/ceo-review-placement-2026-07-01T09-45-00.md` (drafted via `/loom-think` this session; gstack ground truth fetched via `gh api repos/garrytan/gstack` during Phase 4-bis).
+
+**Description:** Add a pre-plan CEO interrogation gate as `/loom-think:review [--advisory] <path-to-think-doc>` — a subcommand of `/loom-think` that reads a think doc and invokes the existing `plan-ceo-review-agent` rubric with the think doc as input contract (previously PLAN.md only). Emits `.loom/thinks/{slug}-interrogation.toon` with a mode declaration ({SCOPE_EXPANSION | SELECTIVE | HOLD | REDUCTION}), 11-section findings (each with `confidence:1-10`), and a terminal decision `{proceed | rewrite-think | kill}`. `--advisory` mode suppresses the terminal decision and emits findings-only. Mirrors gstack's `plan-ceo-review` shape (design-doc-as-input, mode-and-approaches output — confirmed via gh api against `garrytan/gstack/plan-ceo-review/SKILL.md` Step 1 and Step 0 Nuclear Scope Challenge) without disturbing M-04's post-plan CEO review, which stays as-is for plan-artifact critique. Wedge is CEO lens only — Design / Eng / DevEx pre-plan lenses and `/loom-auto` sequencing land in a follow-up feature.
+
+**Entities involved:** InterrogationRecord (new), ThinkArtifact (existing, unchanged), plan-ceo-review-agent (existing, input contract widened).
+
+**Key behaviors:**
+- Reads a `/loom-think` doc as the source-of-truth artifact (problem, constraints, chosen approach candidates).
+- Invokes the existing `agents/plan-ceo-review-agent.md` (M-04) with a widened input contract that accepts either a PLAN.md draft or a think doc; agent rubric text unchanged.
+- Emits `.loom/thinks/{slug}-interrogation.toon` conforming to a new `protocols/interrogation-artifact.schema.toon`.
+- Terminates in a decision `{proceed | rewrite-think | kill}` by default; `--advisory` suppresses the decision, emits findings-only.
+- Registers `/loom-think:review` under `library.prompts:` in `skills/library.yaml` with `kit: plan-review` so the interrogation is discoverable alongside the M-04 post-plan reviewers.
+
+**Anti-scope:**
+- Design, Engineering, and DevEx pre-plan lenses (defer to follow-up feature).
+- `/loom-auto` sequencing that chains all four lenses (defer).
+- `/loom-roadmap init` consumption of the interrogation artifact (defer — artifact sits on disk unread by roadmap for the wedge).
+- Interactive AskUserQuestion inside the CEO agent during interrogation (gstack does this; wedge is batch envelope only).
+- Any change to M-04's post-plan `/loom-plan review` firing of `plan-ceo-review-agent` — that stays as-is.
+- Rewriting the agent's 11-section rubric — rubric is correct; only the input contract widens.
+
+**Blast radius:** Small and contained. New subcommand file, new protocol schema, agent input-contract widens (backward-compatible), library.yaml registration. No existing behavior changes. Worst case if the wedge is wrong: the operator finds the batch decision + findings envelope too shallow to act on and interactive interrogation lands sooner than planned.
+
+**Scenarios:**
+
+```toon
+scenarios[4]{id,name,given,when,whenTriggerType,then,tags,automatable}:
+S-01,happy-path,"An operator has a /loom-think doc at .loom/thinks/{slug}-{ts}.md and runs /loom-think:review <path>","the subcommand completes","actor-action","An .loom/thinks/{slug}-interrogation.toon MUST be written with a declared mode, 11-section findings each carrying confidence:1-10, and one terminal decision in {proceed,rewrite-think,kill}",happy-path,true
+S-02,advisory-mode,"An operator runs /loom-think:review --advisory <path>","the subcommand completes","actor-action","The emitted interrogation.toon MUST omit the terminal decision AND MUST still contain the mode declaration and 11-section findings",edge-case,true
+S-03,missing-input,"An operator runs /loom-think:review with a path that does not exist","the path resolution fails","actor-action","The subcommand MUST exit non-zero with a clear error naming the missing path AND MUST NOT write any interrogation.toon",edge-case,true
+S-04,backward-compat,"An operator runs /loom-plan review on a PLAN.md draft","plan-ceo-review-agent fires as part of the parallel fan-out","system-event","The agent MUST emit its existing 11-section findings envelope over PLAN.md unchanged — F-38's input-contract widening MUST NOT alter M-04 post-plan behavior",happy-path,true
+```
+
+**Effort:** S (~2 days). Repoints an existing agent's input contract, writes one subcommand, one schema, one test fixture.
+
+**Depends on:** M-01 (learnings — plan-ceo-review-agent's Prior Learning preamble), M-03 (`/loom-think` — supplies the input artifact), M-04 (`plan-ceo-review-agent` — rubric already exists).
 
 ## Milestones
 
@@ -1320,6 +1363,13 @@ This is a meta / tooling initiative. Entities are Loom-scoped artifacts, not use
 **Depends on:** M-04, M-11
 **Acceptance:** `/loom-design:consultation` writes a design premise artifact to the Loom design directory; `/loom-design:html` emits HTML that parses without structural errors from an approved mockup; `/loom-design:shotgun` records VariantPreference entries with capturedAt timestamps. Browser features consume the persistent daemon from M-11.
 **Effort:** L
+
+### M-14: Pre-plan judgment gate
+
+**Features:** F-38
+**Depends on:** M-03, M-04
+**Acceptance:** `/loom-think:review` writes an `.loom/thinks/{slug}-interrogation.toon` artifact with a declared mode, 11-section findings (each with `confidence:1-10`), and a terminal decision when invoked on a `/loom-think` doc; `--advisory` mode omits the decision. `plan-ceo-review-agent` continues to fire unchanged in `/loom-plan review`. Design, Engineering, and DevEx pre-plan lenses are explicitly deferred to a follow-up milestone.
+**Effort:** S
 
 ## Risks & Mitigations
 
