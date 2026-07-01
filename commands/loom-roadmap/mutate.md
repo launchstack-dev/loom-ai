@@ -58,15 +58,22 @@ If the roadmap contains phase definitions (sections like `### Phase N`):
 
 ### Step A5: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `planning/history/` directory exists (create if not).
-3. Append to `planning/history/changelog.md`:
+1. **Bump frontmatter counts.** Before writing, recompute the roadmap's frontmatter counts from the mutated document:
+   - `totalFeatures`: count of feature rows in the feature list.
+   - `totalMilestones`: count of `## Milestone` sections (or equivalent milestone anchor pattern used by this roadmap).
+   If either differs from the value already in the frontmatter, update in place. Silent drift here (was 36, actual 38 — see planning/history/changelog.md 2026-06 for the F-38 incident) is exactly what note 039 flagged.
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the same target file resolved in Step A1 (default `ROADMAP.md` or `ROADMAP-{slug}.md` when `--name` was set).
+3. **Invalidate roadmap-converge state.** If `.roadmap-converge/{slug}/state.toon` exists (where `{slug}` is the roadmap slug — `default` for `ROADMAP.md`, `{slug}` for `ROADMAP-{slug}.md`), bump its `content_hash` field (recompute over the new document body) OR delete the file outright. Rationale: converge state's `sign_off_state` can be `eligible` or `signed-off` — a mutation without invalidation leaves stale sign-off status pointing at a document that no longer matches. If you delete the file, log `.roadmap-converge/{slug}/state.toon: deleted (mutation invalidates prior convergence)`. If you recompute the hash, log `.roadmap-converge/{slug}/state.toon: content_hash bumped ({old} → {new}), sign_off_state reset to not-eligible`.
+4. Ensure `planning/history/` directory exists (create if not).
+5. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature added: {description}
    - Feature ID: {F-XX}
    - Slug: {slug}
    - Milestone: {milestone name}
    - Placement: {top | after {feature} | appended}
+   - Frontmatter: totalFeatures {before} → {after}, totalMilestones {before} → {after}
+   - Converge state: {invalidated ({slug}) | none}
    {- Phase: {N} (if phase was created)}
    ```
 
@@ -143,9 +150,11 @@ Validate:
 
 ### Step I6: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Ensure `planning/history/` directory exists.
-3. Append to `planning/history/changelog.md`:
+1. Recompute and bump frontmatter `totalFeatures` / `totalMilestones` per Step A5.1 (silent drift is what note 039 flagged).
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the target resolved in Step I1.
+3. Invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3.
+4. Ensure `planning/history/` directory exists.
+5. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Feature inserted: {description}
    - Phase: {position.X} (inserted after Phase {position})
@@ -223,8 +232,10 @@ If no dependents exist, proceed without prompting.
 
 ### Step R6: Write and Log
 
-1. Write updated `ROADMAP.md` (atomic: write to `.tmp`, rename).
-2. Append to `planning/history/changelog.md`:
+1. Recompute and bump frontmatter `totalFeatures` / `totalMilestones` per Step A5.1.
+2. Write updated roadmap file (atomic: write to `.tmp`, rename). Use the target resolved in Step R1.
+3. Invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3.
+4. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phase removed: Phase {N} ({slug})
    - Description: {phase name/description}
@@ -351,9 +362,10 @@ If "no", display "Reorder cancelled." and stop.
 
 ### Step O8: Write and Log
 
-1. Rewrite the phase sections in `ROADMAP.md` in the new order (atomic: write to `.tmp`, rename).
+1. Rewrite the phase sections in the target roadmap file (resolved in Step O1) in the new order (atomic: write to `.tmp`, rename).
    - **Important**: only the document order of phase sections changes. Phase numbers, slugs, dependency lists, and all other content remain unchanged.
-2. Append to `planning/history/changelog.md`:
+2. Frontmatter `totalFeatures` / `totalMilestones` are unchanged by reorder (counts don't move), but invalidate `.roadmap-converge/{slug}/state.toon` per Step A5.3 — the content hash still shifts because document body bytes moved.
+3. Append to `planning/history/changelog.md`:
    ```markdown
    ## {YYYY-MM-DD} — Phases reordered
    - Moves: {list of "Phase N moved after Phase M"}
