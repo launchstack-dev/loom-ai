@@ -43,6 +43,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Configure git identity
+        # Tests that init a throwaway repo and `git commit` need an identity;
+        # CI runners have none by default. See pr-gate.yml changed-file-tests.
+        run: |
+          git config --global user.email "ci@loom.test"
+          git config --global user.name "Loom CI"
+          git config --global init.defaultBranch main
+
       - name: Run the full vitest suite
         run: bunx vitest run
 

@@ -110,6 +110,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Configure git identity
+        # Many tests init a throwaway repo and `git commit`; CI runners have no
+        # ambient user.name/user.email, so the commit fails and the whole test
+        # file errors. Set a global identity so any git-touching test works.
+        run: |
+          git config --global user.email "ci@loom.test"
+          git config --global user.name "Loom CI"
+          git config --global init.defaultBranch main
+
       - name: Run tests mapped from the PR diff
         run: bun scripts/ci/changed-files-vitest.ts --base "origin/${{ github.base_ref || 'main' }}"
 
