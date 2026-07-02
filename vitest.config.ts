@@ -3,6 +3,10 @@ export default {
     exclude: [
       "**/node_modules/**",
       ".worktrees/**",
+      // Git worktrees live here too; their .git is a gitdir pointer, and a
+      // detached/corrupted worktree makes `git -C` calls in tests fatal. Never
+      // let the root runner reach into another worktree's checkout.
+      ".claude/worktrees/**",
       "test/e2e/pass2-seeded-failure/**",
       // Sub-project with its own vitest config + deps (ajv, @toon-format/toon);
       // run via `cd test/protocol && bunx vitest run`.

@@ -12,14 +12,28 @@ const STALENESS_SECONDS = 300;
 const SEP = ' \x1b[2m\u2502\x1b[0m '; // dim │
 
 let input = '';
-const stdinTimeout = setTimeout(() => render({}), 3000);
+// Guard so the status line renders exactly once regardless of which stdin
+// event (end / error / timeout) fires first — double render would duplicate
+// the line and break width/content assertions.
+let rendered = false;
+function renderOnce(data) {
+  if (rendered) return;
+  rendered = true;
+  clearTimeout(stdinTimeout);
+  try { render(data); } catch { /* Exit 0 ALWAYS */ }
+}
+const stdinTimeout = setTimeout(() => renderOnce({}), 3000);
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => input += chunk);
 process.stdin.on('end', () => {
-  clearTimeout(stdinTimeout);
-  try { render(input.trim() ? JSON.parse(input) : {}); }
-  catch { render({}); }
+  try { renderOnce(input.trim() ? JSON.parse(input) : {}); }
+  catch { renderOnce({}); }
 });
+// Honor the "Exit 0 ALWAYS" contract: an ignored/closed stdin can surface as an
+// errored fd (observed under Bun on Linux CI, where stdio:'ignore' yields an
+// EPIPE/EBADF 'error' event rather than a clean EOF). Without this handler the
+// unhandled 'error' crashes the process non-zero and blanks the status line.
+process.stdin.on('error', () => renderOnce({}));
 
 function render(data) {
   try {
