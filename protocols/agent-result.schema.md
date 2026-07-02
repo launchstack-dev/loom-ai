@@ -1,6 +1,32 @@
 # AgentResult Schema
 
-Standard return envelope for all execution agents. Every agent MUST return valid TOON matching this schema as the last content block in its response.
+Standard return envelope for Loom pipeline agents. Whether an agent MUST emit this envelope is governed by the **Tiered Mandate (C-07)** below: pipeline-participant agents MUST return valid TOON matching this schema as the last content block in their response; standalone/utility agents are exempt.
+
+## Tiered Mandate (C-07)
+
+The envelope requirement is tiered by agent class. An agent is a **pipeline participant** when its output is parsed programmatically by an orchestrator, driver, or downstream agent to make control-flow decisions (gate, retry, wave advance, findings triage). Participants MUST emit the envelope. Agents whose output is consumed only by a human or by the calling prompt inline are **exempt**.
+
+Machine-readable policy table:
+
+```toon
+envelopeMandate[4]{class,examples,requirement}:
+  stage-teammate,"execute-stage-teammate, review-stage-teammate, test-stage-teammate, fix-stage-teammate, converge-stage-teammate",must-emit
+  reviewer,"roadmap-converge-reviewer, plan-review agents, code-review agents, qa-review-agent, interpretation-reviewer-agent",must-emit
+  executor,"implementer-agent, contracts-agent, wiring-agent, verification-agent, fixer-agent, data-pipeline-agent",must-emit
+  converge-driver,"roadmap-converge-driver, roadmap-converge-integrator, converge drivers and integrators",must-emit
+
+envelopeExempt[3]{class,examples,requirement}:
+  standalone,"statusline-setup, loom-pause-handoff-author, meta-agent invoked directly by a user",exempt
+  utility,"prompt-refiner-agent, read-only Explore/Plan helpers, archetype detectors invoked outside a pipeline",exempt
+  external,"third-party plugin agents not registered in a Loom pipeline stage or kit gate",exempt
+```
+
+### Mandate Rules
+
+1. **must-emit classes** (stage teammates, reviewers, executors, converge drivers) MUST return the full envelope. A missing or malformed envelope from a participant is a task failure — the orchestrator treats it as `status: failure`.
+2. **Exempt classes** (standalone/utility agents) MAY return free-form output. Consumers MUST NOT require or attempt to parse an envelope from exempt agents, and validators MUST NOT flag envelope absence in their output.
+3. **Classification tiebreaker:** if an agent is registered in a pipeline stage, kit gate (`[[kit.<name>.gates]]`), or wave assignment, it is a participant regardless of how it was authored. The same agent definition invoked ad hoc by a user (outside a pipeline) is exempt for that invocation, but emitting the envelope anyway is encouraged.
+4. Exempt agents that *do* emit an envelope must still conform to this schema — partial envelopes are worse than none.
 
 ## Schema
 
@@ -80,7 +106,9 @@ findings[N]{id,category,severity,confidence,message}:
 
 ### Confidence Semantics
 
-The `confidence` column is a required integer 1..10 expressing the reviewer's certainty that the finding is real and actionable:
+The `confidence` column is a required integer 1..10 expressing the reviewer's certainty that the finding is real and actionable. **The integer 1..10 scale is the canonical confidence scale for AgentResult envelopes.** The confidence-tier handling below (suppressed / caveat / promoted) is load-bearing across consumers and MUST NOT be re-based onto another scale.
+
+> **Scale reconciliation note (Wave 0 / Phase 3 coordination).** `lib/types.ts` currently models `AgentResultFinding.confidence` as a float 0.0–1.0. That field is a DISTINCT, normalized representation and does NOT redefine this envelope's scale. Directive to the code owner (Phase 3 / later phases own `lib/types.ts`): either (a) migrate `AgentResultFinding.confidence` to `integer 1..10` to match this schema, or (b) keep the float form but document and apply the boundary conversion `envelopeConfidence = round(float * 10)` clamped to 1..10 wherever envelopes are produced or parsed. On-the-wire envelopes are ALWAYS integer 1..10; `hooks/agent-result-validator.ts` rejects anything else.
 
 | Range | Handling | Rationale |
 |---|---|---|
@@ -88,7 +116,7 @@ The `confidence` column is a required integer 1..10 expressing the reviewer's ce
 | 5..6 | **Shown with caveat.** Consumers surface the finding but MUST annotate it with a low-confidence marker (e.g., "possible" prefix, dimmer UI) and MUST NOT gate on it. | Medium confidence deserves visibility without triggering blocks. |
 | 7..10 | **Promoted.** Consumers surface the finding at full weight. Gate agents MAY block on `severity: blocking` findings at this confidence tier. | High-confidence findings drive the user-facing feedback loop. |
 
-Validator behavior: an envelope containing any `findings[]` row missing the `confidence` field MUST be rejected with error code `FINDING_MISSING_CONFIDENCE` (blocking). This is enforced by `hooks/agent-result-validator.ts`.
+Validator behavior: on a **pipeline-participant** envelope (see Tiered Mandate above), any `findings[]` row missing the `confidence` field — or carrying a non-integer or out-of-range value — MUST be rejected with error code `FINDING_MISSING_CONFIDENCE`. This is a **BLOCKING** validation failure: the validator MUST reject the envelope, and MUST NOT downgrade a missing required `confidence` to a warn-only diagnostic. Enforced by `hooks/agent-result-validator.ts` (C-08: blocking on required fields; warn-only applies exclusively to *optional* fields).
 
 ## Gate Primitive
 

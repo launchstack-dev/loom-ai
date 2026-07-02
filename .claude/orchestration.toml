@@ -7,8 +7,8 @@ dataFormat = "toon"
 
 [settings.profiles.quality]
 planning = "fable"
-execution = "opus"
-review = "opus"
+execution = "fable"
+review = "fable"
 verification = "sonnet"
 utility = "sonnet"
 

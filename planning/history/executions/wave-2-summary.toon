@@ -1,51 +1,11 @@
-schemaVersion: 1
 wave: 2
-runId: kit-native-skills-20260612-001
-status: success
-gateMode: auto
-phases[3]: 3, 4, 5
-startedAt: 2026-06-12T23:20:00Z
-completedAt: 2026-06-12T23:45:00Z
-durationMs: 1500000
-
-agentResults[3]{taskId,agent,status,durationMs}:
-  wave2-phase3-installer-routing,implementer-agent,success,1320000
-  wave2-phase4-installer-tests,implementer-agent,success,420000
-  wave2-phase5-python-conventions-kit,implementer-agent,success,240000
-
-filesCreated[5]: skills/python-conventions/SKILL.md, .plan-execution/stage-context/phase-3.toon, .plan-execution/stage-context/phase-4.toon, .plan-execution/stage-context/phase-5.toon, .plan-execution/stage-context/wave-2-gate.toon
-filesModified[6]: commands/loom-library.md, test/installer-skill-routing.test.ts, test/wizard-interview.test.ts, test/library-add-heuristic.test.ts, skills/library.yaml, hooks/lib/wizard-interview.ts
-filesRegenerated[1]: checksums.sha256
-filesIncidentallyFixed[1]: scripts/validate-library-catalog.js
-
-exportsAdded: 0
-exportsRetargeted[0]:
-
-catalogChanges:
-  librarySkillsAdded[1]: python-conventions
-  kitsAdded[1]: python-conventions (typed includes form)
-
-testCounts:
-  installerSkillRouting: 24->27
-  wizardInterview: 32->34
-  libraryAddHeuristic: 21->22
-  totalNewTests: 6
-  totalPassing: 83
-  totalFailing: 0
-
-crossBoundaryRequests:
-  filed: 0
-  resolved: 0
-
-verification:
-  status: pass
-  waveGateStatus: passed
-  fullSuiteStatus: 1-deferred-pre-existing
-  preExistingFailures[1]: "vi.resetModules infra in test/loom-change/lifecycle.test.ts (pre-Wave-1; unrelated)"
-
-releaseConstraint: "F-010: Wave 1 + Wave 2 NOW form the merged release candidate. Wave 3 (Phase 6 — schema docs) may begin."
-
-nextWave:
-  number: 3
-  phases[1]: 6
-  description: "Schema docs, DeltaBlock seed, loom-upgrade v4 awareness"
+status: partial-complete
+phasesComplete[4]: 3, 4, 5, 6
+phasesPending[2]: 7, 8
+agentsVerified[4]: w2-p3-validator, w2-p4-health, w2-p5-versionslot, w2-p6-reconcile
+filesModified[5]: hooks/agent-result-validator.ts, .claude/settings.json, scripts/loom-health.ts, scripts/loom-version-slot.ts, protocols/agent-result.schema.md
+filesCreated[5]: tests/hooks/agent-result-validator.test.ts, tests/scripts/loom-health-exec.test.ts, tests/scripts/loom-version-slot-security.test.ts, tests/scripts/loom-version-slot-scope.test.ts, tests/protocols/agent-result-conformance.test.ts
+verification: pass
+verificationDetail: vitest 39/39 pass (validator+conformance+health+version-slot); execSync injection eliminated in loom-health(0) + loom-version-slot(0), execFileSync argv arrays; validator runHook signature fixed + registered + blocking on confidence; tsc baseline measured 21 (not 25)
+defectsClosed[4]: 1 (validator no-op), 2 (both shell injections), 3 (cross-repo contamination), 11 (schema blocking posture)
+pendingWork: P7 (F-15 release spine) quarantined partial in .plan-execution/wip-p7-partial/ (loom-release.ts, version-gate.ts, version-gate.yml — untested, ~20pct, DISCARD+redo on resume); P8 (F-17 install fail-closed) not started (install.sh untouched)

@@ -31,7 +31,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 interface Slot {
   repo: string;
@@ -52,9 +52,16 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function safeExec(cmd: string, cwd?: string): string {
+/**
+ * Run a command with execFileSync — args go through argv as literals, NEVER
+ * through a shell. Branch names and worktree paths read from the registry or
+ * from disk are attacker-influenced (refnames may legally contain `;`, `$()`,
+ * backticks), so no value may ever be interpolated into a shell string.
+ * Pattern: hooks/deploy-guard.ts findDependentPrs().
+ */
+function safeExecFile(file: string, args: string[], cwd?: string): string {
   try {
-    return execSync(cmd, {
+    return execFileSync(file, args, {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       cwd,
@@ -65,12 +72,30 @@ function safeExec(cmd: string, cwd?: string): string {
 }
 
 function currentRepo(): string {
-  const top = safeExec("git rev-parse --show-toplevel");
+  const top = safeExecFile("git", ["rev-parse", "--show-toplevel"]);
   return top ? path.basename(top) : path.basename(process.cwd());
 }
 
 function currentBranch(cwd?: string): string {
-  return safeExec("git branch --show-current", cwd);
+  return safeExecFile("git", ["branch", "--show-current"], cwd);
+}
+
+/**
+ * Resolve the git common dir for a path — identifies which repo a worktree
+ * belongs to. Linked worktrees of the same repo share one common dir; a
+ * different repo (even one with the same directory basename) resolves to a
+ * different path. Returns "" when `p` is not inside a git repo.
+ * Mirrors the repo-scoping approach of scripts/loom-worktree-scan.ts.
+ */
+function gitCommonDir(p: string): string {
+  const common = safeExecFile("git", ["rev-parse", "--git-common-dir"], p);
+  if (!common) return "";
+  const abs = path.isAbsolute(common) ? common : path.resolve(p, common);
+  try {
+    return fs.realpathSync(abs);
+  } catch {
+    return abs;
+  }
 }
 
 function readVersionFromWorktree(worktreePath: string): string {
@@ -131,9 +156,16 @@ interface PrRow {
 }
 
 function fetchOpenPrs(): PrRow[] {
-  const raw = safeExec(
-    "gh pr list --state open --json number,headRefName,state,isDraft --limit 200",
-  );
+  const raw = safeExecFile("gh", [
+    "pr",
+    "list",
+    "--state",
+    "open",
+    "--json",
+    "number,headRefName,state,isDraft",
+    "--limit",
+    "200",
+  ]);
   if (!raw) return [];
   try {
     return JSON.parse(raw) as PrRow[];
@@ -144,7 +176,15 @@ function fetchOpenPrs(): PrRow[] {
 
 function branchExists(branch: string): boolean {
   if (!branch) return false;
-  const out = safeExec(`git rev-parse --verify --quiet refs/heads/${branch}`);
+  // Branch names come from the parsed registry file and are untrusted.
+  // execFileSync argv keeps them literal — a refname like `x;rm -rf $HOME`
+  // is just a ref that doesn't exist, not a shell command.
+  const out = safeExecFile("git", [
+    "rev-parse",
+    "--verify",
+    "--quiet",
+    `refs/heads/${branch}`,
+  ]);
   return out !== "";
 }
 
@@ -227,8 +267,15 @@ function refresh(reg: { updatedAt: string; slots: Slot[] }): {
   const repo = currentRepo();
   const now = nowIso();
   const seen = new Map<string, Slot>(); // key repo|version
+  // Repo-scoping filter (mirrors scripts/loom-worktree-scan.ts scan()): a
+  // sibling directory is only a worktree of THIS repo if its git common dir
+  // resolves to ours. Without this check, unrelated repos that happen to sit
+  // in the same parent dir (or ~/.worktrees) get recorded under `repo`,
+  // contaminating the registry with foreign versions.
+  const repoCommonDir = gitCommonDir(process.cwd());
   // Bring forward siblings.
   for (const wt of enumerateSiblingWorktrees()) {
+    if (!repoCommonDir || gitCommonDir(wt) !== repoCommonDir) continue;
     const v = readVersionFromWorktree(wt);
     if (!v) continue;
     const branch = currentBranch(wt);

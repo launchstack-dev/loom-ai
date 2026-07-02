@@ -40,7 +40,7 @@ jobs:
     env:
       # Error-count baseline: 49 pre-existing errors under hooks/tsconfig.json.
       # Phase 9 (typecheck-zero) drops this to 0. Ratchet DOWN only.
-      TYPECHECK_ERROR_BASELINE: "49"
+      TYPECHECK_ERROR_BASELINE: "25"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

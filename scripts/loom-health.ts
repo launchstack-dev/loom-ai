@@ -17,7 +17,7 @@
  * Contract: PLAN-gstack-adoption.md Phase 2 F-07, error HEALTH_TOOL_MISSING.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -40,10 +40,20 @@ function linearScore(errors: number, ceiling: number): number {
   return Math.max(0, Math.min(10, 10 * (1 - errors / ceiling)));
 }
 
-/** Runs a command and returns { code, stdout, stderr }; never throws. */
-function tryRun(cmd: string): { code: number; stdout: string; stderr: string } {
+/**
+ * Runs a command and returns { code, stdout, stderr }; never throws.
+ *
+ * SECURITY: uses execFileSync with an argv array — arguments are passed to the
+ * process literally and NEVER through a shell, so filenames or other values
+ * containing shell metacharacters (`;`, `$(...)`, backticks, quotes) cannot
+ * inject commands. House pattern: hooks/deploy-guard.ts.
+ */
+function tryRun(
+  file: string,
+  args: string[]
+): { code: number; stdout: string; stderr: string } {
   try {
-    const stdout = execSync(cmd, {
+    const stdout = execFileSync(file, args, {
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "pipe"],
       cwd: REPO_ROOT,
@@ -58,10 +68,23 @@ function tryRun(cmd: string): { code: number; stdout: string; stderr: string } {
   }
 }
 
-/** Returns true if the binary is on PATH. */
+/**
+ * Returns true if the binary is on PATH. Pure filesystem scan — no shell,
+ * no subprocess, so the bin name can never reach a command line.
+ */
 function has(bin: string): boolean {
-  const which = tryRun(`command -v ${bin}`);
-  return which.code === 0 && which.stdout.trim().length > 0;
+  const dirs = (process.env.PATH ?? "").split(path.delimiter);
+  for (const dir of dirs) {
+    if (!dir) continue;
+    try {
+      const candidate = path.join(dir, bin);
+      fs.accessSync(candidate, fs.constants.X_OK);
+      if (fs.statSync(candidate).isFile()) return true;
+    } catch {
+      // not here — keep scanning
+    }
+  }
+  return false;
 }
 
 function existsAny(patterns: string[]): boolean {
@@ -92,7 +115,7 @@ function runTypecheck(): ComponentResult {
       note: "HEALTH_TOOL_MISSING: no tsconfig.json",
     };
   }
-  const result = tryRun(`${runner} tsc --noEmit`);
+  const result = tryRun(runner, ["tsc", "--noEmit"]);
   // Count "error TSxxxx" occurrences.
   const errors = (result.stdout.match(/error TS\d+/g) ?? []).length;
   const score = linearScore(errors, 10);
@@ -119,7 +142,7 @@ function runTests(): ComponentResult {
       note: "HEALTH_TOOL_MISSING: vitest not installed",
     };
   }
-  const result = tryRun(`${runner} vitest run --reporter=basic --run`);
+  const result = tryRun(runner, ["vitest", "run", "--reporter=basic", "--run"]);
   // Parse totals from vitest output: "Tests  N passed | M failed".
   const passMatch = /(\d+)\s+passed/.exec(result.stdout);
   const failMatch = /(\d+)\s+failed/.exec(result.stdout);
@@ -159,7 +182,7 @@ function runLint(): ComponentResult {
       note: "HEALTH_TOOL_MISSING: eslint config not found",
     };
   }
-  const result = tryRun(`${runner} eslint . --format=stylish`);
+  const result = tryRun(runner, ["eslint", ".", "--format=stylish"]);
   // Count "error" markers, exclude "0 errors" summary lines.
   const errorCount = (result.stdout.match(/\bproblems?\b.*?(\d+)\s+error/g) ?? [])
     .map((m) => {
@@ -190,7 +213,7 @@ function runDeadCode(): ComponentResult {
       note: "HEALTH_TOOL_MISSING: knip not installed",
     };
   }
-  const result = tryRun(`${runner} knip --reporter=compact`);
+  const result = tryRun(runner, ["knip", "--reporter=compact"]);
   // knip reports totals like "Unused files (3)".
   const unusedMatches = result.stdout.match(/Unused\s+\w+\s*\((\d+)\)/g) ?? [];
   const total = unusedMatches
@@ -207,15 +230,32 @@ function runDeadCode(): ComponentResult {
 }
 
 function runShellcheck(): ComponentResult {
+  // List shell scripts: git ls-files first (pathspecs are passed as literal
+  // argv entries — git does its own glob matching), falling back to find.
+  // No shell is involved at any point. Output is NUL-delimited (-z / -print0)
+  // so a filename containing a newline survives as a single entry instead of
+  // splitting into two bogus paths.
   let shFiles: string[] = [];
-  try {
-    const out = execSync(
-      `git ls-files '*.sh' '*.bash' 2>/dev/null || find . -maxdepth 4 -type f \\( -name '*.sh' -o -name '*.bash' \\) 2>/dev/null`,
-      { encoding: "utf-8", cwd: REPO_ROOT }
-    );
-    shFiles = out.split("\n").filter((l) => l.trim().length > 0);
-  } catch {
-    shFiles = [];
+  const gitLs = tryRun("git", ["ls-files", "-z", "--", "*.sh", "*.bash"]);
+  if (gitLs.code === 0) {
+    shFiles = gitLs.stdout.split("\0").filter((l) => l.length > 0);
+  } else {
+    const found = tryRun("find", [
+      ".",
+      "-maxdepth",
+      "4",
+      "-type",
+      "f",
+      "(",
+      "-name",
+      "*.sh",
+      "-o",
+      "-name",
+      "*.bash",
+      ")",
+      "-print0",
+    ]);
+    shFiles = found.stdout.split("\0").filter((l) => l.length > 0);
   }
   if (shFiles.length === 0) {
     return {
@@ -235,7 +275,11 @@ function runShellcheck(): ComponentResult {
       note: "HEALTH_TOOL_MISSING: shellcheck not installed",
     };
   }
-  const result = tryRun(`shellcheck ${shFiles.map((f) => `'${f}'`).join(" ")}`);
+  // SECURITY (defect 2, site 1): filenames are argv entries, never a shell
+  // string. A file literally named `x'; rm -rf ~; '.sh` is one literal arg.
+  // `--` stops option parsing so a filename starting with `-` can't be
+  // misread as a shellcheck flag.
+  const result = tryRun("shellcheck", ["--", ...shFiles]);
   const errors = (result.stdout.match(/^In\s.+\sline\s\d+:/gm) ?? []).length;
   const score = linearScore(errors, 20);
   return {
