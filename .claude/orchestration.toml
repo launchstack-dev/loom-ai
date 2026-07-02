@@ -6,14 +6,14 @@ persistHistory = true
 dataFormat = "toon"
 
 [settings.profiles.quality]
-planning = "fable"
-execution = "fable"
-review = "fable"
+planning = "opus"
+execution = "opus"
+review = "opus"
 verification = "sonnet"
 utility = "sonnet"
 
 [settings.profiles.balanced]
-planning = "fable"
+planning = "opus"
 execution = "sonnet"
 review = "sonnet"
 verification = "sonnet"
