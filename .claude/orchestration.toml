@@ -1,8 +1,30 @@
 [settings]
 maxParallelAgents = 6
 defaultModel = "sonnet"
+modelProfile = "quality"
 persistHistory = true
 dataFormat = "toon"
+
+[settings.profiles.quality]
+planning = "fable"
+execution = "opus"
+review = "opus"
+verification = "sonnet"
+utility = "sonnet"
+
+[settings.profiles.balanced]
+planning = "fable"
+execution = "sonnet"
+review = "sonnet"
+verification = "sonnet"
+utility = "haiku"
+
+[settings.profiles.budget]
+planning = "sonnet"
+execution = "sonnet"
+review = "haiku"
+verification = "haiku"
+utility = "haiku"
 
 [settings.contextBudget]
 contextWindow = 200000

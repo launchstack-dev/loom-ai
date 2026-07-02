@@ -79,14 +79,14 @@ If a profile name is provided (`quality`, `balanced`, or `budget`):
    modelProfile = "{name}"
 
    [settings.profiles.quality]
-   planning = "opus"
+   planning = "fable"
    execution = "opus"
    review = "opus"
    verification = "sonnet"
    utility = "sonnet"
 
    [settings.profiles.balanced]
-   planning = "opus"
+   planning = "fable"
    execution = "sonnet"
    review = "sonnet"
    verification = "sonnet"
@@ -123,8 +123,8 @@ If `--set <tier> <model>` is provided:
 1. Validate the tier name. Must be one of: `planning`, `execution`, `review`, `verification`, `utility`.
    If not recognized: print "Unknown tier: {tier}. Available tiers: planning, execution, review, verification, utility" and stop.
 
-2. Validate the model name. Must be one of: `opus`, `sonnet`, `haiku`.
-   If not recognized: print "Unknown model: {model}. Available models: opus, sonnet, haiku" and stop.
+2. Validate the model name. Must be one of: `fable`, `opus`, `sonnet`, `haiku`.
+   If not recognized: print "Unknown model: {model}. Available models: fable, opus, sonnet, haiku" and stop.
 
 3. Read the current profile name from orchestration.toml.
    - If no profile is set: warn "No active profile. Set a base profile first with `/loom-profile <name>`, or this override will only apply if a profile is activated later."

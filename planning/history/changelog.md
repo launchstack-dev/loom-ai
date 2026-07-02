@@ -695,3 +695,9 @@ Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat
 - Related SKILL/command updates: none in this mutation. F-38 will add commands/loom-think/review.md, protocols/interrogation-artifact.schema.toon, agents/plan-ceo-review-agent.md input-contract widening, and skills/library.yaml registration.
 - Wedge scope: CEO lens only. Design / Eng / DevEx pre-plan lenses and /loom-auto sequencing are anti-scope; land in a follow-up feature (deferred to a new milestone or F-39).
 - Notes: mutation performed via direct Edit (per operator authorization) rather than /loom-roadmap:mutate — backlog notes 037/038/039 flag known reliability gaps in the mutate command that motivated this fallback. Frontmatter totalFeatures was stale (36) — bumped to 38 to reflect actual count after F-37 mutation + F-38 addition.
+
+## 2026-07-01 — ROADMAP-exceed-gstack created and approved
+- Generated via /loom-roadmap init (auto mode) from 4-agent comparative review of loom-ai vs gstack
+- Features: 26, Milestones: 9, Constraints: C-01..C-13 (C-03 supersedes gstack-adoption N-03 — eval framework now in scope)
+- Validation: passed (0 errors — sections, counts, cross-refs)
+- Acceptance gate: re-run 4-agent scorecard; every dimension ≥ gstack, overall > 8.3
