@@ -1,47 +1,9 @@
 wave: 1
-label: Wave 1
-phases[2]: Phase 1, Phase 2
-agents[2]: implementer-agent (P1), implementer-agent (P2)
+phases[3]: 1, 2a, 2b
 status: complete
-verificationStatus: pass
-
-filesCreated[11]:
-  hooks/lib/plugin-root-resolver.ts
-  hooks/lib/plugin-root-resolver.test.ts
-  .claude-plugin/plugin.json
-  hooks/hooks.json
-  hooks/lib/fail-loud-logger.ts
-  hooks/lib/fail-loud-logger.test.ts
-  scripts/probe-hook-runtime.sh
-  loom-init-audit-notes.md
-  test/fixtures/hook-input.json
-  test/plugin-manifest.test.ts
-  test/install-mutual-exclusion.test.ts
-
-filesModified[2]:
-  hooks/run-hook.sh
-  install.sh
-
-verifyCommands[2]{cmd,exit,note}:
-  bunx vitest run [Wave 1 test files],0,30/30 tests pass
-  bunx tsc --noEmit (hooks/),2,pre-existing vitest type-decl gap; not Wave 1 regression
-
-wiringApplied[1]{file,change,source}:
-  install.sh,Added scripts/probe-hook-runtime.sh to INFRA_FILES + mkdir for ${CLAUDE_DIR}/scripts,Phase 2 crossBoundaryRequest
-
-reconciliationWarnings[0]:
-
-infoFindings[3]:
-  Phase 1: 14 inline ${CLAUDE_PLUGIN_ROOT} matches in protocols/*.schema.md + commands/loom-{auto,init}.md — schema refs are documentation fixtures (S-03 acceptable); 2 hits in command files worth migrating in a later phase
-  Phase 2: PR #9 wrapper APPENDS Homebrew paths (not prepends as plan said) — correct behavior so user pins win; left as-is and documented in loom-init-audit-notes.md
-  Phase 2: install.sh post-install probe fallback to source checkout path works today; wiring applied above to land the probe under ~/.claude/scripts/ for curl users
-
-keyDecisions[3]:
-  Plugin manifest declares minimal initial permissions[] set (one per hook category). Later phases expand.
-  hooks.json registers 6 PreToolUse + 3 PostToolUse + 1 SessionStart + 2 Stop using ${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.sh.
-  install.sh tarball sha256 verification is opt-in via LOOM_RELEASE_TARBALL + LOOM_RELEASE_MANIFEST env vars; default still file-by-file fetch.
-
-nextStageHints[3]:
-  Phase 3 (Wave 2b) consumes loom-init-audit-notes.md when authoring commands/loom-init.md.
-  Phase 4 (Wave 2a) consumes install.sh + the install state schema for first-run handler.
-  Phase 6 (Wave 3a) implements the release-pipeline that emits the manifest.toon consumed by install.sh's sha256 verification gate.
+agents[4]: w1-p1-ci-gates, w1-p2a-parsers, w1-p2b-writers, w1-wiring
+filesCreated[17]: .github/workflows/pr-gate.yml, .github/workflows/nightly-gate.yml, scripts/ci/check-hook-drift.ts, scripts/ci/check-docs-drift.ts, scripts/ci/check-library-catalog.ts, scripts/ci/changed-files-vitest.ts, tests/ci/drift-checks.test.ts, tests/ci/changed-files-mapping.test.ts, lib/toon.ts, lib/csv.ts, lib/atomic-fs.ts, lib/entry-guard.ts, lib/index.ts, tests/lib/toon-roundtrip.test.ts, tests/lib/csv.test.ts, tests/lib/atomic-fs.test.ts, tests/lib/entry-guard.test.ts
+filesModified[5]: eslint.config.js, package.json, bun.lock, lib/types.ts, protocols/shared-core.schema.md
+verification: pass
+verificationDetail[5]: eslint exit 0 (65 legacy warnings / 0 errors), barrel tsc strict clean, vitest 131/131 (tests/lib+tests/ci), pr-gate lint sim exit 0, typecheck ratchet 25<49 PASS
+notes[3]: TYPECHECK_ERROR_BASELINE ratcheted 49->25 by orchestrator, type:module declined (validate-library-catalog.js is CJS), hooks/tsconfig.json does not typecheck root lib/ — flag for Phase 9

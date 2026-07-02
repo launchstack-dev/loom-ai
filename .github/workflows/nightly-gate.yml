@@ -1,0 +1,237 @@
+# nightly-gate — the nightly CI tier (F-01, contract C-01). NEVER PR-blocking.
+#
+# Check names below are FROZEN in protocols/ci-gates.contract.md. This tier is
+# the backstop for what the changed-file PR tier misses: the full vitest suite,
+# the hermetic eval tiers, the quarantine suite, and the Docker e2e harness.
+#
+#   full-suite        bunx vitest run (the full 1810-test suite)
+#   hook-drift        warn-only until Phase 13 (defect 10)
+#   docs-drift        warn-only until Phase 16
+#   eval-t1 / eval-t2 stub-guarded until Phase 20 lands scripts/eval/run-evals.ts
+#                     (hermetic tiers — llmCalls MUST be 0)
+#   quarantine-suite  continue-on-error per contract; entries must hit zero
+#                     before fileParallelism:false is removed (Phase 19)
+#   docker-e2e        continue-on-error per contract (plan acceptance: nightly
+#                     runs the Docker e2e job)
+#
+# Every run publishes `.loom-ci/gate-status.toon` as a machine-readable artifact.
+
+name: nightly-gate
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-suite:
+    name: full-suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run the full vitest suite
+        run: bunx vitest run
+
+  hook-drift:
+    name: hook-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # --warn-only until Phase 13 reconciles the sources (warnUntilPhase: 13).
+      - name: Compare the three hook-registration sources
+        run: bun scripts/ci/check-hook-drift.ts --warn-only
+
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-hook-drift-report
+          path: .loom-ci/hook-drift.toon
+          if-no-files-found: ignore
+
+  docs-drift:
+    name: docs-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # --warn-only until Phase 16 (warnUntilPhase: 16).
+      - name: Recompute generated-docs checksums
+        run: bun scripts/ci/check-docs-drift.ts --check --warn-only
+
+  eval-t1:
+    name: eval-t1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      # Phase 20 lands scripts/eval/run-evals.ts; until then this is a stub
+      # invocation that passes vacuously (guarded absence per plan).
+      - name: Run T1 evals (hermetic, zero LLM calls)
+        run: |
+          if [ -f scripts/eval/run-evals.ts ]; then
+            bun scripts/eval/run-evals.ts --tier t1
+          else
+            echo "::notice::eval-t1: scripts/eval/run-evals.ts not yet present (lands Phase 20) — stub pass"
+          fi
+
+  eval-t2:
+    name: eval-t2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      # Phase 20 lands scripts/eval/run-evals.ts; until then this is a stub
+      # invocation that passes vacuously (guarded absence per plan).
+      - name: Run T2 evals (hermetic, zero LLM calls)
+        run: |
+          if [ -f scripts/eval/run-evals.ts ]; then
+            bun scripts/eval/run-evals.ts --tier t2
+          else
+            echo "::notice::eval-t2: scripts/eval/run-evals.ts not yet present (lands Phase 20) — stub pass"
+          fi
+
+  quarantine-suite:
+    name: quarantine-suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true # per contract: quarantine runs with continue-on-error
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run quarantined tests
+        env:
+          LOOM_QUARANTINE_INCLUDE: "true"
+        run: |
+          if [ -d tests/quarantine ]; then
+            bunx vitest run tests/quarantine
+          else
+            echo "::notice::quarantine-suite: tests/quarantine does not exist yet (Phase 19) — nothing quarantined"
+          fi
+
+  docker-e2e:
+    name: docker-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true # per contract: Docker e2e never blocks the nightly gate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build local test tarball
+        run: bunx tsx scripts/build-release-tarball.ts --dry-run
+
+      # The harness self-skips (exit 0, HARNESS_SKIPPED_NO_DOCKER) when docker
+      # is unavailable.
+      - name: Run Docker e2e harness
+        run: sh test/docker/run-harness.sh --local-tarball dist/loom-local-test.tar.gz
+
+  gate-status:
+    name: gate-status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - full-suite
+      - hook-drift
+      - docs-drift
+      - eval-t1
+      - eval-t2
+      - quarantine-suite
+      - docker-e2e
+    steps:
+      - name: Compose .loom-ci/gate-status.toon
+        run: |
+          mkdir -p .loom-ci
+          cat > .loom-ci/gate-status.toon.tmp <<EOF
+          gateStatus:
+            tier: nightly
+            workflow: nightly-gate.yml
+            blocking: false
+            schedule: 0 7 * * *
+            runId: ${{ github.run_id }}
+            sha: ${{ github.sha }}
+            completedAt: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          checks[7]{name,result,blocking,warnUntilPhase}:
+            full-suite,${{ needs.full-suite.result }},false,
+            hook-drift,${{ needs.hook-drift.result }},false,13
+            docs-drift,${{ needs.docs-drift.result }},false,16
+            eval-t1,${{ needs.eval-t1.result }},false,
+            eval-t2,${{ needs.eval-t2.result }},false,
+            quarantine-suite,${{ needs.quarantine-suite.result }},false,
+            docker-e2e,${{ needs.docker-e2e.result }},false,
+          EOF
+          mv .loom-ci/gate-status.toon.tmp .loom-ci/gate-status.toon
+          cat .loom-ci/gate-status.toon
+
+      - name: Publish gate-status artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-gate-status
+          path: .loom-ci/gate-status.toon

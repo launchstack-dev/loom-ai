@@ -38,8 +38,9 @@ export interface CsvSplitOptions {
   quote?: string;
   /**
    * When true, surrounding quotes are kept on the returned fields
-   * (the `scripts/loom-change/archive.ts:1119` reference behavior).
-   * When false, quotes are stripped and escaped `""` collapses to `"`.
+   * (the `scripts/materialize-contracts.ts:787` reference behavior).
+   * When false, quotes are stripped and escaped `""` collapses to `"`
+   * (the `scripts/loom-change/archive.ts:1119` default reference behavior).
    * @default false
    */
   preserveQuotes?: boolean;

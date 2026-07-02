@@ -40,7 +40,7 @@ All types referenced below are exported from `lib/types.ts`.
 exports[7]{module,export,signature,behavior}:
   toon,parseToon,(text: string) => ToonValue,"Full TOON grammar per CLAUDE.md quick reference; throws ToonParseError with line/col"
   toon,serializeToon,(value: ToonValue) => string,"Canonical output: 2-space indent, stable key order; round-trips with parseToon"
-  csv,splitCsvLine,"(line: string, opts?: CsvSplitOptions) => string[]","Handles quoted fields AND escaped double-quotes (the hooks/lib/toon-reader.ts:125 miss); preserves quotes per scripts/loom-change/archive.ts:1119 reference behavior"
+  csv,splitCsvLine,"(line: string, opts?: CsvSplitOptions) => string[]","Handles quoted fields AND escaped double-quotes (the hooks/lib/toon-reader.ts:125 miss); strips/collapses by default per scripts/loom-change/archive.ts:1119, preserves quotes per scripts/materialize-contracts.ts:787 when preserveQuotes: true"
   csv,joinCsvLine,(fields: string[]) => string,"Quotes/escapes inverse of splitCsvLine"
   atomic-fs,atomicWrite,"(path: string, data: string | Buffer, opts?: AtomicWriteOptions) => void","Write {path}.tmp then fs.renameSync — the single sanctioned implementation"
   atomic-fs,atomicWriteText,"(path: string, text: string, opts?: AtomicWriteOptions) => void","String convenience wrapper over atomicWrite"
@@ -54,9 +54,10 @@ exports[7]{module,export,signature,behavior}:
   the Phase 2a `lib/toon.ts` implementation.
 - `serializeToon(parseToon(x))` MUST round-trip for any canonical TOON input.
 - `splitCsvLine` with `preserveQuotes: true` reproduces the
-  `scripts/loom-change/archive.ts:1119` behavior; the default (`false`)
-  collapses escaped `""` to `"` — the case `hooks/lib/toon-reader.ts:125`
-  missed.
+  `scripts/materialize-contracts.ts:787` behavior; the default (`false`)
+  strips quotes and collapses escaped `""` to `"` — the
+  `scripts/loom-change/archive.ts:1119` reference behavior, and the case
+  `hooks/lib/toon-reader.ts:125` missed.
 
 ## Indexes (reader-enforced)
 

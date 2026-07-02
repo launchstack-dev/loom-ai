@@ -1,0 +1,215 @@
+# pr-gate — the PR-blocking CI tier (F-01, contract C-01).
+#
+# Check names below are FROZEN in protocols/ci-gates.contract.md — they are the
+# branch-protection interface. Renaming a job's `name:` is a breaking change
+# and MUST land together with the branch-protection update in the same PR.
+#
+# Tier summary (see the contract for the full CiGateConfig):
+#   typecheck           blocking     tsc --noEmit -p hooks/tsconfig.json,
+#                                    ratcheted against TYPECHECK_ERROR_BASELINE
+#                                    (49 pre-existing errors; Phase 9 drives
+#                                    this to 0 and the baseline drops with it —
+#                                    the gate fails only on NEW errors)
+#   lint                blocking     bunx eslint . (flat config lands Phase 2b;
+#                                    vacuous pass until the config exists)
+#   changed-file-tests  blocking     bun scripts/ci/changed-files-vitest.ts
+#   hook-drift          warn-only    until Phase 13 (sources known-divergent, defect 10)
+#   docs-drift          warn-only    until Phase 16 (generated-docs markers not yet everywhere)
+#   library-catalog     blocking     bun scripts/ci/check-library-catalog.ts
+#
+# Every run publishes `.loom-ci/gate-status.toon` as a machine-readable artifact.
+
+name: pr-gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Error-count baseline: 49 pre-existing errors under hooks/tsconfig.json.
+      # Phase 9 (typecheck-zero) drops this to 0. Ratchet DOWN only.
+      TYPECHECK_ERROR_BASELINE: "49"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: tsc --noEmit against error-count baseline
+        run: |
+          set -u
+          bunx tsc --noEmit -p hooks/tsconfig.json > tsc-output.txt 2>&1 || true
+          count=$(grep -cE 'error TS[0-9]+' tsc-output.txt || true)
+          echo "typecheck: ${count} errors (baseline ${TYPECHECK_ERROR_BASELINE})"
+          if [ "${count}" -gt "${TYPECHECK_ERROR_BASELINE}" ]; then
+            echo "::error::typecheck: ${count} errors exceed baseline ${TYPECHECK_ERROR_BASELINE} — this PR introduces new type errors"
+            cat tsc-output.txt
+            exit 1
+          fi
+          if [ "${count}" -lt "${TYPECHECK_ERROR_BASELINE}" ]; then
+            echo "::notice::typecheck error count dropped to ${count} — ratchet TYPECHECK_ERROR_BASELINE down in .github/workflows/pr-gate.yml"
+          fi
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: bunx eslint .
+        run: |
+          if [ -f eslint.config.js ] || [ -f eslint.config.mjs ] || [ -f eslint.config.cjs ] || [ -f eslint.config.ts ]; then
+            bunx eslint .
+          else
+            echo "::warning::lint: no ESLint flat config yet — Phase 2b lands eslint.config.js; passing vacuously"
+          fi
+
+  changed-file-tests:
+    name: changed-file-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests mapped from the PR diff
+        run: bun scripts/ci/changed-files-vitest.ts --base "origin/${{ github.base_ref || 'main' }}"
+
+  hook-drift:
+    name: hook-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # --warn-only until Phase 13 reconciles the three registration sources
+      # (defect 10). Phase 13 removes the flag and flips this check to blocking.
+      - name: Compare the three hook-registration sources
+        run: bun scripts/ci/check-hook-drift.ts --warn-only
+
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hook-drift-report
+          path: .loom-ci/hook-drift.toon
+          if-no-files-found: ignore
+
+  docs-drift:
+    name: docs-drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # --warn-only until Phase 16 lands generated-docs markers + manifest
+      # everywhere. Phase 16 removes the flag and flips this check to blocking.
+      - name: Recompute generated-docs checksums
+        run: bun scripts/ci/check-docs-drift.ts --check --warn-only
+
+  library-catalog:
+    name: library-catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate skills/library.yaml
+        run: bun scripts/ci/check-library-catalog.ts
+
+  gate-status:
+    name: gate-status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - typecheck
+      - lint
+      - changed-file-tests
+      - hook-drift
+      - docs-drift
+      - library-catalog
+    steps:
+      - name: Compose .loom-ci/gate-status.toon
+        run: |
+          mkdir -p .loom-ci
+          cat > .loom-ci/gate-status.toon.tmp <<EOF
+          gateStatus:
+            tier: pr
+            workflow: pr-gate.yml
+            blocking: true
+            runId: ${{ github.run_id }}
+            sha: ${{ github.sha }}
+            completedAt: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          checks[6]{name,result,blocking,warnUntilPhase}:
+            typecheck,${{ needs.typecheck.result }},true,
+            lint,${{ needs.lint.result }},true,
+            changed-file-tests,${{ needs.changed-file-tests.result }},true,
+            hook-drift,${{ needs.hook-drift.result }},false,13
+            docs-drift,${{ needs.docs-drift.result }},false,16
+            library-catalog,${{ needs.library-catalog.result }},true,
+          EOF
+          mv .loom-ci/gate-status.toon.tmp .loom-ci/gate-status.toon
+          cat .loom-ci/gate-status.toon
+
+      - name: Publish gate-status artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-status
+          path: .loom-ci/gate-status.toon
