@@ -1,11 +1,11 @@
 schemaVersion: 1
 projectName: loom-ai
 domain: code
-wikiVersion: 3
-pageCount: 39
-lastUpdated: 2026-06-26T00:00:00Z
+wikiVersion: 4
+pageCount: 40
+lastUpdated: 2026-07-01T00:00:00Z
 
-pages[39]{pageId,title,category,staleness,updatedAt}:
+pages[40]{pageId,title,category,staleness,updatedAt}:
   component-command-dispatch,Command Dispatch System,component,fresh,2026-04-25T22:00:00Z
   component-context-budget,Context Budget Hook,component,fresh,2026-04-25T22:00:00Z
   component-context-monitor,Context Monitor Hook,component,fresh,2026-04-25T22:00:00Z
@@ -45,12 +45,13 @@ pages[39]{pageId,title,category,staleness,updatedAt}:
   convergence-target-ct-06-vocab-diff,CT-06 Vocabulary Diff Harness,convergence-target,fresh,2026-06-26T00:00:00Z
   waiver-m-06-precheck,M-08-PreCheck-M-06 Waiver,waiver,fresh,2026-06-26T00:00:00Z
   waiver-sediment-phase5b,Sediment Phase 5b Slip-Rule Waiver,waiver,fresh,2026-06-26T00:00:00Z
+  decision-distribution-plugin-first,Distribution: Plugin-First Decision,decision,fresh,2026-07-01T00:00:00Z
 
 categories[12]{name,count}:
   component,10
   concept,3
   convention,4
-  decision,4
+  decision,5
   pattern,2
   structure,2
   feature,1
