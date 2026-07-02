@@ -1,44 +1,9 @@
 wave: 0
-label: Wave 0
-phases[2]: Phase 0A, Phase 0B
-agents[2]: contracts-agent (0A), contracts-agent (0B)
+phase: 0
 status: complete
-verificationStatus: pass
-
-filesCreated[5]:
-  protocols/update-check.schema.md
-  protocols/submission-evidence.schema.md
-  scripts/lib/doctor/migration-runner.interface.ts
-  scripts/lib/doctor/check.interface.ts
-  scripts/validate-toon-schemas.ts
-
-filesModified[7]:
-  protocols/plugin-manifest.schema.md
-  protocols/doctor-report.schema.md
-  protocols/settings-tier.schema.md
-  protocols/upstream/plugin.schema.json
-  protocols/upstream/.meta.toon
-  protocols/install-state.schema.md
-  protocols/library-catalog.schema.md
-
-filesVerifiedUnchanged[3]:
-  protocols/hook-manifest.schema.md
-  protocols/migration-evidence.schema.md
-  protocols/migration-runner.schema.md
-
-verifyCommands[2]{cmd,exit}:
-  bunx tsx scripts/validate-toon-schemas.ts,0
-  bash scripts/refresh-upstream-schemas.sh --check,0
-
-reconciliationWarnings[1]{file,reason,resolution}:
-  protocols/library-catalog.schema.md,Out-of-ownership write by Phase 0B agent — added TOON exemplar to make new validator pass,Allowed: benign documentation fix needed by new validator. Logged.
-
-keyDecisions[3]:
-  permissions-derived check assigned category=settings (vs hook-wiring) by Phase 0A in doctor-report registry. Phase 9A2b implementer must honor this categorization.
-  TS interfaces (Check, MigrationRunner) use unknown placeholders for InstallState/HealthCheck/MigrationEvidence types with TODO comments. Tighten in Phase 9A/9B.
-  Upstream snapshot refreshed (date 2026-06-18). plugin.schema.json + .meta.toon updated from live docs.
-
-nextStageHints[3]:
-  Phase 9A2a and Phase 9A2b compile against scripts/lib/doctor/check.interface.ts. Both can run in parallel from Wave 5a start.
-  Phase 9B implements MigrationRunner; Phase 9A1 dispatches via the interface. No sibling dependency.
-  doctor-report.schema.md categorizes permissions-derived as settings; permissions-derived module belongs to 9A2b ownership (already declared).
+agent: contracts-agent
+taskId: w0-contracts
+filesCreated[7]: lib/types.ts, protocols/shared-core.schema.md, protocols/ci-gates.contract.md, protocols/eval-tier.schema.md, protocols/release-versioning.schema.md, protocols/metrics-snapshot.schema.md, .plan-execution/contracts/manifest.toon
+verification: pass
+verificationChecks[3]: tsc-standalone-pass, ownership-drift-none, toon-convention-pass
+contractAmendments[1]: agent-result.schema.md confidence scale 0.0-1.0 vs 1..10 — Phase 3 reconciles

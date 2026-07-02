@@ -59,6 +59,8 @@ retire = []                   # dimensions to skip evaluation entirely
 # "vision" = "protocols/roadmap-rubrics/vision-strict.md"
 
 [execution.agents]
+contracts-agent = "agents/contracts-agent.md"
+wiring-agent = "agents/wiring-agent.md"
 roadmap-converge-driver = "agents/roadmap-converge-driver.md"
 roadmap-converge-reviewer = "agents/roadmap-converge-reviewer.md"
 roadmap-converge-integrator = "agents/roadmap-converge-integrator.md"
