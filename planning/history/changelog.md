@@ -701,3 +701,12 @@ Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat
 - Features: 26, Milestones: 9, Constraints: C-01..C-13 (C-03 supersedes gstack-adoption N-03 — eval framework now in scope)
 - Validation: passed (0 errors — sections, counts, cross-refs)
 - Acceptance gate: re-run 4-agent scorecard; every dimension ≥ gstack, overall > 8.3
+
+## 2026-07-01 — PLAN-exceed-gstack created from roadmap
+- Generated via /loom-plan create (dual-track, fable plan-builder + sonnet criteria-planner)
+- Source: planning/ROADMAP-exceed-gstack.md (approved)
+- planVersion: 2 — Phases: 30 (after P-02/P-03/P-04 splits), Waves: 12, Deliverables: ~160
+- API interface specs: 15, State machines: 4, Error codes: 21
+- Criteria plan: .plan-execution/criteria-plan.toon (49 criteria after integrator: 45 + CG-001..004 backfills; C-21 equivalence block per IC-001)
+- Interpretation conflicts: 1 blocking, 5 warning, 1 info — all resolved via fable integrator pass alongside 6 critic-predicted blockers
+- Note: integrator session died post-edit/pre-report; state verified complete by orchestrator re-validation
