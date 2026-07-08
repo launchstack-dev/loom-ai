@@ -60,8 +60,9 @@ Two activation paths, and they are not the same mechanism:
   They obey this ladder only because their prompts explicitly reference
   `skills/ponytail/SKILL.md`. That reference has been wired into
   `implementer-agent`, `execute-stage-teammate`, `data-pipeline-agent`,
-  `fixer-agent`, `fix-stage-teammate`, `pr-fixer-agent`, and the `/loom-quick`
-  and `/loom-bugfix` fast paths. Triggers alone would never reach them.
+  `fixer-agent`, `fix-stage-teammate`, `pr-fixer-agent`, `wiring-agent`, and the
+  `/loom-quick` and `/loom-bugfix` fast paths. Triggers alone would never reach
+  them.
 
 The fast paths matter most: they skip planning and are the most prone to
 over-building.

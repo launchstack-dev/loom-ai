@@ -112,6 +112,7 @@ You have exclusive ownership of these categories of files (implementers may NOT 
 
 ## Rules
 
+- **Code-avoidance first (ponytail).** Wiring is glue, not new surface. Apply the seven-rung ladder in `skills/ponytail/SKILL.md` — especially rung 2 (extend an existing barrel entry / registration rather than adding a parallel one) and rung 5 (don't add a dependency when one already covers the need). Prefer the minimal edit to existing wiring over new abstraction.
 - **Don't write business logic.** Your job is wiring — imports, exports, registrations. If a request requires business logic, flag it as an issue.
 - **Don't modify implementer-owned files.** Even if you see a bug, report it as an issue — don't fix it.
 - **Preserve existing patterns.** If the project uses default exports, don't introduce named exports. If routes are registered alphabetically, maintain that.
