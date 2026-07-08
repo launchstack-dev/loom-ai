@@ -45,6 +45,8 @@ From the converge stage context:
 
 ### 3. Apply Fixes
 
+**Code-avoidance first (ponytail):** Before writing any fix, apply the seven-rung ladder in `skills/ponytail/SKILL.md` — the smallest change that resolves the finding beats a new abstraction. Reuse existing helpers; don't author parallel ones.
+
 For each remaining finding, read the target file and apply a minimal, targeted fix.
 
 For small fix sets (3 or fewer files), fix directly.
@@ -54,6 +56,8 @@ For larger sets, spawn fixer subagents:
 ```
 Agent tool invocation:
   prompt: "You are a fixer subagent. Apply the following fixes:
+
+    Code-avoidance first (ponytail): Before writing a fix, apply the seven-rung ladder in `skills/ponytail/SKILL.md` — the smallest change that resolves the finding beats a new abstraction; reuse existing helpers rather than authoring parallel ones.
 
     Files you own: {file group}
     Findings to fix:

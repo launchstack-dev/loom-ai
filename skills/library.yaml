@@ -305,6 +305,7 @@ library:
     - name: ponytail
       description: "Code-avoidance discipline — run the seven-rung 'does it need to exist?' ladder before writing code. Prevention-side complement to the feedback-loop verification ladder."
       source: skills/ponytail/SKILL.md
+      # keep triggers in sync with skills/ponytail/SKILL.md frontmatter
       triggers:
         - "**/*.ts"
         - "**/*.tsx"

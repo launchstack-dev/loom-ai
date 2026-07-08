@@ -25,6 +25,8 @@ You receive:
 
 ## Approach
 
+0. **Code-avoidance first (ponytail):** Before authoring any direct edit, apply the seven-rung ladder in `skills/ponytail/SKILL.md` — prefer reuse, stdlib, platform features, and existing deps over new code, and keep the net-new diff minimal. (Edits delegated to `fixer-agent` Integrator Mode already carry this; this covers your own direct-edit paths.)
+
 1. **Validate the PR is checked out.** Run `gh pr view {prNumber} --json headRefName,headRefOid` and confirm the working tree's `HEAD` matches `headRefOid`. If not, abort with a `SUBJECT_UNREADABLE`-class blocking issue describing the mismatch (the wrapper is supposed to have checked this out).
 
 2. **Inject PR-diff context.** Capture the full PR diff once per invocation:

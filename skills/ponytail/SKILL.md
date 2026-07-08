@@ -51,16 +51,24 @@ new code must do. Jumping to rung 7 is how over-engineering enters a diff.
 
 ## When This Applies
 
-Auto-loads on edits to source files (`.ts`, `.tsx`, `.js`, `.jsx`, `.py`,
-`.go`, `.rs`). It reaches the implementation agents (`implementer-agent`,
-`execute-stage-teammate`, `data-pipeline-agent`) and the fast paths
-(`/loom-quick`, `/loom-bugfix`) whenever they are writing code — the fast paths
-skip planning and are the most prone to over-building, so the ladder matters
-most there.
+Two activation paths, and they are not the same mechanism:
+
+- **Interactive sessions** — the `triggers:` frontmatter auto-loads this skill
+  when you edit a source file (`.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.go`,
+  `.rs`).
+- **Spawned pipeline subagents** — subagents do **not** inherit skill triggers.
+  They obey this ladder only because their prompts explicitly reference
+  `skills/ponytail/SKILL.md`. That reference has been wired into
+  `implementer-agent`, `execute-stage-teammate`, `data-pipeline-agent`,
+  `fixer-agent`, `fix-stage-teammate`, `pr-fixer-agent`, and the `/loom-quick`
+  and `/loom-bugfix` fast paths. Triggers alone would never reach them.
+
+The fast paths matter most: they skip planning and are the most prone to
+over-building.
 
 At plan/roadmap altitude the same YAGNI instinct lives in `strategy-agent`
-(scope discipline) and `plan-ceo-review-agent` (SCOPE_REDUCTION). Ponytail is
-the code-level expression of that principle, not a replacement for it.
+(scope discipline) and `plan-ceo-review-agent` (the `REDUCTION` mode). Ponytail
+is the code-level expression of that principle, not a replacement for it.
 
 ---
 
