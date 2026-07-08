@@ -8,6 +8,8 @@ Zero-ceremony task execution with Loom rigor. Describe what you need done and Lo
 
 ## Requirements
 
+**Code-avoidance discipline (ponytail).** Before writing any new code in this flow, apply the seven-rung ladder in `skills/ponytail/SKILL.md`: prefer YAGNI, reuse, stdlib, platform features, and existing deps over authoring. Write only the minimal net-new diff that passes review — fast paths skip planning and are the most prone to over-building.
+
 $ARGUMENTS
 
 ### Arguments

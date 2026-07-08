@@ -166,6 +166,7 @@ durationMs: 0
 
 ## Quality Standards
 
+- **Code-avoidance first (ponytail):** Before writing new code, walk the seven-rung ladder in `skills/ponytail/SKILL.md` — does it need to exist? already in the codebase? stdlib? platform feature? installed dep? one-liner? Only then author, and only the minimal net-new diff. Reuse beats authoring.
 - Match existing codebase style and patterns
 - Import types from contracts — don't redefine them
 - Write code that compiles/type-checks in isolation (given contracts)

@@ -302,6 +302,18 @@ library:
         - "**/loop.toon"
         - "**/feedback-loop*"
 
+    - name: ponytail
+      description: "Code-avoidance discipline — run the seven-rung 'does it need to exist?' ladder before writing code. Prevention-side complement to the feedback-loop verification ladder."
+      source: skills/ponytail/SKILL.md
+      triggers:
+        - "**/*.ts"
+        - "**/*.tsx"
+        - "**/*.js"
+        - "**/*.jsx"
+        - "**/*.py"
+        - "**/*.go"
+        - "**/*.rs"
+
     - name: loom-install
       description: Direct-symlink install path for Loom — alternative to plugin marketplace, cross-host (claude-code, hermes, openclaw, codex). Documents install/upgrade/uninstall flow, git-pull upgrade path, cross-host binding, and the install manifest schema. Auto-loads when working under bin/loom-install, scripts/loom-install.ts, or ~/.loom/install-manifest.toon.
       source: skills/loom-install/SKILL.md
@@ -1085,6 +1097,14 @@ kits:
     includes:
       - type: skill
         name: feedback-loop
+
+  - name: ponytail
+    description: "Code-avoidance discipline — the seven-rung 'does it need to exist?' ladder applied before writing code. Auto-loads on source-file edits. Prevention-side complement to the feedback-loop verification ladder; routes review-side intent to /simplify and /code-review rather than shipping a command."
+    version: 0.1.0
+    minLoomVersion: 4
+    includes:
+      - type: skill
+        name: ponytail
 
   - name: code-review
     description: "Extended code-review lenses that fan out inside /loom-code review — designer-eye visual QA with AI-slop detection, LLM trust-boundary review, and cross-vendor (OpenAI/Gemini) adversarial review. Shipped by M-05 (gstack adoption Phase 5)."

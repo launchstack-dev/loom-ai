@@ -8,6 +8,8 @@ Rapid bug-fix workflow that applies Loom's rigor (wiki context, impact assessmen
 
 ## Requirements
 
+**Code-avoidance discipline (ponytail).** Before writing the fix, apply the seven-rung ladder in `skills/ponytail/SKILL.md`: the smallest change that resolves the bug beats a new abstraction. Reuse existing helpers, prefer stdlib/platform/existing deps, and keep the net-new diff minimal.
+
 $ARGUMENTS
 
 ### Arguments

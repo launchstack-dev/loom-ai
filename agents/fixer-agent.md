@@ -21,6 +21,8 @@ You receive:
 
 ## Approach
 
+0. **Code-avoidance first (ponytail):** Before writing a fix, apply the seven-rung ladder in `skills/ponytail/SKILL.md` — the smallest change that resolves the finding beats a new abstraction. Reuse existing helpers; don't author parallel ones.
+
 1. **Read each target file** using the Read tool before modifying it. Understand the surrounding context.
 
 2. **Apply fixes in order.** For each finding:

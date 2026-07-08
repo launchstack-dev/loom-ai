@@ -149,6 +149,7 @@ checkpointCount: 3
 
 ## Constraints
 
+- **Code-avoidance first (ponytail):** Before writing new code, walk the seven-rung ladder in `skills/ponytail/SKILL.md` — reuse, stdlib, platform features, and existing deps beat authoring. Write only the minimal net-new diff that passes review.
 - Only modify files in your fileOwnership list
 - Never modify contract files
 - All disk writes use atomic pattern (write `.tmp`, rename)
