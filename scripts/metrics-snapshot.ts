@@ -738,6 +738,16 @@ export function validateSnapshotDoc(
     typeof ratioRow.value === "number" &&
     ratioRow.value >= RATIO_FLOOR;
 
+  // A snapshot pinned to a PAST gitRef (not the current merge-base) is a frozen
+  // historical acceptance record: skip exact live re-derivation of the density
+  // (unrelated later code growth legitimately shifts it), but still enforce the
+  // calibrated floor. Fresh snapshots (gitRef == current merge-base) keep the
+  // full anti-tamper exact-match. See validateEquivalenceBlock.
+  const frozen =
+    typeof snap.gitRef === "string" &&
+    SHA_RE.test(snap.gitRef) &&
+    snap.gitRef !== resolveGitRef(repoRoot);
+
   const equiv = asObject(snap.equivalence as ToonValue);
   if (!rawRatioOk) {
     if (equiv === null) {
@@ -745,20 +755,33 @@ export function validateSnapshotDoc(
         "IC-001: raw test-source-ratio < 1.4 requires an equivalence block",
       );
     } else {
-      errors.push(...validateEquivalenceBlock(equiv, repoRoot));
+      errors.push(...validateEquivalenceBlock(equiv, repoRoot, frozen));
     }
   } else if (equiv !== null) {
     // Present anyway — still must be well-formed and re-derivable.
-    errors.push(...validateEquivalenceBlock(equiv, repoRoot));
+    errors.push(...validateEquivalenceBlock(equiv, repoRoot, frozen));
   }
 
   return { ok: errors.length === 0, errors };
 }
 
-/** Machine-validate an equivalence block: known basis, re-derived, >= floor. */
+/**
+ * Machine-validate an equivalence block: known basis, re-derived, >= floor.
+ *
+ * `frozen` marks a snapshot pinned to a PAST gitRef (a historical acceptance
+ * record, not the current merge-base). For a frozen snapshot the exact
+ * live-tree re-derivation is skipped — later, unrelated code growth legitimately
+ * shifts the density and MUST NOT invalidate a recorded acceptance snapshot (its
+ * authority is its pinned gitRef, per the `derivedBy` contract). The calibrated
+ * FLOOR check still applies unconditionally: a frozen record must still clear
+ * the bar it was judged against, so a tampered/below-floor value is still
+ * caught. Fresh snapshots (gitRef == current merge-base, e.g. `--write` output)
+ * keep the full exact-match anti-tamper check.
+ */
 export function validateEquivalenceBlock(
   equiv: { [k: string]: ToonValue },
   repoRoot: string,
+  frozen = false,
 ): string[] {
   const errors: string[] = [];
   const basis = equiv.basis;
@@ -779,12 +802,14 @@ export function validateEquivalenceBlock(
   if (typeof equiv.rationale !== "string" || equiv.rationale.trim() === "") {
     errors.push("equivalence.rationale: required non-empty string");
   }
-  const derived = computeEquivalence(repoRoot).computedValue;
-  if (typeof computed === "number" && round2(computed) !== derived) {
-    errors.push(
-      `equivalence.computedValue: stored ${computed} != re-derived ${derived} ` +
-        "(stale — regenerate with --write)",
-    );
+  if (!frozen) {
+    const derived = computeEquivalence(repoRoot).computedValue;
+    if (typeof computed === "number" && round2(computed) !== derived) {
+      errors.push(
+        `equivalence.computedValue: stored ${computed} != re-derived ${derived} ` +
+          "(stale — regenerate with --write)",
+      );
+    }
   }
   // The density basis is checked against its OWN calibrated floor, NOT the LOC
   // ratio floor (unit mismatch). Floor = max(lib/-core density, absolute 3.0).

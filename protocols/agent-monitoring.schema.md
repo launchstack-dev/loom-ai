@@ -1,5 +1,11 @@
 # Agent Monitoring Protocol
 
+> **FALLBACK (frozen — bugfix-only, roadmap C-04/M-2).** Heartbeat polling
+> exists because a markdown orchestrator cannot await agents. The executable
+> engine (`workflows/loom-execute.mjs`) awaits its spawns natively via the
+> Workflow runtime and does not use this protocol. It applies only to the
+> markdown fallback drivers (strict profile / no Workflow tool).
+
 Canonical specification for runtime monitoring of background agents. This protocol enables the orchestrator to track agent progress, detect hung agents, and intervene when necessary.
 
 All orchestrators (`/loom-execute-plan`, `/loom-roadmap`) and all execution agents (`implementer-agent`, `contracts-agent`, `wiring-agent`, `verification-agent`) MUST conform to this spec.

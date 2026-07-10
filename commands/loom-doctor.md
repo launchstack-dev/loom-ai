@@ -36,6 +36,10 @@ Flags:
   --quiet                      Suppress per-check pass lines (warn/fail only)
   --output-file <path>         Redirect report to file; stderr keeps progress
   --only <id>                  Run only the named check (registry id)
+  --resolve-profile            Probe harness capabilities and write the resolved
+                               discipline profile to [settings.discipline]
+                               (requires confirmation; see
+                               protocols/discipline.schema.md)
   --reconcile                  Reconcile install channel (requires confirmation)
   --reset-evidence <check-id>  Clear cached evidence for one check (delegates
                                to MigrationRunner.resetEvidence)
@@ -50,6 +54,8 @@ Examples:
   /loom-doctor
   /loom-doctor --json
   /loom-doctor --only hook-files-present
+  /loom-doctor --resolve-profile
+  /loom-doctor --only discipline-profile
   /loom-doctor --quiet --output-file doctor.txt
   /loom-doctor --reconcile --yes
   /loom-doctor --reset-evidence channel-files
@@ -74,6 +80,15 @@ The CLI lives at `scripts/loom-doctor.ts`. It calls:
 interface (`scripts/lib/doctor/migration-runner.interface.ts`); the concrete
 implementation ships in Phase 9B (`scripts/lib/migration-runner.ts`) and is
 injected at runtime — the CLI surface ships independently.
+
+`--resolve-profile` consumes `scripts/lib/doctor/profile-resolver.ts` — one of
+the only two modules (with `hooks/lib/discipline.ts`) permitted to contain
+discipline-profile resolution logic. It probes harness capabilities (never
+model names), prints what the resolved profile turns off, and — after
+confirmation — writes `resolved = "<profile>"` into `[settings.discipline]`
+atomically. The `profile` key (user pin) is never modified. The read-only
+counterpart is the `discipline-profile` check, which reports configured /
+resolved / effective profile and tier floors on every doctor run.
 
 ## Exit Codes
 

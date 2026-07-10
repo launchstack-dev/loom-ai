@@ -1,5 +1,12 @@
 /**
  * Hook: checkpoint-trigger (PostToolUse + Stop)
+ *
+ * DEPRECATED — scaffold layer, active only under the `strict` discipline
+ * profile (roadmap M-3). Native replacement: the harness's automatic context
+ * summarization makes the checkpoint+clear ritual unnecessary; Workflow runs
+ * additionally carry their own resume journal. See
+ * protocols/discipline.schema.md.
+ *
  * Monitors accumulated context and suggests checkpoint+clear when estimated
  * context exceeds 80% of the context window. Fires on every tool use but
  * only injects a suggestion every 10 tool uses (unless critical).
@@ -11,6 +18,7 @@ import * as path from "node:path";
 import { runHook, allow } from "./lib/run-hook.js";
 import { estimateTokens, estimateFileTokens } from "./lib/token-estimator.js";
 import { findPlanExecutionDir } from "./lib/context.js";
+import { hookActive } from "./lib/discipline.js";
 
 interface CheckpointConfig {
   contextWindow: number;
@@ -159,6 +167,9 @@ function detectResumeCommand(planExecDir: string | null): string {
 }
 
 runHook("checkpoint-trigger", async (input) => {
+  // Scaffold layer — inactive below the strict discipline profile
+  if (!hookActive("checkpoint-trigger")) return allow();
+
   const config = readCheckpointConfig();
   const planExecDir = findPlanExecutionDir();
 

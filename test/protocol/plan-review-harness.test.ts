@@ -504,6 +504,7 @@ describe("buildSpawnRequest", () => {
       resultDir: ".plan-execution/convergence/reviewer-results",
       iteration: 2,
       now: new Date("2026-06-13T10:00:00.000Z"),
+      panel: REVIEWER_AGENT_FILES,
     });
     expect(req.spawns.length).toBe(6);
     expect(req.spawns.map((s) => s.agentName)).toEqual(
@@ -573,7 +574,7 @@ describe("collectEnvelopes", () => {
         encodeAgentResult({ agent: r.reviewerAgent, status: "success" }),
       );
     }
-    const result = collectEnvelopes(tmp);
+    const result = collectEnvelopes(tmp, REVIEWER_AGENT_FILES);
     expect(result.envelopes.length).toBe(3);
     expect(result.missing.length).toBe(3);
     expect(result.failed.length).toBe(0);
@@ -589,7 +590,7 @@ describe("collectEnvelopes", () => {
         status: "success",
       }),
     );
-    const result = collectEnvelopes(tmp);
+    const result = collectEnvelopes(tmp, REVIEWER_AGENT_FILES);
     expect(result.envelopes.length).toBe(1);
     expect(result.envelopes[0].agent).toBe("feature-coverage-reviewer-agent");
   });
@@ -602,7 +603,7 @@ describe("collectEnvelopes", () => {
         status: "failure",
       }),
     );
-    const result = collectEnvelopes(tmp);
+    const result = collectEnvelopes(tmp, REVIEWER_AGENT_FILES);
     expect(result.failed).toEqual(["strategy-reviewer-agent"]);
     expect(result.corrupted).toEqual([]);
   });
@@ -619,7 +620,7 @@ describe("collectEnvelopes", () => {
       path.join(tmp, "ux-reviewer-agent.toon"),
       "this is not a valid TOON envelope\n",
     );
-    const result = collectEnvelopes(tmp);
+    const result = collectEnvelopes(tmp, REVIEWER_AGENT_FILES);
     expect(result.corrupted).toEqual(["ux-reviewer-agent"]);
     // The corrupted file is NOT in `missing` (which would trigger respawn).
     expect(result.missing.includes("ux-reviewer-agent")).toBe(false);
@@ -652,7 +653,7 @@ describe("collectEnvelopes", () => {
       "garbage content\n",
     );
     // Remaining 3 reviewers absent → missing
-    const result = collectEnvelopes(tmp);
+    const result = collectEnvelopes(tmp, REVIEWER_AGENT_FILES);
     expect(result.envelopes.length).toBe(2); // success + failure both parsed
     expect(result.failed).toEqual(["strategy-reviewer-agent"]);
     expect(result.corrupted).toEqual(["ux-reviewer-agent"]);

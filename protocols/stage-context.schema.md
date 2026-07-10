@@ -1,5 +1,12 @@
 # Stage Context Schema
 
+> **PARTIALLY DEPRECATED (roadmap M-3).** The `StageContext` stage-summary
+> machinery is scaffold-layer (strict profile only) — the Workflow runtime's
+> journal and structured agent outputs replace it on the executable path.
+> `ConvergenceIterationSummary` (`iter-{N}.toon`) remains AUTHORITATIVE on
+> every path: the engine step-recorder writes it. See
+> `protocols/discipline.schema.md`.
+
 Defines the `StageContext` TOON format written at every pipeline boundary, and the `ConvergenceIterationSummary` format written after each convergence iteration. These structured summaries are the authoritative source for stage outcomes; `rolling-context.md` is the compressed derivative.
 
 ## File Locations

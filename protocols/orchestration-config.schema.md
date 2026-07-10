@@ -21,6 +21,20 @@ review = "opus"
 verification = "sonnet"
 utility = "sonnet"
 
+[settings.discipline]
+# Capability-gated discipline profile — see protocols/discipline.schema.md.
+# auto: doctor probes harness capabilities and writes `resolved`; until then
+#       resolution defaults to strict (existing installs are unaffected).
+# strict:   core + engine + scaffold — today's Loom
+# standard: core + engine — scaffold hooks off
+# minimal:  core only — engine trusts the native Workflow tool
+profile = "auto"
+# resolved = "standard"     # written by /loom-doctor --resolve-profile
+
+[settings.discipline.tierOverrides]
+# Per-agent-tier floors for tier-sensitive hooks (LOOM_AGENT_TIER on spawn).
+haiku = "standard"          # cheap-tier subagents keep file-ownership enforcement
+
 # ─────────────────────────────────────────────────────────────
 # Pipeline agents — plug into /review-plan, /execute-plan, etc.
 # ─────────────────────────────────────────────────────────────

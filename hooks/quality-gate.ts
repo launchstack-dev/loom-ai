@@ -14,7 +14,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { runHook, allow, block } from "./lib/run-hook.js";
-import { findPlanExecutionDir, readPipelineState } from "./lib/context.js";
+import { findPlanExecutionDir, readPipelineState, readExecutionState } from "./lib/context.js";
+import { hookActive } from "./lib/discipline.js";
+import { revalidateCompletion } from "./lib/revalidation.js";
 
 const STALE_PIPELINE_DAYS = 7;
 const STALE_PIPELINE_MS = STALE_PIPELINE_DAYS * 24 * 60 * 60 * 1000;
@@ -26,6 +28,35 @@ const KNOWN_STAGES = new Set([
   "execute", "converge", "test", "review-code", "fix-code",
   "complete", "escalated",
 ]);
+
+/**
+ * Acceptance re-validation gate (roadmap C-08 / CT6 A2): a completion claim
+ * is only allowed to stop after the acceptance checks pass on an independent
+ * re-run. Fail-closed on failing checks; the failing criterion is named.
+ */
+function gateCompletionClaim(planExecDir: string) {
+  const result = revalidateCompletion(planExecDir);
+  switch (result.verdict) {
+    case "pass":
+    case "already-validated":
+    case "operator-skip":
+      return allow();
+    case "fail":
+      return block(
+        `Completion claimed, but acceptance re-validation FAILED:\n` +
+          result.failures.map((f) => `  - ${f}`).join("\n") +
+          `\nFix the failing checks before finishing (or re-run them manually to inspect). ` +
+          `This gate re-runs [domain].verificationPipeline independently — a claim is not a verdict.`
+      );
+    case "skipped-checks":
+      return block(
+        `Completion claimed, but verification was skipped or unrecorded:\n` +
+          result.failures.map((f) => `  - ${f}`).join("\n") +
+          `\nRun the verification pipeline and record wave verificationResult before finishing. ` +
+          `Self-certified completion is blocked under every discipline profile (C-08).`
+      );
+  }
+}
 
 const STAGE_NAMES: Record<string, string> = {
   "roadmap-create": "Roadmap Creation",
@@ -44,14 +75,30 @@ const STAGE_NAMES: Record<string, string> = {
 };
 
 runHook("quality-gate", async (_input) => {
+  // Core layer (C-08): the Stop-time gate holds under every profile. The
+  // hookActive call is kept so the single seam stays the only decision point.
+  if (!hookActive("quality-gate")) return allow();
+
   const planExecDir = findPlanExecutionDir();
   if (!planExecDir) return allow(); // Not in a Loom run
 
   const pipeline = readPipelineState(planExecDir);
-  if (!pipeline) return allow(); // Can't read state — fail open
+  if (!pipeline) {
+    // No pipeline run — but an execution-only run claiming completion still
+    // gets the acceptance re-validation gate (C-08: no self-certification).
+    const execution = readExecutionState(planExecDir);
+    if (execution && execution.status === "completed") {
+      return gateCompletionClaim(planExecDir);
+    }
+    return allow(); // No completion claim — fail open as before
+  }
 
   if (TERMINAL_STAGES.has(pipeline.currentStage)) {
-    return allow(); // Legitimate stop
+    // "escalated" is not a done-claim; only "complete" is re-validated.
+    if (pipeline.currentStage === "complete") {
+      return gateCompletionClaim(planExecDir);
+    }
+    return allow();
   }
 
   // Unknown stage — fail open rather than blocking on corrupted state

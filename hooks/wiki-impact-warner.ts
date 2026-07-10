@@ -1,5 +1,13 @@
 /**
  * Hook: wiki-impact-warner (PreToolUse — Write/Edit)
+ *
+ * DEPRECATED — scaffold layer (throttle/injection machinery), active only
+ * under the `strict` discipline profile (roadmap M-3). Native replacement:
+ * on-demand knowledge access — `/loom-wiki query` and (once Track B lands)
+ * scoped map excerpts in agent contracts — instead of unsolicited prompt
+ * injection. The wiki itself is core and unaffected. See
+ * protocols/discipline.schema.md.
+ *
  * Surfaces flow/contract impact before file edits via graph walk over
  * .loom/wiki/. Never blocks; only emits informational messages.
  *
@@ -16,6 +24,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { runHook, allow } from "./lib/run-hook.js";
 import { parseToon, parseToonArray } from "./lib/toon-reader.js";
+import { hookActive } from "./lib/discipline.js";
 import {
   findProjectRoot,
   writeAtomic,
@@ -283,6 +292,9 @@ runHook("wiki-impact-warner", async (input) => {
   const filePath: string | undefined = input.tool_input?.file_path;
   if (!filePath) return allow();
   if (process.env.LOOM_WIKI_HOOKS === "0") return allow();
+
+  // Scaffold layer (throttle/injection machinery) — inactive below strict
+  if (!hookActive("wiki-impact-warner")) return allow();
 
   const absPath = canonicalize(filePath);
   const root = findProjectRoot();

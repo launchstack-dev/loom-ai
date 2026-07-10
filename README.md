@@ -49,7 +49,7 @@ What you actually get when you run Loom on a project:
 - **Convergence loops** that iterate `do work → check work → remediate` until tests pass and reviewers approve, with circuit breakers (stalled, regression, budget-exhausted) instead of infinite spin.
 - **A repo-committed wiki** (`.loom/wiki/`) that captures scope decisions, contracts, scenarios, and per-domain `contract-*` pages — coherent across changes because `/loom-change` mutates atomically.
 - **Given/When/Then scenarios as the canonical testable unit** — the convergence-planner emits verification targets directly from scenarios at four tiers (unit / integration / e2e / qa-review).
-- **Tool-call-level discipline** — <!-- loom:generated:hook-count-summary -->21<!-- /loom:generated:hook-count-summary --> enforcement and monitoring hooks plus a 100k-token context-budget cap per spawn keep long agentic runs predictable and auditable.
+- **Tool-call-level discipline** — <!-- loom:generated:hook-count-summary -->22<!-- /loom:generated:hook-count-summary --> enforcement and monitoring hooks plus a 100k-token context-budget cap per spawn keep long agentic runs predictable and auditable.
 
 ## Quickstart
 
@@ -803,7 +803,7 @@ The curl install also stages inert hook templates under `~/.claude/templates/hoo
 Loom uses a **two-tier install model**:
 
 1. **User-global tier (`~/.claude/`)** — slash commands, agents, statusline, update-checker, and inert hook templates. Installed once by the curl installer.
-2. **Per-project tier (`<repo>/hooks/` + `<repo>/.claude/settings.json`)** — the <!-- loom:generated:hook-count-tier -->21<!-- /loom:generated:hook-count-tier --> enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus ambient monitors; full table in [`docs/reference/hooks.md`](docs/reference/hooks.md)). Installed per-project, opt-in.
+2. **Per-project tier (`<repo>/hooks/` + `<repo>/.claude/settings.json`)** — the <!-- loom:generated:hook-count-tier -->22<!-- /loom:generated:hook-count-tier --> enforcement hooks (file-ownership, contract-lock, context-budget, deploy-guard, quality-gate, typecheck-on-write, wiki guards, plus ambient monitors; full table in [`docs/reference/hooks.md`](docs/reference/hooks.md)). Installed per-project, opt-in.
 
 Claude Code hooks reference `$CLAUDE_PROJECT_DIR/hooks/...`, so the user-global tier alone cannot wire enforcement. The per-project tier is bootstrapped during these commands:
 
@@ -1589,7 +1589,7 @@ Available as direct commands (`/loom-debate`) or flags on any command (`--debate
 
 ## Hooks (Deterministic Enforcement)
 
-<!-- loom:generated:hook-count-section -->21<!-- /loom:generated:hook-count-section --> Claude Code hooks enforce Loom invariants at the tool-call level — file ownership, contract locks, context budgets, deploy guards, wiki integrity. Fail-open on missing state, fail-closed on schema-version mismatches. For the severity convention (which event type to slot a hook into when authoring a kit), see [Install → Hook enforcement](#hook-enforcement-per-project) above.
+<!-- loom:generated:hook-count-section -->22<!-- /loom:generated:hook-count-section --> Claude Code hooks enforce Loom invariants at the tool-call level — file ownership, contract locks, context budgets, deploy guards, wiki integrity. Fail-open on missing state, fail-closed on schema-version mismatches. For the severity convention (which event type to slot a hook into when authoring a kit), see [Install → Hook enforcement](#hook-enforcement-per-project) above.
 
 **Full hook reference, infra scripts, and registration:** see [`docs/reference/hooks.md`](docs/reference/hooks.md).
 
@@ -1665,7 +1665,7 @@ scripts/verify-checksums.sh          # exit 1 if drift; suggests the fix
 
 Reference material kept out of the main README to keep it scannable:
 
-- [`docs/reference/hooks.md`](docs/reference/hooks.md) — Full table of the <!-- loom:generated:hook-count-deepdive -->21<!-- /loom:generated:hook-count-deepdive --> enforcement hooks, infra scripts, and registration.
+- [`docs/reference/hooks.md`](docs/reference/hooks.md) — Full table of the <!-- loom:generated:hook-count-deepdive -->22<!-- /loom:generated:hook-count-deepdive --> enforcement hooks, infra scripts, and registration.
 - [`docs/internals.md`](docs/internals.md) — Wiki maintenance triggers, data formats (TOON), persistence layout, and repo file structure.
 - [`docs/concepts.md`](docs/concepts.md) — The five concepts behind everything Loom does.
 - [`docs/first-30-minutes.md`](docs/first-30-minutes.md) — Narrated walkthrough of your first session.

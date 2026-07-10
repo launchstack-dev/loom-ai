@@ -395,6 +395,27 @@ Write a starter `planning/README.md` (one paragraph: "This directory holds {proj
 
 Skip this step entirely if the legacy layout is already in use (i.e., a non-stub `ROADMAP.md` or `PLAN.md` exists at root). Migration of legacy projects is the job of `/loom-upgrade --project` Rule 14, not `/loom-init`.
 
+##### 4e. Discipline Profile Seed (roadmap C-06)
+
+Fresh installs default to `auto` — seed `.claude/orchestration.toml` with the
+discipline section (create the file if it doesn't exist; NEVER modify an
+existing `[settings.discipline]` section — a present section is a user
+decision):
+
+```toml
+[settings.discipline]
+# Capability-gated discipline profile — see protocols/discipline.schema.md.
+# Resolves to "strict" until /loom-doctor --resolve-profile writes `resolved`.
+profile = "auto"
+
+[settings.discipline.tierOverrides]
+haiku = "standard"   # cheap-tier subagents keep file-ownership enforcement
+```
+
+Until the user runs `/loom-doctor --resolve-profile`, `auto` resolves to
+`strict` (today's full behavior) — seeding is additive, never a behavior
+change.
+
 #### Step 4.5: Generate Wiki
 
 **Skip this step if `--no-wiki` was passed.**
@@ -549,6 +570,8 @@ Next:
 ```
 
 Run /loom-doctor to verify your install.
+Run /loom-doctor --resolve-profile to probe your harness and enable the
+modern discipline profile (until then Loom runs strict — full scaffold).
 
 Other useful follow-ups:
   /loom-roadmap init --brownfield                Create a brownfield roadmap explicitly

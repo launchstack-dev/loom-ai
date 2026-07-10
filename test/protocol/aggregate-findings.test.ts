@@ -224,13 +224,15 @@ describe("deriveDimension", () => {
     }
   });
 
-  it("throws FindingsInvariantViolation for unknown reviewer agent names", () => {
-    expect(() => deriveDimension("unknown-agent")).toThrow(
-      FindingsInvariantViolation,
-    );
-    expect(() => deriveDimension("feature-coverage-agent")).toThrow(
-      /FINDINGS_SCHEMA_INVALID/,
-    );
+  it("derives a name-based dimension for non-canonical reviewers (C-07 config panels)", () => {
+    expect(deriveDimension("adversary-agent")).toBe("adversary");
+    expect(deriveDimension("hipaa-security-reviewer-agent")).toBe("hipaa-security");
+    // Canonical family name without the -reviewer- infix derives cleanly too.
+    expect(deriveDimension("feature-coverage-agent")).toBe("feature-coverage");
+  });
+
+  it("still throws FindingsInvariantViolation for unusable names", () => {
+    expect(() => deriveDimension("-agent")).toThrow(FindingsInvariantViolation);
   });
 });
 
@@ -603,18 +605,19 @@ describe("aggregateFindings — invariant enforcement", () => {
     ).toThrow(FindingsInvariantViolation);
   });
 
-  it("throws when an envelope references an unknown reviewer name", () => {
+  it("aggregates non-canonical reviewers with a derived dimension (C-07 config panels)", () => {
     const envelopes: AgentResultEnvelope[] = [
-      envelope("nonexistent-reviewer-agent", "success", [issue("high")]),
+      envelope("adversary-reviewer-agent", "success", [issue("high")]),
     ];
-    expect(() =>
-      aggregateFindings({
-        subject: SUBJECT,
-        iteration: 1,
-        envelopes,
-        now: fixedNow(),
-      }),
-    ).toThrow(/unknown reviewer agent/);
+    const findings = aggregateFindings({
+      subject: SUBJECT,
+      iteration: 1,
+      envelopes,
+      now: fixedNow(),
+    });
+    expect(findings.findings).toHaveLength(1);
+    expect(findings.findings[0].dimension).toBe("adversary");
+    expect(findings.findings[0].reviewerAgent).toBe("adversary-reviewer-agent");
   });
 
   it("the resulting blockingCount/advisoryCount always match the findings array", () => {

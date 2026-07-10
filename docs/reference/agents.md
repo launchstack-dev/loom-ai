@@ -9,6 +9,7 @@ Every spawnable Loom agent and its resolved model tier, generated from the
 <!-- loom:generated:agents-table -->
 | Agent | Model | Description |
 |---|---|---|
+| `adversary-agent` | sonnet | Adversarial reviewer — builds the strongest case that the work under review is wrong. |
 | `agentic-workflow-agent` | sonnet | Decompose project phases into discrete, context-bounded tasks optimized for AI agent execution. |
 | `auto-dispatcher` | sonnet | Thin lead dispatcher for agent team pipeline mode. |
 | `benchmark-agent` | opus | Competitive-benchmark agent — runs PRE-roadmap on a bare idea (unlike the plan-scoped feature-cover… |

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # generate-checksums.sh — regenerate checksums.sha256 in place.
 #
-# Reads the path list from the current checksums.sha256 and re-hashes
-# each file. Writes the new manifest atomically (.tmp + rename). The
-# path list is the source of truth — to add a new file to the manifest,
-# append it manually once; subsequent regenerations preserve the line
-# (and update its hash whenever the file changes).
+# Re-hashes every path already listed in checksums.sha256 AND discovers
+# new fetch targets from install.sh's file arrays, appending them with
+# hashes. install.sh is the source of truth for WHAT ships; this script
+# keeps the manifest complete against it automatically — adding a file to
+# install.sh and running this script (or committing, via the pre-commit
+# hook) is sufficient. Writes the new manifest atomically (.tmp + rename).
 #
 # Usage:
 #   scripts/generate-checksums.sh           # regenerate from repo root
@@ -132,6 +133,37 @@ if [ "${MISSING}" -gt 0 ]; then
   exit 1
 fi
 
+# ── Discover new install.sh fetch targets ─────────────────────────────
+# Same parser as scripts/check-install-manifest-drift.sh: union of the
+# array-entry form ("src:${CLAUDE_DIR}/...") and direct fetch_file calls.
+# Any fetch target not yet in the manifest is appended (hashed) so a new
+# file added to install.sh can never ship unverified. checksums.sha256
+# itself is excluded (it is the integrity manifest, fetched separately).
+INSTALL_SH="${REPO_ROOT}/install.sh"
+ADDED=0
+if [ -f "${INSTALL_SH}" ]; then
+  while IFS= read -r p; do
+    [ -n "${p}" ] || continue
+    if ! awk 'NF == 2 && $1 !~ /^#/ { print $2 }' "${TMP_MANIFEST}" | grep -qxF "${p}"; then
+      full="${REPO_ROOT}/${p}"
+      if [ ! -f "${full}" ]; then
+        echo "ERROR: install.sh fetches ${p} but the file does not exist in the repo" >&2
+        rm -f "${TMP_MANIFEST}"
+        exit 1
+      fi
+      hash=$(shasum -a 256 "${full}" | awk '{print $1}')
+      printf '%s  %s\n' "${hash}" "${p}" >> "${TMP_MANIFEST}"
+      echo "NEW: ${p} (from install.sh)" >&2
+      ADDED=$((ADDED + 1))
+    fi
+  done < <(
+    {
+      grep -oE '"[^"]+:\$\{CLAUDE_DIR\}' "${INSTALL_SH}" | sed 's/:.*//; s/^"//'
+      grep -oE 'fetch_file "[^"$]+"' "${INSTALL_SH}" | sed 's/^fetch_file "//; s/"$//'
+    } | grep -vE '^(checksums\.sha256|\$)' | LC_ALL=C sort -u
+  )
+fi
+
 # ── Compare or commit ─────────────────────────────────────────────────
 if [ "${CHECK_MODE}" = "true" ]; then
   if cmp -s "${MANIFEST}" "${TMP_MANIFEST}"; then
@@ -150,4 +182,9 @@ fi
 
 # Commit the new manifest atomically
 mv "${TMP_MANIFEST}" "${MANIFEST}"
-echo "checksums.sha256 regenerated (${#PATHS[@]} files)"
+TOTAL=$(( ${#PATHS[@]} + ADDED ))
+if [ "${ADDED}" -gt 0 ]; then
+  echo "checksums.sha256 regenerated (${TOTAL} files, ${ADDED} new from install.sh)"
+else
+  echo "checksums.sha256 regenerated (${TOTAL} files)"
+fi

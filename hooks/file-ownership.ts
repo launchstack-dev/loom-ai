@@ -8,10 +8,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { runHook, allow, block } from "./lib/run-hook.js";
 import { findPlanExecutionDir, getOwnedFiles } from "./lib/context.js";
+import { hookActive } from "./lib/discipline.js";
 
 runHook("file-ownership", async (input) => {
   const filePath: string | undefined = input.tool_input?.file_path;
   if (!filePath) return allow();
+
+  // Core, tier-gated: off for the main session under the minimal profile, but
+  // tier floors (LOOM_AGENT_TIER, e.g. haiku) keep it on for cheap-tier agents.
+  if (!hookActive("file-ownership")) return allow();
 
   const planExecDir = findPlanExecutionDir();
   if (!planExecDir) return allow(); // Not in a Loom run

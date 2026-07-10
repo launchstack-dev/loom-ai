@@ -515,18 +515,23 @@ The colon-prefixed legacy form (`agent:name`, `skill:name`) is still accepted fo
 ### `use <kit-name>` (when name matches a kit)
 
 1. Read library.yaml `kits:` section, find the kit by name.
-2. Check `minLoomVersion` against the local `catalog_version` in library.yaml. If the kit requires a higher version, warn:
+2. If the kit declares a `gate:` (see `protocols/kit.schema.md § Discipline Gate`), resolve the project's discipline profile via `hooks/lib/discipline.ts` → `resolveProfile()` and compare on the `minimal < standard < strict` order. If the resolved profile is less strict than `gate.discipline`, abort before installing anything:
+   ```
+   Kit <kit-name> is gated to the "<gate.discipline>" discipline profile; this project resolves to "<resolved>".
+   To install anyway, pin profile = "<gate.discipline>" in .claude/orchestration.toml [settings.discipline] and re-run.
+   ```
+3. Check `minLoomVersion` against the local `catalog_version` in library.yaml. If the kit requires a higher version, warn:
    ```
    Kit <kit-name> requires Loom catalog version <N>, you have <M>. Install anyway? (yes/no)
    ```
    If the user declines, abort.
-3. Install all items in the kit's `includes` list sequentially, showing progress:
+4. Install all items in the kit's `includes` list sequentially, showing progress:
    ```
    [1/6] Installing data-schema-reviewer...
    [2/6] Installing data-quality-gate...
    ```
-4. Each item is installed using the existing `use` logic (source resolution, dependency resolution, target path, write). Items already present in install-state.toon are skipped with a note: `[3/6] data-lineage-tracker — already installed, skipping`.
-5. After all items are installed, show a kit-level summary:
+5. Each item is installed using the existing `use` logic (source resolution, dependency resolution, target path, write). Items already present in install-state.toon are skipped with a note: `[3/6] data-lineage-tracker — already installed, skipping`.
+6. After all items are installed, show a kit-level summary:
    ```
    Installed <kit-name> kit: 6 items (5 agents, 1 command)
 
@@ -534,7 +539,7 @@ The colon-prefixed legacy form (`agent:name`, `skill:name`) is still accepted fo
      See the kit's suggested config at: kits/<kit-name>/orchestration-fragment.toml
      Or run: /loom-agent create --from ~/.claude/agents/<first-agent-in-kit>.md
    ```
-6. If any item fails to install, report which succeeded and which failed. Do not roll back successful items — leave them installed. The kit is in a partial state. Suggest: `loom-library use <kit-name>` to retry (it will skip already-installed items).
+7. If any item fails to install, report which succeeded and which failed. Do not roll back successful items — leave them installed. The kit is in a partial state. Suggest: `loom-library use <kit-name>` to retry (it will skip already-installed items).
 
 ### `list` (kit section)
 

@@ -17,6 +17,7 @@ end-of-session snapshot.)
 | `file-ownership` | PreToolUse | `Write|Edit` | 10000ms |
 | `wiki-write-guard` | PreToolUse | `Write|Edit` | 10000ms |
 | `wiki-impact-warner` | PreToolUse | `Write|Edit` | 3000ms |
+| `map-freshness` | PreToolUse | `Write|Edit` | 5000ms |
 | `deploy-guard` | PreToolUse | `Bash` | 10000ms |
 | `loom-careful` | PreToolUse | `Bash` | 5000ms |
 | `preflight-worktree-scan` | PreToolUse | `Bash` | 10000ms |

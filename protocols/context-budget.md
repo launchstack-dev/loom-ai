@@ -1,5 +1,10 @@
 # Context Budget
 
+> **DEPRECATED — scaffold layer (roadmap M-3).** Active only under the
+> `strict` discipline profile. Native replacement: the harness manages
+> subagent context; the executable engine bounds spend via `agentBudget`
+> (BUDGET_EXHAUSTED breaker). See `protocols/discipline.schema.md`.
+
 Defines the context budget system for estimating and enforcing token budgets when spawning agents. The budget system is **additive and fail-open** -- it never blocks agent spawns when data is unavailable.
 
 ## ContextBudgetConfig

@@ -32,7 +32,7 @@ const EXPECTED_CHANGES = LOOM_HOOKS.length;
 // hook from every future registration. This ONE hardcoded number forces a
 // human to acknowledge any manifest size change. Intentionally adding or
 // removing a hook? Bump it here, in this single place.
-const MANIFEST_SIZE_ACKNOWLEDGED = 22;
+const MANIFEST_SIZE_ACKNOWLEDGED = 23;
 
 describe("LOOM_HOOKS manifest change-detector", () => {
   it(`has exactly ${MANIFEST_SIZE_ACKNOWLEDGED} entries (bump MANIFEST_SIZE_ACKNOWLEDGED when intentionally changing the manifest)`, () => {

@@ -48,6 +48,28 @@ suggestedConfig: kits/data-engineering/orchestration-fragment.toml
 | includes | yes | (string \| TypedInclude)[] | Library items bundled in this kit. Each entry is either a typed object `{ type, name }` (preferred, v4+) or a bare-string name (deprecated, removed in v5). See § Typed Includes (v4+). |
 | command | no | string | Kit command file (relative to commands directory). |
 | suggestedConfig | no | string | Path to an orchestration.toml fragment that projects can merge in. |
+| gate | no | object | Install precondition. Currently one key: `discipline: <profile>` — the kit installs only when the project's resolved discipline profile is at least this strict. See § Discipline Gate. |
+
+## Discipline Gate
+
+A kit may declare `gate: { discipline: <profile> }` (`strict` | `standard` | `minimal`).
+At `use <kit-name>` time the installer resolves the project's effective profile
+via `hooks/lib/discipline.ts` → `resolveProfile()` (the single seam — never
+re-implement resolution) and compares strictness: the kit installs only when
+`resolvedProfile >= gate.discipline` on the `minimal < standard < strict` order.
+
+On a gate miss the installer aborts before installing anything:
+
+```
+Kit loom-scaffold is gated to the "strict" discipline profile; this project
+resolves to "standard". The scaffold layer is superseded by native harness
+machinery at this profile. To install anyway, pin profile = "strict" in
+.claude/orchestration.toml [settings.discipline] and re-run.
+```
+
+The gate is an install-time convenience, not the enforcement boundary — the
+runtime gate is `hookActive()` in `hooks/lib/discipline.ts`, which self-bails
+scaffold hooks below `strict` even if the files are installed.
 
 ## Typed Includes (v4+)
 
@@ -141,7 +163,14 @@ Kit insertion points map to the existing `phase` values used by project-specific
 
 ## Kit-Prefixed Naming Convention
 
-All kit agents MUST use the kit name as a prefix in their agent name:
+All kit agents MUST use the kit name as a prefix in their agent name.
+
+**Exemption — layer kits:** `loom-core`, `loom-engine`, and `loom-scaffold`
+bundle first-party resources that predate the kit split (Fable Readiness M-1);
+their members keep their original names and are exempt from the prefix rule
+and its install-time enforcement.
+
+Examples of the prefix rule for domain kits:
 
 - `data-schema-reviewer` (kit: data-engineering)
 - `ml-train-agent` (kit: ml-ops)

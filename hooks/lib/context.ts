@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parseToon, parseToonArray, parseToonSimpleArray } from "./toon-reader.js";
+import { parseToon, parseToonArray } from "./toon-reader.js";
 
 export interface WaveTask {
   taskId: string;
@@ -83,7 +83,13 @@ export function readExecutionState(planExecDir: string): ExecutionState | null {
         taskId: String(t["taskId"] ?? ""),
         agent: String(t["agent"] ?? ""),
         status: String(t["status"] ?? "pending"),
-        fileOwnership: parseToonSimpleArray(dedented, `tasks.${t["taskId"]}.fileOwnership`),
+        // fileOwnership is a column in the tasks typed-array table row
+        // (protocols/state.schema.md), not a standalone nested array. Writers
+        // join multiple paths with ";" (see execute-step.ts writeState).
+        fileOwnership: String(t["fileOwnership"] ?? "")
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean),
       }));
 
       waves[waveIdx] = {

@@ -1,22 +1,26 @@
 # Project Conventions
 
-## Data Format: TOON Everywhere
+## Data Format: TOON Frozen (roadmap C-05, M-3)
 
-All Loom on-disk artifacts, agent output formats, protocol schemas, state files, and inter-agent communication MUST use **TOON** (Token-Oriented Object Notation). This applies to:
+**TOON is frozen, not migrated.** Existing TOON artifacts, schemas, and agent
+envelopes stay exactly as they are — every existing contract remains
+authoritative, and there is NO TOON→JSON conversion project. But the
+"convert JSON you find to TOON" mandate is retired:
 
-- Agent result envelopes (AgentResult)
-- Execution state, pipeline state, convergence state
-- Progress/heartbeat files
-- Contract manifests, wave summaries, scope coverage
-- converge.config, Delta Reports, target manifests, fix lists
-- Any new schema, protocol, or agent output format
+- **Existing artifacts:** keep their format. Do not convert in either
+  direction; churning state files breaks resume compatibility for zero user
+  value.
+- **New schemas, protocols, and agent output formats:** MAY use JSON with
+  schema validation (preferred where the consumer is a Workflow
+  `agent(schema)` structured output or an engine CLI) or TOON — pick
+  whichever the surrounding subsystem already speaks.
+- **Never** teach a new consumer both formats for the same artifact; one
+  artifact, one format.
 
-**Exceptions** (these may use their native format):
-- App-specific data being compared or generated (e.g., JSON API responses, SQL result sets, HTML output)
-- Standard tooling config files (`package.json`, `tsconfig.json`, `orchestration.toml`, `library.yaml`)
-- Hook stdin/stdout that follows Claude Code's protocol (JSON per Claude Code spec)
-
-When creating a new agent, skill, command, or protocol: define its output format in TOON. If you find an existing Loom artifact using JSON where TOON should be used, convert it.
+Rationale: TOON's token-savings case is superseded by schema-validated
+structured output and cheaper long context, while a bespoke notation every
+agent must be taught is friction (`planning/ROADMAP-fable-readiness.md`
+C-05).
 
 ## TOON Quick Reference
 
@@ -44,6 +48,13 @@ blockName:                                    # nested block
 - See `protocols/execution-conventions.md` for directory structure and file naming
 
 ## Context Management
+
+> **Scaffold layer — active only under the `strict` discipline profile**
+> (`protocols/discipline.schema.md`). Everything in this section is
+> compensation for harnesses without native context management; under
+> `standard`/`minimal` these hooks self-bail and the native harness
+> (auto-compaction, Workflow budget accounting) owns the job. Each scaffold
+> component's file carries a deprecation note naming its replacement.
 
 ### Budget Cap
 
