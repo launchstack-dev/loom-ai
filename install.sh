@@ -223,6 +223,9 @@ declare -a HOOK_TEMPLATE_FILES=(
   "hooks/bash-portability-on-write.ts:${CLAUDE_DIR}/templates/hooks/bash-portability-on-write.ts"
   "hooks/pylint-on-write.ts:${CLAUDE_DIR}/templates/hooks/pylint-on-write.ts"
   "hooks/loom-migration.ts:${CLAUDE_DIR}/templates/hooks/loom-migration.ts"
+  "hooks/agent-result-validator.ts:${CLAUDE_DIR}/templates/hooks/agent-result-validator.ts"
+  "hooks/loom-careful.ts:${CLAUDE_DIR}/templates/hooks/loom-careful.ts"
+  "hooks/preflight-worktree-scan.ts:${CLAUDE_DIR}/templates/hooks/preflight-worktree-scan.ts"
   # Shared lib modules the hook templates import (./lib/*.js). The drift
   # checker's import-closure axis keeps this list complete.
   "hooks/lib/run-hook.ts:${CLAUDE_DIR}/templates/hooks/lib/run-hook.ts"
