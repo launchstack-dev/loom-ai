@@ -186,6 +186,25 @@ describe("validateSnapshotDoc — machine-validated equivalence (no free-prose)"
     expect(res.errors.join("\n")).toMatch(/computedValue/);
   });
 
+  it("keeps the density-floor check on a frozen (past-gitRef) snapshot", () => {
+    // A snapshot pinned to a past ancestor is a FROZEN acceptance record: exact
+    // live re-derivation is skipped (unrelated later code growth legitimately
+    // shifts density), but a value BELOW the calibrated floor is still rejected
+    // — so relaxing the exact-match did not lose tamper-detection.
+    const pastRef = spawnSync("git", ["rev-parse", "main~3"], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }).stdout.trim();
+    const doc = freshDoc();
+    const snap = doc.metricsSnapshot as { [k: string]: ToonValue };
+    snap.gitRef = pastRef; // frozen: != current merge-base
+    const equiv = snap.equivalence as { [k: string]: ToonValue };
+    equiv.computedValue = 0.5; // below the absolute 3.0 density floor
+    const res = validateSnapshotDoc(doc, REPO_ROOT);
+    expect(res.ok).toBe(false);
+    expect(res.errors.join("\n")).toMatch(/density floor/);
+  });
+
   it("rejects an unknown (prose) equivalence basis", () => {
     const doc = freshDoc();
     const snap = doc.metricsSnapshot as { [k: string]: ToonValue };
