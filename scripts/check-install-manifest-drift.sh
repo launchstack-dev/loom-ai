@@ -89,9 +89,98 @@ if [ -n "${ORPHANS}" ]; then
   FAIL=1
 fi
 
+# ── Completeness axis 2: hooks.json → install list ────────────────────
+# Every hook script referenced by the shipped hooks/hooks.json must be a
+# fetch target — a registered-but-unshipped hook breaks fresh installs
+# (the doctor's hook-files-present check fails on day one). This is the
+# exact gap that let hooks/map-freshness.ts go unshipped (2026-07-09).
+HOOKS_JSON="${REPO_ROOT}/hooks/hooks.json"
+if [ -f "${HOOKS_JSON}" ]; then
+  grep -oE '\$\{(CLAUDE_PLUGIN_ROOT|CLAUDE_PROJECT_DIR)\}/[^" ]+\.(ts|cjs|sh)' "${HOOKS_JSON}" \
+    | sed -E 's/^\$\{[A-Z_]+\}\///' | LC_ALL=C sort -u > "${TMP}/hooksjson-files.txt"
+  HOOK_MISSING=$(comm -23 "${TMP}/hooksjson-files.txt" "${TMP}/install-files.txt")
+  if [ -n "${HOOK_MISSING}" ]; then
+    echo "ERROR: hooks.json registers hook files that install.sh never ships:" >&2
+    echo "${HOOK_MISSING}" | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "   Fresh installs will register a hook whose file does not exist." >&2
+    echo "   Fix: add each path to install.sh (HOOK_TEMPLATE_FILES), then run" >&2
+    echo "   scripts/generate-checksums.sh (it appends new entries itself)." >&2
+    echo "" >&2
+    FAIL=1
+  fi
+fi
+
+# ── Completeness axis 3: shipped hooks' lib-import closure ────────────
+# Shipped hook files import ./lib/*.js siblings; each import (transitively)
+# must also ship or the hook crashes at require-time on curl installs.
+grep -E '^hooks/.*\.ts$' "${TMP}/install-files.txt" > "${TMP}/closure-worklist.txt" || true
+: > "${TMP}/closure-needed.txt"
+: > "${TMP}/closure-seen.txt"
+PASS=0
+while [ -s "${TMP}/closure-worklist.txt" ] && [ "${PASS}" -lt 10 ]; do
+  PASS=$((PASS + 1))
+  : > "${TMP}/closure-next.txt"
+  while IFS= read -r hookfile; do
+    grep -qxF "${hookfile}" "${TMP}/closure-seen.txt" && continue
+    echo "${hookfile}" >> "${TMP}/closure-seen.txt"
+    src="${REPO_ROOT}/${hookfile}"
+    [ -f "${src}" ] || continue
+    case "${hookfile}" in
+      hooks/lib/*) prefix="hooks/lib/" ; pattern='from "\./[a-z0-9-]+\.js"' ;;
+      hooks/*)     prefix="hooks/lib/" ; pattern='from "\./lib/[a-z0-9-]+\.js"' ;;
+      *) continue ;;
+    esac
+    while IFS= read -r imp; do
+      [ -n "${imp}" ] || continue
+      dep="${prefix}$(echo "${imp}" | sed -E 's/^from "\.\/(lib\/)?//; s/\.js"$//').ts"
+      echo "${dep}" >> "${TMP}/closure-next.txt"
+      if ! grep -qxF "${dep}" "${TMP}/install-files.txt"; then
+        echo "${dep} (imported by ${hookfile})" >> "${TMP}/closure-needed.txt"
+      fi
+    done < <(grep -oE "${pattern}" "${src}" | LC_ALL=C sort -u)
+    # Cross-package imports (hooks/ files importing ../scripts/lib/...) must
+    # ship too, at a target where the relative path still resolves.
+    while IFS= read -r imp; do
+      [ -n "${imp}" ] || continue
+      dep="$(echo "${imp}" | sed -E 's/^from "\.\.\///; s/\.js"$//').ts"
+      if ! grep -qxF "${dep}" "${TMP}/install-files.txt"; then
+        echo "${dep} (cross-package import by ${hookfile})" >> "${TMP}/closure-needed.txt"
+      fi
+    done < <(grep -oE 'from "\.\./scripts/lib/[a-z0-9/.-]+\.js"' "${src}" | LC_ALL=C sort -u)
+  done < "${TMP}/closure-worklist.txt"
+  LC_ALL=C sort -u "${TMP}/closure-next.txt" > "${TMP}/closure-worklist.txt"
+done
+if [ -s "${TMP}/closure-needed.txt" ]; then
+  echo "ERROR: shipped hook files import lib modules that install.sh never ships:" >&2
+  LC_ALL=C sort -u "${TMP}/closure-needed.txt" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "   Curl-installed hook templates will crash at import time. Fix: add" >&2
+  echo "   each hooks/lib/*.ts to install.sh, then run scripts/generate-checksums.sh." >&2
+  echo "" >&2
+  FAIL=1
+fi
+
+# ── Completeness axis 4: command → workflow driver references ─────────
+# Commands that dispatch to a Workflow engine driver must ship that driver.
+grep -rhoE 'workflows/[a-z0-9-]+\.mjs' "${REPO_ROOT}/commands" 2>/dev/null \
+  | LC_ALL=C sort -u > "${TMP}/workflow-refs.txt" || true
+if [ -s "${TMP}/workflow-refs.txt" ]; then
+  WF_MISSING=$(comm -23 "${TMP}/workflow-refs.txt" "${TMP}/install-files.txt")
+  if [ -n "${WF_MISSING}" ]; then
+    echo "ERROR: commands reference Workflow drivers that install.sh never ships:" >&2
+    echo "${WF_MISSING}" | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "   Profile dispatch will fail on installed projects. Fix: add each" >&2
+    echo "   workflows/*.mjs to install.sh, then run scripts/generate-checksums.sh." >&2
+    echo "" >&2
+    FAIL=1
+  fi
+fi
+
 if [ "${FAIL}" = "0" ]; then
   N=$(wc -l < "${TMP}/install-files.txt" | tr -d ' ')
-  echo "install.sh and checksums.sha256 in sync (${N} files)"
+  echo "install.sh and checksums.sha256 in sync (${N} files; hooks.json, lib closure, and workflow refs complete)"
 fi
 
 exit "${FAIL}"

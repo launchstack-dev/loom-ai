@@ -250,6 +250,34 @@ interface ConvergeConfig {
   subject: string;
   harness?: string;
   outputPath: string;
+  /** Reviewer panel (C-07): config-chosen; defaults to REVIEWER_AGENT_FILES. */
+  reviewers: ReviewerAgentRow[];
+}
+
+/**
+ * Parse an optional `reviewers[N]{reviewerAgent,agentFile}:` typed array from
+ * converge.config (C-07: the panel is a parameter; the 6 canonical plan
+ * reviewers are the DEFAULT, not a mandate). Returns [] when absent.
+ */
+function parseReviewerPanel(text: string): ReviewerAgentRow[] {
+  const lines = text.split("\n");
+  const rows: ReviewerAgentRow[] = [];
+  let inArray = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!inArray) {
+      if (/^reviewers\[\d+\]\{reviewerAgent,agentFile\}:$/.test(trimmed)) {
+        inArray = true;
+      }
+      continue;
+    }
+    if (!line.startsWith("  ") || !trimmed) break;
+    const [reviewerAgent, agentFile] = trimmed.split(",").map((s) => s.trim());
+    if (reviewerAgent && agentFile) {
+      rows.push({ reviewerAgent: reviewerAgent as ReviewerAgent, agentFile });
+    }
+  }
+  return rows;
 }
 
 /**
@@ -311,12 +339,14 @@ function readConvergeConfig(
     exit(2);
   }
 
+  const panel = parseReviewerPanel(text);
   return {
     convergenceMode: config.convergenceMode,
     subject: config.subject,
     harness: config.harness,
     outputPath:
       config.outputPath ?? ".plan-execution/convergence/findings.toon",
+    reviewers: panel.length > 0 ? panel : REVIEWER_AGENT_FILES,
   };
 }
 
@@ -542,8 +572,9 @@ function buildSpawnRequest(args: {
   resultDir: string;
   iteration: number;
   now: Date;
+  panel: ReviewerAgentRow[];
 }): SpawnAgentRequest {
-  const spawns: SpawnAgentSpec[] = REVIEWER_AGENT_FILES.map((row) => ({
+  const spawns: SpawnAgentSpec[] = args.panel.map((row) => ({
     agentName: row.reviewerAgent,
     agentFile: row.agentFile,
     model: readAgentModel(row.agentFile),
@@ -609,13 +640,13 @@ interface AggregateResult {
   corrupted: string[];
 }
 
-function collectEnvelopes(resultsDir: string): AggregateResult {
+function collectEnvelopes(resultsDir: string, panel: ReviewerAgentRow[]): AggregateResult {
   const envelopes: AgentResultEnvelope[] = [];
   const missing: string[] = [];
   const failed: string[] = [];
   const corrupted: string[] = [];
 
-  for (const row of REVIEWER_AGENT_FILES) {
+  for (const row of panel) {
     const candidate = path.resolve(resultsDir, `${row.reviewerAgent}.toon`);
     if (!fs.existsSync(candidate)) {
       missing.push(row.reviewerAgent);
@@ -655,7 +686,7 @@ function main(argv: string[] = process.argv, exit: (code: number) => never = (co
   const resultsDir = args.resultsDir ?? resultsDirDefault;
 
   // Check if the results dir already contains all 6 envelopes.
-  const collection = collectEnvelopes(resultsDir);
+  const collection = collectEnvelopes(resultsDir, config.reviewers);
 
   // Halt on corrupted envelopes — distinct from missing (Mode A respawn
   // trigger). A corrupted file on disk signals a real bug; silently
@@ -675,7 +706,7 @@ function main(argv: string[] = process.argv, exit: (code: number) => never = (co
     return exit(1);
   }
 
-  const haveAll = collection.missing.length === 0 && collection.envelopes.length === REVIEWER_AGENT_FILES.length;
+  const haveAll = collection.missing.length === 0 && collection.envelopes.length === config.reviewers.length;
 
   if (!haveAll) {
     // Mode A: write spawn-request and exit so the driver can fulfill it.
@@ -687,12 +718,13 @@ function main(argv: string[] = process.argv, exit: (code: number) => never = (co
       resultDir: resultsDir,
       iteration: args.iteration,
       now: new Date(),
+      panel: config.reviewers,
     });
     writeSpawnRequest(request, spawnRequestPath);
     process.stderr.write(
       [
         `Harness wrote spawn-request.toon at ${spawnRequestPath}.`,
-        `Driver: spawn ${REVIEWER_AGENT_FILES.length} reviewers per request, write results to ${resultsDir}/, then re-invoke this harness with --results-dir ${resultsDir}.`,
+        `Driver: spawn ${config.reviewers.length} reviewers per request, write results to ${resultsDir}/, then re-invoke this harness with --results-dir ${resultsDir}.`,
         `Missing envelopes: ${collection.missing.join(", ") || "(none — first invocation)"}.`,
         "",
       ].join("\n"),
@@ -703,7 +735,7 @@ function main(argv: string[] = process.argv, exit: (code: number) => never = (co
   // Mode B: aggregate. Note any failed reviewers via stderr warning (AC 8).
   for (const name of collection.failed) {
     process.stderr.write(
-      `warning: reviewer ${name} returned status=failed; findings aggregated from remaining ${REVIEWER_AGENT_FILES.length - collection.failed.length} reviewers.\n`,
+      `warning: reviewer ${name} returned status=failed; findings aggregated from remaining ${config.reviewers.length - collection.failed.length} reviewers.\n`,
     );
   }
 

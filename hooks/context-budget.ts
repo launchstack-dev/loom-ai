@@ -1,5 +1,12 @@
 /**
  * Hook: context-budget (PreToolUse — Agent)
+ *
+ * DEPRECATED — scaffold layer, active only under the `strict` discipline
+ * profile (roadmap M-3). Native replacement: the harness manages subagent
+ * context directly, and the engine's `agentBudget` breaker
+ * (scripts/lib/engine/breakers.ts BUDGET_EXHAUSTED) bounds spawn spend on
+ * the executable path. See protocols/discipline.schema.md.
+ *
  * Intercepts Agent tool calls (subagent spawns) and estimates prompt size.
  * Blocks spawns that would exceed the configured agentBudgetCap.
  * Fail-open: any estimation error allows the spawn.
@@ -10,6 +17,7 @@ import * as path from "node:path";
 import { runHook, allow, block } from "./lib/run-hook.js";
 import { estimateTokens, estimateFileTokens, estimateContextBudget } from "./lib/token-estimator.js";
 import { findPlanExecutionDir } from "./lib/context.js";
+import { hookActive } from "./lib/discipline.js";
 
 interface BudgetConfig {
   contextWindow: number;
@@ -87,6 +95,9 @@ function findAgentMdPath(prompt: string): string | undefined {
 runHook("context-budget", async (input) => {
   // Only intercept Agent tool calls
   if (input.tool_name !== "Agent") return allow();
+
+  // Scaffold layer — inactive below the strict discipline profile
+  if (!hookActive("context-budget")) return allow();
 
   const prompt: string = input.tool_input?.prompt ?? "";
   if (!prompt) return allow();

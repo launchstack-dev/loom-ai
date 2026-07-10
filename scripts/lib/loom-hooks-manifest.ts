@@ -45,6 +45,8 @@ export const LOOM_HOOKS: HookEntry[] = [
   { hookName: "wiki-write-guard",    event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 10000 },
   // PreToolUse Write|Edit — non-gating (warner)
   { hookName: "wiki-impact-warner",  event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 3000  },
+  // PreToolUse Write|Edit — map-freshness precondition (C-08; dormant until .loom/wiki/maps/ exists)
+  { hookName: "map-freshness",       event: "PreToolUse",  matcher: "Write|Edit", timeoutMs: 5000  },
   // PreToolUse Bash — gating + non-gating (warner) for /loom-git pr fan-in scan
   { hookName: "deploy-guard",        event: "PreToolUse",  matcher: "Bash",       timeoutMs: 10000 },
   { hookName: "loom-careful",        event: "PreToolUse",  matcher: "Bash",       timeoutMs: 5000  },

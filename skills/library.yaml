@@ -275,6 +275,28 @@ library:
       description: "BenchmarkScorecard — typed competitive-benchmark math the benchmark-agent writes into a think doc. selfScore/refScore 0..10, gap = selfScore − refScore, overall = mean(selfScore), refOverall = mean(refScore); references[] (N) + per-dimension sourceRefs[]. 'Thin' defined as dimensions.length < 3 OR any refScore unsourced; a missing/thin card is a P4 benchmark-presence finding."
       source: protocols/benchmark-scorecard.schema.md
 
+    # Discipline-profile protocols (Fable Readiness M-1)
+    - name: discipline-schema
+      description: Capability-gated discipline profile — [settings.discipline] config, resolution algorithm, layer membership, tier floors, LOOM_AGENT_TIER contract
+      source: protocols/discipline.schema.md
+
+    - name: context-budget-protocol
+      description: Context budget spec — 100k agent budget cap, token estimation algorithm, preflight checks (scaffold layer)
+      source: protocols/context-budget.md
+
+    - name: stage-context-schema
+      description: StageContext schema — structured per-stage summaries written to .plan-execution/stage-context/ (scaffold layer)
+      source: protocols/stage-context.schema.md
+
+    # Track A protocols (Fable Readiness M-2, C-08)
+    - name: coverage-matrix-schema
+      description: Spec→coverage matrix — requirements (criteria + phase promises) to coverage status; uncovered rows block convergence, one bounded fix per gap
+      source: protocols/coverage-matrix.schema.md
+
+    - name: phase-promise-schema
+      description: Phase promises — machine-readable deliverables captured at plan approval; goal-backward verification input for the coverage matrix
+      source: protocols/phase-promise.schema.md
+
   # In v4, skills = Claude Code native skills (new, initialized empty at v3→v4 migration)
   skills:
     - name: python-conventions
@@ -491,6 +513,129 @@ library:
     - name: loom-install
       description: "Direct-symlink install path for Loom (F-35, M-12 Distribution). Alternative to plugin marketplace; neither channel deprecates the other (roadmap C-07). bin/loom-install wraps scripts/loom-install.ts and supports --link, --unlink, --check across four hosts: claude-code (default), hermes, openclaw, codex. Writes ~/.loom/install-manifest.toon per protocols/install-manifest.schema.toon (atomic .tmp+rename). Idempotent --link, INSTALL_MANIFEST_INVALID blocking on corrupt manifest during --unlink. Shipped by M-12 (gstack adoption Phase 12)."
       source: scripts/loom-install.ts
+
+    # ── Hooks by discipline layer (Fable Readiness M-1) ──────────────
+    # Runtime gating lives in hooks/lib/discipline.ts (HOOK_GATES); these
+    # entries make layer membership legible in the catalog and give the
+    # loom-core / loom-engine / loom-scaffold kits concrete members.
+
+    # core — always on, every profile
+    - name: deploy-guard
+      description: "Core hook (PreToolUse Bash): blocks git push to main/master and unreviewed deploys"
+      source: hooks/deploy-guard.ts
+      target: hooks/deploy-guard.ts
+
+    - name: typecheck-on-write
+      description: "Core hook (PostToolUse): tsc --noEmit on TypeScript writes"
+      source: hooks/typecheck-on-write.ts
+      target: hooks/typecheck-on-write.ts
+
+    - name: shellcheck-on-write
+      description: "Core hook (PostToolUse): shellcheck on shell-script writes"
+      source: hooks/shellcheck-on-write.ts
+      target: hooks/shellcheck-on-write.ts
+
+    - name: bash-portability-on-write
+      description: "Core hook (PostToolUse): BSD/GNU portability checks on shell-script writes"
+      source: hooks/bash-portability-on-write.ts
+      target: hooks/bash-portability-on-write.ts
+
+    - name: pylint-on-write
+      description: "Core hook (PostToolUse): ruff + mypy on Python writes"
+      source: hooks/pylint-on-write.ts
+      target: hooks/pylint-on-write.ts
+
+    - name: contract-lock
+      description: "Core hook (PreToolUse): blocks contract edits after Wave 0 completes"
+      source: hooks/contract-lock.ts
+      target: hooks/contract-lock.ts
+
+    - name: file-ownership
+      description: "Core hook (PreToolUse), tier-gated: blocks writes outside the active task's ownership boundary; LOOM_AGENT_TIER floors keep it on for cheap-tier agents under minimal"
+      source: hooks/file-ownership.ts
+      target: hooks/file-ownership.ts
+
+    - name: wiki-write-guard
+      description: "Core hook (PreToolUse): guards .loom/wiki/ writes"
+      source: hooks/wiki-write-guard.ts
+      target: hooks/wiki-write-guard.ts
+
+    - name: wiki-commit-ledger
+      description: "Core hook (PostToolUse): records wiki-relevant commits to the freshness ledger"
+      source: hooks/wiki-commit-ledger.ts
+      target: hooks/wiki-commit-ledger.ts
+
+    - name: wiki-session-status
+      description: "Core hook (SessionStart): surfaces wiki freshness at session start"
+      source: hooks/wiki-session-status.ts
+      target: hooks/wiki-session-status.ts
+
+    - name: loom-migration
+      description: "Core hook (SessionStart): idempotent settings/anchor migrations"
+      source: hooks/loom-migration.ts
+      target: hooks/loom-migration.ts
+
+    - name: map-freshness
+      description: "Core hook (PreToolUse, C-08): fail-closed map-freshness precondition on planning artifacts; dormant until .loom/wiki/maps/ exists (Track B)"
+      source: hooks/map-freshness.ts
+      target: hooks/map-freshness.ts
+
+    - name: quality-gate
+      description: "Core hook (Stop), all profiles (C-08): blocks premature stops mid-pipeline-stage today; evolves into the acceptance re-validation gate in M-2"
+      source: hooks/quality-gate.ts
+      target: hooks/quality-gate.ts
+
+    # scaffold — strict only; deprecation track (native harness replacements listed in protocols/discipline.schema.md)
+    - name: context-budget
+      description: "Scaffold hook (PreToolUse Agent): blocks subagent spawns over the token budget cap"
+      source: hooks/context-budget.ts
+      target: hooks/context-budget.ts
+
+    - name: budget-tracker
+      description: "Scaffold hook (PreToolUse Agent + SubagentStop): agent-count budget tracking and spawn blocking"
+      source: hooks/budget-tracker.ts
+      target: hooks/budget-tracker.ts
+
+    - name: context-monitor
+      description: "Scaffold hook (PostToolUse): remaining-context estimation and warning injection"
+      source: hooks/context-monitor.ts
+      target: hooks/context-monitor.ts
+
+    - name: checkpoint-trigger
+      description: "Scaffold hook (PostToolUse + Stop): checkpoint/clear suggestions at context thresholds"
+      source: hooks/checkpoint-trigger.ts
+      target: hooks/checkpoint-trigger.ts
+
+    - name: status-updater
+      description: "Scaffold hook (SubagentStop): heartbeat timestamps in ephemeral status.toon"
+      source: hooks/status-updater.ts
+      target: hooks/status-updater.ts
+
+    - name: wiki-impact-warner
+      description: "Scaffold hook (PreToolUse): pre-edit impact warnings from the wiki graph (throttle/injection machinery)"
+      source: hooks/wiki-impact-warner.ts
+      target: hooks/wiki-impact-warner.ts
+
+    # engine — executable drivers (Fable Readiness M-2, C-04)
+    - name: engine-step-recorder
+      description: "Engine CLI owning the locked convergence semantics — preflight, record (findings validation + breakers + iter-N.toon), finalize (convergence-summary.toon)"
+      source: scripts/lib/engine/iterate.ts
+      target: scripts/lib/engine/iterate.ts
+
+    - name: loom-converge-workflow
+      description: "Workflow engine driver for /loom-converge (standard/minimal profiles) — pure choreography over the step-recorder CLI; markdown driver remains the strict fallback"
+      source: workflows/loom-converge.mjs
+      target: workflows/loom-converge.mjs
+
+    - name: execute-step-cli
+      description: "Engine CLI owning wave-execution semantics — state.toon, rollback tags, wave summaries, auto quality-gate rules (proceed/retry/escalate)"
+      source: scripts/lib/engine/execute-step.ts
+      target: scripts/lib/engine/execute-step.ts
+
+    - name: loom-execute-workflow
+      description: "Workflow engine driver for /loom-plan execute --auto (standard/minimal profiles) — waves in parallel rounds, serial wiring/verification, gate via execute-step CLI"
+      source: workflows/loom-execute.mjs
+      target: workflows/loom-execute.mjs
 
   agents:
     # Planning agents
@@ -740,6 +885,10 @@ library:
       description: Interactive convergence target discovery — proposes outputs to verify, comparison methods, tolerances through interview
       source: agents/convergence-planner-agent.md
       requires: [protocol:convergence-plan-schema]
+
+    - name: adversary-agent
+      description: Adversarial reviewer (C-08 / CT6 A1) — builds the strongest case the work is wrong; default convergence participant, registered via orchestration.toml [[review.agents]]
+      source: agents/adversary-agent.md
 
     # Documentation agents
     - name: project-guidance-agent
@@ -1153,4 +1302,145 @@ kits:
         name: plan-design-review-agent
       - type: agent
         name: plan-devex-review-agent
+
+  # ── Discipline layer kits (Fable Readiness M-1, roadmap C-03) ──────
+  # Layer membership IS the lifecycle rule: core is mandatory and ages well;
+  # engine is default and re-platforms onto Workflow scripts (M-2); scaffold
+  # is the deprecation track and installs only under the strict profile.
+  # Layer kits are exempt from the kit-prefix naming rule (first-party
+  # resources predating the kit split — see protocols/kit.schema.md).
+
+  - name: loom-core
+    description: Always-on layer — deterministic safety hooks + the durable knowledge system (wiki, contracts, scenarios). Model- and profile-independent.
+    version: 1.0.0
+    minLoomVersion: 4
+    includes:
+      - type: infrastructure
+        name: deploy-guard
+      - type: infrastructure
+        name: typecheck-on-write
+      - type: infrastructure
+        name: shellcheck-on-write
+      - type: infrastructure
+        name: bash-portability-on-write
+      - type: infrastructure
+        name: pylint-on-write
+      - type: infrastructure
+        name: contract-lock
+      - type: infrastructure
+        name: file-ownership
+      - type: infrastructure
+        name: wiki-write-guard
+      - type: infrastructure
+        name: wiki-commit-ledger
+      - type: infrastructure
+        name: wiki-session-status
+      - type: infrastructure
+        name: loom-migration
+      - type: infrastructure
+        name: map-freshness
+      - type: infrastructure
+        name: quality-gate
+      - type: protocol
+        name: discipline-schema
+      - type: protocol
+        name: wiki-page-schema
+      - type: protocol
+        name: wiki-index-schema
+      - type: protocol
+        name: wiki-conventions
+      - type: protocol
+        name: wiki-lint-rules
+      - type: protocol
+        name: execution-log-schema
+      - type: protocol
+        name: scenario-schema
+      - type: protocol
+        name: scenario-coverage-schema
+      - type: protocol
+        name: change-proposal-schema
+      - type: protocol
+        name: change-state-schema
+      - type: protocol
+        name: contract-page-extensions-schema
+
+  - name: loom-engine
+    description: Orchestration layer — convergence loop, wave execution, tier routing. Default install; re-platforms onto executable Workflow scripts in M-2 (markdown drivers become the labeled fallback).
+    version: 1.0.0
+    minLoomVersion: 4
+    includes:
+      - type: infrastructure
+        name: engine-step-recorder
+      - type: infrastructure
+        name: loom-converge-workflow
+      - type: infrastructure
+        name: execute-step-cli
+      - type: infrastructure
+        name: loom-execute-workflow
+      - type: agent
+        name: contracts-agent
+      - type: agent
+        name: implementer-agent
+      - type: agent
+        name: wiring-agent
+      - type: agent
+        name: verification-agent
+      - type: agent
+        name: convergence-driver
+      - type: agent
+        name: convergence-planner-agent
+      - type: agent
+        name: target-parser
+      - type: agent
+        name: harness-builder
+      - type: agent
+        name: delta-analyzer
+      - type: agent
+        name: adversary-agent
+      - type: protocol
+        name: coverage-matrix-schema
+      - type: protocol
+        name: phase-promise-schema
+      - type: protocol
+        name: execution-protocols
+      - type: protocol
+        name: orchestration-patterns
+      - type: protocol
+        name: pattern-executor-protocol
+      - type: protocol
+        name: state-schema
+      - type: protocol
+        name: pipeline-state-schema
+      - type: protocol
+        name: agent-result-schema
+      - type: protocol
+        name: convergence-plan-schema
+      - type: protocol
+        name: convergence-summary-schema
+
+  - name: loom-scaffold
+    description: "Deprecation track — context/orchestration compensations that modern harnesses provide natively (budget caps, checkpoints, heartbeats, context compression). Installs only under the strict discipline profile; membership here IS the deprecation list."
+    version: 1.0.0
+    minLoomVersion: 4
+    gate:
+      discipline: strict
+    includes:
+      - type: infrastructure
+        name: context-budget
+      - type: infrastructure
+        name: budget-tracker
+      - type: infrastructure
+        name: context-monitor
+      - type: infrastructure
+        name: checkpoint-trigger
+      - type: infrastructure
+        name: status-updater
+      - type: infrastructure
+        name: wiki-impact-warner
+      - type: protocol
+        name: context-budget-protocol
+      - type: protocol
+        name: stage-context-schema
+      - type: protocol
+        name: agent-monitoring-schema
 

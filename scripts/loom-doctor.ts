@@ -28,6 +28,12 @@ import * as path from "node:path";
 import { runChecks } from "./lib/doctor/index.js";
 import { renderJSON, renderText } from "./lib/doctor/render.js";
 import { createBundle } from "./lib/doctor/bundle.js";
+import {
+  probeCapabilities,
+  resolveFromCapabilities,
+  writeResolvedProfile,
+  PROFILE_DISABLES,
+} from "./lib/doctor/profile-resolver.js";
 import type {
   Channel,
   MigrationRunner,
@@ -45,6 +51,8 @@ Flags:
   --quiet                      Suppress per-check pass lines (warn/fail only)
   --output-file <path>         Redirect report to file; stderr keeps progress
   --only <id>                  Run only the named check (registry id)
+  --resolve-profile            Probe harness capabilities and write the resolved
+                               discipline profile (requires confirmation)
   --reconcile                  Reconcile install channel (requires confirmation)
   --reset-evidence <check-id>  Clear cached evidence for one check
   --fix                        Apply remediation via MigrationRunner.run()
@@ -62,6 +70,7 @@ export interface ParsedArgs {
   quiet: boolean;
   outputFile?: string;
   only?: string;
+  resolveProfile: boolean;
   reconcile: boolean;
   resetEvidence?: string;
   fix: boolean;
@@ -76,6 +85,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const out: ParsedArgs = {
     json: false,
     quiet: false,
+    resolveProfile: false,
     reconcile: false,
     fix: false,
     bundle: false,
@@ -91,6 +101,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
         break;
       case "--quiet":
         out.quiet = true;
+        break;
+      case "--resolve-profile":
+        out.resolveProfile = true;
         break;
       case "--reconcile":
         out.reconcile = true;
@@ -221,6 +234,47 @@ export async function main(deps: MainDeps = {}): Promise<number> {
       return 0;
     } catch (err) {
       stderr.write(`reset-evidence failed: ${(err as Error).message}\n`);
+      return 2;
+    }
+  }
+
+  // --resolve-profile — probe capabilities, confirm-gated write of `resolved`.
+  if (args.resolveProfile) {
+    try {
+      const caps = probeCapabilities();
+      const resolution = resolveFromCapabilities(caps);
+      stderr.write(
+        `Capabilities: claudeCode=${caps.claudeCode} ` +
+          `harnessVersion=${caps.harnessVersion ?? "(unknown)"} ` +
+          `workflowCapable=${caps.workflowCapable ?? "(unknown)"}\n`
+      );
+      for (const reason of resolution.reasons) stderr.write(`  - ${reason}\n`);
+      const disabled = PROFILE_DISABLES[resolution.profile];
+      stderr.write(
+        disabled.length
+          ? `Resolved profile: ${resolution.profile} — scaffold hooks off: ${disabled.join(", ")}\n`
+          : `Resolved profile: ${resolution.profile} — all layers stay on\n`
+      );
+      if (!args.yes) {
+        const ok = await confirm(
+          `Write resolved = "${resolution.profile}" to .claude/orchestration.toml? ` +
+            `(takes effect only while profile = "auto") [y/N] `,
+        );
+        if (!ok) {
+          stderr.write("Resolve-profile aborted. Nothing written.\n");
+          return 1;
+        }
+      }
+      const result = writeResolvedProfile(resolution.profile, process.cwd(), now().toISOString());
+      stderr.write(
+        result.updated
+          ? `Wrote resolved = "${resolution.profile}" to ${result.tomlPath}` +
+              (result.previous ? ` (was "${result.previous}")\n` : "\n")
+          : `Already resolved to "${resolution.profile}" — no change.\n`
+      );
+      return 0;
+    } catch (err) {
+      stderr.write(`resolve-profile failed: ${(err as Error).message}\n`);
       return 2;
     }
   }

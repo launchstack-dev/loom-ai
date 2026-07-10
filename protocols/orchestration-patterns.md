@@ -332,6 +332,11 @@ Orchestrator execution:
 
 ## Pattern 5: Converge
 
+> **FALLBACK (frozen — bugfix-only, roadmap C-04/M-2).** The loop mechanics
+> described in Patterns 5–6 are authoritative only for the markdown fallback
+> path (strict profile / no Workflow tool). The executable engine is
+> `workflows/loom-converge.mjs` + `scripts/lib/engine/iterate.ts`.
+
 **Description:** An iterative pipeline that compares current output against a deterministic target and loops until the delta reaches zero (or circuit breaks). Unlike chain (linear) or debate (adversarial), converge is a feedback loop that measures progress toward a known-good target.
 
 ### When to use

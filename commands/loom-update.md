@@ -126,6 +126,23 @@ Claude Code restart required to load new plugin version
 Consumed by the statusline renderer and by docs Phase 11A as the
 canonical user-facing string.
 
+### Post-update notice: discipline profile (roadmap C-06, additive)
+
+After a successful update (either channel), if the current project's
+`.claude/orchestration.toml` has no `[settings.discipline]` section, print an
+advisory AFTER the contract lines above (never instead of them):
+
+```
+New in this version: capability-gated discipline profiles.
+Your install continues to run strict (today's full behavior — nothing changed).
+To let Loom step aside where your harness is self-sufficient, run:
+  /loom-doctor --resolve-profile
+Details: protocols/discipline.schema.md
+```
+
+Never write config from `/loom-update` — the doctor is the only writer
+(C-02). This notice is informational only.
+
 ### `--resume` unrecoverable
 
 Stderr:

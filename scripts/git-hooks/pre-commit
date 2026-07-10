@@ -42,8 +42,8 @@ STAGED_PATHS=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | so
 # Intersection. `comm -12` shows lines common to both, requires sorted input.
 TOUCHED=$(comm -12 <(echo "${TRACKED_PATHS}") <(echo "${STAGED_PATHS}"))
 
-# Compute install-coverage trigger BEFORE the early-exit so a commit that
-# stages only install.sh (not in checksums.sha256) still runs the check.
+# Compute install-coverage trigger up front so the check below can run even
+# when only install.sh / commands/ are staged (neither is a manifest entry).
 STAGED_COMMANDS_OR_INSTALL=""
 STAGED_COMMANDS_OR_INSTALL=$(echo "${STAGED_PATHS}" | grep -E '^(commands/|install\.sh$)') || {
   _rc=$?
@@ -53,34 +53,54 @@ STAGED_COMMANDS_OR_INSTALL=$(echo "${STAGED_PATHS}" | grep -E '^(commands/|insta
   fi
 }
 
-if [ -z "${TOUCHED}" ] && [ -z "${STAGED_COMMANDS_OR_INSTALL}" ]; then
-  # No tracked file in this commit and no commands/install.sh staged.
-  # Manifest can't have drifted via this commit.
-  exit 0
+# NOTE: no early exit here — later sections (install-coverage, distribution
+# completeness, quality gates) must run even when no manifest-tracked file is
+# staged. A hooks.json or install.sh edit is not itself a manifest entry, and
+# the early-exit form silently skipped the completeness check for exactly
+# those files (found 2026-07-09).
+#
+# install.sh staged also triggers the generator: it discovers new fetch
+# targets and appends them to the manifest, so adding a file to install.sh
+# self-completes at commit time.
+if echo "${STAGED_PATHS}" | grep -qx 'install.sh'; then
+  TOUCHED="${TOUCHED}${TOUCHED:+$'\n'}install.sh"
+fi
+if [ -n "${TOUCHED}" ]; then
+  echo "[checksums] regenerating manifest (tracked files staged):"
+  echo "${TOUCHED}" | sed 's/^/  /'
+
+  if ! "${GENERATOR}"; then
+    echo "[checksums] ERROR: regeneration failed — commit aborted." >&2
+    echo "[checksums] Inspect the error above, then re-stage and retry." >&2
+    exit 1
+  fi
+
+  # Re-stage the manifest if it changed.
+  if ! git diff --quiet -- "${MANIFEST}"; then
+    git add -- "${MANIFEST}"
+    echo "[checksums] checksums.sha256 updated and re-staged"
+  fi
 fi
 
-if [ -z "${TOUCHED}" ]; then
-  # Only commands/ or install.sh staged — skip checksums regeneration,
-  # fall through to the install-coverage check below.
-  true
-else
-
-echo "[checksums] regenerating manifest (tracked files staged):"
-echo "${TOUCHED}" | sed 's/^/  /'
-
-if ! "${GENERATOR}"; then
-  echo "[checksums] ERROR: regeneration failed — commit aborted." >&2
-  echo "[checksums] Inspect the error above, then re-stage and retry." >&2
-  exit 1
+# ── Distribution completeness (fail-closed) ───────────────────────────
+# install.sh ↔ manifest sync, hooks.json → install list, hook lib-import
+# closure, command → workflow-driver references. Catches "registered or
+# referenced but never shipped" at commit time — the gap class that let
+# hooks/map-freshness.ts and the hooks/lib/ modules go unshipped
+# (2026-07-09). Only runs when a distribution surface is staged.
+DRIFT_CHECKER="${REPO_ROOT}/scripts/check-install-manifest-drift.sh"
+if [ -x "${DRIFT_CHECKER}" ]; then
+  DIST_TOUCHED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null \
+    | grep -E '^(install\.sh|checksums\.sha256|hooks/|workflows/|commands/|scripts/lib/)' || true)
+  if [ -n "${DIST_TOUCHED}" ]; then
+    echo "[distribution] checking completeness (install.sh / hooks.json / lib closure / workflow refs)..."
+    if ! "${DRIFT_CHECKER}"; then
+      echo "[distribution] ERROR: shipping completeness check failed — commit aborted." >&2
+      echo "[distribution] Add the missing entries to install.sh, then run scripts/generate-checksums.sh." >&2
+      exit 1
+    fi
+  fi
 fi
-
-# Re-stage the manifest if it changed.
-if ! git diff --quiet -- "${MANIFEST}"; then
-  git add -- "${MANIFEST}"
-  echo "[checksums] checksums.sha256 updated and re-staged"
-fi
-
-fi  # end: if [ -n "${TOUCHED}" ]
 
 # ── Install-coverage check (fail-closed) ──────────────────────────────
 # Closes the gap where a new commands/*.md file is added without being

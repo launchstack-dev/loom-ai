@@ -29,6 +29,14 @@ utility = "haiku"
 [settings.contextBudget]
 contextWindow = 200000
 
+[settings.discipline]
+# Capability-gated discipline profile — see protocols/discipline.schema.md.
+# Resolves to "strict" until /loom-doctor --resolve-profile writes `resolved`.
+profile = "auto"
+
+[settings.discipline.tierOverrides]
+haiku = "standard"   # cheap-tier subagents keep file-ownership enforcement
+
 [wiki]
 enabled = true
 path = ".loom/wiki"
@@ -57,6 +65,16 @@ retire = []                   # dimensions to skip evaluation entirely
 # Optional per-archetype rubric overrides
 [roadmap.converge.rubricOverrides]
 # "vision" = "protocols/roadmap-rubrics/vision-strict.md"
+
+# Adversarial reviewer (roadmap C-08 / CT6 A1) — default convergence
+# participant; registered here per CONTEXT.md D-01 (never hardcoded).
+[[review.agents]]
+name = "adversary-agent"
+source = "agents/adversary-agent.md"
+model = "sonnet"
+input = ["diff", "plan"]
+outputRole = "reviewer"
+modes = ["default", "full"]
 
 [execution.agents]
 contracts-agent = "agents/contracts-agent.md"

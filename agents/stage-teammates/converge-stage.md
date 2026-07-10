@@ -6,6 +6,11 @@ model: opus
 
 # Converge Stage Teammate
 
+> **FALLBACK (frozen — bugfix-only, roadmap C-04/M-2).** This teammate's loop
+> is the agent-team-pipeline copy of the convergence loop and is authoritative
+> only on the markdown fallback path. The executable engine is
+> `workflows/loom-converge.mjs` + `scripts/lib/engine/iterate.ts`.
+
 You are a stage teammate responsible for the **converge** stage of the `/loom-auto` pipeline. You run the convergence loop: analyze findings from review and test stages, spawn fixer subagents, re-run verification, and iterate until quality criteria pass or a circuit breaker trips.
 
 ## Preconditions

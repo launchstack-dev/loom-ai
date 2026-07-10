@@ -73,6 +73,56 @@ describe("file-ownership hook", () => {
     expect(result.exitCode).toBe(0);
   });
 
+  // Regression (2026-07-10 live wave-driver e2e): fileOwnership is a COLUMN in
+  // the tasks typed-array table (protocols/state.schema.md), multi-path cells
+  // joined with ";". readExecutionState previously looked for a standalone
+  // nested `fileOwnership[N]:` key, parsed [] for every task, and blocked
+  // agents from writing their own owned files ("Owned files: []").
+  it("allows writes to a file owned by an in_progress task (table-cell format)", async () => {
+    const realTmp = fs.realpathSync(tmpDir);
+    const owned = path.join(realTmp, "src", "greeter.ts");
+    writeStateToon(
+      `status: running\ncurrentWave: 1\n1:\n  status: in_progress\n  tasks[1]{taskId,agent,description,status,fileOwnership,retryCount}:\n    task-002,implementer-agent,Create greeter.ts,in_progress,${owned},0`
+    );
+    const result = await runHook("file-ownership.ts", makePreToolUseInput(owned), {
+      cwd: tmpDir,
+    });
+    expect(result.exitCode).toBe(0);
+  });
+
+  it("blocks unowned writes and lists the parsed owned files", async () => {
+    const realTmp = fs.realpathSync(tmpDir);
+    const owned = path.join(realTmp, "src", "greeter.ts");
+    writeStateToon(
+      `status: running\ncurrentWave: 1\n1:\n  status: in_progress\n  tasks[1]{taskId,agent,description,status,fileOwnership,retryCount}:\n    task-002,implementer-agent,Create greeter.ts,in_progress,${owned},0`
+    );
+    const result = await runHook(
+      "file-ownership.ts",
+      makePreToolUseInput(path.join(realTmp, "src", "other.ts")),
+      { cwd: tmpDir }
+    );
+    expect(result.exitCode).toBe(2);
+    const decision = parseDecision(result.stdout);
+    expect(decision?.decision).toBe("block");
+    // The owned list must reflect the parsed cell — "[]" was the bug signature.
+    expect(decision?.reason).toContain("greeter.ts");
+  });
+
+  it("parses multi-file ownership cells joined with ';'", async () => {
+    const realTmp = fs.realpathSync(tmpDir);
+    const a = path.join(realTmp, "src", "a.ts");
+    const b = path.join(realTmp, "src", "b.ts");
+    writeStateToon(
+      `status: running\ncurrentWave: 1\n1:\n  status: in_progress\n  tasks[1]{taskId,agent,description,status,fileOwnership,retryCount}:\n    task-004,implementer-agent,Create both modules,in_progress,${a};${b},0`
+    );
+    for (const target of [a, b]) {
+      const result = await runHook("file-ownership.ts", makePreToolUseInput(target), {
+        cwd: tmpDir,
+      });
+      expect(result.exitCode).toBe(0);
+    }
+  });
+
   it("allows writes to .loom/wiki/ during active execution", async () => {
     writeStateToon(
       `status: running\ncurrentWave: 1\n1:\n  status: in_progress\n  tasks[1]{taskId,agent,status}:\n    w1-auth,implementer-agent,in_progress`

@@ -46,7 +46,7 @@ describe("Phase 12 — CLAUDE.md worktree-block guard (F-09)", () => {
     const content = readFileSync(MAINLINE_CLAUDE_MD, "utf8");
     // Removing the block must not have gutted the file.
     expect(content).toContain("# Project Conventions");
-    expect(content).toContain("## Data Format: TOON Everywhere");
+    expect(content).toContain("## Data Format: TOON Frozen");
     expect(content).toContain("## Extensibility Model");
   });
 

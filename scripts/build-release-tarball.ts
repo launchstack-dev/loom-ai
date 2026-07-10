@@ -24,6 +24,7 @@ const RELEASE_PATHS = [
   "agents",
   "hooks",
   "scripts",
+  "workflows",
   "marketplace",
   ".claude-plugin",
   "README.md",

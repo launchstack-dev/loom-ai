@@ -40,6 +40,11 @@
             "type": "command",
             "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/wiki-impact-warner.ts\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/run-hook.sh\" \"$CLAUDE_PROJECT_DIR/hooks/map-freshness.ts\"",
+            "timeout": 5
           }
         ]
       },

@@ -826,7 +826,13 @@ Run criteria convergence as an auto-mode `/loom-converge --criteria`:
 
 4. If harness-builder fails: record in failureLog, go to quality gate.
 
-5. **Run convergence loop.** Spawn convergence-driver:
+5. **Run convergence loop.** Driver dispatch follows the discipline profile
+   exactly as `/loom-converge` Step 2.5 (single seam): under `standard`/`minimal`,
+   launch the Workflow engine driver (`workflows/loom-converge.mjs`, path
+   resolved from the Loom install root) with this stage's converge.config and
+   skip the spawn below — the engine writes `convergence-summary.toon` itself.
+   Under `strict` (or without the Workflow tool), spawn the frozen markdown
+   fallback driver:
    ```
    "Read your instructions from ~/.claude/agents/convergence-driver.md first.
     Convergence mode: criteria

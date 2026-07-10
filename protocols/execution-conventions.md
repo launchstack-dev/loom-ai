@@ -114,7 +114,11 @@ If `/loom-init` or `/loom-auto` detect the old layout, they warn: "Old .plan-exe
 
 ## Data Formats — TOON vs JSON
 
-TOON (Token-Oriented Object Notation) is the **default format for all runtime artifacts**. See `protocols/toon-format.md` for the full spec.
+> **TOON is frozen (roadmap C-05, M-3).** Every artifact listed below KEEPS
+> its TOON format — no migration. New schemas and agent output formats may
+> use JSON with schema validation instead; see `CLAUDE.md § Data Format`.
+
+TOON (Token-Oriented Object Notation) is the **default format for the runtime artifacts listed below**. See `protocols/toon-format.md` for the full spec.
 
 ### TOON — Runtime Artifacts (Default)
 - **state.toon**, **manifest.toon**, **wave-N-summary.toon** — on-disk persistence

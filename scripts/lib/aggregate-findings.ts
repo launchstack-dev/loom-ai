@@ -58,7 +58,10 @@ export const CANONICAL_DIMENSIONS = [
   "agentic-workflow",
 ] as const;
 
-export type ReviewerDimension = (typeof CANONICAL_DIMENSIONS)[number];
+// Widened per C-07: reviewer panels are config-chosen, so registered
+// non-canonical reviewers carry a name-derived dimension. The literal union
+// is preserved for autocomplete on the canonical six.
+export type ReviewerDimension = (typeof CANONICAL_DIMENSIONS)[number] | (string & {});
 
 /**
  * The 6 reviewer agent names as they appear in `findings.toon`'s `reviewerAgent`
@@ -241,19 +244,23 @@ export function severityToConvergenceSeverity(
 }
 
 /**
- * Derive the canonical dimension for a reviewer agent name. Strips the
- * `-reviewer-agent` suffix.
+ * Derive the dimension for a reviewer agent name. Canonical reviewers map to
+ * their locked dimensions; non-canonical reviewers (config-chosen panels,
+ * C-07) derive a dimension by stripping the `-reviewer-agent` / `-agent`
+ * suffix.
  *
- * @throws if the name is not one of the 6 canonical reviewers.
+ * @throws only when the name is empty/unusable.
  */
 export function deriveDimension(reviewerAgent: string): ReviewerDimension {
   const idx = CANONICAL_REVIEWER_AGENTS.indexOf(reviewerAgent as ReviewerAgent);
-  if (idx === -1) {
+  if (idx !== -1) return CANONICAL_DIMENSIONS[idx];
+  const derived = reviewerAgent.replace(/-reviewer-agent$/, "").replace(/-agent$/, "");
+  if (!derived) {
     throw new FindingsInvariantViolation(
-      `unknown reviewer agent: ${reviewerAgent}; expected one of ${CANONICAL_REVIEWER_AGENTS.join(", ")}`,
+      `unusable reviewer agent name: ${JSON.stringify(reviewerAgent)}`,
     );
   }
-  return CANONICAL_DIMENSIONS[idx];
+  return derived;
 }
 
 /** Format a sequential finding id (`F-01`, `F-02`, ...). */
@@ -287,13 +294,12 @@ function orderEnvelopes(
     const env = byName.get(name);
     if (env) ordered.push(env);
   }
-  // Append any non-canonical envelopes at the end so unknown-reviewer errors
-  // surface deterministically (instead of being silently dropped).
-  for (const env of envelopes) {
-    if (!CANONICAL_REVIEWER_AGENTS.includes(env.agent as ReviewerAgent)) {
-      ordered.push(env);
-    }
-  }
+  // Non-canonical panel members (C-07 config-chosen reviewers) sort after
+  // the canonical block, alphabetically, so output stays deterministic.
+  const extras = envelopes
+    .filter((env) => !CANONICAL_REVIEWER_AGENTS.includes(env.agent as ReviewerAgent))
+    .sort((a, b) => a.agent.localeCompare(b.agent));
+  ordered.push(...extras);
   return ordered;
 }
 

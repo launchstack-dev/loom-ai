@@ -1,5 +1,11 @@
 /**
  * Hook: context-monitor (PostToolUse)
+ *
+ * DEPRECATED — scaffold layer, active only under the `strict` discipline
+ * profile (roadmap M-3). Native replacement: the harness's automatic context
+ * summarization — long conversations are summarized and continued without
+ * warnings or manual intervention. See protocols/discipline.schema.md.
+ *
  * Monitors remaining context percentage and injects warnings into tool output.
  * Writes contextRemaining to .plan-execution/ephemeral/status.toon for statusline display.
  * (The path is the canonical ephemeral location consumed by ambient-state.ts and statusline-renderer.cjs.)
@@ -14,6 +20,7 @@ import { atomicWriteText } from "../lib/index.js";
 import { runHook, allow } from "./lib/run-hook.js";
 import { estimateTokens, estimateFileTokens } from "./lib/token-estimator.js";
 import { findPlanExecutionDir } from "./lib/context.js";
+import { hookActive } from "./lib/discipline.js";
 
 interface MonitorConfig {
   contextWindow: number;
@@ -193,6 +200,9 @@ function writeContextRemainingToStatus(
 }
 
 runHook("context-monitor", async (input) => {
+  // Scaffold layer — inactive below the strict discipline profile
+  if (!hookActive("context-monitor")) return allow();
+
   const config = readMonitorConfig();
   const planExecDir = findPlanExecutionDir();
 

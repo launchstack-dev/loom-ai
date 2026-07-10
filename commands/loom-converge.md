@@ -589,7 +589,25 @@ Wait for user response:
    - **Target mode** (default): `configPath = .plan-execution/converge.config`, `runnerPath = .plan-execution/harness/runner.sh`, `specPath = .plan-execution/target-manifest.toon`, `convergenceMode = target`
    - **Criteria mode** (from Step 1.5C): `configPath = .plan-execution/convergence/criteria/converge.config`, `runnerPath = .plan-execution/convergence/criteria/harness/run-harness.sh`, `specPath = .plan-execution/criteria-plan.toon`, `convergenceMode = criteria`
 
-3. Spawn convergence-driver agent (general-purpose):
+2.5. **Driver dispatch (discipline profile — single seam):** run
+   `bunx tsx scripts/loom-doctor.ts --only discipline-profile` and read the
+   `effective=` value from the check line.
+   - `standard` or `minimal` → launch the **Workflow engine driver**. Resolve
+     the driver path from the Loom install root: `${CLAUDE_PLUGIN_ROOT}/workflows/loom-converge.mjs`
+     when `CLAUDE_PLUGIN_ROOT` is set (plugin channel), else
+     `~/.claude/workflows/loom-converge.mjs` (curl channel), else
+     `workflows/loom-converge.mjs` (developing Loom itself). Call the Workflow
+     tool with `{scriptPath: <resolved path>, args: {configPath,
+     startedAt: <current ISO timestamp>, maxParallelAgents: <from orchestration.toml>}}`.
+     The workflow returns `{status, haltReason, finalBlockingCount, iterationsRun,
+     summaryPath}`; on return, skip to Step 6 (the CLI already wrote
+     `convergence-summary.toon`, iteration files, and the locked stdout lines).
+     Do NOT also spawn the markdown convergence-driver.
+   - `strict` (or the Workflow tool is unavailable) → use the **markdown fallback
+     driver** below (steps 3–5). The fallback is frozen (bugfix-only) per
+     roadmap C-04.
+
+3. *(fallback path)* Spawn convergence-driver agent (general-purpose):
 
    **Target mode:**
    ```
