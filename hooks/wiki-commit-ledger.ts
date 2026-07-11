@@ -32,6 +32,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { runHook, allow } from "./lib/run-hook.js";
 import { parseToon, parseToonArray } from "./lib/toon-reader.js";
+import { serializeToonTable } from "./lib/toon-writer.js";
 import { findProjectRoot, writeAtomic } from "./lib/wiki-helpers.js";
 
 /**
@@ -260,17 +261,20 @@ function writeLedger(
 ): void {
   const lastTs =
     entries.length > 0 ? entries[entries.length - 1].timestamp : new Date().toISOString();
-  const header = `schemaVersion: 1
-projectName: ${projectName}
-lastEntry: ${lastTs}
-totalEntries: ${entries.length}
-`;
-  const arrayHeader = `entries[${entries.length}]{commitSha,timestamp,filesChanged,impactedPages,wikiUpdatedAt,status}:`;
-  const rows = entries.map(
-    (e) =>
-      `  ${e.commitSha},${e.timestamp},"${e.filesChanged}","${e.impactedPages}",${e.wikiUpdatedAt},${e.status}`
+  const content = serializeToonTable(
+    {
+      schemaVersion: 1,
+      projectName,
+      lastEntry: lastTs,
+      totalEntries: entries.length,
+    },
+    "entries",
+    ["commitSha", "timestamp", "filesChanged", "impactedPages", "wikiUpdatedAt", "status"],
+    entries.map((e) => ({
+      ...e,
+      wikiUpdatedAt: e.wikiUpdatedAt === "null" ? null : e.wikiUpdatedAt,
+    }))
   );
-  const content = [header, arrayHeader, ...rows, ""].join("\n");
   writeAtomic(ledgerPath, content);
 }
 
