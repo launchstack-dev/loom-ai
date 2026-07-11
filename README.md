@@ -271,7 +271,7 @@ Loom forks on (a) is there existing code Loom should learn first, and (b) how de
 
 For brownfield projects that *also* want to plan a new feature, run `/loom-init` first, then `/loom-roadmap init --brownfield --full` — the `--brownfield` flag adds a codebase-analysis step that shapes the roadmap around what already exists. For long `/loom-auto` runs, enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window.
 
-For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the five concepts behind everything see [`docs/concepts.md`](docs/concepts.md). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
+For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the seven concepts behind everything see [`docs/concepts.md`](docs/concepts.md). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
 
 ## Commands
 
@@ -1698,7 +1698,7 @@ Reference material kept out of the main README to keep it scannable:
 
 - [`docs/reference/hooks.md`](docs/reference/hooks.md) — Full table of the <!-- loom:generated:hook-count-deepdive -->21<!-- /loom:generated:hook-count-deepdive --> enforcement hooks, infra scripts, and registration.
 - [`docs/internals.md`](docs/internals.md) — Wiki maintenance triggers, data formats (TOON), persistence layout, and repo file structure.
-- [`docs/concepts.md`](docs/concepts.md) — The five concepts behind everything Loom does.
+- [`docs/concepts.md`](docs/concepts.md) — The seven concepts behind everything Loom does.
 - [`docs/first-30-minutes.md`](docs/first-30-minutes.md) — Narrated walkthrough of your first session.
 - [`docs/scenarios-and-changes.md`](docs/scenarios-and-changes.md) — End-to-end walkthroughs of scenarios and change proposals.
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — Everyday command reference.

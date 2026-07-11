@@ -1,6 +1,6 @@
-# Five Concepts You Need Before Anything Else
+# Seven Concepts You Need Before Anything Else
 
-Loom has a big surface area (41 commands, 67 agents, 13 hooks). You do not need to learn all of it. You need to internalize **five concepts**, after which the commands stop looking arbitrary and start looking like verbs over the same five nouns.
+Loom has a big surface area (41 commands, 67 agents, 13 hooks). You do not need to learn all of it. You need to internalize **seven concepts**, after which the commands stop looking arbitrary and start looking like verbs over the same seven nouns.
 
 Read this once. ~5 minutes. Then go run something.
 
