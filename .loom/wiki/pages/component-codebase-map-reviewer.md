@@ -29,7 +29,7 @@ The agent is registered in `orchestration.toml [review]` per D-01 (never hardcod
 
 - `model: sonnet` frontmatter (no fable/Mythos tier per memory rule).
 - Stays within the 100k spawn cap enforced by `hooks/lib/token-estimator.ts` (C-11).
-- Consumes `protocols/map-artifact.schema.md` and reads the in-progress map from `.loom/wiki/maps/codebase-map.toon`.
+- Consumes `protocols/map-artifact.schema.md` and reads the in-progress map from `.loom/maps/codebase-map.toon`.
 - Does NOT write new map files (write ownership belongs to `/loom-map`).
 - Convergence is bounded (no unbounded loop); non-consensus after cap → `MAP_CONVERGE_FAILED` + surplus gaps to `.loom/learnings.toon`.
 

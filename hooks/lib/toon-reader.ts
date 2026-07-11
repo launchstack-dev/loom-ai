@@ -76,7 +76,10 @@ export function parseToonArray(
 
       if (!fields) break;
 
-      const values = splitCsvLine(trimmed, { trim: true });
+      // preserveQuotes keeps outer quotes and `""` doubling intact so
+      // parseValue can distinguish quoted (string, unescape) from bare
+      // (typed) cells — the inverse of toon-writer's encodeToonCell.
+      const values = splitCsvLine(trimmed, { trim: true, preserveQuotes: true });
       const obj: Record<string, string | number | boolean | null> = {};
       for (let i = 0; i < fields.length; i++) {
         obj[fields[i]] = parseValue(values[i] ?? "");
@@ -107,15 +110,21 @@ export function parseToonSimpleArray(content: string, arrayName: string): string
   return [];
 }
 
+/**
+ * Decode one scalar token — the inverse of toon-writer's encodeToonCell and
+ * a mirror of lib/toon.ts decodeScalarToken. A quoted token is always a
+ * string: strip outer quotes, collapse `""` → `"`, then backslash-decode.
+ * A bare token gets keyword/number typing.
+ */
 function parseValue(raw: string): string | number | boolean | null {
+  if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) {
+    const inner = raw.slice(1, -1).replace(/""/g, '"');
+    return backslashDecode(inner);
+  }
+
   if (raw === "null") return null;
   if (raw === "true") return true;
   if (raw === "false") return false;
-
-  // Remove surrounding quotes if present
-  if (raw.startsWith('"') && raw.endsWith('"')) {
-    return raw.slice(1, -1);
-  }
 
   // Try number
   if (/^-?\d+(\.\d+)?$/.test(raw)) {
@@ -123,6 +132,43 @@ function parseValue(raw: string): string | number | boolean | null {
   }
 
   return raw;
+}
+
+/**
+ * Inverse of the backslash escapes applied by toon-writer's quoteString
+ * (mirror of lib/toon.ts backslashDecode). Lone backslashes are kept
+ * verbatim so legacy hand-written or pre-writer ledger cells stay intact.
+ */
+function backslashDecode(s: string): string {
+  if (!s.includes("\\")) return s;
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch !== "\\") {
+      out += ch;
+      continue;
+    }
+    const next = s[i + 1];
+    if (next === "\\") {
+      out += "\\";
+      i++;
+    } else if (next === "n") {
+      out += "\n";
+      i++;
+    } else if (next === "r") {
+      out += "\r";
+      i++;
+    } else if (next === "t") {
+      out += "\t";
+      i++;
+    } else if (next === "u" && /^[0-9a-fA-F]{4}$/.test(s.slice(i + 2, i + 6))) {
+      out += String.fromCharCode(parseInt(s.slice(i + 2, i + 6), 16));
+      i += 5;
+    } else {
+      out += ch; // lone backslash: keep verbatim (legacy cells)
+    }
+  }
+  return out;
 }
 
 function escapeRegExp(s: string): string {

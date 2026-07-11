@@ -52,6 +52,6 @@ crossRefs[5]{pageId,relationship}:
 ## References
 
 - Command file (planned): `commands/loom-map.md`
-- Maps directory (planned): `.loom/wiki/maps/`
+- Maps directory (planned): `.loom/maps/`
 - Schema: `protocols/map-artifact.schema.md`
 - Reviewer: `agents/codebase-map-reviewer.md`

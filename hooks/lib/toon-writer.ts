@@ -11,6 +11,10 @@
 
 export type ToonCell = string | number | boolean | null;
 
+// SYNC ANCHOR (lib/toon.ts): the bare-keyword set and number grammar below
+// must stay in lockstep with lib/toon.ts needsQuoting/parseUnquotedToken:
+// true | false | null | NaN | Infinity | -Infinity, plus NUMBER_RE.
+// If lib/toon.ts adds a bare keyword, add it here or quoting drifts.
 const NUMBER_RE = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
 
 /** True when a string cannot survive as a bare (unquoted) token. */

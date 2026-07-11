@@ -226,7 +226,7 @@ Loom separates the **driver** — the model in your interactive Claude Code sess
 
 Run your session on Fable 5 and every `/loom-*` command gets Fable-grade synthesis at the seams where judgment concentrates: `/loom-think` interviews, plan decomposition, review triage, convergence verdicts.
 
-The iron rule: **Fable stays in the driver's seat.** Workers never resolve to a fable-tier model — the model-resolution chain (profile tier → agent frontmatter → inherit) contains no fable at any level, and the orchestration schema forbids it in profile tiers outright (`protocols/orchestration-config.schema.md`). Two reasons:
+The iron rule: **Fable stays in the driver's seat.** Workers never resolve to a fable-tier model — the model-resolution chain (profile tier → agent frontmatter → inherit) contains no fable at any level, and the orchestration schema documents that profile tiers must not use fable (`protocols/orchestration-config.schema.md`). Two reasons:
 
 1. **Usage economics.** A single execution wave can fan out a dozen contract-scoped agents; convergence multiplies that per iteration. Fable-tier limits are exhausted by exactly this shape of load — one fable driver plus sonnet/opus workers is sustainable, a fable fleet is not.
 2. **Availability.** Fable ships in limited windows. A pipeline that *requires* it breaks the day the window closes; a pipeline that merely *benefits* from it degrades to the other mode with zero changes.

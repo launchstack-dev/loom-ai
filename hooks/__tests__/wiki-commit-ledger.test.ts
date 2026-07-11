@@ -4,6 +4,8 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { runHook } from "./helpers/hook-runner.js";
+import { parseToon, parseToonArray } from "../lib/toon-reader.js";
+import { serializeToonTable } from "../lib/toon-writer.js";
 
 let tmpDir: string;
 let realTmpDir: string;
@@ -253,5 +255,49 @@ describe("wiki-commit-ledger hook", () => {
     // New entry appended with debt status.
     expect(ledger.rows[1]).toMatch(/,debt$/);
     expect(ledger.rows[1]).toContain("flow-login");
+  });
+
+  it("preserves special-char cells through the hook's read-modify-write cycle", async () => {
+    // Seed a ledger whose first entry has a comma and embedded quotes in its
+    // cells — the class of value the pre-serializer writer corrupted.
+    const seeded = serializeToonTable(
+      {
+        schemaVersion: 1,
+        projectName: "test-project",
+        lastEntry: "2026-07-11T00:00:00.000Z",
+        totalEntries: 1,
+      },
+      "entries",
+      ["commitSha", "timestamp", "filesChanged", "impactedPages", "wikiUpdatedAt", "status"],
+      [
+        {
+          commitSha: "seed123",
+          timestamp: "2026-07-11T00:00:00.000Z",
+          filesChanged: 'a,b/c.ts + say "hi".ts',
+          impactedPages: "page-one",
+          wikiUpdatedAt: null,
+          status: "debt",
+        },
+      ]
+    );
+    fs.writeFileSync(path.join(wikiDir, "freshness-ledger.toon"), seeded, "utf-8");
+
+    writeFlowPage("flow-x", ["src/a.ts"]);
+    commit({ "src/a.ts": "x" }, "change");
+    const result = await runLedger(bashInput(`git commit -m "change"`));
+    expect(result.exitCode).toBe(0);
+
+    const content = fs.readFileSync(
+      path.join(wikiDir, "freshness-ledger.toon"),
+      "utf-8"
+    );
+    const rows = parseToonArray(content, "entries");
+    expect(rows.length).toBe(2);
+    // Seeded special-char cells survive the append cycle byte-for-byte.
+    expect(rows[0]["filesChanged"]).toBe('a,b/c.ts + say "hi".ts');
+    expect(rows[0]["wikiUpdatedAt"]).toBe(null);
+    // New entry parsed cleanly alongside them.
+    expect(rows[1]["filesChanged"]).toBe("src/a.ts");
+    expect(parseToon(content)["totalEntries"]).toBe(2);
   });
 });

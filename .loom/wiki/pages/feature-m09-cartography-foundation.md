@@ -43,7 +43,7 @@ C-17 (fable-readiness reconciliation layer) narrowed M-09's scope in two areas:
 
 **F-22 scope collapse (most significant):** M-09 builds the **producer side only** — stamping `lastMappedCommit` on every map write. The `mapStale` flip logic ships in the fork's `hooks/map-freshness.ts` (PR #42 Track A, already shipped), not in this branch. This avoids rebuilding fork code and establishes a clean producer/gate split.
 
-**C-26 new integration criterion:** Verifies that the producer write-path (`.loom/wiki/maps/*.toon` on this branch) matches the fork gate read-path. A path mismatch would leave the fork gate dormant — silently allowing everything because it never finds a `lastMappedCommit` to check. C-26 is an integration-tier criterion verified against the merged fork.
+**C-26 new integration criterion:** Verifies that the producer write-path (`.loom/maps/*.toon` on this branch) matches the fork gate read-path. A path mismatch would leave the fork gate dormant — silently allowing everything because it never finds a `lastMappedCommit` to check. C-26 is an integration-tier criterion verified against the merged fork.
 
 **Freshness model (CWE-345):** `mapStale` is advisory-cache-only. Gates MUST derive freshness from git (`diff HEAD vs lastMappedCommit`; non-ancestor ⇒ stale-by-default). See `contract-map-artifact-schema` § Integrity and Freshness Model.
 
@@ -55,7 +55,7 @@ C-16 freeze: no M-09 phase may begin until M-06 OSS launch completes its Phase 2
 
 ## Build Order
 
-Wave 0 (Phase 0): contracts-agent extracts shared surfaces (`MapArtifact` schema, `map-state.ts`, `.loom/wiki/maps/` directory, `orchestration.toml` gates seam).
+Wave 0 (Phase 0): contracts-agent extracts shared surfaces (`MapArtifact` schema, `map-state.ts`, `.loom/maps/` directory, `orchestration.toml` gates seam).
 
 Wave 1 (Phase 1): F-20 integration-map serialization wired into `wiki-maintainer-agent`.
 
@@ -68,6 +68,6 @@ Wave 3 (Phases 3+4): F-23 gate and F-22 **producer-side stamping** run in parall
 - Canonical plan: `planning/plans/PLAN-ct6-cartography.md`
 - Key contracts: C-11 (TOON + atomic writes), C-13 (no new loop primitive), C-15 (warn-first fail-closed), C-16 (M-06 Phase 2 gate), C-17 (fable-readiness reconciliation), C-26 (producer write-path == fork gate read-path)
 - MapArtifact schema (planned): `protocols/map-artifact.schema.md`
-- Maps directory (planned): `.loom/wiki/maps/`
+- Maps directory (planned): `.loom/maps/`
 - Fork (Track A): PR #42 — ships `hooks/map-freshness.ts` (mapStale flip), `agents/adversary-agent.md`, `hooks/lib/revalidation.ts`, evolved `quality-gate.ts`
 - Locked design decision: F-30 partition-check fail-closed with no waiver (see `decision-f30-partition-check-no-waiver`)

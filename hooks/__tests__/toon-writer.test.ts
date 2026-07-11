@@ -82,4 +82,43 @@ describe("serializeToonTable", () => {
     const rowLines = out.split("\n").filter((l) => l.startsWith("  "));
     expect(rowLines.length).toBe(2);
   });
+
+  function roundTripCell(value: string): string | number | boolean | null {
+    const row = { ...rows[0], filesChanged: value };
+    const out = serializeToonTable(header, "entries", columns, [row]);
+    return parseToonArray(out, "entries")[0]["filesChanged"];
+  }
+
+  it("round-trips cells containing backslashes", () => {
+    expect(roundTripCell("src\\win\\path.ts")).toBe("src\\win\\path.ts");
+  });
+
+  it("round-trips a git-quotePath-escaped unicode path verbatim", () => {
+    expect(roundTripCell('"src/\\303\\251.ts"')).toBe('"src/\\303\\251.ts"');
+  });
+
+  it("round-trips cells containing embedded newlines and tabs", () => {
+    expect(roundTripCell("line1\nline2")).toBe("line1\nline2");
+    expect(roundTripCell("tab\there")).toBe("tab\there");
+  });
+
+  it("round-trips a cell whose value starts and ends with a quote char", () => {
+    expect(roundTripCell('"already"')).toBe('"already"');
+  });
+
+  it("round-trips numeric-looking and keyword-looking string cells at table level", () => {
+    expect(roundTripCell("42")).toBe("42");
+    expect(roundTripCell("true")).toBe("true");
+    expect(roundTripCell("null")).toBe("null");
+  });
+
+  it("round-trips scalar header values containing escapes through parseToon", () => {
+    const out = serializeToonTable(
+      { ...header, projectName: 'proj "x"\\y' },
+      "entries",
+      columns,
+      rows
+    );
+    expect(parseToon(out)["projectName"]).toBe('proj "x"\\y');
+  });
 });

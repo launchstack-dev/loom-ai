@@ -212,7 +212,7 @@ interface LedgerEntry {
   timestamp: string;
   filesChanged: string;
   impactedPages: string;
-  wikiUpdatedAt: string;
+  wikiUpdatedAt: string | null;
   status: string;
 }
 
@@ -237,7 +237,7 @@ function readLedger(ledgerPath: string): {
       timestamp: String(r["timestamp"] ?? ""),
       filesChanged: String(r["filesChanged"] ?? ""),
       impactedPages: String(r["impactedPages"] ?? ""),
-      wikiUpdatedAt: String(r["wikiUpdatedAt"] ?? "null"),
+      wikiUpdatedAt: r["wikiUpdatedAt"] == null ? null : String(r["wikiUpdatedAt"]),
       status: String(r["status"] ?? ""),
     }));
     return { header: headerLines.join("\n"), entries };
@@ -270,10 +270,7 @@ function writeLedger(
     },
     "entries",
     ["commitSha", "timestamp", "filesChanged", "impactedPages", "wikiUpdatedAt", "status"],
-    entries.map((e) => ({
-      ...e,
-      wikiUpdatedAt: e.wikiUpdatedAt === "null" ? null : e.wikiUpdatedAt,
-    }))
+    entries.map((e) => ({ ...e }))
   );
   writeAtomic(ledgerPath, content);
 }
@@ -368,7 +365,7 @@ runHook("wiki-commit-ledger", async (input) => {
     timestamp: new Date().toISOString(),
     filesChanged: files.join(" + "),
     impactedPages: Array.from(impactedPages).join(" + "),
-    wikiUpdatedAt: "null",
+    wikiUpdatedAt: null,
     status,
   };
   ledger.entries.push(entry);

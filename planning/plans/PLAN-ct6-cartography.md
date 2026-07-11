@@ -640,7 +640,7 @@ automatable: true
 | commands/loom-next.md | Modify | implementer-agent |
 
 #### Acceptance Criteria
-- [ ] `hooks/map-freshness.ts` is a PreToolUse `Write|Edit` hook that computes drift via `hooks/lib/map-state.ts`, flips `mapStale: true` (atomic write) once drift ≥ `staleThreshold`, and is **fail-open** — its `decision` is always `allow` (it never blocks a write).
+- [ ] The pre-existing `hooks/map-freshness.ts` (shipped in the fable-readiness fork as a PreToolUse `Write|Edit` hook) is aligned and validated against this plan's contract: it computes drift via `hooks/lib/map-state.ts`, flips `mapStale: true` (atomic write) once drift ≥ `staleThreshold`, and is **fail-open** — its `decision` is always `allow` (it never blocks a write). Alignment work, not creation from scratch.
 - [ ] The hook is registered in `hooks/hooks.json` under the PreToolUse `Write|Edit` matcher via the `run-hook.sh` wrapper (same shape as `file-ownership.ts`).
 - [ ] A pre-stale warning state (default 70% of threshold) is surfaced in `/loom-status` and `/loom-next`; `mapStale` and the current `staleThreshold` are visible in `/loom-status`.
 - [ ] After committing changes to N files exceeding the threshold, the hook flips `mapStale: true` on the affected artifact; a `/loom-map refresh` clears it and updates `lastMappedCommit` to the new HEAD.

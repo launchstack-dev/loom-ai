@@ -464,7 +464,7 @@ Loom's gates and loops only protect work that enters them — route work through
 <!-- loom:command-routing-v1 — managed by /loom-upgrade. Edit text freely; preserve this marker. -->
 ```
 
-**Detection granularity**: each subsection is checked independently. If CLAUDE.md already has "TOON" mentioned but lacks "Model resolution", only the Agent Conventions block is appended. The Command Routing block is detected by its `loom:command-routing-v1` marker and appended only when `.loom/` exists at the project root (see `agents/project-guidance-agent.md` for the same block's `/loom-init` emission rules).
+**Detection granularity**: each subsection is checked independently. If CLAUDE.md already has "TOON" mentioned but lacks "Model resolution", only the Agent Conventions block is appended. The Command Routing block is detected by its `loom:command-routing-v1` marker and appended only when `.loom/` exists at the project root (see `agents/project-guidance-agent.md` for the same block's `/loom-init` emission rules). Note the heading level is intentionally H3 here (nesting under the `## Loom Conventions` umbrella this rule appends) while the `/loom-init` emitter writes it as a standalone H2 — the marker, not the heading, is the detection key, so do not "fix" one to match the other.
 
 ### Rule 9: Hook wiring — add missing hooks to settings.json
 

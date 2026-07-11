@@ -37,7 +37,7 @@ crossRefs[6]{pageId,relationship}:
 | Git-derived freshness check in downstream gates | Fork gate read-path |
 | `mapContentSha` digest computation | M-09 write-path (optional field) |
 
-**C-26 integration criterion:** The M-09 producer MUST write `lastMappedCommit` at `.loom/wiki/maps/*.toon`. The fork gate MUST read from that exact path. C-26 verifies producer write-path == fork gate read-path end-to-end; a path mismatch causes a dormant gate.
+**C-26 integration criterion:** The M-09 producer MUST write `lastMappedCommit` at `.loom/maps/*.toon`. The fork gate MUST read from that exact path. C-26 verifies producer write-path == fork gate read-path end-to-end; a path mismatch causes a dormant gate.
 
 ## Behavior
 
@@ -45,7 +45,7 @@ crossRefs[6]{pageId,relationship}:
 
 On every `Write` or `Edit` tool call that touches a map artifact:
 
-1. Reads the affected map artifact(s) from `.loom/wiki/maps/` using `hooks/lib/map-state.ts`.
+1. Reads the affected map artifact(s) from `.loom/maps/` using `hooks/lib/map-state.ts`.
 2. Stamps `lastMappedCommit` = current git HEAD SHA on the artifact (`.tmp`+rename atomic write).
 3. Optionally computes and stamps `mapContentSha` (`sha256:` digest of the artifact body) to enable hand-edit detection.
 4. Always returns `decision: "allow"`.
