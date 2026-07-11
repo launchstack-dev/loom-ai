@@ -41,7 +41,7 @@ blockName:                                    # nested block
 - Execution agents write progress heartbeats to `.plan-execution/progress/{taskId}.toon`
 - File writes must be atomic: write to `.tmp`, then rename
 - **Model resolution is mandatory.** Before every Agent tool call, read the target agent's `.md` frontmatter `model:` field and pass `model: "{value}"` on the call. Resolution priority: (1) `orchestration.toml` profile tier, (2) frontmatter, (3) inherit parent. Never spawn an agent without resolving its model first.
-- **Fable is driver-only.** Fable-tier models may drive the interactive session but must never resolve as a spawned agent's model — multi-agent fan-out exhausts fable usage limits, and Fable availability is windowed. Worker tiers are opus/sonnet/haiku only (see README → "Two ways to run Loom — with and without Fable").
+- **Fable is driver-only.** Fable-tier models may drive the interactive session but must never resolve as a spawned agent's model — multi-agent fan-out exhausts fable usage limits, and Fable availability is windowed. Worker tiers are opus/sonnet/haiku only (see README → "Two ways to run Loom — with and without Fable"). If resolution falls through to (3) inherit and the session model is fable-tier, do not inherit: substitute the active profile's tier default for that stage, or `sonnet` if no profile is configured.
 - See `protocols/execution-conventions.md` for directory structure and file naming
 
 ## Context Management
