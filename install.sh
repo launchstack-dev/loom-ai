@@ -159,6 +159,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-browser.md:${CLAUDE_DIR}/commands/loom-browser.md"
   "commands/loom-canary.md:${CLAUDE_DIR}/commands/loom-canary.md"
   "commands/loom-careful.md:${CLAUDE_DIR}/commands/loom-careful.md"
+  "commands/loom-fable.md:${CLAUDE_DIR}/commands/loom-fable.md"
   "commands/loom-cso.md:${CLAUDE_DIR}/commands/loom-cso.md"
   "commands/loom-design.md:${CLAUDE_DIR}/commands/loom-design.md"
   "commands/loom-design/consultation.md:${CLAUDE_DIR}/commands/loom-design/consultation.md"

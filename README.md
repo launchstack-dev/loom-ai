@@ -245,7 +245,7 @@ The tiering principle: *opus for decisions, sonnet for generation, haiku for plu
 
 ### Choosing
 
-Use Fable as the driver when you have it — fuzzy problems, architecture calls, and long autonomous runs benefit most. Configure profiles for everything spawned (`modelProfile` in `.claude/orchestration.toml`, see [Per-Project Extensibility](#per-project-extensibility)). When Fable is unavailable, change nothing: the session model changes, the system doesn't.
+Use Fable as the driver when you have it — fuzzy problems, architecture calls, and long autonomous runs benefit most. Configure profiles for everything spawned (`modelProfile` in `.claude/orchestration.toml`, see [Per-Project Extensibility](#per-project-extensibility)). When Fable is unavailable, change nothing: the session model changes, the system doesn't. Record which mode a project is in with [`/loom-fable on|off|auto`](#loom-fable) when a Fable window opens or closes.
 
 Direction of travel: the fable-readiness fork (PR #42) makes this split explicit as **capability-gated discipline profiles** — scaffolding that tightens or relaxes based on the measured capability of whatever model is present, rather than on a model name. Not yet merged; this section describes shipped behavior.
 
@@ -401,6 +401,7 @@ The split is the layer they touch:
 | `/loom-install` | — | Direct-symlink install path for Loom (alternative to plugin marketplace). Cross-host aware. |
 | `/loom-health` | (flags) `--quick` | Composite 0–10 quality score from 5 weighted components with trend history at `.loom/health-history.toon`. |
 | `/loom-careful` | — | PreToolUse guard hook that blocks destructive Bash commands (`rm -rf /`, `DROP TABLE`, force-push, `mkfs`, …) before they run. |
+| `/loom-fable` | on, off, auto, status | Toggle fable-driver mode for windowed Fable availability. Workers stay opus/sonnet/haiku in every mode. |
 
 The tables above are the quick index. Every surface below also gets a full section — [The idea pipeline](#the-idea-pipeline), [Quality gates](#quality-gates), [Shipping](#shipping), [Learning loop](#learning-loop), [Design](#design), [Docs & diagrams](#docs--diagrams), [Browser automation](#browser-automation), and [Guardrails & meta](#guardrails--meta).
 
@@ -696,11 +697,15 @@ Run it once per project after configuring the domain list, and again whenever `/
 
 ## Guardrails & meta
 
-Two remaining surfaces don't fit a lifecycle stage: `/loom-careful` guards every Bash call, and `/loom-skillify` turns transcripts into tested tooling. (The other meta surfaces have their own sections: [`/loom-install`](#direct-install-power-user) for the direct-symlink channel and [`/loom-update`](#update-and-uninstall) for runtime upgrades.)
+Three remaining surfaces don't fit a lifecycle stage: `/loom-careful` guards every Bash call, `/loom-fable` toggles driver mode across Fable availability windows, and `/loom-skillify` turns transcripts into tested tooling. (The other meta surfaces have their own sections: [`/loom-install`](#direct-install-power-user) for the direct-symlink channel and [`/loom-update`](#update-and-uninstall) for runtime upgrades.)
 
 ### /loom-careful
 
 `/loom-careful` is not a workflow command — it documents and manages the `loom-careful` PreToolUse hook (`hooks/loom-careful.ts`) that intercepts Bash commands before Claude Code runs them and denies the destructive ones: `rm -rf` against `/`, `~`, `.`, or `*`; destructive SQL DDL (`DROP TABLE`, `DROP DATABASE`, `TRUNCATE TABLE`); `git push --force` / `git reset --hard`; `chmod -R 777 .`; raw-device writes (`dd of=/dev/sda`); and filesystem formatters (`mkfs`). A blocked call surfaces to the agent as `CAREFUL_BLOCKED` with the reason.
+
+### /loom-fable
+
+`/loom-fable on|off|auto|status` records **driver mode** in `.loom/driver-mode.toon` — whether a Fable-tier model is driving this project's sessions. Fable ships in limited windows (see [Two ways to run Loom](#two-ways-to-run-loom--with-and-without-fable)); this is the switch you flip when a window opens or closes. `on` sets driver-quality expectations at the judgment seams; `off` suggests the `quality` model profile for planning-heavy work and reminds you that nothing structural changes; `auto` (the default) infers driver class per session. No mode ever changes worker model resolution — fable stays driver-only, workers stay opus/sonnet/haiku, cross-model second opinions stay pinned to a non-fable model. This command is the stopgap until the fable-readiness capability-gated discipline profiles land (PR #42), at which point it becomes an alias over the capability gate.
 
 When a legitimately destructive command must run, the escape hatches are graduated: `LOOM_CAREFUL_OVERRIDE=1 <command>` for one command, `export LOOM_CAREFUL_OVERRIDE=1` for the session, or remove the hook's `PreToolUse` entry from `~/.claude/settings.json` (or unregister via `/loom-library` if kit-installed) to disable it globally. Unlike Loom's task-scoped enforcement hooks, this one guards the agent session itself — it pairs with, rather than replaces, the per-project enforcement hooks described under [Hook enforcement](#hook-enforcement-per-project).
 
