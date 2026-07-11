@@ -218,6 +218,37 @@ Three more pillars that fall out of that composability:
 2. **Scenarios drive convergence.** Plans and roadmaps ship Given/When/Then scenarios under each phase and feature. The convergence-planner emits targets from scenarios; the verification pipeline gates on them at four tiers (unit / integration / e2e / qa-review) mapped to wave / phase / feature / milestone.
 3. **Change-proposal lifecycle.** After the initial materialize, `/loom-change init → review → approve → run → archive` mutates per-domain `contract-*` wiki pages atomically with drift validation. `/loom-quick` auto-emits a retroactive proposal so small work stays zero-ceremony.
 
+## Two ways to run Loom — with and without Fable
+
+Loom separates the **driver** — the model in your interactive Claude Code session, the one you talk to — from the **workers** — the subagents the pipeline spawns for planning, execution, review, and verification. That separation is what makes both operating modes first-class. Every guarantee Loom makes lives in structure, not in model intelligence: criteria are authored before code, the F-18 loop gate refuses to fix a bug nobody has watched fail, convergence loops carry non-disableable circuit breakers, and four verification tiers gate waves, features, and milestones. A stronger driver makes runs faster and judgment calls sharper; it is never what makes the output correct.
+
+### With Fable — Fable drives, never works
+
+Run your session on Fable 5 and every `/loom-*` command gets Fable-grade synthesis at the seams where judgment concentrates: `/loom-think` interviews, plan decomposition, review triage, convergence verdicts.
+
+The iron rule: **Fable stays in the driver's seat.** Workers never resolve to a fable-tier model — the model-resolution chain (profile tier → agent frontmatter → inherit) contains no fable at any level, and the orchestration schema forbids it in profile tiers outright (`protocols/orchestration-config.schema.md`). Two reasons:
+
+1. **Usage economics.** A single execution wave can fan out a dozen contract-scoped agents; convergence multiplies that per iteration. Fable-tier limits are exhausted by exactly this shape of load — one fable driver plus sonnet/opus workers is sustainable, a fable fleet is not.
+2. **Availability.** Fable ships in limited windows. A pipeline that *requires* it breaks the day the window closes; a pipeline that merely *benefits* from it degrades to the other mode with zero changes.
+
+### Without Fable — opus/sonnet/haiku end to end
+
+This is the baseline Loom is engineered against, not a fallback. The same commands, gates, and loops run identically; you choose a model profile and the five stage tiers map accordingly:
+
+| Profile | planning | execution | review | verification | utility |
+|---|---|---|---|---|---|
+| `quality` | opus | opus | opus | sonnet | sonnet |
+| `balanced` | opus | sonnet | sonnet | sonnet | haiku |
+| `budget` | sonnet | sonnet | haiku | haiku | haiku |
+
+The tiering principle: *opus for decisions, sonnet for generation, haiku for plumbing.* Where a weaker driver would drift, the scaffolding holds instead — the thinking gate fails closed, the interpretation reviewer catches semantic conflicts between plan and criteria, and cross-model second opinions pin a named non-fable model so they work in every mode.
+
+### Choosing
+
+Use Fable as the driver when you have it — fuzzy problems, architecture calls, and long autonomous runs benefit most. Configure profiles for everything spawned (`modelProfile` in `.claude/orchestration.toml`, see [Per-Project Extensibility](#per-project-extensibility)). When Fable is unavailable, change nothing: the session model changes, the system doesn't.
+
+Direction of travel: the fable-readiness fork (PR #42) makes this split explicit as **capability-gated discipline profiles** — scaffolding that tightens or relaxes based on the measured capability of whatever model is present, rather than on a model name. Not yet merged; this section describes shipped behavior.
+
 ## Troubleshooting
 
 If something looks wrong:
@@ -1621,7 +1652,7 @@ outputRole = "producer"
 
 Or `/loom-agent create` for an interactive flow.
 
-**Model resolution** is 3-level: profile tier mapping (`quality`/`balanced`/`budget`) → agent frontmatter `model:` → inherit parent. The default tiering follows the principle *opus for decisions, sonnet for generation, haiku for plumbing*.
+**Model resolution** is 3-level: profile tier mapping (`quality`/`balanced`/`budget`) → agent frontmatter `model:` → inherit parent. The default tiering follows the principle *opus for decisions, sonnet for generation, haiku for plumbing*. Fable-tier models never appear at any level of this chain — Fable is a driver, not a worker; see [Two ways to run Loom](#two-ways-to-run-loom--with-and-without-fable).
 
 ## Internals
 

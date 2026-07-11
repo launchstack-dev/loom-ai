@@ -97,9 +97,19 @@ See `protocols/feedback-loop.schema.md` for the full field schema, `protocols/lo
 
 ---
 
+## 7. Driver vs workers (with and without Fable)
+
+The **driver** is the model in your interactive Claude Code session — the one you talk to. **Workers** are the subagents Loom spawns for planning, execution, review, and verification, resolved through model profiles (`quality` / `balanced` / `budget` → opus / sonnet / haiku tiers).
+
+**Why this concept matters:** it's what lets Loom run two ways with zero configuration difference. With Fable, the driver's judgment sharpens the seams where it concentrates (think interviews, plan decomposition, convergence verdicts) — but Fable never resolves as a worker: multi-agent fan-out exhausts fable-tier usage limits, and Fable's availability is windowed, so nothing load-bearing may depend on it. Without Fable, the same commands, gates, and loops run identically, because correctness comes from the concepts above — scope contracts, scenarios, hooks, convergence, feedback loops — not from model intelligence. The system degrades in speed and polish, never in guarantees.
+
+See README → "Two ways to run Loom — with and without Fable" for the full operating-mode guide, and `protocols/orchestration-config.schema.md` for the profile schema (which forbids fable in worker tiers).
+
+---
+
 ## The four pillars (recap)
 
-These six concepts compose into Loom's four pillars, which are what the README is really about:
+These seven concepts compose into Loom's four pillars, which are what the README is really about:
 
 1. **Pre-flight scope contract** — concept 1, captured before any code.
 2. **Scenarios drive convergence** — concepts 2 and 4 wired together. Scenarios become convergence targets.
