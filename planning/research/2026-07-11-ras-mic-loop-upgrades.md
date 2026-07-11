@@ -40,7 +40,7 @@ Recent shipped work (v0.2.0, 2026-07-04..07-10) already covers — often more ri
 
 ## 4. Ranked upgrade proposals
 
-Primary signal stays `blockingCount == 0` everywhere — no proposal replaces Loom's convergence semantics; they add intake, evidence, and gating at the edges. All new artifacts are TOON per project convention.
+Primary signal stays `blockingCount == 0` everywhere — no proposal replaces Loom's convergence semantics; they add intake, evidence, and gating at the edges. All new artifacts are TOON per this branch's convention. **C-05 compatibility note:** the fable-readiness branch freezes TOON (existing artifacts keep it, no migration) and prefers JSON-with-schema for *new* schemas consumed by the Workflow engine — since C-17 re-platforms this class of work onto that engine, the new schemas proposed below (`ticket-intake`, `review-scorecard`) should be format-decided at design time under whichever convention has landed; nothing else in the proposals is format-sensitive.
 
 ### P1 — `linear-intake` kit: `/loom-linear` ticket ingestion (Track: integration) — **L**
 - **Ports ideas:** 1, 2 (the in-scope half), 6.

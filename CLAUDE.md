@@ -35,6 +35,17 @@ blockName:                                    # nested block
 - Prefer **bun** / **bunx** when available; fall back to **npm** / **npx** otherwise
 - Use **vitest** for test suites in the meta-orchestration project
 
+## Command Routing
+
+Route work through the pipeline instead of doing it by hand — the gates and loops only protect work that enters them:
+
+- Bug report or failing behavior → `/loom-bugfix` (expects a verified-red `loop.toon`; do not hand-fix and skip the gate)
+- New feature or fuzzy idea → `/loom-spec` (small) or `/loom-think` → `/loom-roadmap` → `/loom-plan` (large)
+- Iterate an artifact to a quality bar → `/loom-converge` (criteria / target / document modes)
+- Small zero-ceremony task → `/loom-quick`; fully autonomous pipeline → `/loom-auto`
+- Unsure which command → `/loom-which`
+- Before starting parallel or overlapping work, check `.plan-execution/` for live pipeline state
+
 ## Agent Conventions
 
 - All agents return a standard AgentResult envelope in TOON (see `protocols/agent-result.schema.md`)
