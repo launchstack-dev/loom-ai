@@ -449,9 +449,22 @@ Exceptions: app-specific data (JSON API responses, SQL), standard tooling config
 - Token estimation: characters / 4 heuristic, plus 5000-token overhead
 - Every pipeline stage writes a StageContext summary to `.plan-execution/stage-context/{stage}.toon`
 - Writes must be atomic: write to `{path}.tmp`, then `fs.renameSync`
+
+### Command Routing
+
+Loom's gates and loops only protect work that enters them — route work through the pipeline instead of doing it by hand:
+
+- Bug report or failing behavior → `/loom-bugfix` (expects a verified-red loop; don't hand-fix around the gate)
+- New feature or fuzzy idea → `/loom-spec` (small) or `/loom-think` → `/loom-roadmap` → `/loom-plan` (large)
+- Iterate an artifact to a quality bar → `/loom-converge`
+- Small zero-ceremony task → `/loom-quick`; fully autonomous run → `/loom-auto`
+- Unsure which command fits → `/loom-which`
+- Before starting parallel or overlapping work, check `.plan-execution/` for live pipeline state
+
+<!-- loom:command-routing-v1 — managed by /loom-upgrade. Edit text freely; preserve this marker. -->
 ```
 
-**Detection granularity**: each subsection is checked independently. If CLAUDE.md already has "TOON" mentioned but lacks "Model resolution", only the Agent Conventions block is appended.
+**Detection granularity**: each subsection is checked independently. If CLAUDE.md already has "TOON" mentioned but lacks "Model resolution", only the Agent Conventions block is appended. The Command Routing block is detected by its `loom:command-routing-v1` marker and appended only when `.loom/` exists at the project root (see `agents/project-guidance-agent.md` for the same block's `/loom-init` emission rules).
 
 ### Rule 9: Hook wiring — add missing hooks to settings.json
 

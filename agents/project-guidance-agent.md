@@ -155,6 +155,19 @@ This project has a Loom wiki at `.loom/wiki/`. The wiki is the authoritative sou
 If the relevant wiki page is missing or stale, say so in your response — don't silently work around it.
 
 <!-- loom:wiki-discipline-v1 — managed by /loom-upgrade. Edit text freely; preserve this marker. -->
+
+## Loom Command Routing
+
+Loom's gates and loops only protect work that enters them — route work through the pipeline instead of doing it by hand:
+
+- Bug report or failing behavior → `/loom-bugfix` (expects a verified-red loop; don't hand-fix around the gate)
+- New feature or fuzzy idea → `/loom-spec` (small) or `/loom-think` → `/loom-roadmap` → `/loom-plan` (large)
+- Iterate an artifact to a quality bar → `/loom-converge`
+- Small zero-ceremony task → `/loom-quick`; fully autonomous run → `/loom-auto`
+- Unsure which command fits → `/loom-which`
+- Before starting parallel or overlapping work, check `.plan-execution/` for live pipeline state
+
+<!-- loom:command-routing-v1 — managed by /loom-upgrade. Edit text freely; preserve this marker. -->
 ```
 
 The `## Coding Behavior` block is **mandatory** in every generated CLAUDE.md. It must:
@@ -171,6 +184,14 @@ The `## Loom Wiki Discipline` block is **conditional**: emit it ONLY when `.loom
 - Operationalizes each of the four Karpathy principles against the wiki — each `**Before X**` paragraph references its corresponding Coding Behavior § by name.
 
 The marker enables `/loom-upgrade` Rule 8 to detect and inject this block into pre-existing CLAUDE.md files when a wiki appears later (see `protocols/schema-upgrade.md` Rule 8). The conditional gate is `.loom/wiki/` existence at the project root, checked at run time. Do NOT emit the Wiki Discipline block for projects without a wiki — surfacing wiki-discipline guidance in a repo with no wiki is noise.
+
+The `## Loom Command Routing` block is **conditional**: emit it ONLY when the project is Loom-onboarded (`.loom/` exists at the project root at run time — always true when `/loom-init` itself is completing). When emitted, it:
+
+- Appears immediately after the Wiki Discipline block (or after Coding Behavior when no wiki exists), keeping the fixed order Coding Behavior → Wiki Discipline → Command Routing.
+- Preserves the `<!-- loom:command-routing-v1 -->` marker on its own line at the end of the block.
+- Exists so the always-loaded CLAUDE.md applies routing pressure toward the gated pipeline — without it, a driver handed "fix this bug" has nothing in context steering it to `/loom-bugfix`, and the loop gates never fire because the command they live in was never invoked.
+
+The marker enables `/loom-upgrade` Rule 8 to detect and inject this block into pre-existing CLAUDE.md files. Do NOT emit it for projects without a `.loom/` directory — routing guidance to commands that aren't installed is noise.
 
 ### Subdirectory Guidance
 
