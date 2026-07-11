@@ -8,6 +8,14 @@
      until then they read `<pending>`. Schema: protocols/release-versioning.schema.md.
      Dated `## YYYY-MM-DD` sections below predate this convention and are retained. -->
 
+## 2026-07-11 — Code fixes applied (review round 2)
+
+- Source: .plan-execution/review-report.md (archived: planning/history/reviews/2026-07-11-review-2.md)
+- Reviewers: 5-agent fan-out (opus, quality profile) + gemini-code-assist PR #43 comments (11, merged)
+- Applied: 12 findings (1 critical — hooks TOON codec round-trip symmetry; 5 warning incl. both gemini themes; 6 info)
+- Ledger note: freshness-ledger cells canonicalize to minimal-quoting on first post-merge commit (deliberate one-shot)
+- Verification: hooks suite 200/200 (serial), skill-autoload-audit 22/22, hooks tsc clean, docs-drift 0, checksums regenerated
+
 ## 2026-07-06 — version bump: 0.2.0 (manifest)
 
 - Bumped `loomCoreVersion`, `loomHooksVersion` (`skills/library.yaml`) and the plugin manifest (`.claude-plugin/plugin.json`) from `0.1.0` → **`0.2.0`**.
