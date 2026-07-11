@@ -1,0 +1,63 @@
+type: roadmap-review
+roadmapFile: planning/ROADMAP.md
+reviewedAt: 2026-07-08
+scope: CT6-ports-only (M-09..M-13, F-20..F-33, C-10..C-14, 6 new entities, 6 new risk rows)
+baselineTreatedApproved: M-01..M-08, F-01..F-19
+thinkReviewRan: false
+resolvedArchetype: cli-tool/framework (no visual surface — design lens skipped)
+strategicLenses[3]: plan-eng-review-agent, plan-devex-review-agent, plan-ceo-review-agent
+agentCount: 7
+structuralErrors: 0
+structuralWarnings: 2
+structuralWarningNotes[2]: totalFeatures 33 trips schema >20 split advisory, milestone header count 14 vs frontmatter 13 (pre-existing M-02a/b convention)
+
+compositeScores[3]{lens,score}:
+  engineering,7.1
+  ceo,5.5
+  others,not-scored
+
+agents[7]{name,findingCount,blockingCount,warningCount,infoCount}:
+  scope-feasibility-agent,13,1,8,4
+  feature-coverage-agent,14,3,7,4
+  strategy-agent,6,0,2,4
+  ux-agent,10,1,6,3
+  plan-eng-review-agent,11,2,6,3
+  plan-devex-review-agent,7,2,3,2
+  plan-ceo-review-agent,8,3,3,2
+
+blockingFindings[12]{id,agent,theme,title,disposition}:
+  SF-02,scope,sequencing,Build-order note contradicts milestone deps (F-24 in M-10 sequenced before M-09 done),auto-integrate
+  UX-01,ux,escape-hatch,No override path on new fail-closed gates (drops F-18 --override-loop-gate precedent),auto-integrate
+  CEO-F-01,ceo,launch-timing,CT6 scope accepted before M-06 launch demand-test clears,USER-DECISION
+  CEO-F-02,ceo,scope-discipline,33 features trips split advisory; recommend split into ROADMAP-rigor-ports.md,USER-DECISION
+  CEO-F-03,ceo,cold-start,F-23 fail-closed map precondition is a cold-start adoption landmine,auto-integrate (degrade) + USER-DECISION (pre-launch timing)
+  DEVEX-F-01,devex,cold-start,F-23 headless/CI dead-end; auto-invoke /loom-map instead of fail closed,auto-integrate
+  DEVEX-F-02,devex,docs-debt,M-09..M-13 ship zero docs acceptance criteria (violates standing learning),auto-integrate
+  ENG-F-25.1,eng,f25-contract,Stop hook has no phase/criteria context; cannot auto-re-run (block+surface only),auto-integrate
+  ENG-F-25.2,eng,f25-contract,Six-layer contract mixes deterministic + LLM-judged but Stop hooks cannot spawn agents,auto-integrate
+  CT6-001,feature-coverage,schema,MapArtifact missing edge-type vocabulary for codebase/route layers,auto-integrate
+  CT6-002,feature-coverage,agent-collision,F-24 adversarial-reviewer collides with existing plan-critic-agent (no charter boundary),auto-integrate
+  CT6-003,feature-coverage,schema,MovementsTable missing rollback anchor (preMoveCommit),auto-integrate
+
+crossCuttingThemes[8]{theme,agents,confidence,summary}:
+  f23-cold-start-wall,ux;ceo;devex;eng;scope,high,F-23 fail-closed map gate needs graceful degradation (auto-invoke/warn-first) + escape hatch + must not ship pre-launch fail-closed
+  gate-escape-hatches,ux;feature-coverage;eng;devex,high,New gates (F-23/F-25/F-27/F-30) lack override/waiver paths; baseline F-18 --override-loop-gate precedent dropped
+  sequencing-incoherence,scope;eng;strategy,high,Build-order vs milestone-dep contradiction (SF-02); F-22-after-F-23 inversion (SF-03); M-10 oversized -> split M-10a/M-10b
+  f25-contract-redraw,eng;feature-coverage,high,F-25 Stop hook = block+name-unmet-layer not auto-rerun; split deterministic-at-Stop vs pre-computed LLM-judged layers; define layer eval order + loop guard
+  schema-gaps,feature-coverage,medium,MapArtifact edge vocab (blk); MovementsTable rollback (blk); RoleCharter eviction; VerifiedOutputContract eval order
+  launch-timing-scope,ceo;strategy;devex,high,Defer CT6 behind M-06 Phase 2; add explicit post-launch sequencing note; consider F-25-A2-seed-only into 1.0; add launch-starvation risk row
+  docs-debt,devex,high,Zero docs acceptance criteria on M-09..M-13; add docs/hooks.md + README + troubleshooting criteria per gate/command
+  f28-tree-sitter-rescope,eng;feature-coverage,medium,LSP-first infeasible in CC hook/agent (C-09/C-11); re-scope to tree-sitter-first (reuse F-10) and add M-05->M-11 dependency; /loom-data lineage + data-lineage-tracker CONFIRMED EXIST (C-12 holds)
+  f21-critical-path,scope,medium,F-21 map is unmarked linchpin of F-23/F-27/F-28/F-30/F-32 across 4 milestones; elevate + add coverage-may-not-converge risk row
+  injection-budget-contention,scope;feature-coverage;eng,medium,F-32 map-excerpt + F-08 wiki-context + F-10 repo-map + F-31 compression all touch 100k cap; declare arbitration precedence
+
+dismissedFindings[1]{id,agent,reason}:
+  ENG-F-28.2,eng,FALSE — /loom-data command and data-lineage-tracker agent both verified present in worktree; C-12 enrich-existing contract holds
+
+verifiedCodebaseClaims[6]{claim,result}:
+  /loom-data command exists,TRUE
+  data-lineage-tracker agent exists,TRUE
+  plan-critic-agent exists (F-24 collision real),TRUE
+  quality-gate.ts Stop hook exists (F-25 grounding),TRUE
+  /loom-map + /loom-restructure absent (C-13 net-new correct),TRUE
+  tree-sitter dependency present,FALSE (M-05 not started; F-28.1 re-scope real)
