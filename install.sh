@@ -170,6 +170,7 @@ declare -a COMMAND_FILES=(
   "commands/loom-docs.md:${CLAUDE_DIR}/commands/loom-docs.md"
   "commands/loom-docs/generate.md:${CLAUDE_DIR}/commands/loom-docs/generate.md"
   "commands/loom-docs/release.md:${CLAUDE_DIR}/commands/loom-docs/release.md"
+  "commands/loom-fable.md:${CLAUDE_DIR}/commands/loom-fable.md"
   "commands/loom-health.md:${CLAUDE_DIR}/commands/loom-health.md"
   "commands/loom-install.md:${CLAUDE_DIR}/commands/loom-install.md"
   "commands/loom-landing-report.md:${CLAUDE_DIR}/commands/loom-landing-report.md"

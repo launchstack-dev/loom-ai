@@ -3,10 +3,16 @@ roadmapVersion: 1
 name: "Loom Convergence Testing & Planning Taxonomy"
 status: approved
 created: 2026-04-18
-lastReviewed: 2026-06-25
+lastReviewed: 2026-07-10
 targetDate: null
-totalFeatures: 19
-totalMilestones: 8
+totalFeatures: 33
+totalMilestones: 13
+# Reconciled 2026-07-10 with the fable-readiness fork (PR #42) — see C-17.
+# Of the 14 CT6 ports: 3 SUPERSEDED (F-24/F-25/F-26 shipped as fork Track A),
+# 2 DROPPED (F-31/F-32 now scaffold-deprecated under fable-readiness's discipline
+# profile), 9 SURVIVE and re-platform onto the Workflow engine as fable-readiness
+# Track B (F-20/F-21 map producer is the load-bearing activator of the fork's
+# already-built-but-dormant map-freshness gate).
 ---
 
 # Roadmap: Loom Convergence Testing & Planning Taxonomy
@@ -91,6 +97,71 @@ Unlike framework-level orchestrators (CrewAI, AutoGen, LangGraph), Loom operates
 **Rationale:** Even without full cross-platform support, the data layer should never couple to a specific host tool. This means Loom state survives platform switches without migration.
 **Alternatives considered:** Embed platform-specific metadata in state files (rejected — creates unnecessary coupling)
 **Impact:** low (already true today — formalizing as a constraint)
+
+<!-- Applied: CT6-PORTS — C-10..C-14 added for the CT6 rigor & cartography port milestones (M-09..M-13). Source: ct6-to-loom-port-plan.md, loom-cartography-port-proposal.md (2026-07-08). -->
+
+### C-10: Port the Gate, Not the Skill
+**Decision:** Every CT6 capability ported into Loom (M-09..M-13) MUST land as a fail-closed enforcement point wired into Loom's existing hook set — never as an optional standalone skill or utility. A ported skill without its gate is explicitly out of scope.
+**Rationale:** CT6's genuine product is the enforcement backbone (a PreToolUse skill-gate that denies Edit/Write/Agent until the pipeline is engaged; a Stop hook that re-runs validation before "done"), not the skills themselves. Loom already shares this instinct (18 tool-call hooks, fail-closed decision tables). The high-leverage ports are the gates (F-23, F-25 (now fork Track A per C-17), F-27, F-30 partition-check), and each ported skill must be non-optional to deliver CT6's value.
+**Alternatives considered:** Port skills as opt-in utilities (rejected — reproduces the "la carte skill repo" failure mode CT6 itself avoids); make gates advisory/warn-only (rejected — defeats fail-closed containment)
+**Impact:** high
+
+### C-11: No SQLite, No Daemon, Keep the 100k Cap
+**Decision:** CT6 ports MUST NOT import a database (CT6's `.mempalace/palace` SQLite store), a long-running background daemon (the Librarian), 1M-token live agent contexts, or unbounded solving loops. All ported state stays file-based, TOON-on-disk; all agent spawns respect the existing 100k-token/spawn cap; all loops stay bounded by Loom's convergence machinery.
+**Rationale:** These CT6 mechanisms contradict Loom's whole thesis (containment, no-daemon simplicity, bounded cost, bus-factor transparency). Cross-run memory is already covered by `.loom/learnings.toon`; persistent knowledge is covered by the wiki + map TOON artifacts. Take the *ideas* (persistent map, wake-up query, func-level lineage), implement them over existing primitives.
+**Alternatives considered:** Adopt MemPalace SQLite for richer queries (rejected — opacity + daemon liability); allow 1M contexts for named specialists (rejected — cap-busting token burn, the exact failure mode Loom is built against)
+**Impact:** high
+
+### C-12: One Shared Trace Graph for Cartography and Lineage
+**Decision:** Endpoint/call-trace mapping (C2) and data-lineage mapping (C3) MUST share one graph artifact under `.loom/maps/`, using a common stable-ID scheme (`func://` for code nodes, `asset://<store>/<schema>/<table>` for data nodes). Data-lineage enriches the *existing* `/loom-data lineage` subcommand and its existing `data-lineage-tracker` agent — it does NOT add a new command or agent.
+**Rationale:** In CT6 endpoint-trace and data-lineage are one artifact; splitting them in Loom would duplicate extraction and drift. Loom already ships `/loom-data lineage`, so the data layer lands on an existing command and the data track.
+**Alternatives considered:** Separate endpoint-trace and lineage graphs (rejected — duplicate extraction, drift); a new `/loom-lineage` command (rejected — an equivalent already exists)
+**Impact:** medium
+
+### C-13: Extend Existing Commands — Only Two Net-New Surfaces
+**Decision:** The CT6 ports introduce exactly two net-new commands — `/loom-map` and `/loom-restructure`. Every other port extends an existing command's lifecycle seam (`/loom-plan`, `/loom-converge`, `/loom-wiki`, `/loom-data`, `/loom-code`, `/loom-bugfix`, `/loom-library`, `/loom-auto`). New reviewers are registered via `.claude/orchestration.toml` per D-01, never hardcoded.
+**Rationale:** Loom's command surface is already deep (68 commands verified 2026-07-08); the ports are enforcement and cartography that plug into existing seams. `/loom-map` and `/loom-restructure` were verified absent and are safe as net-new.
+**Alternatives considered:** New commands per port (rejected — surface bloat, discovery cost); fold `/loom-map` into `/loom-wiki` (deferred — evaluated as a `map` subcommand during F-21 planning)
+**Impact:** medium
+
+### C-14: A Verified Artifact Is a Fail-Closed Precondition for Reasoning
+**Decision:** The through-line of every CT6 port: a *verified* artifact (a fresh codebase map, a passed verified-output contract, a cited reuse path) is a fail-closed precondition for the stage that consumes it — not an optional input. Mapping gates planning (F-23); verified-output gates completion and pre-PR (F-25 (now fork Track A per C-17)); reuse claims gate on map citation (F-27); restructure gates on a two-round-clean adversary consensus + partition check (F-30).
+**Rationale:** This is CT6's single best idea and it maps 1:1 onto Loom's convergence loops + tool-call hooks. It gives Loom architect-grade grounding using machinery it already ships.
+**Alternatives considered:** Advisory preconditions with override-by-default (rejected — becomes a no-op); no precondition, rely on agent diligence (rejected — the exact hallucination/skip failure the ports target)
+**Impact:** high
+
+<!-- Applied: CT6-REVIEW 2026-07-08 — C-15..C-16 added from the roadmap review (planning/history/reviews/2026-07-08-roadmap-review.toon). C-15 resolves the cross-cutting "gate escape hatch" + "F-23 cold-start" blocking themes; C-16 resolves the "launch-timing" blocking theme (user chose keep-full-scope + launch-gate). -->
+
+### C-15: Every Fail-Closed Gate Ships With Degradation + a Logged Escape
+**Decision:** Every new fail-closed gate (F-23 map precondition, F-25 (now fork Track A per C-17) verified-output, F-27 reuse-cite, F-28 hallucination gate, F-30 partition-check) MUST ship with (1) a **calibration ramp** — a first release in `warn` mode before flipping to `block`, configurable via an `orchestration.toml` `[gates]` block (`warn|block|off` per gate); (2) a **self-heal or auto-invoke path** where one exists (F-23 auto-invokes `/loom-map` on first miss and fails closed only if the auto-build itself fails); and (3) a **reason-logged escape** mirroring the baseline F-18 `--override-loop-gate` precedent (a per-gate `--skip-*`/`waive <layer> --reason` that writes the reason to state and to `DECISIONS.md` and surfaces prominently). A gate that can only block, with no ramp and no recourse, is out of spec. **Fork-audit (Track B):** verifying that the fork's shipped verified-output gate (`quality-gate.ts`/`revalidation.ts`) actually exposes the warn-ramp + waive escape is an explicit Track-B audit item; C-15 compliance for F-25 is NOT silently satisfied by supersession alone.
+**Rationale:** The review found (5 agents, 2 blocking) that the ports specified every gate's *block* condition precisely but dropped the escape/degradation layer the approved baseline (F-18) already established — the exact "users disable/resent the gate" dynamic the F-23 risk row warns about, and a hard headless/CI/`/loom-auto` dead-end. Enforcement without recourse becomes a wall users route around, defeating C-10.
+**Alternatives considered:** Fail-closed with no override (rejected — headless/CI dead-end, gets disabled); advisory-only (rejected — violates C-10/C-14). The ramp+escape keeps the gate load-bearing while giving a logged, auditable exit.
+**Impact:** high
+
+### C-16: CT6 Ports Are Post-Launch — Gated Behind M-06 Phase 2
+**Decision:** No CT6-port milestone (M-09–M-13) is activated until the OSS launch (M-06) clears its Phase 2 gate (public launch + the 5-stranger cold-install demand test). The ports are captured now as an approved, execution-ready roadmap but are sequenced *behind* the launch so they neither compete with launch-gate closure nor ship a first-run wall to brand-new installers.
+**Rationale:** The review (CEO + strategy + devex, blocking) found that committing 14 features ahead of an unproven launch starves the only A-priority — architect-grade rigor is a retention lever, not an acquisition lever, and pre-1.0 survival is an acquisition problem. Capturing the work now (vs. deferring the design) preserves the analysis; gating activation protects the launch. This is the middle path chosen over a full REDUCTION / file-split.
+**Alternatives considered:** Split M-09–M-13 into a separate deferred `ROADMAP-rigor-ports.md` (rejected — user chose one-roadmap; adds bookkeeping); proceed now with no launch gate (rejected — launch-starvation risk); reduce to F-25-A2-seed-only in 1.0 (rejected — loses the captured decomposition).
+**Impact:** high
+
+<!-- Applied: CT6×FABLE-RECONCILE 2026-07-10 — C-17 added from the CT6-vs-fable-readiness reconciliation assessment. The fable-readiness fork (PR #42) shipped working code for the CT6 verification backbone; this reconciles the CT6 ports down to what is genuinely not-yet-shipped and re-platforms the survivors onto the fork's Workflow engine. See project memory [[project-fable-readiness-fork]]. -->
+
+### C-17: CT6 Ports Reconciled With the fable-readiness Fork (Track A shipped ⇒ CT6 becomes Track B)
+**Decision:** The 14 CT6 ports (M-09–M-13) are reconciled against the fable-readiness fork (PR #42), which already ships the CT6 **verification backbone** as its "Track A." The reconciliation has three buckets:
+- **SUPERSEDED (do NOT build — shipped in the fork):** **F-24** adversarial reviewer (`agents/adversary-agent.md`), **F-25** verified-output/Stop-hook re-validation gate (evolved `quality-gate.ts` acceptance re-validation), **F-26** spec→coverage matrix with bounded per-gap fixes. This retires **M-10a** in full and the F-26 half of **M-10b**.
+- **DROPPED (now scaffold-deprecated):** **F-31** inter-agent token compression and **F-32** persistent role identity + wake-up injection. The fork classifies rolling-context compression and lossy-delegation compensation as the **`loom-scaffold`** layer — turned off on modern harnesses that auto-compact and that solve delegation natively via the Workflow tool + worktrees + structured output. Building them would re-introduce the scaffold the fork is deprecating.
+- **SURVIVES — re-platform onto the fork's Workflow engine as "Track B":** **F-20/F-21** (map serialization + `/loom-map` producer + `codebase-map-reviewer`), **F-22/F-23** (freshness gate + planning precondition), **F-27** reuse-cite, **F-28** trace graph, **F-29** system-architect, **F-30** `/loom-restructure`, and optionally **F-33** phenotype kits. These build on the fork's `scripts/lib/engine/*` Workflow driver rather than the markdown-prompt loops the original CT6 plan assumed.
+
+**The load-bearing finding:** the fork **built the map-freshness gate (its Track A copy of F-22) but left it DORMANT** — `hooks/map-freshness.ts` allows everything until a producer writes `.loom/maps/*.toon`, explicitly deferring to "Track B lands `/loom-map`." **The fork has no map producer.** CT6's **F-20/F-21 is exactly that missing producer**, so it is the single highest-leverage remaining CT6 work: it *activates* a guarantee the fork already built and tested. F-20/F-21 is promoted to the front of the reconciled build order.
+
+**Map-location reconciliation:** the fork's dormant gate reads `.loom/maps/*.toon` (aligned with the C-15/CT6-review relocation that moved maps out of `.loom/wiki/maps/` to dodge `wiki-write-guard`). `/loom-map`'s producer writes via the Write tool and will still hit `wiki-write-guard` — so at build time either add `/loom-map` to the guard's allowlist or confirm the producer writes under the guard-exempt `.loom/maps/` path. Producer and gate MUST agree on the path or the gate stays dormant.
+
+**The "do NOT port" list (C-11) is re-validated and REINFORCED:** 1M-token teammates, the MemPalace SQLite store + Librarian daemon, `func://` as a separate SQLite lineage store, and INSTRUCTION_COMPLIANCE_RUBRIC all remain validly avoided. The fork's bounded Workflow engine + explicit no-daemon/file-based stance makes them *less* necessary, not more; the fork's own Out-of-Scope names MemPalace and the taste/judgment layer (which stays gstack's territory) as excluded.
+
+**Rationale:** A naive merge would rebuild three shipped features and two now-obsolete ones. Reconciliation keeps only the ~9 survivors, points them at the fork's engine, and turns CT6 from a parallel roadmap into the fork's Track B — with F-20/F-21 as the keystone that makes the fork's already-built map machinery live.
+**Alternatives considered:** Naive merge / build all 14 (rejected — rebuilds F-24/F-25/F-26, wastes the fork's Track A); keep CT6 fully separate (rejected — the dormant-gate/missing-producer coupling means they are one system); drop cartography too and rely on the fork alone (rejected — leaves the fork's map gate permanently dormant).
+**Impact:** high
+**Supersedes/amends:** narrows C-16's "14 features" to the reconciled survivor set; M-10a/M-10b/M-13 milestone bodies below carry the per-milestone reconciliation status.
 
 ## Tech Stack
 
@@ -700,6 +771,319 @@ ADR vs wiki decision pages (F-02): **ADRs are the primary decision record.** Wik
 
 F-18 Phase B introduces `loop.toon` as the per-symptom atom for `/loom-bugfix` and `/loom-converge`. F-19 reuses *the same envelope* across `/loom-plan test --autoconverge` and `/loom-plan execute --autoconverge`. One schema, four entry points. F-19 is structurally dependent on F-18 Phase B landing first — without `loop.toon`, F-19 Phases B and C have nothing to bind to.
 
+<!-- Applied: CT6-PORTS — F-20..F-33 added for the CT6 rigor & cartography port milestones (M-09..M-13). Each feature preserves the source port IDs (A1..D7) as key-behavior labels; those port IDs become PLAN.md phases. Source: ct6-to-loom-port-plan.md, loom-cartography-port-proposal.md (2026-07-08). -->
+
+### F-20: Integration-Map Serialization
+
+> ✅ **SURVIVES · KEYSTONE (C-17)** — with F-21, this is the **map producer the fork lacks**. It activates the fork's dormant map-freshness gate. Build first; re-platform on the Workflow engine.
+
+**Priority:** P1
+**Milestone:** M-09
+**Description:** The `wiki-maintainer-agent` already computes an 8-relation cross-reference graph across wiki pages, but it lives only as scattered `crossRefs[]` frontmatter — no standalone graph artifact exists. This feature has the maintainer serialize that graph to a single first-class file on each maintenance pass, making an invisible structure auditable and diffable.
+**Ports:** B2 (do-first — cheapest, single-owner, zero new discovery).
+
+**Entities involved:** MapArtifact, WikiPage
+
+**Key behaviors:**
+- On each `/loom-wiki` maintenance pass, `wiki-maintainer-agent` writes `.loom/maps/integration-map.toon` serializing the 8-relation cross-ref graph it already computes.
+- The artifact is TOON, atomically written (`.tmp` then rename), and owned solely by the maintainer (preserves Loom's single-owner governance).
+- No new graph discovery — the feature persists existing computation only.
+
+**Convergence targets:**
+- After a `/loom-wiki` maintenance pass on a repo with ≥2 cross-referenced pages, `.loom/maps/integration-map.toon` exists and its edge count equals the total `crossRefs[]` entries across all pages.
+- The file parses as valid TOON and round-trips through the wiki-maintainer without edge loss.
+
+### F-21: First-Class Codebase Map
+
+> ✅ **SURVIVES · KEYSTONE (C-17)** — the `/loom-map` producer that turns the fork's already-built-but-dormant map-freshness gate live. Single highest-leverage remaining CT6 work. Re-platform the map-coverage convergence onto the fork's Workflow engine; reconcile the write path with the gate's `.loom/maps/` read path (C-17).
+
+
+**Priority:** P1
+**Milestone:** M-09
+**Description:** Loom has no standing, reviewed codebase map — mapping is emergent (wiki pages) and `/loom-deepen` "explicitly does NOT produce a codebase/architecture map." This feature adds a new `/loom-map` command that produces standing TOON map artifacts and drives their coverage to consensus using Loom's *existing* convergence + reviewer fan-out (not CT6's ralph-loop).
+**Ports:** B1; introduces the `codebase-map-reviewer` agent (registered `[review]` per D-01).
+
+**Entities involved:** MapArtifact, WikiPage, AgentResult
+
+**Key behaviors:**
+- New `/loom-map` command writes `.loom/maps/{codebase-map,route-map,integration-map}.toon` (integration-map produced by F-20; `/loom-map` consumes/refreshes it).
+- Map coverage is driven to consensus by ≥1 `codebase-map-reviewer` agent through the existing `/loom-converge` machinery — no new loop primitive.
+- Each artifact carries frontmatter for freshness stamping (consumed by F-22).
+- `/loom-map` is one of only two net-new command surfaces (per C-13); a `/loom-wiki map` subcommand is evaluated as an alternative during planning.
+
+**Convergence targets:**
+- `/loom-map` on the loom-ai repo produces three TOON artifacts under `.loom/maps/`; `codebase-map.toon` enumerates every top-level source directory with zero uncovered modules at consensus.
+- A second `/loom-map` run with no code changes is a no-op (idempotent) and reports "map fresh".
+
+**Review-integrated (2026-07-08) — SF-09/SF-11 + CT6-006/011/014 + DEVEX-F-06:** **F-21 is the critical-path linchpin** — F-23, F-27, F-28, F-30, and ~~F-32~~ (dropped per C-17) across four milestones all hard-depend on `codebase-map.toon`; any F-21 slip cascades. Live dependents: F-23, F-27, F-28, F-30. Elevated to the anchor of the M-09 build order. `/loom-map` ships a first-class **`status`** verb (report fresh/stale + coverage without rebuild — surface the idempotent no-op path as a query), a **`diff`** verb (added/removed/changed nodes since `lastMappedCommit`, closing the Sourcegraph/CodeScene visibility parity gap the freshness gate needs), and a **`resolve`** verb (node lookup for pre-flight citation validation, shared with F-28). Add a **wiki bridge** mirroring F-10's: map nodes with no corresponding `component-*` wiki page surface to `wiki-maintainer-agent` as ingestion candidates, preventing map↔wiki drift that would break F-27's reuse-cite. Route all new `/loom-map` flags through the L-002 canonical-flag-convention audit before planning. See the new "F-21 map-coverage may not converge" risk row.
+
+### F-22: Map Freshness Gate
+
+> ✅ **SURVIVES (C-17)** — gate already shipped in the fork; F-22 collapses to producer-side `lastMappedCommit` stamping + write-path/read-path reconcile.
+
+**Priority:** P2
+**Milestone:** M-09
+**Description:** Page-level staleness exists in the wiki, but there is no map-level invalidation. This feature stamps each map artifact with the commit it was built against and adds a PreToolUse hook that marks the map stale once HEAD moves past a touched-file threshold — pure fail-closed containment in Loom's existing hook idiom.
+**Ports:** B3.
+
+**Entities involved:** MapArtifact, ExecutionLog
+
+**Key behaviors:**
+- Each map artifact records `lastMappedCommit`.
+- A PreToolUse hook compares `lastMappedCommit` against current git HEAD; once touched-file drift exceeds a configurable threshold, it flips a `mapStale` flag.
+- **Degraded-input handling:** missing or malformed `lastMappedCommit`, unresolvable git HEAD (detached HEAD, shallow clone, fresh repo with no commits), or corrupt/unparseable map TOON MUST be treated as `mapStale: true` (fail-closed to the safe state) and logged — never silently treated as fresh.
+- Stale-map state is the trip-wire the F-23 planning precondition reads (this feature detects staleness; F-23 blocks on it).
+
+**Convergence targets:**
+- After committing changes to N files exceeding the threshold, the freshness hook flips `mapStale: true` on the affected map artifact; a `/loom-map` refresh clears it and updates `lastMappedCommit` to the new HEAD.
+- Producer-written `.loom/maps/*.toon` carries `lastMappedCommit` at the exact field path the fork's shipped map-freshness gate (`hooks/map-freshness.ts`) reads; a producer write followed by threshold-exceeding file drift trips the gate (write-path == read-path verified).
+
+**Review-integrated (2026-07-08) — UX-05 + DEVEX-F-05:** Staleness must not arrive only as a surprise hard block. Add a **pre-stale warning state** (e.g. "map is 70% toward stale — 7 of 10 touched") surfaced in `/loom-status` and `/loom-next`, converting the block into a nudge (mirroring the existing ">5k files surfaces a warning" pattern). The freshness gate meets the F-25 legibility bar — its block names the unmet condition + one-line remedy + where-to-look; `mapStale` and the current `staleThreshold` are visible in `/loom-status`. The `.loom/maps/` directory has two writers (`wiki-maintainer-agent` for integration-map, `/loom-map` for the rest) — per-file ownership + atomic `.tmp`+rename prevent collision (F-22.1). **Map artifact integrity (CWE-345 mitigation):** freshness MUST be derived from git (diff HEAD vs `lastMappedCommit` over tracked files); a `lastMappedCommit` that is not an ancestor of HEAD implies stale-by-default. The stored `mapStale` boolean is **advisory-cache-only** and MUST NEVER be the sole gate input — the freshness hook re-derives from git on each run. An optional `mapContentSha` digest (SHA-256 of the map TOON body) makes hand-edited maps detectable.
+
+### F-23: Mapping as a Planning Precondition
+
+> ✅ **SURVIVES (C-17)** — re-platform per C-17.
+
+**Priority:** P1
+**Milestone:** M-09
+**Description:** Loom's planning and convergence never require a map. This feature adds a fail-closed precondition to `/loom-plan create` and `/loom-converge` that blocks when no fresh map exists, with a one-line remedy (`run /loom-map first`). This is the mechanism that makes F-20–F-22 load-bearing rather than optional artifacts nobody reads — the cartography analog of the F-25 re-validation ethos.
+**Ports:** B4 (low effort once F-21 exists).
+
+**Entities involved:** MapArtifact, PlanPhase
+
+**Key behaviors:**
+- `/loom-plan create` and `/loom-converge` check for a fresh (non-stale, present) map before proceeding; absence or staleness fails closed with remedy text.
+- The gate is wired into the existing hook set so it is non-optional (per C-10).
+- `/loom-auto` inherits the gate so the autonomous pipeline cannot plan against an unmapped codebase.
+
+**Convergence targets:**
+- `/loom-plan create` invoked with no `.loom/maps/codebase-map.toon` present, with `[gates] requireFreshMap = block`, exits non-zero with a state-specific remedy; with the default `warn` it auto-invokes `/loom-map` and proceeds.
+- With `mapStale: true` and `block` mode, `/loom-converge` blocks with a stale-specific remedy (naming the drifted files) until a `/loom-map` refresh clears the flag; with `--skip-map-gate` it proceeds with a logged reason.
+
+**Review-integrated (2026-07-08) — CT6-REVIEW blocking (CEO-F-03, DEVEX-F-01, UX-01):** F-23 does NOT ship hard-fail-closed. Per **C-15**, it ships degraded: (1) **auto-invoke** `/loom-map` on first miss and fail closed only if the auto-build itself fails — so `/loom-auto`/headless/CI never dead-ends on an unmapped repo; (2) an `orchestration.toml` `[gates] requireFreshMap = warn|block|off` knob defaulting to **`warn`** for the first release, flipping to `block` only after the map story is battle-tested; (3) a `--skip-map-gate "<reason>"` escape logged to state + `DECISIONS.md`. Remedy text is **state-specific** (absent-map: "building your codebase map (~N min)…"; stale-map: "run /loom-map to refresh — files X,Y drifted"), not one hardcoded string (UX-02). **Interim behavior (SF-03):** F-23 ships before F-22 in the M-09 phasing, so until F-22 lands the gate is **presence-only**; the staleness convergence target is deferred to when F-22 exists — this is an explicit acceptance sub-item, not a gap. A documented CI recipe ships with F-23.
+
+### F-24: Adversarial Reviewer
+
+> ❌ **SUPERSEDED (C-17)** — shipped in the fable-readiness fork (PR #42) as `agents/adversary-agent.md`. Do not build. Spec retained as the reference charter (esp. the boundary vs `plan-critic-agent`) for auditing the fork's shipped version.
+
+**Priority:** P1
+**Milestone:** M-10a
+**Description:** Loom's `/loom-plan review` fans out multiple reviewers, but they are checkers — none is a dedicated steelman-the-failure role. This feature adds a refute-only reviewer whose charter is to build the strongest case the work is wrong and default to rejecting on uncertainty, joining the existing review fan-out.
+**Ports:** A1 / D1 (`adversarial-reviewer`, registered `[review]` default+full per D-01).
+
+**Entities involved:** AgentResult, InterpretationConflict
+
+**Key behaviors:**
+- New `adversarial-reviewer` agent — system prompt: "Build the strongest case this work is wrong. Default to rejecting on uncertainty."
+- Registered in `.claude/orchestration.toml` (`[review]`, default + full modes) so teams can toggle it — never hardcoded.
+- Joins the fan-out in `/loom-plan review`, `/loom-converge` review rounds, and `/loom-code review`.
+- Rejections route into `.loom/learnings.toon`.
+
+**Convergence targets:**
+- `/loom-plan review --full` on a fixture plan with a known flaw surfaces at least one blocking adversary finding that the standard reviewers miss.
+- The agent is discoverable via `orchestration.toml` and absent from any hardcoded reviewer list.
+
+**Review-integrated (2026-07-08) — CT6-002 blocking + ENG-F-24.1:** Loom already ships `plan-critic-agent` (an adversarial PLAN.md checker that walks a locked checklist at plan *creation*). F-24's `adversarial-reviewer` MUST declare an explicit charter boundary in both its feature description and its system-prompt opening line: **`plan-critic-agent` = structure gate during plan creation; `adversarial-reviewer` = steelman-the-failure of any work product during plan/code/converge review.** They complement; they must not be merged or F-24 collapses into creation-time redundancy. Per ENG-F-24.1, instrument the adversary's block rate on fixtures (mirroring M-01's interpretation-reviewer false-positive decision gate): if precision is low, its findings render advisory-with-confidence rather than hard-blocking, so a reject-on-uncertainty charter cannot stall the pipeline.
+
+### F-25: Verified-Agent-Output Gate
+
+> ❌ **SUPERSEDED (C-17)** — shipped in the fable-readiness fork (PR #42) as the evolved `quality-gate.ts` acceptance re-validation Stop-gate. Do not build. Spec retained as the reference contract (deterministic vs agent-judged layer split, `evaluationOrder`, loop guard, `waive` escape) for auditing the fork's version. **Fork-audit requirement (Track B):** agent-judged verdict rows in `verified-output.toon` must be attributable to a distinct verification pass; a `pass` row without non-empty `evidence` must be rejected by the Stop hook (CWE-807 mitigation — an agent cannot self-certify without evidence). Verify the fork's `quality-gate.ts` satisfies this during the Track-A audit.
+
+
+**Priority:** P1
+**Milestone:** M-10a
+**Description:** Loom enforces invariants at the tool call but has no Stop-time "re-run the acceptance criteria before you're allowed to finish" gate, and no named, layered output-verification standard. This feature ships the single highest-value CT6 idea: an agent cannot self-certify "done" — a hook independently re-checks it against a multi-layer contract. Built in two steps: A2 (Stop-hook re-validation) as the seed, then generalized into C1 (the full layer set).
+**Ports:** A2 → C1; backed by D2 (`task-reviewer`, diff-vs-acceptance + anti-stub). The highest-leverage port in the set.
+
+**Entities involved:** VerifiedOutputContract, AgentResult, DeltaReport
+
+**Key behaviors:**
+- A Stop hook re-executes the phase's acceptance criteria / convergence target on a completion attempt and blocks self-certified or skipped verdicts (A2 seed).
+- A named `verified-output` contract (TOON, in `.plan-execution/`) enumerates the layers that apply: tests pass, criteria met, files-in-map, no skipped verdicts, diff-scope respected, lint clean (C1 full set).
+- Enforced by the Stop hook plus PreToolUse checks; wired into `/loom-converge` (no pass self-certifies) and used as the pre-PR gate on `/loom-git pr` and `/loom-canary`.
+- Rejections feed `.loom/learnings.toon`.
+
+**Convergence targets:**
+- A convergence pass that skips a required verdict is blocked by the Stop hook with the unmet layer named; supplying the missing verdict lets it complete.
+- `.plan-execution/verified-output.toon` lists all six layers with per-layer pass/fail; a failing layer blocks completion and a pre-PR run.
+
+**Review-integrated (2026-07-08) — CT6-REVIEW blocking (ENG-F-25.1, ENG-F-25.2), verified against the shipped `hooks/quality-gate.ts` Stop hook:** The Stop hook receives only `session_id`/`transcript_path`/`cwd`/`last_assistant_message` — **no phase or acceptance-criteria reference** — and `exit 2`/`decision:"block"` prevents the turn ending and injects a reason but does **NOT** force programmatic re-execution. So F-25 is reframed at roadmap altitude: (1) the Stop hook **resolves the active phase + `verified-output.toon` from on-disk `.plan-execution/` state** (mirroring `quality-gate.ts`), and behavior is **block-and-name-the-unmet-layer, not automated re-run**; writing that state is a precondition of any gated phase. (2) The six layers **split by `kind`**: deterministic layers (`tests-pass`/`lint-clean`/`diff-scope`/`files-in-map`) are checked *at* Stop by the shell hook; agent-judged layers (`criteria-met`/`no-skipped-verdicts`) have their verdicts **pre-computed to `verified-output.toon` before Stop** (PostToolUse/convergence) because the hook runtime cannot spawn agents — the Stop hook only re-checks the pre-computed ledger. (3) A **`stop_hook_active` loop guard** (ENG-F-25.3) with bounded retries + the C-15 `waive <layer> --reason` escape prevents a block-until-pass hook wedging a session on unmeetable criteria. (4) Ships the A2 Stop-hook seed (one deterministic layer) first to calibrate before generalizing to the full C1 contract. A human-readable per-layer pass/fail/skip/waive rendering (UX-09) accompanies the on-disk TOON.
+
+### F-26: Spec→Coverage Matrix with Bounded Auto-Fix
+
+> ❌ **SUPERSEDED (C-17)** — shipped in the fable-readiness fork (PR #42) as its spec→coverage matrix with bounded per-gap fixes (Track A). Do not build.
+
+
+**Priority:** P2
+**Milestone:** M-10b
+**Description:** `/loom-converge` has criteria-TDD mode but no explicit requirement → coverage → dispatch-a-bounded-fix-per-gap matrix. This feature extends criteria-TDD mode to emit a coverage matrix (requirement × covered?/test-ref) and spawn exactly one bounded fix per uncovered row — turning convergence into requirement-complete verification without unbounded loops.
+**Ports:** A3. Coverage matrix is seeded from `/loom-spec` acceptance criteria.
+
+**Entities involved:** CoverageMatrix, CriteriaPlan, FeedbackLoop
+
+**Key behaviors:**
+- `/loom-converge` criteria-TDD mode emits `.plan-execution/coverage-matrix.toon` (requirement × covered? × testRef).
+- For each uncovered row, spawn ONE bounded fix (respecting the 100k cap) — never an unbounded loop.
+- Uncovered rows that remain after the bounded attempt route into `.loom/learnings.toon` as coverage gaps.
+
+**Convergence targets:**
+- On a plan with a deliberately uncovered requirement, `coverage-matrix.toon` marks that row `covered: false` and exactly one fix unit is dispatched for it; the run does not loop past one bounded attempt per gap.
+
+### F-27: Reuse-First Discipline
+
+> ✅ **SURVIVES (C-17)** — a durable reuse-cite discipline gate the fork does not have; depends on the F-21 map + `edgeTypes[]`. Re-platform the reuse-cite plan-lint as a Workflow-engine stage.
+
+
+**Priority:** P2
+**Milestone:** M-10b
+**Description:** Nothing in Loom pushes agents to reuse before building, and nothing enforces that a "reuse existing X" claim points at a real path. This feature adds a plan-lint / hook rule enforcing an extend → compose → reuse → build-new hierarchy: new-code decisions must document why extend/compose/reuse was rejected (logged to `DECISIONS.md`), and any reuse claim must cite a path present in `codebase-map.toon`, else block.
+**Ports:** C4 (the hierarchy half, subsumes B5 the citation half).
+
+**Entities involved:** MapArtifact, PlanPhase, ADR
+
+**Key behaviors:**
+- Plan-lint/hook rule in `/loom-plan`: a "reuse existing X" claim must cite a path present in `codebase-map.toon` (F-21), else fail closed (B5).
+- New-code decisions must first document why extend/compose/reuse was rejected, logged to `DECISIONS.md` (C4).
+- Depends on F-21's map for citation resolution.
+
+**Convergence targets:**
+- A PLAN asserting "reuse existing auth" with no matching path in `codebase-map.toon` is blocked by plan-lint; adding the real path clears it.
+- A PLAN introducing new code with no extend/compose/reuse rejection rationale is flagged until a `DECISIONS.md` entry is added.
+
+**Review-integrated (2026-07-08) — C-15 + UX-02:** F-27's reuse-cite block ships with the C-15 ramp (`[gates]` `warn` first) and a logged escape; the block remedy is state-specific — on an uncited "reuse existing X" it names the missing path AND the nearest match found in `codebase-map.toon`, rather than a bare failure. Depends on F-21's `edgeTypes[]` vocabulary (CT6-001) to validate citation shape.
+
+### F-28: Endpoint + Data-Lineage Trace Graph
+
+> ✅ **SURVIVES (C-17)** — re-platform onto the fork's Workflow engine.
+
+**Priority:** P2
+**Milestone:** M-11
+**Description:** Loom has no verified call-graph or request-flow trace (wiki `flow-*` pages are prose), and its existing `/loom-data lineage` lacks a stable-ID asset graph. This feature builds ONE shared trace graph: an LSP/static-first endpoint call-tree with `func://` node IDs, enriched with an `asset://` data-asset layer answering "who populates/reads this table" — with a hallucination gate blocking any citation of a node not in the graph.
+**Ports:** C2 (endpoint trace, extends F-21) + C3 (data lineage, enriches the *existing* `/loom-data lineage` and `data-lineage-tracker` agent — no new command/agent, per C-12); D5 tracers (`endpoint-tracer-agent`).
+
+**Entities involved:** TraceGraph, MapArtifact
+
+**Key behaviors:**
+- `/loom-map` emits `.loom/maps/endpoint-trace.toon` with rename-stable `func://` node IDs; extraction is LSP/static-first, using an agent only for ambiguous edges.
+- The *existing* `/loom-data lineage` subcommand and its existing `data-lineage-tracker` agent are enriched to emit `asset://<store>/<schema>/<table>` nodes with reads/writes/modifies/originates edges into the same graph artifact.
+- A hallucination gate blocks any downstream citation (e.g. `/loom-bugfix` routing) of a node not present in the graph.
+
+**Convergence targets:**
+- `/loom-map` on a repo with ≥1 HTTP endpoint produces `endpoint-trace.toon` whose entry node resolves to a real handler via `func://`; a renamed function keeps its `func://` ID stable across a re-map.
+- `/loom-data lineage` on a repo with a known table populates ≥1 `asset://` node with correct reads/writes edges in the shared graph; citing a non-existent `func://`/`asset://` node fails the hallucination gate.
+
+**Review-integrated (2026-07-08) — ENG-F-28.1 + factual verification:** "LSP-first" is infeasible in a Claude Code hook/agent context — there is no running language server or bundled LSP client, and standing one up violates C-09 (platform-agnostic, no external services) and C-11 (no daemon). The extraction strategy is re-scoped to **"static/tree-sitter-first, LSP-optional"**, reusing the tree-sitter machinery F-10 (Repo Map, M-05) already commits to. **This adds an M-05→M-11 dependency** (there is no `tree-sitter` dep in `package.json` today and M-05 is NOT STARTED). Fallback ladder: tree-sitter static edges → agent for ambiguous edges (already allowed) → LSP as future optional enrichment, never baseline. **Verified 2026-07-08:** `/loom-data` (`commands/loom-data.md`) and `data-lineage-tracker` (`agents/data-lineage-tracker.md`) both exist, so C-12's "enrich existing, no new command/agent" contract holds (dismisses ENG-F-28.2). Add `/loom-map resolve <path-or-id>` and `/loom-data lineage`-side lookup so authors can pre-flight a `func://`/`asset://` citation before hitting the hallucination gate (CT6-014); the gate's block names the unresolved node + remedy (DEVEX-F-05). **C-15 conformance (hallucination gate):** the hallucination gate ships warn-first via `[gates] hallucinationGate = warn|block|off` (default `warn`), with a `--skip-node-check "<reason>"` escape that is logged to state + `DECISIONS.md` — mirroring F-23's C-15 treatment. A bare fail-closed hallucination block with no ramp or recourse is out of spec.
+
+### F-29: System-Architect Design Authority
+
+> ✅ **SURVIVES (C-17)** — re-platform onto the fork's Workflow engine.
+
+**Priority:** P2
+**Milestone:** M-12
+**Description:** Loom's `architecture-reviewer` critiques diffs but there is no decisive design authority that returns ONE recommendation. This feature ports CT6's `system-architect` — porting only 3 of its 9 modes (Default design/tradeoff, Diagnostic Plan Review, Restructure Plan Audit) — invoked from `/loom-think` and `/loom-plan create` to make the design-decision call, distinct from the diff-critiquing reviewer.
+**Ports:** D6 (`system-architect`, model opus).
+
+**Entities involved:** AgentResult, PlanPhase, ADR
+
+**Key behaviors:**
+- New `agents/system-architect.md` (model opus) returns exactly ONE decisive recommendation, not a survey.
+- Only 3 modes ported: Default design/tradeoff, Diagnostic Plan Review, Restructure Plan Audit (the other 6 are CT6 pipeline phases Loom lacks).
+- Invoked from `/loom-think` and `/loom-plan create` as the design authority; its Restructure Plan Audit mode is consumed by F-30.
+
+**Convergence targets:**
+- Invoked on a design question with multiple viable approaches, `system-architect` returns a single recommendation with a stated tradeoff rationale (not an enumerated menu).
+- Its Restructure Plan Audit mode produces a pass/fail verdict on a `movements[]` table.
+
+### F-30: Safe-Restructure Pipeline
+
+> ✅ **SURVIVES (C-17)** — re-platform onto the fork's Workflow engine.
+
+**Priority:** P1
+**Milestone:** M-12
+**Description:** Loom has no safe-refactor capability. This feature ships a new `/loom-restructure` command: a producer/checker pipeline (restructure-analyst ×3 → reference-tracer → restructure-adversary ×3) that converges to ONE identical machine-checkable `movements[]` table, passing only after two consecutive all-clean adversary rounds AND a deterministic partition-check hook (every git-tracked file maps to exactly one of move/stays).
+**Ports:** D7 (pipeline + `/loom-restructure`) + D3 (`reference-tracer-agent`, `[execution.agents]`); uses F-29's Restructure Plan Audit mode. Does NOT port CT6's scaffold-agent (`/loom-agent create` covers it).
+
+**Entities involved:** MovementsTable, AgentResult, MapArtifact
+
+**Key behaviors:**
+- New `/loom-restructure` command (second and last net-new surface, per C-13) runs `restructure-analyst-agent` (×3) → `reference-tracer-agent` → `restructure-adversary-reviewer` (×3).
+- The pipeline converges to ONE identical `movements[]` table; passes only after two consecutive all-clean adversary rounds.
+- A deterministic partition-check hook verifies every git-tracked file maps to exactly one of move/stays — fail closed otherwise.
+- `system-architect` Restructure Plan Audit mode (F-29) gates the plan.
+
+**Convergence targets:**
+- `/loom-restructure` on a fixture move produces a `movements[]` table where the partition check confirms every git-tracked file is classified exactly once; a deliberately incomplete partition fails the hook.
+- The pipeline does not pass until two consecutive adversary rounds return zero findings.
+
+**Review-integrated (2026-07-08) — CT6-003, CT6-013, UX-08, CT6-012:** `/loom-restructure` ships a `--dry-run` that exits after the partition-check gate printing the `movements[]` table without moving files, and an explicit **human confirm before the destructive multi-file move executes** (F-33 has a reuse confirm-gate; F-30 is far more destructive and must too). The `movements[]` table records `preMoveCommit` (CT6-003) so an interrupted restructure has a git-anchored rollback; a post-run success summary + documented recovery path ship with it. **Exclusion clarified (CT6-012):** `/loom-agent create` covers agent scaffolding but NOT post-restructure migration-stub generation (import redirects for moved code) — that is explicitly out of scope; the user handles stubs after reviewing the table (or a future `--generate-stubs` step adds it). **C-15 / partition-check escape (BY DESIGN):** the partition-check gate is **fail-closed with NO waiver** — this is an intentional exception to C-15's every-gate-ships-an-escape rule, because a pre-destructive-move partition failure is never safe to override; `--dry-run` + mandatory human confirm are the sole recourse. **Check-execution error branch:** if the partition check itself cannot run (git error, glob defect, unresolvable file list), treat this as **fail-closed-with-logged-reason** — the reason is written to state + `DECISIONS.md`; the pipeline NEVER fails-open before a destructive multi-file move under any circumstances.
+
+### F-31: Inter-Agent Token Compression
+
+> ❌ **DROPPED (C-17)** — now scaffold-deprecated. The fable-readiness fork classes rolling-context compression as the `loom-scaffold` layer, off on modern auto-compacting harnesses. Building it re-introduces scaffold the fork is deprecating. Spec retained for history only.
+
+
+**Priority:** P2
+**Milestone:** M-13
+**Description:** Loom caps context (100k/spawn) but does not compress the handoffs between spawns. This feature adds a compression step in the message-passing / stage-summary layer that shrinks agent-to-agent payloads (stage summaries, contracts) while leaving all user-facing output and contract-normative text verbatim — squeezing more signal under the cap.
+**Ports:** C5 (must guarantee no lossy compression of anything user-facing or contract-normative).
+
+**Entities involved:** StageContext, AgentResult
+
+**Key behaviors:**
+- A compression step in the message-passing layer shrinks inter-agent payloads (stage summaries, contracts).
+- User-facing output and contract-normative text are NEVER compressed (verbatim guarantee).
+- Compression is transparent to consumers — a decompressed payload is byte-identical for normative fields.
+
+**Convergence targets:**
+- A stage summary handed between two spawns is transmitted in fewer tokens than its raw form while the deliverable and any contract-normative fields decompress byte-identically.
+- A regression test confirms user-facing output is passed through uncompressed.
+
+**Review-integrated (2026-07-08) — ENG-F-31.1 + CT6-004:** The "byte-identical normative fields" guarantee is only mechanically enforceable if normativity is *declared*, so F-31's plan MUST define a **machine-checkable manifest**: each payload schema (StageContext, AgentResult, contract) tags every field `normative` vs `compressible`, and the guarantee becomes a round-trip byte-equality test over the tagged normative set. The spec must also name the compression method (lossy summary / content-addressed dedup / structured truncation), distinguish it from the existing F-08 HOT/WARM/COLD rolling-context scheme (don't duplicate), and set a **measurable target vs a named baseline** (e.g. "≥20% token reduction on the PLAN-browser-e2e execution trace") so "fewer tokens" is falsifiable and F-31 can't ship as a no-op pass-through. Add a `--no-compress` debug flag + a compression-ratio line in the execution log for observability (DEVEX-F-04). As P2/last, defer until measured token pressure exists.
+
+### F-32: Persistent Role Identity + Wake-Up Injection
+
+> ❌ **DROPPED (C-17)** — now scaffold-deprecated. Compensation for lossy delegation that the fork solves natively via the Workflow tool + worktrees + structured output. Building it re-introduces scaffold the fork is deprecating. Spec retained for history only.
+
+
+**Priority:** P2
+**Milestone:** M-13
+**Description:** Loom's spawns are fire-and-forget with disk handoff — no persistent role identity — and wiki `query` is on-demand only with no auto-injection at spawn. This feature keeps the 100k cap and fire-and-forget execution but lets a named role persist its charter + history on disk and re-hydrate a *scoped* summary each spawn; and at spawn auto-injects a *scoped* map excerpt (only the components/routes in the agent's contract) sourced via wiki query. Identity persists; context does not.
+**Ports:** A4 (persistent named specialists — containment-safe) + B6 (runtime wake-up injection). Watch the cap.
+
+**Entities involved:** RoleCharter, MapArtifact, StageContext
+
+**Key behaviors:**
+- A named role persists its charter + history to `.plan-execution/roles/<role>.toon` and re-hydrates a scoped summary each spawn — never a 1M live context (per C-11).
+- At spawn, a scoped map excerpt (only the contract's components/routes) is auto-injected into the contract, sourced from the map TOON via wiki `query`.
+- Injection is a bounded summary, not the whole map, and must respect the 100k cap.
+
+**Convergence targets:**
+- A role re-spawned across two waves reads its prior charter from `.plan-execution/roles/<role>.toon`; the re-hydrated summary stays under a bounded token ceiling.
+- A spawn whose contract touches component X receives only X's map excerpt (not the full map), and the total contract stays within the 100k cap.
+
+**Review-integrated (2026-07-08) — SF-06, CT6-007, ENG-F-31.2:** Four systems now write into the finite 100k spawn budget — F-32 map excerpt + F-32 role charter + F-08 wiki rolling-context + F-10 repo-map pack — plus F-31 compression removing tokens. F-32's plan MUST declare a single **budget-arbitration precedence** (e.g. contract > map excerpt > role charter > repo-map pack > wiki context), reusing the `agent-prompt-builder.ts` shrink-order F-10 already defines, and a **prompt-composition order** for the co-located summaries (role-charter section above the F-08 `[WIKI]` rolling-context section; merged only when no persistent role is active — document in `protocols/stage-context.schema.md`). Add a convergence target asserting total injected context stays under the cap when all injectors fire. Order F-31 (savings) before F-32 (spend) as the M-13 phasing already does.
+
+### F-33: Phenotype Architecture Kits
+
+> ⚪ **SURVIVES · OPTIONAL/CUT-LINE (C-17)**
+
+**Priority:** P2
+**Milestone:** M-13
+**Description:** CT6's `phenotypes` captures a proven, deployable app-architecture pattern once, then discovers/scaffolds/reuses it (confirm-gated). Loom already has the packaging primitive — typed kits in `/loom-library`. Rather than building a new skill, this feature extends `/loom-library` to capture a whole-architecture (multi-resource) kit with a confirm-gate on reuse.
+**Ports:** C6 (converge with kits, do not rebuild); D4 (`synthesizer-agent`) available to merge N drafts where the kit spans multiple sources.
+
+**Entities involved:** AgentResult, WikiPage
+
+**Key behaviors:**
+- `/loom-library` is extended to capture a whole-architecture kit (multi-resource scaffold), not just single resources.
+- Reuse of an architecture kit is confirm-gated.
+- No new skill is authored — this is a kit-model enhancement.
+
+**Convergence targets:**
+- `/loom-library` can register a multi-resource architecture kit and, on reuse, prompts for confirmation before scaffolding; the scaffolded resources match the captured pattern.
+
+**Review-integrated (2026-07-08) — CT6-008:** CT6's phenotype concept is *discovery + confirm*, not just confirm. Add a `detect` step — a `/loom-library detect` subcommand (or a hook into `/loom-map`) that matches structural map patterns to registered kits and surfaces "this repo looks like kit X — apply it?". Without the recognition step the confirm-gate only guards a manual selection and isn't a true port of the phenotype capability. F-21's map is the pattern source (uses F-21's `edgeTypes[]`). Softest-strategy port (S-6) — designated cut-line candidate if M-13 scope tightens.
+
 ## Data Model (Conceptual)
 
 ### Entities
@@ -731,6 +1115,12 @@ F-18 Phase B introduces `loop.toon` as the per-symptom atom for `/loom-bugfix` a
 | Prototype | name, branch (logic\|ui), capturedAnswerAdrRef, answerToonPath, createdAt | F-18: throwaway code with explicit completion ceremony; lives at `prototypes/{name}/`. |
 | CriteriaTestBinding | criterionId, testFile, loopId, verifiedRedAt, status (pending\|good\|missing\|wrong-shape\|flaky\|spurious\|regenerating\|unverifiable), criterionSource, tier (unit\|integration\|e2e\|qa-review) | F-19: binds a `criteria-plan.toon` row to its generated test file and the per-criterion `loop.toon`. `status` mirrors reviewer classification. `criterionSource` traces provenance across the three derivation paths. `tier` lets the execute path filter bindings without re-reading `criteria-plan.toon`. |
 | ExecuteLoopMap | waveId, criterionId, loopId, tier, status (pending\|running\|retired-green\|escape-set), command, retryCount, escalationRung | F-19: per-wave map from a failing tier criterion to the bound `loop.toon` driving its iterations. `command` is the denormalized shell command (no need to chase `loopId → loop.toon` on every retry). `retryCount` + `escalationRung` enable map-level escalation decisions without scanning the loop's full `escalationHistory[]`. |
+| MapArtifact | kind (codebase\|route\|integration\|endpoint-trace), path, lastMappedCommit, mapStale, staleThreshold, mapContentSha, coverage, edgeTypes[], nodes[], edges[] | F-20/F-21/F-22: standing TOON map under `.loom/maps/`. `lastMappedCommit` + `mapStale` drive the freshness gate; `coverage` drives convergence consensus. **`edgeTypes[]` (CT6-001) locks the per-layer edge vocabulary** the `codebase-map-reviewer` converges against and F-27's reuse-cite check validates shape against — codebase/route layers MUST declare their edge-type set (e.g. `imports\|calls\|routes-to\|renders`) just as TraceGraph declares `calls\|reads\|writes\|modifies\|originates`. Owned by `wiki-maintainer-agent` (integration) / `/loom-map` (codebase, route) with per-file ownership + atomic `.tmp`+rename to avoid the shared-dir two-writer collision. **Integrity (CWE-345):** freshness is DERIVED from git (diff HEAD vs `lastMappedCommit` over tracked files); a `lastMappedCommit` not an ancestor of HEAD implies stale-by-default. `mapStale` is advisory-cache-only and never the sole gate input. The optional `mapContentSha` digest makes hand-edited maps detectable. |
+| TraceGraph | nodes[]{id (func://\|asset://), kind, path}, edges[]{from, to, relation (calls\|reads\|writes\|modifies\|originates)}, extractionMode (lsp\|static\|agent) | F-28: the ONE shared endpoint-trace + data-lineage graph (per C-12). `func://` code nodes and `asset://` data nodes coexist; the hallucination gate rejects citations of absent node IDs. |
+| VerifiedOutputContract | layers[]{name (tests-pass\|criteria-met\|files-in-map\|no-skipped-verdicts\|diff-scope\|lint-clean), kind (deterministic\|agent-judged), status (pass\|fail\|skipped\|waived), evidence, waiveReason}, evaluationOrder[6], verdict (pass\|blocked) | F-25: the named multi-layer output-verification standard in `.plan-execution/`. **`kind` (ENG-F-25.2) splits layers the Stop hook can check itself — `tests-pass`/`lint-clean`/`diff-scope`/`files-in-map` (deterministic shell) — from `criteria-met`/`no-skipped-verdicts` (agent-judged), whose verdicts MUST be pre-computed to this file BEFORE Stop (the hook runtime cannot spawn agents).** `evaluationOrder` (CT6-010) fixes layer sequence so the verdict is deterministic (`files-in-map` only valid after `tests-pass`). `waived`+`waiveReason` implement the C-15 logged escape. An agent cannot self-certify; the Stop hook checks every layer has a recorded pass/waive — a deterministic re-check of a pre-computed ledger, block-and-name-unmet-layer, not auto-rerun. **(superseded/dropped — spec retained per C-17)** |
+| CoverageMatrix | rows[]{requirementId, covered, testRef, fixDispatched}, uncoveredCount | F-26: requirement × coverage matrix emitted by `/loom-converge` criteria-TDD mode at `.plan-execution/coverage-matrix.toon`. One bounded fix dispatched per uncovered row. **(superseded/dropped — spec retained per C-17)** |
+| RoleCharter | role, charter, history[]{spawnAt, scopedSummary, tokenCount}, maxHistoryEntries, maxScopedSummaryTokens, evictionPolicy (last-n\|token-capped\|semantic), lastSpawnCommit | F-32: persistent named-role identity at `.plan-execution/roles/<role>.toon`. Identity persists across spawns; live context does not (re-hydrated scoped summary only, per C-11). **`maxHistoryEntries`/`maxScopedSummaryTokens`/`evictionPolicy` (CT6-009) bound `history[]` so a long-running role's re-hydrated summary stays under a structurally-enforced ceiling, not just an asserted one.** **(superseded/dropped — spec retained per C-17)** |
+| MovementsTable | movements[]{path, action (move\|stays), destination}, preMoveCommit, partitionComplete, adversaryCleanRounds | F-30: the machine-checkable restructure plan. The partition-check hook verifies every git-tracked file maps to exactly one action; passes only at `adversaryCleanRounds >= 2`. **`preMoveCommit` (CT6-003) anchors a git SHA before any file moves so an interrupted restructure has a documented recovery path — the "safe restructure" claim requires this.** |
 
 ### Relationships
 
@@ -755,6 +1145,14 @@ F-18 Phase B introduces `loop.toon` as the per-symptom atom for `/loom-bugfix` a
 | CriteriaPlan | CriteriaTestBinding | 1:N | Each criterion row in `criteria-plan.toon` produces one binding once `/loom-plan test --autoconverge` runs |
 | CriteriaTestBinding | FeedbackLoop | 1:1 | Each binding owns one loop.toon; the loop's lifecycle (verifiedRed → retired) drives the binding's status |
 | ExecuteLoopMap | FeedbackLoop | N:N | Multiple loops per wave; loops may be shared across waves when symptoms recur |
+| MapArtifact | WikiPage | 1:N | A map artifact indexes the wiki pages whose `crossRefs[]` it serializes (F-20) |
+| MapArtifact | TraceGraph | 1:1 | The codebase map hosts the shared endpoint-trace + data-lineage graph as its typed layer (F-28) |
+| MapArtifact | PlanPhase | 1:N | A fresh map is the fail-closed precondition consumed by planning phases (F-23) |
+| VerifiedOutputContract | PlanPhase | 1:1 | Each phase's completion is measured against one verified-output contract (F-25) **(superseded/dropped — spec retained per C-17)** |
+| CoverageMatrix | CriteriaPlan | 1:1 | The coverage matrix is derived from a criteria plan's requirements (F-26) **(superseded/dropped — spec retained per C-17)** |
+| CoverageMatrix | FeedbackLoop | 1:N | Each uncovered row dispatches one bounded fix loop (F-26) **(superseded/dropped — spec retained per C-17)** |
+| RoleCharter | PlanPhase | 1:N | A persistent role re-hydrates across the phases it participates in (F-32) **(superseded/dropped — spec retained per C-17)** |
+| MovementsTable | MapArtifact | N:1 | Restructure movements are validated against the codebase map's file set (F-30) |
 
 ## Milestones
 
@@ -887,6 +1285,104 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 9. **F-19 Phase C (`/loom-plan execute --autoconverge`, P2):** per-failing-symptom bound iterations at wave gates. The 4-tier model becomes the gate, not the loop. Depends on F-19 B + F-18 Phase B.
 10. **F-19 Phase E (`orchestration.toml` lifecycle customization, P2):** sequence/caps/reviewers overrides apply uniformly across all four converge entry points. Closes the one item from the original F-19 sketch that's genuinely missing.
 
+<!-- Applied: CT6-PORTS — M-09..M-13 added for the CT6 rigor & cartography ports. Original source-plan build order: F-20 → F-24 → F-21 → F-25 → F-23 → F-22/F-27 → F-28 → F-30 → F-29 → F-26 → F-31 → F-32 → F-33. -->
+<!-- Applied: CT6×FABLE-RECONCILE 2026-07-10 (C-17) — RECONCILED build order (survivors only, on the fork's Workflow engine): F-20 → F-21 (KEYSTONE: activates the fork's dormant map gate) → F-22/F-23 (mostly done in fork; producer-side + path reconcile) → F-27 → F-28 → F-29 → F-30 → F-33 (optional). REMOVED from build: F-24/F-25/F-26 (superseded — fork Track A) and F-31/F-32 (dropped — scaffold-deprecated). -->
+
+### M-09: Cartography Foundation -- NOT STARTED · KEYSTONE (fable-readiness Track B)
+
+**Features:** F-20, F-21, F-22, F-23
+**Reconciliation (C-17):** This is the **highest-leverage remaining CT6 milestone.** The fork shipped the map-freshness *gate* (its Track A copy of F-22) but left it **DORMANT** — no producer writes `.loom/maps/*.toon`. **F-20/F-21 is the missing producer that activates the fork's already-built gate.** Re-platform the `/loom-map` convergence onto the fork's Workflow engine (`scripts/lib/engine/*`) rather than the markdown loop. F-22's own gate logic is largely done in the fork — this milestone's F-22 work collapses to producer-side `lastMappedCommit` stamping + confirming the gate's read path matches the producer's write path (see C-17 map-location note). **Do first, ahead of everything else CT6.**
+**Status:** Not started. Sourced from ct6-to-loom-port-plan.md + loom-cartography-port-proposal.md (2026-07-08). Ports the map front-end: serialize the integration graph, produce a first-class convergence-reviewed codebase map, gate its freshness, and make a fresh map a fail-closed precondition for planning. B2 (F-20) is the cheapest do-first artifact.
+**Depends on:** M-03 (Cross-System Integration — the `wiki-maintainer-agent` cross-ref graph must exist before it can be serialized). M-03 is COMPLETE, so M-09 is satisfiable **now** and does NOT wait on M-04 (BLOCKED)/M-05/M-08 despite lower numbering (SF-08).
+**Launch gate (C-16):** Activation begins only after **M-06 Phase 2** (public launch + the 5-stranger cold-install demand test) clears. M-10–M-13 inherit this via their M-09 dependency chain.
+**Acceptance:** `wiki-maintainer-agent` serializes `.loom/maps/integration-map.toon` each pass; `/loom-map` produces convergence-reviewed `codebase-map.toon`/`route-map.toon` (each declaring its `edgeTypes[]` per CT6-001) driven to coverage consensus by `codebase-map-reviewer`; maps carry `lastMappedCommit`; the fork's shipped freshness hook (`hooks/map-freshness.ts`) reads `lastMappedCommit` to flip `mapStale` past a touched-file threshold — M-09 builds the producer side only (write-path), not the flip logic (owned by the fork); the map precondition on `/loom-plan create` and `/loom-converge` ships warn-first with auto-invoke + a logged escape (C-15). **Docs (DEVEX-F-02):** `docs/hooks.md` gains an entry per new gate, README gains a `/loom-map` section, `docs/troubleshooting.md` gains an entry per fail-closed block with its remedy. **Dogfood (DEVEX-F-07):** run `/loom-map` + exercise the F-23 gate on loom-ai itself, capturing friction to `.loom/learnings.toon`, before closing the milestone.
+**Effort:** L
+
+#### Phasing
+
+1. **F-20 (B2):** `wiki-maintainer-agent` serializes the 8-relation cross-ref graph to `integration-map.toon`. Do first — zero new discovery, single owner.
+2. **F-21 (B1):** New `/loom-map` command + `codebase-map-reviewer`; drive map coverage to consensus via existing `/loom-converge`.
+3. **F-23 (B4):** Fail-closed fresh-map precondition on `/loom-plan create` + `/loom-converge`. Ships early because it makes F-20–F-22 load-bearing.
+4. **F-22 (B3):** `lastMappedCommit` stamping + PreToolUse staleness hook feeding the F-23 gate.
+
+<!-- Applied: CT6-REVIEW 2026-07-08 — M-10 (XL) split into M-10a + M-10b per SF-01/ENG-F-25.4 (the M-02a/M-02b precedent). Features stay whole; M-10a de-risks the verification seed before the coverage/reuse layer. -->
+
+### M-10a: Verification Core -- SUPERSEDED (shipped as fable-readiness Track A)
+
+**Features:** F-24, F-25
+**Reconciliation (C-17):** ❌ **DO NOT BUILD.** Both features shipped in the fable-readiness fork (PR #42): F-24 as `agents/adversary-agent.md`, F-25 as the evolved `quality-gate.ts` acceptance re-validation Stop-gate. The reviewed decomposition below is retained as the *reference spec* for what the fork shipped (useful if the fork's versions need auditing against the CT6 charter — e.g. the F-24 charter-boundary vs `plan-critic-agent`, the F-25 deterministic/agent-judged layer split). This milestone is closed by supersession, not by execution.
+**Reference spec only (superseded — do not execute):** the decomposition below is retained solely for auditing the fork's Track A implementation.
+
+**Status:** Not started. The verify/converge back-end and the single highest-value port. A refute-only adversarial reviewer plus the Stop-hook re-validation gate generalized into a named multi-layer verified-output contract. Split out of the former XL M-10 so the A2 Stop-hook seed calibrates the capability before the full C1 contract generalizes.
+**Depends on:** M-09 (F-25's files-in-map layer resolves against the codebase map)
+**Launch gate (C-16):** inherits M-09's post-M-06-Phase-2 gate.
+**Acceptance:** `adversarial-reviewer` (orchestration.toml-registered, with an explicit charter boundary vs the existing `plan-critic-agent` per CT6-002) joins the review fan-out and surfaces flaws standard reviewers miss; the Stop hook resolves the active phase + `verified-output.toon` from disk (mirroring `quality-gate.ts`) and blocks self-certified/skipped completion by re-checking a pre-computed ledger — deterministic layers checked at Stop, agent-judged layers pre-computed before Stop (ENG-F-25.1/.2); the gate is wired into `/loom-converge` and used as the pre-PR gate, ships A2-seed-first with a `stop_hook_active` loop guard + `waive` escape (C-15). **Docs (DEVEX-F-02):** `docs/hooks.md` entry for the Stop/PreToolUse gate; README/troubleshooting entries for the verified-output block.
+**Effort:** L
+
+#### Phasing
+
+1. **F-24 (A1/D1):** `adversarial-reviewer` agent + orchestration.toml registration + charter boundary + fan-out wiring.
+2. **F-25 A2 seed:** Stop-hook re-validation with ONE deterministic layer, resolving phase/contract from disk state; calibrate block-rate.
+3. **F-25 C1 full:** generalize to the six-layer `verified-output` contract (deterministic vs agent-judged split, `evaluationOrder`, loop guard, `waive`); add `task-reviewer`.
+
+### M-10b: Coverage & Reuse Discipline -- REDUCED (F-26 superseded; F-27 survives)
+
+**Features:** ~~F-26~~ (superseded — fork Track A), **F-27**
+**Reconciliation (C-17):** **F-26** (spec→coverage matrix + bounded per-gap fix) shipped in the fork — ❌ do not build. **F-27** (reuse-first hierarchy + reuse-must-cite plan-lint) **survives** as fable-readiness Track B: it is a durable discipline gate the fork does not have, and it hard-depends on M-09's `codebase-map.toon` + `edgeTypes[]` (which the fork also lacks). Re-platform the reuse-cite check as a Workflow-engine plan-lint stage. This milestone reduces to the F-27 half.
+**Status:** Not started. A requirement→coverage matrix with bounded per-gap fixes, and the reuse-first discipline (extend→compose→reuse→build hierarchy + reuse-must-cite). *(Coverage-matrix half is now superseded; see Reconciliation.)*
+**Depends on:** ~~M-10a~~ (superseded) and M-09 (F-27 cites the codebase map — the live dependency)
+**Launch gate (C-16):** inherits M-09's post-M-06-Phase-2 gate.
+**Acceptance:** ~~`/loom-converge` criteria-TDD emits `coverage-matrix.toon` and dispatches one bounded fix per uncovered row (no unbounded loop)~~ (F-26 superseded — fork Track A per C-17, do not build); plan-lint blocks uncited reuse claims (warn-first per C-15, remedy names the missing path + nearest match) and undocumented new-code decisions, logged to `DECISIONS.md`.
+**Effort:** M
+
+#### Phasing
+
+1. **F-27 (C4, subsumes B5):** Reuse-first hierarchy + reuse-must-cite plan-lint (needs the F-21 map + `edgeTypes[]`).
+2. ~~**F-26 (A3):** Coverage matrix + bounded auto-fix in criteria-TDD mode.~~ **(superseded — fork Track A per C-17, do not build)**
+
+### M-11: Traced Cartography & Data Lineage -- NOT STARTED · SURVIVES (Track B)
+
+**Features:** F-28
+**Reconciliation (C-17):** ✅ **Survives** — the fork has the existing `data-lineage-tracker` but no *verified* trace graph. Re-platform F-28's static/tree-sitter extraction as a Workflow-engine stage. Builds on M-09's map; unchanged dependency on M-05 (tree-sitter).
+**Status:** Not started. Upgrades cartography from prose pages to a verified graph and lands the data layer on Loom's existing `/loom-data lineage`. Endpoint-trace (C2) and data-lineage (C3) are built as ONE shared graph with `func://`/`asset://` stable IDs and a hallucination gate.
+**Depends on:** M-09 (the trace graph is a typed layer of the codebase map) **and M-05** (Repo Map — F-28's static extraction reuses F-10's tree-sitter machinery per the ENG-F-28.1 LSP→tree-sitter re-scope; there is no tree-sitter dep today and M-05 is NOT STARTED)
+**Launch gate (C-16):** inherits M-09's post-M-06-Phase-2 gate.
+**Note:** M-09's `codebase-map.toon` schema must forward-declare the `endpoint-trace` layer (MapArtifact.kind) so M-11 enriches rather than migrates it (ENG dependencies note). `/loom-data lineage` + `data-lineage-tracker` verified to exist — C-12 "enrich existing" holds.
+**Acceptance:** `/loom-map` emits `endpoint-trace.toon` with rename-stable `func://` IDs (LSP/static-first, agent only for ambiguous edges); the existing `/loom-data lineage` + `data-lineage-tracker` are enriched to emit `asset://` nodes with reads/writes/modifies/originates edges into the same graph; a hallucination gate blocks citation of any node absent from the graph (powering `/loom-bugfix` routing).
+**Effort:** M
+
+### M-12: Architect Authority & Safe Restructure -- NOT STARTED · SURVIVES (Track B)
+
+**Features:** F-29, F-30
+**Reconciliation (C-17):** ✅ **Survives.** The fork has only a `PLAN-command-restructure.md` stub, no `system-architect` and no `/loom-restructure` pipeline. Re-platform F-30's producer/checker pipeline as a Workflow-engine script. **Dependency remap:** the restructure pipeline reuses the fork's *shipped* adversary reviewer (`agents/adversary-agent.md`, ex-F-24) and verified-output gate (ex-F-25) — so its former M-10a dependency now resolves against **fork Track A**, not an unbuilt milestone.
+**Status:** Not started. Adds a decisive design authority and Loom's first safe-refactor capability. `system-architect` (3 of 9 modes) makes the design call from `/loom-think` + `/loom-plan create`; the new `/loom-restructure` command runs a producer/checker pipeline converging to a partition-checked `movements[]` table.
+**Depends on:** ~~M-10a~~ → **fork Track A** (the restructure pipeline reuses the fork's shipped adversary reviewer + verified-output gate; `system-architect` Restructure Plan Audit gates the movements table) and M-09 (`system-architect`/restructure cite the codebase map)
+**Launch gate (C-16):** inherits M-09's post-M-06-Phase-2 gate.
+**Docs (DEVEX-F-02):** README section for `/loom-restructure`; `docs/hooks.md` entry for the partition-check gate; troubleshooting entry for a partition-fail block.
+**Acceptance:** `agents/system-architect.md` (opus) returns ONE decisive recommendation and a Restructure Plan Audit verdict; `/loom-restructure` runs restructure-analyst ×3 → reference-tracer → restructure-adversary ×3, converging to one identical `movements[]` table that passes only after two consecutive all-clean adversary rounds AND a deterministic partition-check hook confirms every git-tracked file maps to exactly one of move/stays.
+**Effort:** L
+
+#### Phasing
+
+1. **F-29 (D6):** `system-architect` agent (opus), 3 modes, invoked from `/loom-think` + `/loom-plan create`.
+2. **F-30 (D7, D3):** `/loom-restructure` command + safe-refactor pipeline + partition-check hook, consuming F-29's Restructure Plan Audit mode.
+
+### M-13: Efficiency & Identity -- REDUCED (F-31/F-32 dropped; F-33 optional)
+
+**Features:** ~~F-31~~, ~~F-32~~ (both dropped — scaffold-deprecated), **F-33** (optional)
+**Reconciliation (C-17):** ❌ **F-31** (inter-agent token compression) and **F-32** (persistent role identity + wake-up injection) are **DROPPED.** The fable-readiness fork classifies rolling-context compression and lossy-delegation compensation as the `loom-scaffold` layer, turned off on modern harnesses that auto-compact and that solve delegation natively (Workflow tool + worktrees + structured output). Building them re-introduces the scaffold the fork is deprecating — a direct contradiction of the fork's thesis. **F-33** (phenotype kits over `/loom-library`) **survives as optional/cut-line** — it composes cleanly onto the fork's already-restructured kit system and sources patterns from M-09's map, but it was the softest port (S-6 cut-line candidate) and is not load-bearing. Build only if kit-pattern reuse becomes a felt need.
+**Status:** Not started. ~~Optional cost/grounding layer~~ → reduced to the optional phenotype-kit port. *(Compression + role-identity halves are dropped; see Reconciliation.)*
+**Depends on:** M-09 (F-33's `detect` step sources structural patterns from the F-21 map)
+**Launch gate (C-16):** inherits M-09's post-M-06-Phase-2 gate.
+**Acceptance:** `/loom-library` captures a whole-architecture kit with a confirm-gate on reuse and a `detect` step that matches structural map patterns to registered kits. *(Dropped acceptance items — payload compression, `RoleCharter` persistence, scoped map excerpt — removed per C-17.)*
+**Effort:** S
+
+#### Phasing
+
+1. **F-33 (C6, D4):** Extend `/loom-library` for whole-architecture kits with a reuse confirm-gate + a `/loom-library detect` step sourced from the F-21 map. *(Optional / cut-line.)*
+   - ~~F-31 (C5)~~ dropped — scaffold-deprecated (C-17).
+   - ~~F-32 (A4 + B6)~~ dropped — scaffold-deprecated (C-17).
+
 ## Risks & Mitigations
 
 | Risk | Impact | Likelihood | Mitigation |
@@ -905,6 +1401,15 @@ M-01 alone delivers: formalized planning taxonomy, parallel test criteria genera
 | PageRank perf on large repos (>10k files) | medium | low | v1 measures on loom-ai (~600 files). Cache strategy D-01 has file-watcher invalidation as escape hatch if needed. Projects >5k files surface a warning. |
 | Token-budgeted pack drops critical symbols on overflow | medium | medium | `agent-prompt-builder.ts` shrinks the map before truncating the base prompt. Deterministic ordering means dropped symbols are always the lowest-rank ones. Orchestrators pass a higher `tokenBudget` for phases that need broader context. |
 | Repo map drifts from wiki contract pages | high | low | Repo map is **derived** (never authored); wiki contract pages are **authored**. Repo map never overrides wiki — it can only flag gaps for the maintainer to consider. |
+| CT6 ports scope-creep back toward SQLite/daemon/1M contexts | high | medium | C-11 is a hard constraint; any port PR reintroducing a DB, daemon, or cap-busting context is rejected at review. The verified-output gate (F-25) checks diff-scope. |
+| Fresh-map precondition (F-23) becomes a friction wall that users disable | high | medium | Freshness threshold (F-22) is touched-file-count based, not every-commit; `/loom-map` refresh is idempotent and fast; remedy text is one line. Gate is fail-closed but cheap to satisfy. |
+| LSP-first endpoint extraction (F-28) is brittle across languages | medium | high | Static/LSP-first with agent fallback only for ambiguous edges; failure-mode-is-skip (a node that can't be resolved is omitted, not hallucinated). Hallucination gate makes omission safe. |
+| Verified-output layers (F-25) produce false-blocks that stall convergence **(superseded/dropped — spec retained per C-17)** | medium | medium | Layers carry per-layer evidence; a blocked layer names its unmet condition with a remedy. Ships A2 (one layer) first to calibrate before generalizing to six. |
+| `/loom-restructure` partition check passes but moves break references | high | low | Two-round-clean adversary consensus + `reference-tracer-agent` reference-closure runs before the partition check; `system-architect` Restructure Plan Audit is a third independent gate. |
+| Inter-agent compression (F-31) silently corrupts a contract-normative field **(superseded/dropped — spec retained per C-17)** | high | low | Contract-normative and user-facing text are on a hard no-compress allowlist; a regression test asserts byte-identical round-trip for the machine-checkable normative-field manifest (ENG-F-31.1). |
+| Launch starvation — committing M-09–M-13 delays the in-flight M-06 launch | high | high | C-16 gates all CT6-port activation behind M-06 Phase 2 (launch + demand test). The work is captured now but sequenced behind the launch so it never competes with launch-gate closure. (CEO-F-01/F-06) |
+| F-23 fresh-map gate is a cold-start wall for new installers / headless / CI | high | medium | C-15: F-23 ships warn-first with auto-invoke of `/loom-map` on first miss and a logged `--skip-map-gate` escape; never ships fail-closed pre-launch. Converts a +150s dead-end into a "building map…" ramp. (CEO-F-03, DEVEX-F-01) |
+| F-21 map-coverage consensus may not converge on large/heterogeneous repos, blocking all downstream cartography ports (F-23/F-27/F-28/F-30/~~F-32~~ dropped per C-17) | high | medium | Bound the `codebase-map-reviewer` consensus loop; allow a partial-coverage escape hatch with an explicit uncovered-module list (mirror F-28's failure-mode-is-skip); F-23 degrades to presence-only on a partial map. Live dependents: F-23, F-27, F-28, F-30. (SF-09/SF-11) |
 
 ## Out of Scope
 

@@ -190,7 +190,7 @@ Then a prompt: `Commit changes with /loom-git commit? (y/n)`. Say yes.
 
 ## What just happened
 
-In ~20 minutes you saw three of the five concepts from [`concepts.md`](./concepts.md) in action:
+In ~20 minutes you saw three of the seven concepts from [`concepts.md`](./concepts.md) in action:
 
 - **Wiki knowledge** — `/loom-init` built a knowledge base; `/loom-quick` read it to ground the task in your project's actual conventions and components instead of generic LLM guesses.
 - **Impact assessment** — `/loom-quick` didn't just edit code; it traced dependents and classified the blast radius. If you had touched something high-impact, it would have surfaced regression areas to watch.

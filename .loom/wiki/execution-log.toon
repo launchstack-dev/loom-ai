@@ -1,8 +1,9 @@
 schemaVersion: 1
 projectName: loom-ai
-entryCount: 2
-lastEntry: 2026-07-04T06:00:00Z
+entryCount: 3
+lastEntry: 2026-07-08T00:00:00Z
 
-entries[2]{timestamp,type,actor,summary,detail,relatedPages}:
+entries[3]{timestamp,type,actor,summary,detail,relatedPages}:
   2026-06-17T00:00:00Z,plan-created,wiki-maintainer-agent,F-15/M-07 Roadmap Convergence Harness plan captured in wiki,Plan ships 3 commands (/loom-roadmap converge/sign-off/status) + 5 entities + 8/6/42 phases/waves/deliverables + 10-state machine + 10 error codes; 4 new wiki pages + 1 cross-ref added,"concept-roadmap-convergence;component-roadmap-converge-driver;component-roadmap-converge-state;decision-sign-off-purity;decision-archetype-rubrics"
   2026-07-04T06:00:00Z,wave-complete,wiki-maintainer-agent,Wave 8 complete — M-07 evals subsystem + F-22 skill-preamble foundation,P20 ships three-tier eval ladder (T1 PR-blocking/T2 nightly-advisory/T3 opt-in advisory; free-by-default invariant; 4 error codes; injected judge seam; scripts/eval/ + protocols/eval-tier.schema.md + CI wiring; 22/22 tests). P21 ships shared skill preamble protocol (protocols/skill-preamble.md; @loom-include directive; byte-stable markers; mirrors _loom-init-guard.md; registered under library.protocols; 10/10 tests). Advisory contract amendment: eval-t1 not yet in ci-gates.contract.md frozen required-checks set.,"component-eval-framework;protocol-skill-preamble"
+  2026-07-08T00:00:00Z,plan-created,wiki-maintainer-agent,M-09 Cartography Foundation plan captured in wiki (BLOCKED on M-06 Phase 2 / C-16),Plan: 6 phases / 4 waves / F-20–F-23. Net-new entity MapArtifact (TOON; 9 fields; per-file two-writer ownership; 8 invariants). Net-new surfaces: /loom-map command (5 verbs) + codebase-map-reviewer agent + map-freshness PreToolUse hook + [gates] requireFreshMap config. Key contracts: warn-first fail-closed precondition (C-15); launch-gated behind M-06 Phase 2 (C-16); TOON + atomic writes (C-11); no new loop primitive (C-13). 5 new wiki pages created.,"feature-m09-cartography-foundation;contract-map-artifact-schema;command-loom-map;component-codebase-map-reviewer;component-map-freshness-hook"

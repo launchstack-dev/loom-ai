@@ -923,6 +923,10 @@ library:
       description: "Toggle destructive-command guard — documents the loom-careful PreToolUse hook, its blocklist, and per-command / per-session / global override paths"
       source: commands/loom-careful.md
 
+    - name: loom-fable
+      description: "Toggle fable-driver mode — record whether a Fable-tier model is driving sessions (on/off/auto) and adapt Loom's posture to windowed Fable availability; workers stay opus/sonnet/haiku in every mode"
+      source: commands/loom-fable.md
+
     - name: loom-health
       description: "Composite 0-10 quality score with trend history — runs scripts/loom-health.ts and displays current score plus trend from .loom/health-history.toon"
       source: commands/loom-health.md

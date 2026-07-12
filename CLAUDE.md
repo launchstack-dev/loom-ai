@@ -35,12 +35,24 @@ blockName:                                    # nested block
 - Prefer **bun** / **bunx** when available; fall back to **npm** / **npx** otherwise
 - Use **vitest** for test suites in the meta-orchestration project
 
+## Command Routing
+
+Route work through the pipeline instead of doing it by hand — the gates and loops only protect work that enters them:
+
+- Bug report or failing behavior → `/loom-bugfix` (expects a verified-red `loop.toon`; do not hand-fix and skip the gate)
+- New feature or fuzzy idea → `/loom-spec` (small) or `/loom-think` → `/loom-roadmap` → `/loom-plan` (large)
+- Iterate an artifact to a quality bar → `/loom-converge` (criteria / target / document modes)
+- Small zero-ceremony task → `/loom-quick`; fully autonomous pipeline → `/loom-auto`
+- Unsure which command → `/loom-which`
+- Before starting parallel or overlapping work, check `.plan-execution/` for live pipeline state
+
 ## Agent Conventions
 
 - All agents return a standard AgentResult envelope in TOON (see `protocols/agent-result.schema.md`)
 - Execution agents write progress heartbeats to `.plan-execution/progress/{taskId}.toon`
 - File writes must be atomic: write to `.tmp`, then rename
 - **Model resolution is mandatory.** Before every Agent tool call, read the target agent's `.md` frontmatter `model:` field and pass `model: "{value}"` on the call. Resolution priority: (1) `orchestration.toml` profile tier, (2) frontmatter, (3) inherit parent. Never spawn an agent without resolving its model first.
+- **Fable is driver-only.** Fable-tier models may drive the interactive session but must never resolve as a spawned agent's model — multi-agent fan-out exhausts fable usage limits, and Fable availability is windowed. Worker tiers are opus/sonnet/haiku only (see README → "Two ways to run Loom — with and without Fable"). If resolution falls through to (3) inherit and the session model is fable-tier, do not inherit: substitute the active profile's tier default for that stage, or `sonnet` if no profile is configured.
 - See `protocols/execution-conventions.md` for directory structure and file naming
 
 ## Context Management

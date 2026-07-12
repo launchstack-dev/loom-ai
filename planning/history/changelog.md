@@ -8,6 +8,14 @@
      until then they read `<pending>`. Schema: protocols/release-versioning.schema.md.
      Dated `## YYYY-MM-DD` sections below predate this convention and are retained. -->
 
+## 2026-07-11 — Code fixes applied (review round 2)
+
+- Source: .plan-execution/review-report.md (archived: planning/history/reviews/2026-07-11-review-2.md)
+- Reviewers: 5-agent fan-out (opus, quality profile) + gemini-code-assist PR #43 comments (11, merged)
+- Applied: 12 findings (1 critical — hooks TOON codec round-trip symmetry; 5 warning incl. both gemini themes; 6 info)
+- Ledger note: freshness-ledger cells canonicalize to minimal-quoting on first post-merge commit (deliberate one-shot)
+- Verification: hooks suite 200/200 (serial), skill-autoload-audit 22/22, hooks tsc clean, docs-drift 0, checksums regenerated
+
 ## 2026-07-06 — version bump: 0.2.0 (manifest)
 
 - Bumped `loomCoreVersion`, `loomHooksVersion` (`skills/library.yaml`) and the plugin manifest (`.claude-plugin/plugin.json`) from `0.1.0` → **`0.2.0`**.
@@ -821,3 +829,29 @@ Key fixes: GEM-01 (awk v3→v2 column collapse), SILENT-01/02/04 (mktemp/awk/cat
 - Commit `61dc9c0`. Replaces the no-op `onPageText` daemon hook (`scripts/lib/browser-client.ts`) with a standalone runtime signature detector (`scanForInjection`): on every navigation it screens the loaded page's visible text for six prompt-injection classes — instruction-override, role-hijack, system-prompt exfiltration, data-exfiltration, destructive-directive, chat-template delimiter injection — and fails closed with `BROWSER_INJECTION_BLOCKED` (exit 8) when a hostile directive is present. High-precision rules; ordinary page copy does not trip them.
 - **BE-10 upgraded** (`tests/browser/injection-defense.test.ts`) from a mock-only fires-check to a real detects-check: hostile fixture blocked, a deliberately tricky clean fixture (isolated words "previous/instructions/delete/files") passes. Verified `tsc=0`, `tests/browser` 32 passed / 2 skipped.
 - **Corrected a category error in the docs:** the runtime hook (`onPageText`, a synchronous per-navigation function) is **complementary to, not dependent on**, the `code-llm-trust-review-agent` code-review lens (F-15, an LLM subagent that audits source diffs). The prior "hook wires to the F-15 agent" note was wrong — a diff-review subagent cannot run per-navigation. Fixed across `library.yaml`, `SKILL.md`, ROADMAP F-39, and README. F-39 tracked + marked SHIPPED under gstack-adoption M-05.
+
+## 2026-07-08 — Plan created from roadmap (M-09 Cartography Foundation)
+
+- Generated via `/loom-plan create --auto`, scoped to milestone **M-09** (features F-20–F-23) → `planning/plans/PLAN-ct6-cartography.md`.
+- Source: `planning/ROADMAP.md` (approved). planVersion: 2.
+- Phases: 6, Waves: 4, Deliverables: 22. Wave-0 prefactor extracts the `MapArtifact` schema + shared `map-state.ts` + `.loom/wiki/maps/` two-writer ownership + `orchestration.toml` `[review]`/`[gates]` seams.
+- Validation: passed (0 blocking; 1 info — Phase 1 thinness). Stages 1–4 + v2 Stage 7 clean.
+- Criteria plan: `.plan-execution/criteria-plan-ct6-cartography.toon` (25 criteria, 4 reviewers).
+- Interpretation conflicts: 1 blocking + 4 warning + 1 info; 8 coverage gaps (1 blocking). Both blockers (IC-002 integration-map mis-attribution, CG-002 hook fail-open untested) resolved criteria-side — plan was correct. Report: `.plan-execution/conflicts/interpretation-report.toon`.
+- Plan-critic: 0 predicted blocking, 6 advisory (deferred to `/loom-plan review`).
+- **⚠️ Captured, not executable:** C-16 launch-gates M-09 behind M-06 Phase 2.
+
+## 2026-07-08 — Plan review + autoconverge integration (M-09)
+
+- `/loom-plan review --autoconverge` on `PLAN-ct6-cartography.md`: 8 agents (6 core + eng 6.9/10 + devex 7.7/10; CEO/design skipped — pure-infra). Report: `planning/history/reviews/2026-07-08-review.toon`.
+- 6 blocking findings, 4 code-verified. Resolved: **B4/B5** maps relocated `.loom/wiki/maps/` → `.loom/maps/` (escapes `wiki-write-guard`; `file-ownership` now the real per-file enforcer — user-chosen fix) across plan+roadmap+criteria; **B6** integration-map `edgeTypes[]` corrected to the maintainer's real vocabulary (`exercises/triggers/produces/consumes` ± inverse + `implements`) — invented list would have failed F-20 on first run; **B1** C-16 now machine-enforced via `executionBlocked` frontmatter; **B2** Wave 3 relabeled 3a{P3,P4}/3b{P5} (P5 is a join); **B3** Phase-2 `codebase-map-reviewer` token-budget preflight added.
+- ~12 warnings folded into a "Review-Integrated Changes" section (Phase 4 split, build progress signal, F-23 stale pending-test, F-21 non-convergence rollback, route-map coverage, schemaVersion/per-node-covered/diff-anchor, `/loom-map` help surface, upgrade/rollback path).
+- Structural re-validation clean; plan remains `status: draft`, `executionBlocked: true`.
+
+## 2026-07-11 -- Code fixes applied (C-17 reconciliation review)
+- Source: .plan-execution/review-report.md (6-reviewer /loom-code review of the unstaged C-17 reconciliation diff)
+- Applied: 17 findings (5 critical, 12 warning) + 1 verification fix (criteria TOON nonCriteria list-prefix parse defect, pre-existing)
+- Key: F-28/F-30 C-15 conformance clauses; F-22 write-path==read-path convergence target + criterion C-26; CWE-345 map-integrity spec (freshness derived from git, mapContentSha); C-10/C-14/C-15 F-25 supersession markers; SURVIVES banners on all 6 unbannered survivors; entity/risk-row retirement markers; M-09/M-10a/M-10b acceptance-line reconciliation; PLAN Phase 4 reconciled-scope banner
+- Unfixable: 0
+- Verification: PASS (TOON machine-parse; docs-only diff — typecheck/tests/lint unaffected)
+- Review archived: planning/history/reviews/2026-07-11-review.md (report kept in .plan-execution/ — 7 info findings remain)

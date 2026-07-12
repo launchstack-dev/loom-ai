@@ -1,8 +1,8 @@
 schemaVersion: 1
-entryCount: 27
-lastEntry: 2026-07-06T00:00:00Z
+entryCount: 38
+lastEntry: 2026-07-11T00:00:00Z
 
-entries[27]{timestamp,operation,pageId,agent,summary}:
+entries[38]{timestamp,operation,pageId,agent,summary}:
   2026-04-25T22:00:00Z,bootstrap,*,human,Initial wiki bootstrap: 19 pages across 6 categories covering hooks/infrastructure + command dispatch + agents/protocols
   2026-06-17T00:00:00Z,create,concept-roadmap-convergence,wiki-maintainer-agent,F-15/M-07 plan-created — capture roadmap convergence loop shape, dimensions/rubrics, sibling-to-code-convergence framing
   2026-06-17T00:00:00Z,create,component-roadmap-converge-driver,wiki-maintainer-agent,F-15/M-07 plan-created — capture driver pipeline, three /loom-roadmap commands, 10-state machine, 10 error codes, configuration block
@@ -30,3 +30,14 @@ entries[27]{timestamp,operation,pageId,agent,summary}:
   2026-07-04T06:00:00Z,create,protocol-skill-preamble,wiki-maintainer-agent,Wave 8 P21 (F-22) — shared skill preamble protocol: 7 conventions cited by reference via @loom-include directive, byte-stable LOOM:SKILL-PREAMBLE:BEGIN/END markers, mirrors _loom-init-guard.md pattern, registered in library.protocols; 10/10 preamble-resolution tests pass
   2026-07-06T00:00:00Z,refresh,*,wiki-ingest-agent,Health-run reconciliation — re-derived 9 debt-flagged pages (install-pipeline/library-catalog/command-creation/structure-command-layout/orchestration-patterns/settings-json/execution-pipeline/eval-framework/model-resolution) against current source; W-013 ledger debt cleared (13 entries reconciled); staleness reset; eval-framework retitled Tiered Ladder for qa-outcome 4th tier
   2026-07-06T00:00:00Z,author,*,wiki-ingest-agent,W-026 legacy authoring pass — brought 16 pre-schema pages to the summary+required-H2 convention (5 component hooks, concept-convergence, 2 convention, pattern-subcommand-dispatch, structure-agent-taxonomy corrected 60→86 agents, 2 roadmap-converge partial-fill, decision-context-decisions-split; 3 ADR stubs got summary+pointer only). Index staleness corrected: 3 ADR stubs fresh→migrated. 0 W-026 defects remain
+  2026-07-08T00:00:00Z,create,feature-m09-cartography-foundation,wiki-maintainer-agent,plan-created (M-09) — captured plan overview: 6 phases/4 waves, F-20–F-23, blocked on M-06 Phase 2 (C-16), build-order summary
+  2026-07-08T00:00:00Z,create,contract-map-artifact-schema,wiki-maintainer-agent,plan-created (M-09) — MapArtifact TOON schema: 9 fields, per-file two-writer ownership, 8 invariants, edgeTypes per kind, forward-declared endpoint-trace for M-11
+  2026-07-08T00:00:00Z,create,command-loom-map,wiki-maintainer-agent,plan-created (M-09) — /loom-map command: 5 verbs (build/status/diff/resolve/refresh), read-only META tier for status/diff/resolve, wiki bridge for uncovered modules, C-13 net-new-only
+  2026-07-08T00:00:00Z,create,component-codebase-map-reviewer,wiki-maintainer-agent,plan-created (M-09) — codebase-map-reviewer agent: sonnet tier, registered via orchestration.toml D-01, drives coverage to 1.0 via /loom-converge fan-out, bounded convergence
+  2026-07-08T00:00:00Z,create,component-map-freshness-hook,wiki-maintainer-agent,plan-created (M-09) — map-freshness PreToolUse Write|Edit hook: fail-open always-allow, drift computation via map-state.ts, mapStale flip at threshold, pre-stale warn band at 70%
+  2026-07-08T00:00:00Z,cross-ref-add,*,wiki-maintainer-agent,Added bidirectional cross-refs across all 5 new M-09 pages: feature→contract→command→component×2, and back-refs; component-hooks-system + convention-settings-json + convention-toon-format receive incoming relates-to refs
+  2026-07-11T00:00:00Z,update,contract-map-artifact-schema,wiki-maintainer-agent,C-17 fixes-applied — added mapContentSha field (optional digest for hand-edit detection), Invariants 9+10 (mapStale advisory-cache-only; non-ancestor => stale-by-default), new Integrity and Freshness Model section (CWE-345 two-layer check), F-25 fork-audit note, relates-to decision-f30-partition-check-no-waiver
+  2026-07-11T00:00:00Z,update,component-map-freshness-hook,wiki-maintainer-agent,C-17 fixes-applied — M-09 scope narrowed to producer-side stamping only; mapStale flip is fork-owned (PR #42 Track A); degraded-input clause (malformed stamp/git error => fail-closed); C-26 producer write-path == fork gate read-path criterion; mapStale advisory-cache-only contract
+  2026-07-11T00:00:00Z,update,feature-m09-cartography-foundation,wiki-maintainer-agent,C-17 fixes-applied — F-22 table updated to collapsed scope (producer-side stamping + path reconcile); C-17 Scope Reconciliation section added; C-26 new integration criterion; M-09 acceptance amended; decision-f30 cross-ref added
+  2026-07-11T00:00:00Z,create,decision-f30-partition-check-no-waiver,wiki-maintainer-agent,C-17 fixes-applied — locked design decision: F-30 partition-check is fail-closed with NO waiver by design (explicit exception to C-15); --dry-run + mandatory human confirm are sole recourse; check-error = fail-closed-with-logged-reason
+  2026-07-11T00:00:00Z,cross-ref-add,*,wiki-maintainer-agent,C-17 fixes-applied — bidirectional relates-to refs: decision-f30-partition-check-no-waiver <-> contract-map-artifact-schema, feature-m09-cartography-foundation, component-map-freshness-hook

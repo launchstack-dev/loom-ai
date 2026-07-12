@@ -30,6 +30,7 @@ import {
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { parseToonArray } from "../../hooks/lib/toon-reader.js";
 
 const REPO_ROOT = resolve(__dirname, "../..");
 const CLASSIFY_SCRIPT = join(
@@ -352,5 +353,28 @@ describe("classify.ts — execution against real skills directory", () => {
       expect(content).toContain("modelInvoked:");
       expect(content).toContain("userInvoked:");
     }
+  });
+
+  it("emits the rows table with the locked 7-column schema", () => {
+    const reportFile = join(tmpDir, "skill-audit-test.toon");
+    const result = spawnSync(
+      "bunx",
+      ["tsx", CLASSIFY_SCRIPT, "--output", reportFile],
+      { timeout: 20000, encoding: "utf8", cwd: REPO_ROOT },
+    );
+    expect(result.status).toBe(0);
+    expect(existsSync(reportFile)).toBe(true);
+
+    const content = readFileSync(reportFile, "utf8");
+    expect(content).toMatch(
+      /rows\[\d+\]\{file,skillName,invocationClass,hasDescription,hasTriggers,disableModelInvocationSet,recommendation\}:/,
+    );
+    const rows = parseToonArray(content, "rows");
+    expect(rows.length).toBeGreaterThan(0);
+    const first = rows[0];
+    expect(typeof first["file"]).toBe("string");
+    expect(["model-invoked", "user-invoked"]).toContain(first["invocationClass"]);
+    expect(typeof first["hasDescription"]).toBe("boolean");
+    expect(String(first["recommendation"] ?? "")).not.toBe("");
   });
 });

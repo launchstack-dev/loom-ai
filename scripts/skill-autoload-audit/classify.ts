@@ -41,6 +41,7 @@ import {
 } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { serializeToon } from "../../lib/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -222,23 +223,22 @@ function toToon(rows: SkillAuditRow[], generatedAt: string): string {
     (r) => r.recommendation !== "no action needed" && !r.recommendation.startsWith("OK"),
   ).length;
 
-  const rowLines = rows
-    .map(
-      (r) =>
-        `  ${r.file},${r.skillName},${r.invocationClass},${r.hasDescription},${r.hasTriggers},${r.disableModelInvocationSet},"${r.recommendation}"`,
-    )
-    .join("\n");
-
-  return [
-    `generatedAt: ${generatedAt}`,
-    `totalSkills: ${rows.length}`,
-    `modelInvoked: ${modelInvoked}`,
-    `userInvoked: ${userInvoked}`,
-    `needsAction: ${needsAction}`,
-    ``,
-    `rows[${rows.length}]{file,skillName,invocationClass,hasDescription,hasTriggers,disableModelInvocationSet,recommendation}:`,
-    rowLines,
-  ].join("\n");
+  return serializeToon({
+    generatedAt,
+    totalSkills: rows.length,
+    modelInvoked,
+    userInvoked,
+    needsAction,
+    rows: rows.map((r) => ({
+      file: r.file,
+      skillName: r.skillName,
+      invocationClass: r.invocationClass,
+      hasDescription: r.hasDescription,
+      hasTriggers: r.hasTriggers,
+      disableModelInvocationSet: r.disableModelInvocationSet,
+      recommendation: r.recommendation,
+    })),
+  });
 }
 
 // ---------------------------------------------------------------------------

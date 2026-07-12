@@ -1,9 +1,9 @@
-generatedAt: 2026-07-06T02:08:06.722Z
+generatedAt: 2026-07-11T23:21:01.372Z
 sections[7]{section,targetFile,source,checksum,drift}:
   hook-count-summary,README.md,scripts/lib/loom-hooks-manifest.ts,6f4b6612125fb3a0daecd2799dfd6c9c299424fd920f9b308110a2c1fbd8f443,none
   hook-count-tier,README.md,scripts/lib/loom-hooks-manifest.ts,6f4b6612125fb3a0daecd2799dfd6c9c299424fd920f9b308110a2c1fbd8f443,none
   hook-count-section,README.md,scripts/lib/loom-hooks-manifest.ts,6f4b6612125fb3a0daecd2799dfd6c9c299424fd920f9b308110a2c1fbd8f443,none
   hook-count-deepdive,README.md,scripts/lib/loom-hooks-manifest.ts,6f4b6612125fb3a0daecd2799dfd6c9c299424fd920f9b308110a2c1fbd8f443,none
-  commands-table,docs/reference/commands.md,commands/*.md frontmatter,e2f80cfaf46da4b4cfdb080d7a1b627a166579b2291eb1ad358d82ca8f85a133,none
+  commands-table,docs/reference/commands.md,commands/*.md frontmatter,ca4a72ee18a77a68c155e154021d9ce994e92b0d986b0e46bb7d107611e49d77,none
   hooks-table,docs/reference/hooks.md,scripts/lib/loom-hooks-manifest.ts,f55341bf7a70b9e6ef3d47fa7f5f54a8c2c9e1366defc7dd877cf77bc53687f6,none
   agents-table,docs/reference/agents.md,agents/**/*.md frontmatter,78d516fb37362e7c82963c1d3e3089c18c661442fb521eac12b05c222ac17a5a,none

@@ -75,7 +75,7 @@ For each target found, run the appropriate version detection logic defined in `s
 **Project infrastructure detection (only when `--project`):**
 - **orchestration-config**: Check `.claude/orchestration.toml` for missing `[settings.contextBudget]`, `[wiki]`, `[domain]` sections and key fields (`contractType`, `verificationPipeline`, `dataFormat`).
 - **roadmap**: Check `ROADMAP.md` for structural gaps: missing YAML frontmatter, unstructured features (no F-XX IDs), unstructured milestones (no M-XX IDs), missing data model, missing cross-references. Tier A/B auto-patched; Tier C agent-migrated inline.
-- **claude-md**: Check `CLAUDE.md` for missing TOON convention, model resolution, context budget, and stage summary sections.
+- **claude-md**: Check `CLAUDE.md` for missing TOON convention, model resolution, context budget, stage summary, and command-routing (`loom:command-routing-v1` marker) sections.
 - **hooks**: Check `.claude/settings.json` for missing `contract-lock`, `file-ownership`, `context-budget`, `budget-tracker`, `quality-gate` hook entries.
 - **wiki**: Check if `.loom/wiki/` exists and has `index.toon`.
 - **protocols**: Check `protocols/` for missing required protocol files (13 files minimum).
@@ -210,7 +210,7 @@ Apply migration rules from `schema-upgrade.md` in-place. Each file is written at
   - *Tier A (auto)*: Add YAML frontmatter (`roadmapVersion: 1`, `name`, `status`, `totalFeatures`, `totalMilestones`)
   - *Tier B (auto)*: Add missing required section stubs
   - *Tier C (agent-driven)*: Spawns `roadmap-upgrade-agent` inline to restructure: feature IDs (F-XX), milestone IDs (M-XX), constraint IDs (C-XX), data model tables, cross-references, convergence targets. Confirmation gate before writing (unless `--force`). Runs before plan migration (plan depends on roadmap for cross-refs).
-- **Rule 8 (claude-md)**: Append missing Loom convention sections to `CLAUDE.md`. If CLAUDE.md is missing entirely, report `manual-required` and print guidance to run `/loom-init`.
+- **Rule 8 (claude-md)**: Append missing Loom convention sections to `CLAUDE.md`, including the marker-managed `## Loom Command Routing` block (`loom:command-routing-v1`) when `.loom/` exists and the marker is absent. If CLAUDE.md is missing entirely, report `manual-required` and print guidance to run `/loom-init`.
 - **Rule 9 (hooks)**: Add missing hook entries to `.claude/settings.json`. If settings.json is missing entirely, report `manual-required`. Verify hook source files exist after adding entries.
 - **Rule 10 (wiki)**: Create `.loom/wiki/` directory with empty `index.toon`, `log.toon`, `execution-log.toon`, and `pages/` directory. Report `scaffolded` with guidance to run `/loom-wiki ingest`.
 - **Rule 11 (protocols)**: Copy missing protocol files from the Loom source directory. Never overwrite existing protocols.

@@ -1,0 +1,56 @@
+type: plan-review
+planFile: planning/plans/PLAN-ct6-cartography.md
+reviewedAt: 2026-07-08
+scope: M-09 Cartography Foundation (F-20..F-23)
+agentCount: 8
+agentsRun[8]: feature-coverage-agent, strategy-agent, ux-agent, phasing-agent, parallelization-agent, agentic-workflow-agent, plan-eng-review-agent, plan-devex-review-agent
+lensesSkipped[2]: plan-ceo-review-agent (launch-timing already encoded C-16), plan-design-review-agent (pure-infra, no UI)
+structuralPrecheck: pass (stages 1-4 + v2 Stage 7, 0 blocking during create)
+
+compositeScores[2]{lens,score}:
+  engineering,6.9
+  devex,7.7
+
+blockingFindings[6]{id,agents,title,disposition,verified}:
+  B1-C16-prose,strategy ST-01 + agentic F-02,C-16 launch gate is prose-only — execute.md gates on status/kit-gates not prose,auto-integrate (frontmatter executionBlocked + execute precondition note),conceptually-verified
+  B2-wave3-join,phasing PH-01,Wave 3 is fan-out+join not 3-parallel (P5 deps P3+P4),auto-integrate (relabel Wave 3a={P3,P4} / 3b={P5}),verified
+  B3-reviewer-budget,agentic F-01,Phase 2 codebase-map-reviewer 100k cap asserted not preflighted,auto-integrate (token-estimator preflight AC + scenario),plausible
+  B4-wiki-write-guard,parallelization F-1/F-2 + eng F-01/F-02,maps under .loom/wiki/ blocked by wiki-write-guard for non-wiki-agent writers (/loom-map implementer + F-22 hook),USER-DECISION (relocate to .loom/maps/ vs carve-out guard) + roadmap ripple,VERIFIED-in-code
+  B5-file-ownership-false,parallelization F-2 + eng F-02,plan risk-table claims file-ownership enforces two-writer but it exempts .loom/wiki/ unconditionally,auto-integrate (subsumed by B4 fix; correct risk-table),VERIFIED-in-code
+  B6-edgetypes-invented,eng F-09,integration-map edgeTypes[] invented vs maintainer's real set — would reject every real edge on first run (fails F-20 target),auto-integrate (fix plan line 70 + roadmap to real set),VERIFIED-in-code
+
+realEdgeTypes[9]: exercises, exercised-by, triggers, triggered-by, produces, produced-by, consumes, consumed-by, implements
+
+crossCuttingThemes[6]{theme,agents,confidence,disposition}:
+  wiki-write-guard-collision,parallelization;eng,high,the dominant blocker — maps location decision (B4)
+  c16-not-machine-enforced,strategy;agentic,high,auto-integrate frontmatter+precondition (B1)
+  long-build-no-progress-signal,ux;devex;plan-critic,high,auto-integrate progress/heartbeat AC (top TTHW risk predictedTTHW=270s)
+  phase-sizing-and-wave-labeling,phasing;eng;agentic,medium,relabel Wave 3a/3b (B2) + split Phase 4 (hook vs nudge-surfacing) + define nudge-state channel
+  schema-completeness,feature-coverage;eng,medium,schemaVersion + per-node covered flag + diff content-anchor + edge uniqueness + drop relational-DB framing
+  lifecycle-edges,devex,medium,upgrade path for existing installs + uninstall/rollback + docs-in-Phase-3-not-5
+
+keyWarnings[12]{id,agent,title}:
+  W-route,feature-coverage F-ROUTE,route-map.toon has zero AC/scenarios — add one (accept empty-but-valid) or declare Non-Goal
+  W-diff,feature-coverage F-DIFF,diff "changed" undefined without per-node content hash — narrow to added/removed or add hash
+  W-cov,feature-coverage F-COV,no per-node covered flag for the non-consensus path
+  W-ver,feature-coverage F-VER,MapArtifact lacks schemaVersion (peer TOON artifacts have it)
+  W-p4split,eng F-04 + agentic,split Phase 4 (hook+test+registration vs status/next nudge-surfacing) + define nudge-state file in Phase 0
+  W-p3pending,phasing PH-02 + eng F-03,Phase 3 stale branch untested until P5 — author S-20 as .skip in P3 un-skip in P5
+  W-rollback,eng F-05,no plan-level rollback if F-21 never converges — gate warn->block on demonstrated convergence
+  W-progress,ux + devex F-01,no progress signal during multi-minute build — stream reviewer progress
+  W-help,ux + devex F-07,no /loom-map help/usage/invalid-verb surface; no --format json on read verbs
+  W-upgrade,devex F-03,existing-install upgrade path unspecified (retention feature) — /loom-upgrade stamps [gates]/[review] + CHANGELOG
+  W-reentrancy,eng F-11,assert /loom-map never trips the F-23 gate + no auto-build retry loop
+  W-silentflip,eng F-06,failed/blocked mapStale write silently swallowed — add observable path
+
+feasibilityVerdicts[4]{claim,verdict}:
+  F-22 fail-open PreToolUse execSync git-drift hook,SOUND pattern (detection/enforcement separation) — but write path collides with wiki-write-guard (B4)
+  two-writer atomic .tmp+rename,prevents maintainer-vs-/loom-map clobber but does NOT address wiki-write-guard or F-22 as third writer
+  F-23 warn-mode auto-invoke /loom-map,no direct cycle; bounded by C-15 one-attempt; add explicit re-entrancy assertion (W-reentrancy)
+  codebase-map-reviewer via existing /loom-converge no new loop primitive,FEASIBLE — fits existing criteria-mode fan-out
+
+strengthsNoted[4]:
+  Wave-0 prefactor extracts the right shared surfaces (all agents concur)
+  error-handling is exemplary (8 codes + state-specific remedies + F-25 legibility bar) — eng 9/10 devex 9/10
+  fail-open F-22 hook design is correct engineering
+  Wave-3 file-ownership genuinely disjoint (parallelization + phasing verified)

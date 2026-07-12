@@ -32,6 +32,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import { runHook, allow } from "./lib/run-hook.js";
 import { parseToon, parseToonArray } from "./lib/toon-reader.js";
+import { serializeToonTable } from "./lib/toon-writer.js";
 import { findProjectRoot, writeAtomic } from "./lib/wiki-helpers.js";
 
 /**
@@ -211,7 +212,7 @@ interface LedgerEntry {
   timestamp: string;
   filesChanged: string;
   impactedPages: string;
-  wikiUpdatedAt: string;
+  wikiUpdatedAt: string | null;
   status: string;
 }
 
@@ -236,7 +237,7 @@ function readLedger(ledgerPath: string): {
       timestamp: String(r["timestamp"] ?? ""),
       filesChanged: String(r["filesChanged"] ?? ""),
       impactedPages: String(r["impactedPages"] ?? ""),
-      wikiUpdatedAt: String(r["wikiUpdatedAt"] ?? "null"),
+      wikiUpdatedAt: r["wikiUpdatedAt"] == null ? null : String(r["wikiUpdatedAt"]),
       status: String(r["status"] ?? ""),
     }));
     return { header: headerLines.join("\n"), entries };
@@ -260,17 +261,17 @@ function writeLedger(
 ): void {
   const lastTs =
     entries.length > 0 ? entries[entries.length - 1].timestamp : new Date().toISOString();
-  const header = `schemaVersion: 1
-projectName: ${projectName}
-lastEntry: ${lastTs}
-totalEntries: ${entries.length}
-`;
-  const arrayHeader = `entries[${entries.length}]{commitSha,timestamp,filesChanged,impactedPages,wikiUpdatedAt,status}:`;
-  const rows = entries.map(
-    (e) =>
-      `  ${e.commitSha},${e.timestamp},"${e.filesChanged}","${e.impactedPages}",${e.wikiUpdatedAt},${e.status}`
+  const content = serializeToonTable(
+    {
+      schemaVersion: 1,
+      projectName,
+      lastEntry: lastTs,
+      totalEntries: entries.length,
+    },
+    "entries",
+    ["commitSha", "timestamp", "filesChanged", "impactedPages", "wikiUpdatedAt", "status"],
+    entries.map((e) => ({ ...e }))
   );
-  const content = [header, arrayHeader, ...rows, ""].join("\n");
   writeAtomic(ledgerPath, content);
 }
 
@@ -364,7 +365,7 @@ runHook("wiki-commit-ledger", async (input) => {
     timestamp: new Date().toISOString(),
     filesChanged: files.join(" + "),
     impactedPages: Array.from(impactedPages).join(" + "),
-    wikiUpdatedAt: "null",
+    wikiUpdatedAt: null,
     status,
   };
   ledger.entries.push(entry);

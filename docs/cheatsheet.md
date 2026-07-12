@@ -119,6 +119,7 @@ One page. Organized by **what you want to do**, not by command grouping. For the
 | State-aware next-step suggestion | `/loom next` |
 | Project overview (tests, convergence, budget) | `/loom-status` |
 | Natural-language routing to the right command | `/loom do "<what you want>"` |
+| Record fable-driver mode when a Fable window opens/closes | `/loom-fable on\|off\|auto\|status` |
 
 ## When you're stuck
 

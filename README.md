@@ -218,6 +218,37 @@ Three more pillars that fall out of that composability:
 2. **Scenarios drive convergence.** Plans and roadmaps ship Given/When/Then scenarios under each phase and feature. The convergence-planner emits targets from scenarios; the verification pipeline gates on them at four tiers (unit / integration / e2e / qa-review) mapped to wave / phase / feature / milestone.
 3. **Change-proposal lifecycle.** After the initial materialize, `/loom-change init → review → approve → run → archive` mutates per-domain `contract-*` wiki pages atomically with drift validation. `/loom-quick` auto-emits a retroactive proposal so small work stays zero-ceremony.
 
+## Two ways to run Loom — with and without Fable
+
+Loom separates the **driver** — the model in your interactive Claude Code session, the one you talk to — from the **workers** — the subagents the pipeline spawns for planning, execution, review, and verification. That separation is what makes both operating modes first-class. Every guarantee Loom makes lives in structure, not in model intelligence: criteria are authored before code, the F-18 loop gate refuses to fix a bug nobody has watched fail, convergence loops carry non-disableable circuit breakers, and four verification tiers gate waves, features, and milestones. A stronger driver makes runs faster and judgment calls sharper; it is never what makes the output correct.
+
+### With Fable — Fable drives, never works
+
+Run your session on Fable 5 and every `/loom-*` command gets Fable-grade synthesis at the seams where judgment concentrates: `/loom-think` interviews, plan decomposition, review triage, convergence verdicts.
+
+The iron rule: **Fable stays in the driver's seat.** Workers never resolve to a fable-tier model — the model-resolution chain (profile tier → agent frontmatter → inherit) contains no fable at any level, and the orchestration schema documents that profile tiers must not use fable (`protocols/orchestration-config.schema.md`). Two reasons:
+
+1. **Usage economics.** A single execution wave can fan out a dozen contract-scoped agents; convergence multiplies that per iteration. Fable-tier limits are exhausted by exactly this shape of load — one fable driver plus sonnet/opus workers is sustainable, a fable fleet is not.
+2. **Availability.** Fable ships in limited windows. A pipeline that *requires* it breaks the day the window closes; a pipeline that merely *benefits* from it degrades to the other mode with zero changes.
+
+### Without Fable — opus/sonnet/haiku end to end
+
+This is the baseline Loom is engineered against, not a fallback. The same commands, gates, and loops run identically; you choose a model profile and the five stage tiers map accordingly:
+
+| Profile | planning | execution | review | verification | utility |
+|---|---|---|---|---|---|
+| `quality` | opus | opus | opus | sonnet | sonnet |
+| `balanced` | opus | sonnet | sonnet | sonnet | haiku |
+| `budget` | sonnet | sonnet | haiku | haiku | haiku |
+
+The tiering principle: *opus for decisions, sonnet for generation, haiku for plumbing.* Where a weaker driver would drift, the scaffolding holds instead — the thinking gate fails closed, the interpretation reviewer catches semantic conflicts between plan and criteria, and cross-model second opinions pin a named non-fable model so they work in every mode.
+
+### Choosing
+
+Use Fable as the driver when you have it — fuzzy problems, architecture calls, and long autonomous runs benefit most. Configure profiles for everything spawned (`modelProfile` in `.claude/orchestration.toml`, see [Per-Project Extensibility](#per-project-extensibility)). When Fable is unavailable, change nothing: the session model changes, the system doesn't. Record which mode a project is in with [`/loom-fable on|off|auto`](#loom-fable) when a Fable window opens or closes.
+
+Direction of travel: the fable-readiness fork (PR #42) makes this split explicit as **capability-gated discipline profiles** — scaffolding that tightens or relaxes based on the measured capability of whatever model is present, rather than on a model name. Not yet merged; this section describes shipped behavior.
+
 ## Troubleshooting
 
 If something looks wrong:
@@ -240,7 +271,7 @@ Loom forks on (a) is there existing code Loom should learn first, and (b) how de
 
 For brownfield projects that *also* want to plan a new feature, run `/loom-init` first, then `/loom-roadmap init --brownfield --full` — the `--brownfield` flag adds a codebase-analysis step that shapes the roadmap around what already exists. For long `/loom-auto` runs, enable [Agent Teams](#agent-teams-experimental--recommended-for-loom-auto) so each pipeline stage gets a fresh context window.
 
-For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the five concepts behind everything see [`docs/concepts.md`](docs/concepts.md). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
+For a guided 30-minute tour see [`docs/first-30-minutes.md`](docs/first-30-minutes.md); for the seven concepts behind everything see [`docs/concepts.md`](docs/concepts.md). [`docs/cheatsheet.md`](docs/cheatsheet.md) is the everyday reference; [`docs/troubleshooting.md`](docs/troubleshooting.md) decodes error messages.
 
 ## Commands
 
@@ -370,6 +401,7 @@ The split is the layer they touch:
 | `/loom-install` | — | Direct-symlink install path for Loom (alternative to plugin marketplace). Cross-host aware. |
 | `/loom-health` | (flags) `--quick` | Composite 0–10 quality score from 5 weighted components with trend history at `.loom/health-history.toon`. |
 | `/loom-careful` | — | PreToolUse guard hook that blocks destructive Bash commands (`rm -rf /`, `DROP TABLE`, force-push, `mkfs`, …) before they run. |
+| `/loom-fable` | on, off, auto, status | Toggle fable-driver mode for windowed Fable availability. Workers stay opus/sonnet/haiku in every mode. |
 
 The tables above are the quick index. Every surface below also gets a full section — [The idea pipeline](#the-idea-pipeline), [Quality gates](#quality-gates), [Shipping](#shipping), [Learning loop](#learning-loop), [Design](#design), [Docs & diagrams](#docs--diagrams), [Browser automation](#browser-automation), and [Guardrails & meta](#guardrails--meta).
 
@@ -665,11 +697,15 @@ Run it once per project after configuring the domain list, and again whenever `/
 
 ## Guardrails & meta
 
-Two remaining surfaces don't fit a lifecycle stage: `/loom-careful` guards every Bash call, and `/loom-skillify` turns transcripts into tested tooling. (The other meta surfaces have their own sections: [`/loom-install`](#direct-install-power-user) for the direct-symlink channel and [`/loom-update`](#update-and-uninstall) for runtime upgrades.)
+Three remaining surfaces don't fit a lifecycle stage: `/loom-careful` guards every Bash call, `/loom-fable` toggles driver mode across Fable availability windows, and `/loom-skillify` turns transcripts into tested tooling. (The other meta surfaces have their own sections: [`/loom-install`](#direct-install-power-user) for the direct-symlink channel and [`/loom-update`](#update-and-uninstall) for runtime upgrades.)
 
 ### /loom-careful
 
 `/loom-careful` is not a workflow command — it documents and manages the `loom-careful` PreToolUse hook (`hooks/loom-careful.ts`) that intercepts Bash commands before Claude Code runs them and denies the destructive ones: `rm -rf` against `/`, `~`, `.`, or `*`; destructive SQL DDL (`DROP TABLE`, `DROP DATABASE`, `TRUNCATE TABLE`); `git push --force` / `git reset --hard`; `chmod -R 777 .`; raw-device writes (`dd of=/dev/sda`); and filesystem formatters (`mkfs`). A blocked call surfaces to the agent as `CAREFUL_BLOCKED` with the reason.
+
+### /loom-fable
+
+`/loom-fable on|off|auto|status` records **driver mode** in `.loom/driver-mode.toon` — whether a Fable-tier model is driving this project's sessions. Fable ships in limited windows (see [Two ways to run Loom](#two-ways-to-run-loom--with-and-without-fable)); this is the switch you flip when a window opens or closes. `on` sets driver-quality expectations at the judgment seams; `off` suggests the `quality` model profile for planning-heavy work and reminds you that nothing structural changes; `auto` (the default) infers driver class per session. No mode ever changes worker model resolution — fable stays driver-only, workers stay opus/sonnet/haiku, cross-model second opinions stay pinned to a non-fable model. This command is the stopgap until the fable-readiness capability-gated discipline profiles land (PR #42), at which point it becomes an alias over the capability gate.
 
 When a legitimately destructive command must run, the escape hatches are graduated: `LOOM_CAREFUL_OVERRIDE=1 <command>` for one command, `export LOOM_CAREFUL_OVERRIDE=1` for the session, or remove the hook's `PreToolUse` entry from `~/.claude/settings.json` (or unregister via `/loom-library` if kit-installed) to disable it globally. Unlike Loom's task-scoped enforcement hooks, this one guards the agent session itself — it pairs with, rather than replaces, the per-project enforcement hooks described under [Hook enforcement](#hook-enforcement-per-project).
 
@@ -1621,7 +1657,7 @@ outputRole = "producer"
 
 Or `/loom-agent create` for an interactive flow.
 
-**Model resolution** is 3-level: profile tier mapping (`quality`/`balanced`/`budget`) → agent frontmatter `model:` → inherit parent. The default tiering follows the principle *opus for decisions, sonnet for generation, haiku for plumbing*.
+**Model resolution** is 3-level: profile tier mapping (`quality`/`balanced`/`budget`) → agent frontmatter `model:` → inherit parent. The default tiering follows the principle *opus for decisions, sonnet for generation, haiku for plumbing*. Fable-tier models never appear at any level of this chain — Fable is a driver, not a worker; see [Two ways to run Loom](#two-ways-to-run-loom--with-and-without-fable).
 
 ## Internals
 
@@ -1667,7 +1703,7 @@ Reference material kept out of the main README to keep it scannable:
 
 - [`docs/reference/hooks.md`](docs/reference/hooks.md) — Full table of the <!-- loom:generated:hook-count-deepdive -->21<!-- /loom:generated:hook-count-deepdive --> enforcement hooks, infra scripts, and registration.
 - [`docs/internals.md`](docs/internals.md) — Wiki maintenance triggers, data formats (TOON), persistence layout, and repo file structure.
-- [`docs/concepts.md`](docs/concepts.md) — The five concepts behind everything Loom does.
+- [`docs/concepts.md`](docs/concepts.md) — The seven concepts behind everything Loom does.
 - [`docs/first-30-minutes.md`](docs/first-30-minutes.md) — Narrated walkthrough of your first session.
 - [`docs/scenarios-and-changes.md`](docs/scenarios-and-changes.md) — End-to-end walkthroughs of scenarios and change proposals.
 - [`docs/cheatsheet.md`](docs/cheatsheet.md) — Everyday command reference.
