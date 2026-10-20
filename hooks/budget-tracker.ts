@@ -12,12 +12,18 @@ import { runHook, allow, block } from "./lib/run-hook.js";
 import { findPlanExecutionDir, readPipelineState } from "./lib/context.js";
 import { parseToon } from "./lib/toon-reader.js";
 
+const TERMINAL_STAGES = new Set(["complete", "escalated"]);
+
 runHook("budget-tracker", async (input) => {
   const planExecDir = findPlanExecutionDir();
   if (!planExecDir) return allow();
 
   const pipeline = readPipelineState(planExecDir);
   if (!pipeline) return allow();
+
+  // A finished run has no budget to enforce. Without this, every ad-hoc subagent
+  // after the run keeps incrementing its counter and is eventually blocked.
+  if (TERMINAL_STAGES.has(pipeline.currentStage)) return allow();
 
   // Determine if this is a PreToolUse (Agent) or SubagentStop call
   const isPreToolUse = input.tool_name !== undefined;
